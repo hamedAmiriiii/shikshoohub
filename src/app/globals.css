@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #090d19;
+    --foreground: #ededed;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #090d19;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  /* font-family: Arial, Helvetica, sans-serif; */
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+.css-1yauhf4-MuiGrid-root {
+  flex-basis: 100% !important; /* تغییر عرض */
+  max-width: 100% !important; /* رفع محدودیت */
+}
+@font-face {
+    font-family: 'IRANSans';
+    src: url('/fonts/Iranian Sans.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+@media (min-width: 550px) {
+  html {
+    display: flex;
+    justify-content: center;
+  }
+}
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+  width: 100%;
+}
+
+body  {
+
+  background-color: #090d19;
+    font-family: 'IRANSans', IRANSans;
+}
+h6 , h1 ,h2,h3,h4 ,h5 , span ,p  {
+    font-family: 'IRANSans', IRANSans !important
+}
+
+
+.my-class-name :first-child{
+font-size: x-large;
+font-weight: 600;
+  /* color: #ff9100 !important; */
+  background-color: rgb(232, 232, 232);
+  /* border: 1px solid #ffffff !important; */
+  border-radius: 15px;
+}

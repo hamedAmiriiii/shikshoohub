@@ -1,0 +1,95 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+}
+
+.imagesContainer {
+  display: flex;
+  gap: 20px;
+}
+
+.imageBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-radius: 10px;
+  transition: transform 0.5s ease, border-color 0.5s ease;
+  cursor: pointer;
+}
+
+.imageBox img {
+  border: 3px solid;
+  border-radius: 10px;
+  box-shadow: 0px 4px 15px rgba(255, 255, 255, 0.627);
+  max-width: 98%;
+  max-height: 98%;
+  width: 155px;
+  height: 155px;
+}
+
+.imageBox.active {
+  box-shadow: 2px 0px 15px #ff9100;
+  border: 4px solid;
+  border-radius: 10px;
+  transform: scale(1.12);
+  border-color: #ff9100;
+  transform-origin: center;
+}
+
+.imageBox.chose {
+  box-shadow: 2px 0px 15px #ff9100;
+  border: 4px solid;
+  border-radius: 10px;
+  transform: scale(1.45);
+  border-color: #ff9100;
+  margin-top: 15px;
+  transform-origin: center
+}
+
+.caption {
+  margin-top: 10px;
+  font-size: 14px;
+  color: white;
+  text-align: center;
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 5px 10px;
+  border-radius: 10px;
+  width: 130px;
+}
+
+.buttonContainer {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.selectButton {
+  background-color: #f3f3f340;
+  color: white;
+  border: 2px solid #ccc;
+  padding: 10px 20px;
+  border-radius: 15px;
+  cursor: pointer;
+  transition: background-color 0.3s, border-color 0.3s;
+}
+
+.selectButton:hover {
+  background-color: #ff9100;
+}
+
+.activeButton {
+  transform: scale(1.05);
+  background-color: #ff9100;
+  border-color: #ff9100;
+  color: white;
+}
+
+.animateOut {
+  opacity: 0;
+  transform: translateZ(200px);
+  transition:  transform 0.5s ease;
+}
+/* opacity 0.5s ease, */

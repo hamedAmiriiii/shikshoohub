@@ -1,0 +1,45 @@
+{
+  "name": "sis",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.13.3",
+    "@emotion/styled": "^11.13.0",
+    "@mui/icons-material": "^6.0.2",
+    "@mui/material": "^6.4.6",
+    "@nextui-org/react": "^2.4.6",
+    "@tanstack/react-query": "^5.62.7",
+    "@telegram-auth/react": "^1.0.4",
+    "dat.gui": "^0.7.9",
+    "jsbarcode": "^3.12.1",
+    "lucide-react": "^0.525.0",
+    "mui-one-time-password-input": "^3.0.1",
+    "next": "14.2.8",
+    "next-auth": "^4.24.11",
+    "notistack": "^3.0.1",
+    "react": "^18",
+    "react-dom": "^18",
+    "react-icons": "^5.5.0",
+    "react-image-file-resizer": "^0.4.8",
+    "react-intersection-observer": "^9.14.0",
+    "react-loading-skeleton": "^3.5.0",
+    "react-multi-date-picker": "^4.5.2",
+    "react-player": "^2.16.0",
+    "react-qr-barcode-scanner": "^2.0.0",
+    "react-toastify": "^10.0.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
+}
