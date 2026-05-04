@@ -74,6 +74,25 @@ interface ShippingInfo {
   state_id: number | '';
   city_id: number | '';
   postal_code: string;
+  title: string;
+}
+
+interface CustomerAddress {
+  id: number;
+  customer_id: number;
+  name: string;
+  last_name: string;
+  phone: string;
+  address: string;
+  state_id: number;
+  state_name: string;
+  city_id: number;
+  city_name: string;
+  postal_code: string;
+  title: string;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export default function CartPage() {
@@ -96,14 +115,20 @@ export default function CartPage() {
     state_id: '',
     city_id: '',
     postal_code: '',
+    title: '',
   });
   const [submittingShipping, setSubmittingShipping] = useState(false);
   const [loadingDefaultAddress, setLoadingDefaultAddress] = useState(false);
+  const [addresses, setAddresses] = useState<CustomerAddress[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [loadingAddresses, setLoadingAddresses] = useState(false);
   
   // Payment states
   const [useCredit, setUseCredit] = useState(false);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'online' | 'card'>('card');
   const [completingOrder, setCompletingOrder] = useState(false);
   const [orderCompleted, setOrderCompleted] = useState(false);
   const [orderError, setOrderError] = useState('');
@@ -125,19 +150,29 @@ export default function CartPage() {
     loadCustomerData();
   }, [router]);
 
-  // Fetch default address when going to step 1
+  // Fetch addresses when going to step 1
   useEffect(() => {
     if (activeStep === 1) {
-      fetchDefaultAddress();
+      if (cartItems.length === 0) {
+        setActiveStep(0);
+        toast.error('سبد خرید شما خالی است');
+        return;
+      }
+      fetchAddresses();
     }
-  }, [activeStep]);
+  }, [activeStep, cartItems]);
 
   // Fetch customer credit when going to step 2
   useEffect(() => {
     if (activeStep === 2) {
+      if (cartItems.length === 0) {
+        setActiveStep(0);
+        toast.error('سبد خرید شما خالی است');
+        return;
+      }
       fetchCustomerCredit();
     }
-  }, [activeStep]);
+  }, [activeStep, cartItems]);
 
   const fetchCustomerCredit = async () => {
     const token = localStorage.getItem('customer_token');
@@ -165,38 +200,37 @@ export default function CartPage() {
     }
   };
 
-  const fetchDefaultAddress = async () => {
+  const fetchAddresses = async () => {
     const token = localStorage.getItem('customer_token');
     if (!token) return;
 
-    setLoadingDefaultAddress(true);
+    setLoadingAddresses(true);
     try {
       const res = await apiRequestError(
         'Get',
         {},
         {},
-        '/api/cart/default-address',
+        '/api/customer-addresses',
         true,
         true,
         token
       );
 
-      if (!res.hasError && res) {
-        setShippingInfo(prev => ({
-          ...prev,
-          name: res.name || prev.name || '',
-          last_name: res.last_name || prev.last_name || '',
-          phone: res.phone || prev.phone || '',
-          address: res.address || prev.address || '',
-          state_id: res.state_id || prev.state_id || '',
-          city_id: res.city_id || prev.city_id || '',
-          postal_code: res.postal_code || prev.postal_code || '',
-        }));
+      if (!res.hasError && res.addresses && Array.isArray(res.addresses)) {
+        setAddresses(res.addresses);
+        // Set default address as selected if it exists
+        const defaultAddr = res.addresses.find((a: CustomerAddress) => a.is_default);
+        if (defaultAddr) {
+          setSelectedAddressId(defaultAddr.id);
+          setShowAddressForm(false);
+        } else if (res.addresses.length === 0) {
+          setShowAddressForm(true);
+        }
       }
     } catch (error) {
-      console.error('Error fetching default address:', error);
+      console.error('Error fetching addresses:', error);
     } finally {
-      setLoadingDefaultAddress(false);
+      setLoadingAddresses(false);
     }
   };
 
@@ -363,6 +397,33 @@ export default function CartPage() {
     }, 0);
   };
 
+  const handleSelectAddress = async (addressId: number) => {
+    const token = localStorage.getItem('customer_token');
+    if (!token) return;
+
+    setSelectedAddressId(addressId);
+    try {
+      const res = await apiRequestError(
+        'Post',
+        {},
+        { address_id: addressId },
+        '/api/cart/set-address',
+        true,
+        true,
+        token
+      );
+
+      if (res.hasError) {
+        toast.error('خطا در انتخاب آدرس');
+        return;
+      }
+      toast.success('آدرس انتخاب شد');
+    } catch (error) {
+      console.error('Error selecting address:', error);
+      toast.error('خطا در انتخاب آدرس');
+    }
+  };
+
   const handleShippingInfoChange = (field: keyof ShippingInfo, value: string | number) => {
     setShippingInfo(prev => ({
       ...prev,
@@ -371,7 +432,20 @@ export default function CartPage() {
     }));
   };
 
-  const handleSubmitShippingInfo = async () => {
+  // Check if new address form is valid
+  const isNewAddressFormValid = 
+    shippingInfo.name.trim() &&
+    shippingInfo.last_name.trim() &&
+    shippingInfo.phone &&
+    shippingInfo.phone.length === 11 &&
+    shippingInfo.address.trim() &&
+    shippingInfo.state_id &&
+    shippingInfo.city_id &&
+    shippingInfo.postal_code &&
+    shippingInfo.postal_code.length === 10 &&
+    shippingInfo.title.trim();
+
+  const handleSubmitNewAddress = async () => {
     const token = localStorage.getItem('customer_token');
     if (!token) {
       toast.error('لطفاً ابتدا وارد شوید');
@@ -390,6 +464,10 @@ export default function CartPage() {
     }
     if (!shippingInfo.phone || shippingInfo.phone.length !== 11) {
       toast.error('لطفاً شماره موبایل معتبر وارد کنید');
+      return;
+    }
+    if (!shippingInfo.title.trim()) {
+      toast.error('لطفاً عنوان آدرس را وارد کنید');
       return;
     }
     if (!shippingInfo.state_id) {
@@ -412,7 +490,7 @@ export default function CartPage() {
     setSubmittingShipping(true);
     try {
       const res = await apiRequestError(
-        'Put',
+        'Post',
         {},
         {
           name: shippingInfo.name,
@@ -422,8 +500,10 @@ export default function CartPage() {
           state_id: shippingInfo.state_id,
           city_id: shippingInfo.city_id,
           postal_code: shippingInfo.postal_code,
+          title: shippingInfo.title,
+          is_default: addresses.length === 0,
         },
-        '/api/cart/shipping-info',
+        '/api/customer-addresses',
         true,
         true,
         token
@@ -431,18 +511,39 @@ export default function CartPage() {
 
       if (res.hasError) {
         const parsed = JSON.parse(res.errorText || '{}');
-        toast.error(parsed.message || 'خطا در ثبت اطلاعات ارسال');
+        toast.error(parsed.message || 'خطا در ثبت آدرس');
         return;
       }
 
-      // toast.success('اطلاعات ارسال با موفقیت ثبت شد');
-      setActiveStep(2);
+      toast.success('آدرس با موفقیت ثبت شد');
+      // Refresh addresses and select the new one
+      await fetchAddresses();
+      // Find the newly added address (assuming it's the last one or has the matching title)
+      setTimeout(() => {
+        setAddresses(current => {
+          const newAddress = current.find(addr => addr.title === shippingInfo.title);
+          if (newAddress) {
+            setSelectedAddressId(newAddress.id);
+            setShowAddressForm(false);
+          }
+          return current;
+        });
+      }, 100);
     } catch (error) {
-      console.error('Error submitting shipping info:', error);
-      toast.error('خطا در ثبت اطلاعات ارسال');
+      console.error('Error submitting address:', error);
+      toast.error('خطا در ثبت آدرس');
     } finally {
       setSubmittingShipping(false);
     }
+  };
+
+  const handleSubmitShippingInfo = async () => {
+    if (selectedAddressId) {
+      setActiveStep(2);
+      return;
+    }
+
+    toast.error('لطفاً ابتدا یک آدرس انتخاب کنید یا آدرس جدیدی ثبت کنید');
   };
 
   // Simulate payment gateway
@@ -538,7 +639,7 @@ export default function CartPage() {
             }}
           >
             <Typography variant="h5" sx={{ marginBottom: '16px', color: '#666' }}>
-              سبد خرید شما خالی است
+              سبد خرید شما خالی میباشد
             </Typography>
             <Button
               variant="contained"
@@ -578,7 +679,7 @@ export default function CartPage() {
       <ToastContainer rtl position="top-center" />
       
       {/* Cart Header */}
-      <Box
+      {/* <Box
         sx={{
           display: 'flex',
           alignItems: 'center',
@@ -635,7 +736,7 @@ export default function CartPage() {
             
           </Button>
         )}
-      </Box>
+      </Box> */}
 
       <Stepper 
         activeStep={activeStep} 
@@ -901,7 +1002,7 @@ export default function CartPage() {
                 variant="contained"
                 fullWidth
                 onClick={() => setActiveStep(1)}
-                disabled={loadingTotal || serverTotal === null}
+                disabled={cartItems.length === 0 || loadingTotal || serverTotal === null}
                 sx={{
                   backgroundColor: '#78b568',
                   color: '#fff',
@@ -965,12 +1066,11 @@ export default function CartPage() {
                 </Box>
               )}
 
-              {/* Personal Info Section */}
+
               <Paper
                 sx={{
                   padding: { xs: '20px', sm: '28px' },
                   borderRadius: '16px',
-                  marginBottom: '20px',
                   boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
                   border: '1px solid #e8e8e8',
                 }}
@@ -981,25 +1081,194 @@ export default function CartPage() {
                       width: '44px',
                       height: '44px',
                       borderRadius: '12px',
-                      backgroundColor: '#e8f5e9',
+                      backgroundColor: '#e3f2fd',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
                   >
-                    <PersonIcon sx={{ color: '#78b568', fontSize: '24px' }} />
+                    <LocalShippingIcon sx={{ color: '#1976d2', fontSize: '24px' }} />
                   </Box>
                   <Box>
                     <Typography sx={{ fontWeight: '700', fontSize: '18px', color: '#333' }}>
-                      اطلاعات گیرنده
+                      آدرس ارسال
                     </Typography>
                     <Typography sx={{ fontSize: '13px', color: '#888' }}>
-                      مشخصات فرد تحویل گیرنده را وارد کنید
+                      آدرس محل تحویل سفارش را انتخاب یا ثبت کنید
                     </Typography>
                   </Box>
                 </Box>
 
+                {/* Show loading while fetching addresses */}
+                {loadingAddresses && (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
+                    <CircularProgress sx={{ color: '#78b568' }} />
+                    <Typography sx={{ mr: 2, color: '#666' }}>در حال بارگذاری آدرس‌ها...</Typography>
+                  </Box>
+                )}
+
+                {/* Show saved addresses if any exist */}
+                {!loadingAddresses && addresses.length > 0 && (
+                  <Box sx={{ mb: 3 }}>
+                    <Typography sx={{ fontWeight: '600', fontSize: '14px', color: '#333', mb: 2 }}>
+                      آدرس‌های ذخیره شده:
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {addresses.map((addr) => (
+                        <Card
+                          key={addr.id}
+                          onClick={() => handleSelectAddress(addr.id)}
+                          sx={{
+                            cursor: 'pointer',
+                            border: selectedAddressId === addr.id ? '2px solid #78b568' : '1px solid #e0e0e0',
+                            backgroundColor: selectedAddressId === addr.id ? '#f0f8f5' : '#fafafa',
+                            transition: 'all 0.2s',
+                            p: '16px',
+                            borderRadius: '12px',
+                            '&:hover': {
+                              backgroundColor: '#f5f5f5',
+                              borderColor: '#78b568',
+                            },
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <Box sx={{ flex: 1 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px', mb: 1 }}>
+                                <Typography sx={{ fontWeight: '600', color: '#333' }}>
+                                  {addr.title}
+                                </Typography>
+                                {addr.is_default && (
+                                  <Chip
+                                    label="پیش‌فرض"
+                                    size="small"
+                                    sx={{
+                                      backgroundColor: '#e3f2fd',
+                                      color: '#1976d2',
+                                      height: '20px',
+                                      fontSize: '12px',
+                                    }}
+                                  />
+                                )}
+                              </Box>
+                              <Typography sx={{ fontSize: '13px', color: '#666', mb: 1 }}>
+                                گیرنده: {addr.name} {addr.last_name}
+                              </Typography>
+                              <Typography sx={{ fontSize: '13px', color: '#666', mb: 1 }}>
+                                {addr.address}
+                              </Typography>
+                              <Box sx={{ display: 'flex', gap: '16px', fontSize: '13px', color: '#888' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <LocationOnIcon sx={{ fontSize: '16px' }} />
+                                  {addr.city_name}، {addr.state_name}
+                                </Box>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <PhoneIcon sx={{ fontSize: '16px' }} />
+                                  {addr.phone}
+                                </Box>
+                              </Box>
+                            </Box>
+                            <Box
+                              sx={{
+                                width: '24px',
+                                height: '24px',
+                                borderRadius: '50%',
+                                border: '2px solid',
+                                borderColor: selectedAddressId === addr.id ? '#78b568' : '#ddd',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                backgroundColor: selectedAddressId === addr.id ? '#78b568' : 'transparent',
+                                ml: 2,
+                              }}
+                            >
+                              {selectedAddressId === addr.id && (
+                                <Box sx={{ color: '#fff', fontSize: '14px', fontWeight: 'bold' }}>✓</Box>
+                              )}
+                            </Box>
+                          </Box>
+                        </Card>
+                      ))}
+                    </Box>
+
+                    {/* Button to add new address */}
+                    <Button
+                      fullWidth
+                      variant="outlined"
+                      onClick={() => setShowAddressForm(!showAddressForm)}
+                      sx={{
+                        mt: 2,
+                        borderColor: '#ff9800',
+                        color: '#ff9800',
+                        padding: '10px',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        textTransform: 'none',
+                        borderRadius: '10px',
+                        '&:hover': { backgroundColor: 'rgba(255, 152, 0, 0.1)', borderColor: '#ff9800' },
+                      }}
+                    >
+                      + ثبت آدرس جدید
+                    </Button>
+                  </Box>
+                )}
+
+                {/* Show address form if no addresses or user clicks create new */}
+                {!loadingAddresses && (addresses.length === 0 || showAddressForm) && (
+                  <>
+                    <Divider sx={{ my: 3 }} />
+                    <Typography sx={{ fontWeight: '600', fontSize: '14px', color: '#333', mb: 2 }}>
+                      {addresses.length === 0 ? 'ثبت آدرس' : 'آدرس جدید'}:
+                    </Typography>
                 <Grid container spacing={2.5}>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      variant="filled"
+                      label="عنوان آدرس"
+                      value={shippingInfo.title}
+                      onChange={(e) => handleShippingInfoChange('title', e.target.value)}
+                      placeholder="مثال: خانه، دفتر کار، مغازه"
+                      disabled={loadingDefaultAddress}
+                      inputProps={{ style: { direction: 'rtl', textAlign: 'right' } }}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <LocationOnIcon sx={{ color: '#999', fontSize: '20px' }} />
+                          </InputAdornment>
+                        ),
+                      }}
+                      InputLabelProps={{ sx: { right: 32, left: 'auto', transformOrigin: 'top right' } }}
+                      sx={{
+                        direction: 'rtl',
+                        '& .MuiFilledInput-root': {
+                          borderRadius: '12px',
+                          backgroundColor: '#fafafa',
+                          paddingRight: '14px',
+                          paddingLeft: '14px',
+                          '&:hover': { backgroundColor: '#f5f5f5' },
+                          '&.Mui-focused': { backgroundColor: '#fff' },
+                          '& .MuiInputAdornment-root': {
+                            marginRight: '0',
+                            marginLeft: '12px',
+                          },
+                          '&:before': {
+                            borderBottom: 'none',
+                          },
+                          '&:after': {
+                            borderBottom: 'none',
+                          },
+                        },
+                        '& .MuiInputLabel-root': { right: 32, left: 'auto', transformOrigin: 'top right' },
+                        '& .MuiInputLabel-shrink': { right: 32, left: 'auto', transformOrigin: 'top right' },
+                        '& .MuiInputBase-input': {
+                          direction: 'rtl',
+                          textAlign: 'right',
+                          paddingRight: '14px !important',
+                          paddingLeft: '0 !important',
+                        },
+                      }}
+                    />
+                  </Grid>
                   <Grid item xs={12} sm={6}>
                     <TextField
                       fullWidth
@@ -1125,43 +1394,6 @@ export default function CartPage() {
                       }}
                     />
                   </Grid>
-                </Grid>
-              </Paper>
-
-              {/* Address Section */}
-              <Paper
-                sx={{
-                  padding: { xs: '20px', sm: '28px' },
-                  borderRadius: '16px',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                  border: '1px solid #e8e8e8',
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-                  <Box
-                    sx={{
-                      width: '44px',
-                      height: '44px',
-                      borderRadius: '12px',
-                      backgroundColor: '#e3f2fd',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <LocalShippingIcon sx={{ color: '#1976d2', fontSize: '24px' }} />
-                  </Box>
-                  <Box>
-                    <Typography sx={{ fontWeight: '700', fontSize: '18px', color: '#333' }}>
-                      آدرس ارسال
-                    </Typography>
-                    <Typography sx={{ fontSize: '13px', color: '#888' }}>
-                      آدرس محل تحویل سفارش را وارد کنید
-                    </Typography>
-                  </Box>
-                </Box>
-
-                <Grid container spacing={2.5}>
                   <Grid item xs={12} sm={6}>
                     <Autocomplete
                       disabled={loadingStates || loadingDefaultAddress}
@@ -1473,6 +1705,31 @@ export default function CartPage() {
                     />
                   </Grid>
                 </Grid>
+                
+                {/* Register Address Button */}
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+                  <Button
+                    variant="contained"
+                    onClick={handleSubmitNewAddress}
+                    disabled={submittingShipping || !isNewAddressFormValid}
+                    sx={{
+                      backgroundColor: isNewAddressFormValid ? '#78b568' : '#ccc',
+                      color: '#fff',
+                      padding: '12px 32px',
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      borderRadius: '15px',
+                      minWidth: '200px',
+                      '&:hover': { 
+                        backgroundColor: isNewAddressFormValid ? '#5a9a4a' : '#ccc' 
+                      },
+                    }}
+                  >
+                    {submittingShipping ? <CircularProgress size={20} color="inherit" /> : 'ثبت آدرس'}
+                  </Button>
+                </Box>
+                    </>
+                )}
               </Paper>
             </Box>
           </Grid>
@@ -1509,16 +1766,19 @@ export default function CartPage() {
                 variant="contained"
                 fullWidth
                 onClick={handleSubmitShippingInfo}
-                disabled={submittingShipping}
+                disabled={submittingShipping || selectedAddressId === null}
                 sx={{
-                  backgroundColor: '#78b568',
+                  backgroundColor: selectedAddressId !== null ? '#78b568' : '#ccc',
                   color: '#fff',
                   padding: '12px',
                   fontSize: '16px',
                   fontWeight: '600',
                   marginBottom: '12px',
                   borderRadius: '15px',
-                  '&:hover': { backgroundColor: '#5a9a4a' },
+                  cursor: selectedAddressId !== null ? 'pointer' : 'not-allowed',
+                  '&:hover': { 
+                    backgroundColor: selectedAddressId !== null ? '#5a9a4a' : '#ccc' 
+                  },
                 }}
               >
                 {submittingShipping ? <CircularProgress size={24} color="inherit" /> : 'ادامه به پرداخت'}
@@ -1579,7 +1839,9 @@ export default function CartPage() {
                     <CreditCardIcon sx={{ color: '#fff', fontSize: '40px' }} />
                   </Box>
                   <Typography sx={{ fontSize: '20px', fontWeight: '600', color: '#333', marginBottom: '8px' }}>
-                    در حال انتقال به درگاه بانکی...
+                    {selectedPaymentMethod === 'card'
+                      ? 'در حال پردازش پرداخت کارت به کارت...'
+                      : 'در حال انتقال به درگاه بانکی...'}
                   </Typography>
                   <Typography sx={{ color: '#666', fontSize: '14px', marginBottom: '24px' }}>
                     لطفاً صبر کنید و از بستن صفحه خودداری کنید
@@ -1632,16 +1894,74 @@ export default function CartPage() {
                       <PaymentIcon sx={{ color: '#fff', fontSize: '26px' }} />
                     </Box>
                     <Box>
-                      <Typography sx={{ fontWeight: '700', fontSize: '18px', color: '#333' }}>
-                        پرداخت آنلاین
+                          <Typography sx={{ fontWeight: '700', fontSize: '18px', color: '#333' }}>
+                        انتخاب روش پرداخت
                       </Typography>
-                      <Typography sx={{ fontSize: '13px', color: '#888' }}>
-                        پرداخت امن از طریق درگاه بانکی
-                      </Typography>
+                     
                     </Box>
                   </Box>
 
                   <Divider sx={{ marginBottom: '24px' }} />
+
+                  <Box sx={{ display: 'flex', gap: '16px', flexWrap: 'wrap', mb: 3 }}>
+                    <Paper
+                      sx={{
+                        flex: 1,
+                        minWidth: '220px',
+                        opacity: 0.55,
+                        backgroundColor: '#f5f5f5',
+                        borderRadius: '16px',
+                        border: '1px solid #d1d5db',
+                        padding: '18px',
+                        cursor: 'not-allowed',
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      <Typography sx={{ fontWeight: '700', marginBottom: '8px', color: '#333' }}>
+                        پرداخت آنلاین
+                      </Typography>
+                      <Typography sx={{ fontSize: '13px', color: '#666', marginBottom: '10px' }}>
+                        پرداخت امن و سریع از طریق درگاه‌های بانکی
+                      </Typography>
+                      <Typography sx={{ fontSize: '12px', color: '#888' }}>
+
+                      </Typography>
+                    </Paper>
+
+                    <Paper
+                      onClick={() => setSelectedPaymentMethod('card')}
+                      sx={{
+                        flex: 1,
+                        minWidth: '220px',
+                        backgroundColor: selectedPaymentMethod === 'card' ? '#f0fdf4' : '#ffffff',
+                        borderRadius: '16px',
+                        border: selectedPaymentMethod === 'card' ? '2px solid #4caf50' : '1px solid #e5e7eb',
+                        padding: '18px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          borderColor: '#4caf50',
+                        },
+                      }}
+                    >
+                      <Typography sx={{ fontWeight: '700', marginBottom: '8px', color: '#333' }}>
+                        کارت به کارت
+                      </Typography>
+                      <Typography sx={{ fontSize: '13px', color: '#666', marginBottom: '10px' }}>
+                        شماره کارت و اطلاعات پرداخت
+                      </Typography>
+                      <Typography sx={{ fontSize: '14px', color: '#111', fontWeight: '600', mb: 1, direction: 'ltr', textAlign: 'left' }}>
+                        5041 7210 5909 5506
+                      </Typography>
+                      <Typography sx={{ fontSize: '13px', color: '#666' }}>
+                        به نام حامد امیری
+                      </Typography>
+                    </Paper>
+                  </Box>
+
+                  <Typography sx={{ fontSize: '13px', color: '#888', mb: 3 }}>
+                    لطفاً مبلغ را به کارت بالا واریز کنید، سپس روی دکمه تأیید پرداخت کارت به کارت کلیک کنید.
+                  </Typography>
 
                   {/* Credit Option - Only show if customer has credit */}
                   {loadingCredit ? (
@@ -1743,19 +2063,26 @@ export default function CartPage() {
                     variant="contained"
                     fullWidth
                     onClick={handlePayment}
+                    disabled={selectedPaymentMethod === 'online'}
                     sx={{
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      background: selectedPaymentMethod === 'card'
+                        ? 'linear-gradient(135deg, #4caf50 0%, #43a047 100%)'
+                        : 'linear-gradient(135deg, #cbd5e1 0%, #e2e8f0 100%)',
                       color: '#fff',
                       padding: '14px',
                       fontSize: '16px',
                       fontWeight: '600',
                       borderRadius: '15px',
                       '&:hover': {
-                        background: 'linear-gradient(135deg, #5a6fd6 0%, #6a4190 100%)',
+                        background: selectedPaymentMethod === 'card'
+                          ? 'linear-gradient(135deg, #43a047 0%, #388e3c 100%)'
+                          : 'linear-gradient(135deg, #cbd5e1 0%, #e2e8f0 100%)',
                       },
                     }}
                   >
-                    پرداخت {serverTotal ? new Intl.NumberFormat('fa-IR').format(serverTotal) + ' تومان' : ''}
+                    {selectedPaymentMethod === 'card'
+                      ? `تأیید پرداخت کارت به کارت ${new Intl.NumberFormat('fa-IR').format(serverTotal !== null ? serverTotal : calculateTotal())} تومان`
+                      : 'پرداخت آنلاین (غیرفعال)'}
                   </Button>
 
                   <Button
@@ -1834,7 +2161,7 @@ export default function CartPage() {
               <Box sx={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                 <Typography sx={{ color: '#666', fontSize: '14px' }}>مجموع:</Typography>
                 <Typography sx={{ fontWeight: '700', fontSize: '16px', color: '#333' }}>
-                  {serverTotal ? new Intl.NumberFormat('fa-IR').format(serverTotal) : '---'} تومان
+                  {new Intl.NumberFormat('fa-IR').format(serverTotal !== null ? serverTotal : calculateTotal())} تومان
                 </Typography>
               </Box>
             </Paper>

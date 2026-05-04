@@ -567,7 +567,26 @@ console.log("discounttype" , discounttype);
      console.log("res : ",res);
      
       if (res.hasError) {
-        // اگر خطا بود، در queue ذخیره کن
+        // چک کردن نوع ارور
+        let isInventoryError = false;
+        try {
+          const errorData = JSON.parse(res.errorText);
+          if (errorData.error && errorData.error.includes('موجودی')) {
+            isInventoryError = true;
+            toast.error(errorData.error);
+          }
+        } catch (parseError) {
+          // اگر parse نشد، فرض کنیم ارور عمومی است
+          console.error('خطا در parse ارور:', parseError);
+        }
+
+        if (isInventoryError) {
+          // برای ارور موجودی، خرید را ذخیره نکن و متوقف کن
+          setIsSubmitting(false);
+          return;
+        }
+
+        // اگر خطا بود و موجودی نبود، در queue ذخیره کن
         const timestamp = Date.now();
         const random = Math.random().toString(36).substr(2, 9);
         const counter = pendingPurchases.length;
