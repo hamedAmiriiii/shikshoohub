@@ -288,7 +288,7 @@ export default function CardUser(props: any) {
       price: salePrice || "",
       quantity: quantity || "1"
     });
-    router.push(`/shikshoo/admin/print?${params.toString()}`);
+    router.push(`/shikshoo/admin/printCustom?${params.toString()}`);
   };
 
   const handleUpdate = async () => {
