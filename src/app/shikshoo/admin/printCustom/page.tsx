@@ -901,7 +901,8 @@ function PrintLabelContent() {
           }
 
           .barcode {
-            max-width: ${printSettings.pageWidth / printSettings.columns - 2}mm !important;
+            width: ${barcodeContainerWidth}mm !important;
+            max-width: ${barcodeContainerWidth}mm !important;
             margin-top: 4mm !important;
             margin-bottom: 0 !important;
             display: block !important;

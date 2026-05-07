@@ -1,6 +1,6 @@
 "use client";
 import List from "@/app/coponent/grid/Grid";
-import React, { useState, Suspense, useEffect } from "react";
+import React, { useState, Suspense, useEffect, useMemo, useCallback } from "react";
 import { Box, Typography, IconButton, Paper, RadioGroup, FormControlLabel, Radio, Button, TextField } from "@mui/material";
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
@@ -32,7 +32,7 @@ export default function ListExpenses() {
   const [editingExpense, setEditingExpense] = useState<any>(null);
   
   // Form states
-  const [type, setType] = useState<"سرمایه" | "جاری">("سرمایه");
+  const [type, setType] = useState<"سرمایه" | "جاری">("جاری");
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
   const [userName, setUserName] = useState("");
@@ -45,11 +45,11 @@ export default function ListExpenses() {
     }
   }, []);
 
-  let searchBoxList: any = [
+  const searchBoxList: any = useMemo(() => [
     { fieldName: "type", fieldOperation: "MATCH", fieldValue: "", nextConditionOperator: "OR" },
     { fieldName: "title", fieldOperation: "MATCH", fieldValue: "", nextConditionOperator: "OR" },
     { fieldName: "user_name", fieldOperation: "MATCH", fieldValue: "", nextConditionOperator: "OR" },
-  ];
+  ], []);
 
 
   const buildUrl = () => {
@@ -117,9 +117,9 @@ export default function ListExpenses() {
     setFilterSheetOpen(false);
   };
 
-  const hasActiveFilters = () => {
+  const hasFilters = useMemo(() => {
     return expenseTypeFilter !== 'all' || filterMode !== null || dateRange.length > 0;
-  };
+  }, [expenseTypeFilter, filterMode, dateRange]);
 
   const FilterComponent = () => (
     <Box sx={{ padding: "16px" }}>
@@ -240,7 +240,7 @@ export default function ListExpenses() {
       </Box>
 
       {/* Clear Filters Button */}
-      {hasActiveFilters() && (
+      {hasFilters && (
         <Box sx={{ marginTop: "20px", display: "flex", justifyContent: "center" }}>
           <Button
             variant="outlined"
@@ -262,6 +262,52 @@ export default function ListExpenses() {
     </Box>
   );
 
+  const filterComponent = useMemo(() => <FilterComponent />, [expenseTypeFilter, dateRange, filterMode]);
+
+  const customActions = useMemo(() => (
+    <Box sx={{ display: "flex", gap: "8px", alignItems: "center" }}>
+      {hasFilters && (
+        <IconButton
+          onClick={handleClearFilters}
+          sx={{
+            color: "#ff4444",
+            backgroundColor: "rgba(255, 68, 68, 0.1)",
+            "&:hover": {
+              backgroundColor: "rgba(255, 68, 68, 0.2)"
+            }
+          }}
+          size="small"
+        >
+          <DeleteIcon />
+        </IconButton>
+      )}
+      <IconButton
+        onClick={() => setFilterSheetOpen(true)}
+        sx={{
+          color: hasFilters ? "#78b568" : "#000",
+          backgroundColor: hasFilters ? "rgba(120, 181, 104, 0.2)" : "rgba(255, 255, 255, 0.1)",
+          border: "1px solid #C9C9C9",
+          "&:hover": {
+            backgroundColor: hasFilters ? "rgba(120, 181, 104, 0.3)" : "rgba(255, 255, 255, 0.2)"
+          }
+        }}
+      >
+        <FilterListIcon />
+      </IconButton>
+    </Box>
+  ), [hasFilters, handleClearFilters]);
+
+  const handleEditExpense = useCallback((expense: any) => {
+    setEditingExpense(expense);
+    setType(expense.type || "جاری");
+    setTitle(expense.title || "");
+    setAmount(formatNumber(expense.amount || 0));
+    setUserName(expense.user_name || "");
+    setEditBottomSheet(true);
+  }, []);
+
+  const CartComponent = useMemo(() => (props: any) => <ExpenseCard props={{ ...props, onEdit: handleEditExpense }} />, [handleEditExpense]);
+
   const handleOpenBottomSheet = () => {
     setOpenBottomSheet(true);
   };
@@ -269,26 +315,17 @@ export default function ListExpenses() {
   const handleCloseBottomSheet = () => {
     setOpenBottomSheet(false);
     // Reset form
-    setType("سرمایه");
+    setType("جاری");
     setTitle("");
     setAmount("");
     // Keep userName as it's saved in localStorage
-  };
-
-  const handleEditExpense = (expense: any) => {
-    setEditingExpense(expense);
-    setType(expense.type || "سرمایه");
-    setTitle(expense.title || "");
-    setAmount(formatNumber(expense.amount || 0));
-    setUserName(expense.user_name || "");
-    setEditBottomSheet(true);
   };
 
   const handleCloseEditBottomSheet = () => {
     setEditBottomSheet(false);
     setEditingExpense(null);
     // Reset form
-    setType("سرمایه");
+    setType("جاری");
     setTitle("");
     setAmount("");
   };
@@ -479,42 +516,11 @@ export default function ListExpenses() {
             disableFilter={true}
             searchBoxList={searchBoxList}
             filterBoxList={dataFilter}
-            CartComponent={(props: any) => <ExpenseCard props={{...props, onEdit: handleEditExpense}} />}
+            CartComponent={CartComponent}
             url={buildUrl()}
-            filterComponent={<FilterComponent />}
+            filterComponent={filterComponent}
             showTotal={true}
-            customActions={
-              <Box sx={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                {hasActiveFilters() && (
-                  <IconButton
-                    onClick={handleClearFilters}
-                    sx={{
-                      color: "#ff4444",
-                      backgroundColor: "rgba(255, 68, 68, 0.1)",
-                      "&:hover": {
-                        backgroundColor: "rgba(255, 68, 68, 0.2)"
-                      }
-                    }}
-                    size="small"
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                )}
-                <IconButton
-                  onClick={() => setFilterSheetOpen(true)}
-                  sx={{
-                    color: hasActiveFilters() ? "#78b568" : "#000",
-                    backgroundColor: hasActiveFilters() ? "rgba(120, 181, 104, 0.2)" : "rgba(255, 255, 255, 0.1)",
-                    border: "1px solid #C9C9C9",
-                    "&:hover": {
-                      backgroundColor: hasActiveFilters() ? "rgba(120, 181, 104, 0.3)" : "rgba(255, 255, 255, 0.2)"
-                    }
-                  }}
-                >
-                  <FilterListIcon />
-                </IconButton>
-              </Box>
-            }
+            customActions={customActions}
           />
         </div>
 

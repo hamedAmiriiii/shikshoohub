@@ -19,6 +19,9 @@ export default function InstallmentCreditsPage() {
   const [credit, setCredit] = useState('');
   const [creditDisplay, setCreditDisplay] = useState('');
   const [isCreditFocused, setIsCreditFocused] = useState(false);
+  const [installmentCredit, setInstallmentCredit] = useState('');
+  const [installmentCreditDisplay, setInstallmentCreditDisplay] = useState('');
+  const [isInstallmentCreditFocused, setIsInstallmentCreditFocused] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -66,6 +69,9 @@ export default function InstallmentCreditsPage() {
     setCredit('');
     setCreditDisplay('');
     setIsCreditFocused(false);
+    setInstallmentCredit('');
+    setInstallmentCreditDisplay('');
+    setIsInstallmentCreditFocused(false);
     setCreateDialogOpen(true);
   };
 
@@ -76,6 +82,9 @@ export default function InstallmentCreditsPage() {
     setCredit('');
     setCreditDisplay('');
     setIsCreditFocused(false);
+    setInstallmentCredit('');
+    setInstallmentCreditDisplay('');
+    setIsInstallmentCreditFocused(false);
   };
 
   const handleEditCredit = (creditData: any) => {
@@ -85,6 +94,10 @@ export default function InstallmentCreditsPage() {
     setCredit(creditValue);
     setCreditDisplay(formatNumber(parseFloat(creditValue) || 0));
     setIsCreditFocused(false);
+    const installmentValue = creditData.installment_credit?.toString() || '0';
+    setInstallmentCredit(installmentValue);
+    setInstallmentCreditDisplay(formatNumber(parseFloat(installmentValue) || 0));
+    setIsInstallmentCreditFocused(false);
     setCreateDialogOpen(true);
   };
 
@@ -135,6 +148,11 @@ export default function InstallmentCreditsPage() {
       return;
     }
 
+    if (!installmentCredit || installmentCredit.trim() === '') {
+      toast.error("لطفاً مبلغ اعتبار اقساطی را وارد کنید");
+      return;
+    }
+
     const creditValue = parseFloat(credit.replace(/,/g, ''));
     if (isNaN(creditValue) || creditValue < 0) {
       toast.error("مبلغ اعتبار باید یک عدد مثبت باشد");
@@ -144,9 +162,17 @@ export default function InstallmentCreditsPage() {
     setIsSubmitting(true);
     try {
       const token = tokenCode();
+      const installmentValue = parseFloat(installmentCredit.replace(/,/g, ''));
+      if (isNaN(installmentValue) || installmentValue < 0) {
+        toast.error("مبلغ اعتبار اقساطی باید یک عدد مثبت باشد");
+        setIsSubmitting(false);
+        return;
+      }
+
       const data = {
         phone: phone.trim(),
-        credit: creditValue
+        credit: creditValue,
+        installment_credit: installmentValue
       };
 
       let res;
@@ -336,6 +362,63 @@ export default function InstallmentCreditsPage() {
                   } else {
                     setCredit('');
                     setCreditDisplay('');
+                  }
+                }}
+                inputProps={{
+                  style: { textAlign: "right", direction: "ltr" }
+                }}
+                fullWidth
+                required
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    backgroundColor: "#2b3143",
+                    color: "#fff",
+                    "& fieldset": {
+                      borderColor: "#505669",
+                    },
+                    "&:hover fieldset": {
+                      borderColor: "#78b568",
+                    },
+                    "&.Mui-focused fieldset": {
+                      borderColor: "#78b568",
+                    },
+                  },
+                  "& .MuiInputLabel-root": {
+                    color: "rgba(255,255,255,0.7)",
+                  },
+                  "& .MuiInputLabel-root.Mui-focused": {
+                    color: "#78b568",
+                  },
+                }}
+              />
+              <TextField
+                label="مبلغ اعتبار اقساطی (تومان)"
+                value={isInstallmentCreditFocused ? installmentCredit : installmentCreditDisplay}
+                onChange={(e) => {
+                  const numericValue = formatCreditInput(e.target.value);
+                  setInstallmentCredit(numericValue);
+                  if (numericValue === '') {
+                    setInstallmentCreditDisplay('');
+                  } else {
+                    const num = parseFloat(numericValue);
+                    if (!isNaN(num)) {
+                      setInstallmentCreditDisplay(formatNumber(num));
+                    }
+                  }
+                }}
+                onFocus={() => {
+                  setIsInstallmentCreditFocused(true);
+                  setInstallmentCredit(installmentCredit.replace(/,/g, ''));
+                }}
+                onBlur={() => {
+                  setIsInstallmentCreditFocused(false);
+                  const num = parseFloat(installmentCredit.replace(/,/g, ''));
+                  if (!isNaN(num) && num >= 0) {
+                    setInstallmentCredit(num.toString());
+                    setInstallmentCreditDisplay(formatNumber(num));
+                  } else {
+                    setInstallmentCredit('');
+                    setInstallmentCreditDisplay('');
                   }
                 }}
                 inputProps={{
