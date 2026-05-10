@@ -39,9 +39,10 @@ export default function ListExpenses() {
 
   // Load userName from localStorage on mount
   useEffect(() => {
-    const savedUserName = localStorage.getItem('expense_user_name');
-    if (savedUserName) {
-      setUserName(savedUserName);
+    let user = JSON.parse(localStorage.getItem('user'))
+    
+    if (user) {
+      setUserName(user.name || '');
     }
   }, []);
 
@@ -349,6 +350,8 @@ export default function ListExpenses() {
   };
 
   const handleSubmitExpense = async () => {
+    console.log("userName" , userName);
+    
     if (!title.trim() || !amount.trim() || !userName.trim() || !type) {
       toast.error("لطفاً تمام فیلدها را پر کنید");
       return;
