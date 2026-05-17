@@ -1,6 +1,6 @@
 "use client";
 import List from "@/app/coponent/grid/Grid";
-import React, { useState, Suspense, useEffect, useMemo } from "react";
+import React, { useState, Suspense, useEffect } from "react";
 
 import { Box, Grid, Button, TextField, Typography, IconButton, Card, CardMedia, Select, MenuItem, FormControl, InputLabel, Chip, OutlinedInput, Checkbox, Collapse, Paper, Dialog, DialogTitle, DialogContent, DialogActions, Autocomplete } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -21,16 +21,6 @@ import tokenCode from "@/app/coponent/tokenCode";
 import { apiRequestError } from "@/app/lib/apiRequestError";
 import { useQueryClient } from '@tanstack/react-query';
 import { mainColors, searchColors } from "../../lib/colors";
-
-const PRODUCT_SORT_OPTIONS = [
-    { value: "", label: "پیش‌فرض" },
-    { value: "quantity_desc", label: "بیشترین موجودی" },
-    { value: "quantity_asc", label: "کمترین موجودی" },
-    { value: "most_profit_percent", label: "بیشترین سود" },
-    { value: "profit_percent_asc", label: "کمترین سود" },
-    { value: "discount_desc", label: "بیشترین تخفیف" },
-    { value: "discount_asc", label: "کمترین تخفیف" },
-] as const;
 
 export default function ListData() {
     const queryClient = useQueryClient();
@@ -61,29 +51,6 @@ export default function ListData() {
     const [manufacturerModalOpen, setManufacturerModalOpen] = useState(false);
     const [manufacturerProduct, setManufacturerProduct] = useState<any>(null);
     const [selectedManufacturerId, setSelectedManufacturerId] = useState<number | "">("");
-    const [productSort, setProductSort] = useState("");
-
-    const productListUrl = useMemo(() => {
-        if (!productSort) return "/api/product";
-        return `/api/product?sort=${productSort}`;
-    }, [productSort]);
-
-    const handleProductSortChange = (value: string) => {
-        setProductSort(value);
-        router.push("/admin/product");
-        queryClient.invalidateQueries({
-            predicate: (query) => {
-                const queryKey = query.queryKey;
-                if (queryKey[0] === "datas-infinite" || queryKey[0] === "datas-desktop") {
-                    const url = queryKey[2];
-                    if (url && typeof url === "string" && url.includes("/api/product")) {
-                        return true;
-                    }
-                }
-                return false;
-            },
-        });
-    };
 
     // Scroll to last printed product when page loads
     useEffect(() => {
@@ -273,6 +240,8 @@ export default function ListData() {
       { fieldName: "barcode", fieldOperation: "MATCH", fieldValue: "", nextConditionOperator: "OR" },
     ];
   
+    const FilterComponent = () => <h1>ggggggggg</h1>;
+
     const formatNumber = (num: number | string) => {
       const numValue = typeof num === 'string' ? parseFloat(num) : num;
       if (isNaN(numValue)) return '0';
@@ -505,13 +474,13 @@ export default function ListData() {
             }
             // اگر URL نسبی است
             if (img.startsWith('/storage/')) {
-              return `https://api.webinoplus.ir${img}`;
+              return `https://webinoplus.ir${img}`;
             }
             return img;
           } else if (img.image_url) {
             // اگر object است و image_url دارد
             if (img.image_url.startsWith('/storage/')) {
-              return `https://api.webinoplus.ir${img.image_url}`;
+              return `https://webinoplus.ir${img.image_url}`;
             }
             if (img.image_url.startsWith('http')) {
               return img.image_url;
@@ -520,7 +489,7 @@ export default function ListData() {
           } else if (img.url) {
             // اگر url property دارد
             if (img.url.startsWith('/storage/')) {
-              return `https://api.webinoplus.ir${img.url}`;
+              return `https://webinoplus.ir${img.url}`;
             }
             if (img.url.startsWith('http')) {
               return img.url;
@@ -710,7 +679,7 @@ export default function ListData() {
           {/* <Box sx={{ display: "flex", gap: "2px", alignItems: "center" }}>
            
             <Box
-              onClick={() => router.push("/admin/printAll")}
+              onClick={() => router.push("/shikshoo/admin/printAll")}
               sx={{
                 backgroundColor: "#ff9100",
                 borderRadius: "12px",
@@ -737,7 +706,7 @@ export default function ListData() {
             </Box>
 
             <Box
-              onClick={() => router.push("/admin/product/create")}
+              onClick={() => router.push("/shikshoo/admin/product/create")}
               sx={{
                 backgroundColor: "#78b568",
                 borderRadius: "12px",
@@ -772,44 +741,13 @@ export default function ListData() {
             searchBoxList={searchBoxList}
             filterBoxList={dataFilter}
             CartComponent={(props: any) => <CardUser props={props} manufacturers={manufacturers} />}
-            url={productListUrl}
-            filterComponent={<></>}
+            url={"/api/product"}
+            filterComponent={<FilterComponent />}
             showTotal={false}
             desktopColumns={desktopColumns}
             onEditItem={handleEditProduct}
             onSizeColorItem={handleSizeColorProduct}
             onManufacturerItem={handleManufacturerProduct}
-            customActions={
-              <FormControl size="small" sx={{ minWidth: { xs: 140, sm: 180 } }}>
-                <Select
-                  value={productSort}
-                  displayEmpty
-                  onChange={(e) => handleProductSortChange(e.target.value as string)}
-                  sx={{
-                    backgroundColor: "#2b3143",
-                    color: "#fff",
-                    borderRadius: "12px",
-                    fontSize: "13px",
-                    height: "40px",
-                    "& .MuiOutlinedInput-notchedOutline": { borderColor: "#505669" },
-                    "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#78b568" },
-                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#78b568" },
-                    "& .MuiSvgIcon-root": { color: "#fff" },
-                  }}
-                  renderValue={(selected) => {
-                    if (!selected) return "مرتب‌سازی";
-                    const opt = PRODUCT_SORT_OPTIONS.find((o) => o.value === selected);
-                    return opt?.label ?? "مرتب‌سازی";
-                  }}
-                >
-                  {PRODUCT_SORT_OPTIONS.map((opt) => (
-                    <MenuItem key={opt.value || "default"} value={opt.value}>
-                      {opt.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            }
           />
         </div>
 
