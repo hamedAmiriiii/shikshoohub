@@ -47,7 +47,7 @@ const DesktopActionsCell: React.FC<{
       price: item?.sale_price?.toString() || "",
       quantity: item?.quantity?.toString() || "1"
     });
-    router.push(`/shikshoo/admin/printCustom?${params.toString()}`);
+    router.push(`/admin/printCustom?${params.toString()}`);
   };
 
   return (

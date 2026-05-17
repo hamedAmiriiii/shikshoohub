@@ -9,7 +9,7 @@ const nextConfig = {
         ignoreBuildErrors: true,
   },
   images: {
-    domains: ['https://webinoplus.ir' , 'webinoplus.ir', 'api.webinoplus.ir'], // اضافه کردن هاست به لیست مجاز
+    domains: ['https://api.webinoplus.ir' , 'webinoplus.ir', 'api.webinoplus.ir'], // اضافه کردن هاست به لیست مجاز
     remotePatterns: [
       {
         protocol: 'https',

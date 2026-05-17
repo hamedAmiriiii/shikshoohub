@@ -7,6 +7,7 @@ import {  QueryClientProvider } from "@tanstack/react-query";
 import queryClient from "./lib/queryClient";
 import ServiceWorkerRegistration from "./components/ServiceWorkerRegistration";
 import PWAHead from "./components/PWAHead";
+import AppShell from "./AppShell";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -52,9 +53,9 @@ export default function RootLayout({
         <QueryClientProvider client={queryClient}>
         {/* <AuthProvider > */}
         <LanguageProvider>
-          {children}
+          <AppShell>{children}</AppShell>
           <ServiceWorkerRegistration />
-          </LanguageProvider>
+        </LanguageProvider>
           </QueryClientProvider>
         {/* </AuthProvider> */}
         

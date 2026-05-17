@@ -112,7 +112,7 @@ export default function CardUser(props: any) {
 
         <Box xs={2} sx={{ paddingBottom: 0 }}>
           {props?.props?.data?.personality_image && <Image
-            src={`https://webinoplus.ir${props?.props?.data?.personality_image}`}
+            src={`https://api.webinoplus.ir${props?.props?.data?.personality_image}`}
             width={80}
             height={80}
             alt={`تصویر `}
