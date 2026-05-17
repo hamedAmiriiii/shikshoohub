@@ -169,7 +169,7 @@ export default function CategoryProductsPage() {
         if (firstImage.image_url.startsWith('http')) {
           return firstImage.image_url;
         } else if (firstImage.image_url.startsWith('/storage/')) {
-          return `https://webinoplus.ir${firstImage.image_url}`;
+          return `http://webinoplus.ir${firstImage.image_url}`;
         }
         return firstImage.image_url;
       }
@@ -178,7 +178,7 @@ export default function CategoryProductsPage() {
       if (product.image.startsWith('http')) {
         return product.image;
       } else if (product.image.startsWith('/storage/')) {
-        return `https://webinoplus.ir${product.image}`;
+        return `http://webinoplus.ir${product.image}`;
       }
       return product.image;
     }

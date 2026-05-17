@@ -12,7 +12,7 @@ export interface CartItem {
 }
 
 const CART_STORAGE_KEY = 'shikshoo_cart';
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://webinoplus.ir';
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://webinoplus.ir';
 
 // دریافت توکن کاربر
 const getCustomerToken = (): string | null => {

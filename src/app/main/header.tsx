@@ -106,7 +106,7 @@ export default function Header() {
                 color="inherit"
               >
                 {user?.personality_image && <Image
-            src={`https://webinoplus.ir${user?.personality_image}`}
+            src={`http://webinoplus.ir${user?.personality_image}`}
             width={60}
             height={60}
             alt={``}

@@ -132,7 +132,7 @@ export default function ProductDetailPage() {
         if (img.image_url.startsWith('http')) {
           return img.image_url;
         } else if (img.image_url.startsWith('/storage/')) {
-          return `https://webinoplus.ir${img.image_url}`;
+          return `http://webinoplus.ir${img.image_url}`;
         }
         return img.image_url;
       });
@@ -141,7 +141,7 @@ export default function ProductDetailPage() {
       if (product.image.startsWith('http')) {
         return [product.image];
       } else if (product.image.startsWith('/storage/')) {
-        return [`https://webinoplus.ir${product.image}`];
+        return [`http://webinoplus.ir${product.image}`];
       }
       return [product.image];
     }

@@ -474,13 +474,13 @@ export default function ListData() {
             }
             // اگر URL نسبی است
             if (img.startsWith('/storage/')) {
-              return `https://webinoplus.ir${img}`;
+              return `http://webinoplus.ir${img}`;
             }
             return img;
           } else if (img.image_url) {
             // اگر object است و image_url دارد
             if (img.image_url.startsWith('/storage/')) {
-              return `https://webinoplus.ir${img.image_url}`;
+              return `http://webinoplus.ir${img.image_url}`;
             }
             if (img.image_url.startsWith('http')) {
               return img.image_url;
@@ -489,7 +489,7 @@ export default function ListData() {
           } else if (img.url) {
             // اگر url property دارد
             if (img.url.startsWith('/storage/')) {
-              return `https://webinoplus.ir${img.url}`;
+              return `http://webinoplus.ir${img.url}`;
             }
             if (img.url.startsWith('http')) {
               return img.url;

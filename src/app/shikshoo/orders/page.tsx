@@ -186,7 +186,7 @@ export default function CustomerOrdersPage() {
         if (imageUrl.startsWith("http")) {
           return imageUrl;
         }
-        return `https://webinoplus.ir${imageUrl}`;
+        return `http://webinoplus.ir${imageUrl}`;
       }
     }
     return "/pic/noImageShop.jpg";

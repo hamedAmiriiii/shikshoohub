@@ -370,7 +370,7 @@ export default function ShopHomePage() {
       const firstImage = product.images[0];
       // اگر image_url با /storage شروع می‌شود، باید با base URL ترکیب شود
       if (firstImage.image_url && firstImage.image_url.startsWith('/storage/')) {
-        return `https://webinoplus.ir${firstImage.image_url}`;
+        return `http://webinoplus.ir${firstImage.image_url}`;
       }
       // اگر image_url کامل است و با https شروع می‌شود، مستقیماً استفاده کن
       if (firstImage.image_url && firstImage.image_url.startsWith('http')) {
