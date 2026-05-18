@@ -48,7 +48,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
        
-       
+        
         <PWAHead />
         <QueryClientProvider client={queryClient}>
         {/* <AuthProvider > */}
