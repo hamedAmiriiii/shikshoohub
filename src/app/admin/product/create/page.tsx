@@ -3,7 +3,8 @@
 "use client";
 import tokenCode from "@/app/coponent/tokenCode";
 import { apiRequestError } from "@/app/lib/apiRequestError/client";
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { toast, ToastContainer } from "react-toastify";
 
 import "react-multi-date-picker/styles/layouts/mobile.css"
@@ -15,10 +16,6 @@ import {
   Grid,
   Card,
   CardMedia,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Chip,
   Checkbox,
   Collapse,
@@ -28,19 +25,51 @@ import {
   Modal,
   TextField,
   Input,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
+import PrintIcon from '@mui/icons-material/Print';
+import AddIcon from '@mui/icons-material/Add';
 import FlashlightOnIcon from '@mui/icons-material/FlashlightOn';
 import FlashlightOffIcon from '@mui/icons-material/FlashlightOff';
+import SearchIcon from '@mui/icons-material/Search';
 import BarcodeScannerComponent from "react-qr-barcode-scanner";
 import TextInput from "@/app/coponent/TextInput/TextInput";
 import { useRouter } from "next/navigation";
 import 'react-toastify/dist/ReactToastify.css';
 
+/** استخراج آرایه از پاسخ‌های مختلف API */
+function extractApiList(res: unknown, listKeys: string[] = []): any[] {
+  if (!res || typeof res !== "object") return [];
+  const r = res as Record<string, unknown>;
+  if (r.hasError) return [];
+
+  if (Array.isArray(res)) return res as any[];
+
+  if (Array.isArray(r.data)) return r.data as any[];
+
+  const nested = r.data;
+  if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+    const d = nested as Record<string, unknown>;
+    if (Array.isArray(d.data)) return d.data as any[];
+    for (const key of listKeys) {
+      if (Array.isArray(d[key])) return d[key] as any[];
+    }
+  }
+
+  for (const key of listKeys) {
+    if (Array.isArray(r[key])) return r[key] as any[];
+  }
+
+  return [];
+}
 
 export default function Page() {
   const router = useRouter();
@@ -57,10 +86,23 @@ export default function Page() {
   const [categories, setCategories] = useState<any[]>([]); // لیست دسته‌بندی‌ها
   const [manufacturerId, setManufacturerId] = useState<number | "">(""); // ID تولیدکننده
   const [manufacturers, setManufacturers] = useState<any[]>([]); // لیست تولیدکنندگان
+  const [categorySearch, setCategorySearch] = useState("");
+  const [manufacturerSearch, setManufacturerSearch] = useState("");
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [manufacturersLoading, setManufacturersLoading] = useState(true);
   const [barcodeScannerOpen, setBarcodeScannerOpen] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
   const [scanManualCode, setScanManualCode] = useState("");
   const barcodeScanInputRef = useRef<HTMLInputElement>(null);
+  const [successDialogOpen, setSuccessDialogOpen] = useState(false);
+  const [createdProduct, setCreatedProduct] = useState<{
+    id?: number;
+    name: string;
+    barcode: string;
+    sale_price: string | number;
+    quantity: string | number;
+  } | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const applyScannedBarcode = useCallback((code: string) => {
     const trimmed = code.trim().slice(0, 255);
@@ -89,40 +131,66 @@ export default function Page() {
   // دریافت لیست دسته‌بندی‌ها
   useEffect(() => {
     const fetchCategories = async () => {
+      setCategoriesLoading(true);
       try {
         const token = tokenCode();
-        const res = await apiRequestError("Get", {}, {}, `/api/category?tree=true`, true, true, token);
-        
-        if (!res.hasError && Array.isArray(res)) {
-          setCategories(res);
-        } else if (!res.hasError && res.data && Array.isArray(res.data)) {
-          setCategories(res.data);
+        if (!token) {
+          setCategories([]);
+          return;
         }
+        const res = await FetchWithJwtClient("GET", "/api/category?tree=true", token);
+
+        if (res?.hasError) {
+          const msg = res.message || "خطا در دریافت دسته‌بندی‌ها";
+          toast.error(typeof msg === "string" ? msg : "خطا در دریافت دسته‌بندی‌ها");
+          setCategories([]);
+          return;
+        }
+
+        const list = extractApiList(res, ["categories", "tree", "items"]);
+        setCategories(list);
       } catch (error) {
-        console.error('Error fetching categories:', error);
+        console.error("Error fetching categories:", error);
+        toast.error("خطا در دریافت دسته‌بندی‌ها");
+        setCategories([]);
+      } finally {
+        setCategoriesLoading(false);
       }
     };
-    
+
     fetchCategories();
   }, []);
 
   // دریافت لیست تولیدکنندگان
   useEffect(() => {
     const fetchManufacturers = async () => {
+      setManufacturersLoading(true);
       try {
         const token = tokenCode();
-        const res = await apiRequestError("Get", {}, {}, `/api/manufacturers`, true, true, token);
-        
-        if (!res.hasError && Array.isArray(res)) {
-          setManufacturers(res);
-        } else if (!res.hasError && res.data && Array.isArray(res.data)) {
-          setManufacturers(res.data);
+        if (!token) {
+          setManufacturers([]);
+          return;
         }
+        const res = await FetchWithJwtClient("GET", "/api/manufacturers", token);
+
+        if (res?.hasError) {
+          const msg = res.message || "خطا در دریافت تولیدکنندگان";
+          toast.error(typeof msg === "string" ? msg : "خطا در دریافت تولیدکنندگان");
+          setManufacturers([]);
+          return;
+        }
+
+        const list = extractApiList(res, ["manufacturers", "items"]);
+        setManufacturers(list);
       } catch (error) {
-        console.error('Error fetching manufacturers:', error);
+        console.error("Error fetching manufacturers:", error);
+        toast.error("خطا در دریافت تولیدکنندگان");
+        setManufacturers([]);
+      } finally {
+        setManufacturersLoading(false);
       }
     };
-    
+
     fetchManufacturers();
   }, []);
 
@@ -138,11 +206,51 @@ export default function Page() {
     return result;
   };
 
+  const filterCategoryTree = useCallback((cats: any[], query: string): any[] => {
+    const q = query.trim().toLowerCase();
+    if (!q) return cats;
+
+    return cats.reduce<any[]>((acc, cat) => {
+      const nameMatch = String(cat.name || "").toLowerCase().includes(q);
+      const filteredChildren = cat.children?.length ? filterCategoryTree(cat.children, query) : [];
+      if (nameMatch || filteredChildren.length > 0) {
+        acc.push({
+          ...cat,
+          children: filteredChildren.length > 0 ? filteredChildren : cat.children,
+        });
+      }
+      return acc;
+    }, []);
+  }, []);
+
+  const filteredCategories = useMemo(
+    () => filterCategoryTree(categories, categorySearch),
+    [categories, categorySearch, filterCategoryTree],
+  );
+
+  const filteredManufacturers = useMemo(() => {
+    const q = manufacturerSearch.trim().toLowerCase();
+    if (!q) return manufacturers;
+    return manufacturers.filter((m) => String(m.name || "").toLowerCase().includes(q));
+  }, [manufacturers, manufacturerSearch]);
+
   // کامپوننت درختی برای نمایش دسته‌بندی‌ها
-  const CategoryTreeItem = ({ category, level = 0 }: { category: any; level?: number }) => {
-    const [expanded, setExpanded] = useState(false);
+  const CategoryTreeItem = ({
+    category,
+    level = 0,
+    forceExpanded = false,
+  }: {
+    category: any;
+    level?: number;
+    forceExpanded?: boolean;
+  }) => {
+    const [expanded, setExpanded] = useState(forceExpanded);
     const hasChildren = category.children && category.children.length > 0;
     const isSelected = categoryIds.includes(category.id);
+
+    useEffect(() => {
+      if (forceExpanded) setExpanded(true);
+    }, [forceExpanded]);
 
     const handleToggle = () => {
       if (hasChildren) {
@@ -165,8 +273,8 @@ export default function Page() {
           sx={{
             display: 'flex',
             alignItems: 'center',
-            padding: '8px 12px',
-            paddingRight: `${12 + level * 24}px`,
+            padding: { xs: '8px 12px', md: '4px 8px' },
+            paddingRight: { xs: `${12 + level * 24}px`, md: `${8 + level * 16}px` },
             cursor: hasChildren ? 'pointer' : 'default',
             '&:hover': {
               backgroundColor: 'rgba(120, 181, 104, 0.1)',
@@ -176,33 +284,40 @@ export default function Page() {
         >
           {hasChildren ? (
             expanded ? (
-              <ExpandMoreIcon sx={{ color: '#78b568', fontSize: '20px', marginLeft: '8px' }} />
+              <ExpandMoreIcon sx={{ color: '#78b568', fontSize: { xs: 20, md: 14 }, marginLeft: { xs: '8px', md: '4px' } }} />
             ) : (
-              <ChevronRightIcon sx={{ color: '#78b568', fontSize: '20px', marginLeft: '8px' }} />
+              <ChevronRightIcon sx={{ color: '#78b568', fontSize: { xs: 20, md: 14 }, marginLeft: { xs: '8px', md: '4px' } }} />
             )
           ) : (
-            <Box sx={{ width: '20px', marginLeft: '8px' }} />
+            <Box sx={{ width: { xs: 20, md: 14 }, marginLeft: { xs: '8px', md: '4px' }, flexShrink: 0 }} />
           )}
           <Checkbox
             checked={isSelected}
             onChange={handleCheckboxChange}
             onClick={(e) => e.stopPropagation()}
+            size="small"
             sx={{
               color: '#78b568',
+              p: { md: 0.25 },
               '&.Mui-checked': {
                 color: '#78b568',
               },
             }}
           />
-          <Typography sx={{ color: '#fff', fontSize: '14px', flex: 1 }}>
+          <Typography sx={{ color: '#fff', fontSize: { xs: '14px', md: '10px' }, flex: 1 }}>
             {category.name}
           </Typography>
         </Box>
         {hasChildren && (
           <Collapse in={expanded} timeout="auto" unmountOnExit>
-            <Box sx={{ paddingRight: '24px' }}>
+            <Box sx={{ paddingRight: { xs: '24px', md: '16px' } }}>
               {category.children.map((child: any) => (
-                <CategoryTreeItem key={child.id} category={child} level={level + 1} />
+                <CategoryTreeItem
+                  key={child.id}
+                  category={child}
+                  level={level + 1}
+                  forceExpanded={forceExpanded}
+                />
               ))}
             </Box>
           </Collapse>
@@ -294,9 +409,42 @@ export default function Page() {
     setImages((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const resetForm = () => {
+    setBarcode("");
+    setPale_price("");
+    setPurchase_price("");
+    setQuantity("");
+    setfull_name("");
+    setProfitPercentage(45);
+    setDiscountPercent("");
+    setImages([]);
+    setCategoryIds([]);
+    setManufacturerId("");
+  };
+
+  const handlePrintBarcode = () => {
+    if (!createdProduct) return;
+    const params = new URLSearchParams({
+      name: createdProduct.name,
+      barcode: createdProduct.barcode,
+      price: String(createdProduct.sale_price),
+      quantity: String(createdProduct.quantity || 1),
+      from: "create",
+    });
+    setSuccessDialogOpen(false);
+    router.push(`/admin/printCustom?${params.toString()}`);
+  };
+
+  const handleContinueRegister = () => {
+    resetForm();
+    setCreatedProduct(null);
+    setSuccessDialogOpen(false);
+  };
+
   const confirm = () => {
 
     if (sale_price && purchase_price && quantity && full_name) {
+      if (isSubmitting) return;
       // اعتبارسنجی درصد تخفیف
       if (discountPercent) {
         const discountValue = parseFloat(discountPercent);
@@ -341,31 +489,37 @@ export default function Page() {
       if (manufacturerId && manufacturerId !== "") {
         data.manufacturer_id = manufacturerId;
       }
-      let token = tokenCode()
+      const token = tokenCode();
+      setIsSubmitting(true);
       apiRequestError("Post", {}, data, "/api/product", true, true, token).then((res) => {
+        setIsSubmitting(false);
         if (res.hasError) {
-
           const parsedResponse = JSON.parse(res.errorText);
           const readableMessage = parsedResponse.message;
-          toast.error(readableMessage)
-          return
+          toast.error(readableMessage);
+          return;
         }
 
-        toast.success("کالا با موفقیت ثبت شد")
-        setTimeout(() => {
-          setBarcode("")
-          setPale_price("")
-          setPurchase_price("")
-          setQuantity("")
-          setfull_name("")
-          setProfitPercentage(45) // بازگشت به مقدار پیش‌فرض
-          setDiscountPercent("") // پاک کردن درصد تخفیف
-          setImages([]) // پاک کردن عکس‌ها
-          setCategoryIds([]) // پاک کردن دسته‌بندی‌ها
-          setManufacturerId("") // پاک کردن تولیدکننده
-        }, 1000);
+        const payload = res?.data && typeof res.data === "object" ? res.data : res;
+        const productId = payload?.id ?? payload?.product?.id;
+        const productBarcode =
+          (payload?.barcode && String(payload.barcode).trim()) ||
+          trimmedBarcode ||
+          (productId != null ? String(productId) : "");
+        const productName = payload?.name ?? full_name;
 
-      })
+        setCreatedProduct({
+          id: productId,
+          name: productName,
+          barcode: productBarcode,
+          sale_price: payload?.sale_price ?? sale_price,
+          quantity: payload?.quantity ?? quantity,
+        });
+        setSuccessDialogOpen(true);
+      }).catch(() => {
+        setIsSubmitting(false);
+        toast.error("خطا در ثبت کالا");
+      });
 
 
 
@@ -376,45 +530,108 @@ export default function Page() {
 
 
 
+  /** دسکتاپ: حدود ۳۰٪ کوچک‌تر از موبایل */
+  const desktopFormCompactSx = {
+    md: {
+      "& .MuiOutlinedInput-root": { borderRadius: "8px" },
+      "& .MuiInputBase-input": {
+        py: 0.75,
+        px: 1.25,
+        fontSize: "0.8rem",
+      },
+      "& .MuiInputLabel-root": { fontSize: "0.75rem" },
+      "& .MuiSelect-select": { py: 0.75, fontSize: "0.8rem" },
+      "& .MuiButton-root": {
+        fontSize: "0.78rem",
+        py: 0.65,
+        minHeight: 34,
+        borderRadius: "10px",
+      },
+      "& .MuiIconButton-root": { p: 0.5 },
+      "& .MuiCheckbox-root": { p: 0.35 },
+      "& .MuiChip-root": { height: 22, fontSize: "0.65rem" },
+      "& .MuiDivider-root": { my: "1.25rem !important" },
+    },
+  } as const;
+
   const fieldWrapSx = {
     width: "100%",
     "& > div": { marginTop: 0, width: "100%" },
     "& > div > div:last-of-type": { width: "100%" },
     "& > div > div:last-of-type > div": { width: "100% !important", maxWidth: "100%" },
-    "& .MuiTypography-root": { color: "#fff" },
-  } as const;
-
-  const selectSx = {
-    color: "#fff",
-    borderRadius: "12px",
-    backgroundColor: "#1a1d2e",
-    "& .MuiOutlinedInput-notchedOutline": { borderColor: "#505669" },
-    "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#78b568" },
-    "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#78b568" },
-    "& .MuiSvgIcon-root": { color: "#fff" },
+    "& .MuiTypography-root": { color: "#fff", fontSize: { xs: "14px", md: "10px" } },
+    md: {
+      "& > div": { marginTop: "4px" },
+      "& .MuiOutlinedInput-root": { borderRadius: "8px" },
+      "& .MuiInputBase-input": { py: 0.75, fontSize: "0.8rem" },
+    },
   } as const;
 
   const sectionTitleSx = {
     color: "#fff",
-    fontSize: { xs: "15px", md: "16px" },
+    fontSize: { xs: "15px", md: "11px" },
     fontWeight: 700,
-    mb: 1.5,
+    mb: { xs: 1.5, md: 1 },
   } as const;
 
-  const barcodeFieldSx = {
+  const optionalPanelSx = {
+    backgroundColor: "#1a1d2e",
+    border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: { xs: "12px", md: "8px" },
+    maxHeight: { xs: 220, md: 160 },
+    minHeight: { md: 160 },
+    overflow: "auto",
+    py: 0.5,
+    flex: 1,
+  } as const;
+
+  const panelListRowSx = {
+    display: "flex",
+    alignItems: "center",
+    padding: { xs: "8px 12px", md: "4px 8px" },
+    cursor: "pointer",
+    "&:hover": {
+      backgroundColor: "rgba(120, 181, 104, 0.1)",
+    },
+  } as const;
+
+  const panelSearchSx = {
+    mb: { xs: 1, md: 0.75 },
     "& .MuiOutlinedInput-root": {
       backgroundColor: "#1a1d2e",
       color: "#fff",
-      borderRadius: "12px",
+      borderRadius: { xs: "12px", md: "8px" },
+      fontSize: { xs: "13px", md: "10px" },
       "& fieldset": { borderColor: "#505669" },
       "&:hover fieldset": { borderColor: "#78b568" },
       "&.Mui-focused fieldset": { borderColor: "#78b568" },
     },
     "& .MuiInputBase-input": {
       color: "#fff",
-      fontSize: { xs: "13px", md: "14px" },
+      py: { md: 0.75 },
+    },
+    "& .MuiInputBase-input::placeholder": {
+      color: "rgba(255,255,255,0.45)",
+      opacity: 1,
+    },
+    "& .MuiSvgIcon-root": { color: "rgba(255,255,255,0.5)" },
+  } as const;
+
+  const barcodeFieldSx = {
+    "& .MuiOutlinedInput-root": {
+      backgroundColor: "#1a1d2e",
+      color: "#fff",
+      borderRadius: { xs: "12px", md: "8px" },
+      "& fieldset": { borderColor: "#505669" },
+      "&:hover fieldset": { borderColor: "#78b568" },
+      "&.Mui-focused fieldset": { borderColor: "#78b568" },
+    },
+    "& .MuiInputBase-input": {
+      color: "#fff",
+      fontSize: { xs: "13px", md: "10px" },
       direction: "ltr",
       textAlign: "left",
+      py: { md: 0.75 },
     },
     "& .MuiInputBase-input::placeholder": {
       color: "rgba(255,255,255,0.4)",
@@ -428,46 +645,38 @@ export default function Page() {
         minHeight: "100vh",
         direction: "rtl",
         background: "linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%)",
-        px: { xs: 1, sm: 2, md: 3 },
-        py: { xs: 1.5, md: 2.5 },
-        pb: { xs: "calc(100px + env(safe-area-inset-bottom, 0px))", md: 10 },
+        px: { xs: 1, sm: 2, md: 2 },
+        py: { xs: 1.5, md: 1.25 },
+        pb: { xs: "calc(100px + env(safe-area-inset-bottom, 0px))", md: "60px" },
         boxSizing: "border-box",
       }}
     >
-      <Container maxWidth="lg" disableGutters sx={{ px: { xs: 0, sm: 1 } }}>
+      <Container maxWidth="md" disableGutters sx={{ px: { xs: 0, sm: 1 } }}>
         <Paper
           elevation={0}
           sx={{
-            p: { xs: 2, sm: 2.5, md: 3 },
-            borderRadius: { xs: "14px", md: "18px" },
+            p: { xs: 2, sm: 2.5, md: 1.75 },
+            borderRadius: { xs: "14px", md: "12px" },
             backgroundColor: "#2b3143",
             border: "1px solid rgba(55, 84, 165, 0.35)",
             boxShadow: "0 8px 32px rgba(0,0,0,0.25)",
+            ...desktopFormCompactSx,
           }}
         >
           <Typography
             sx={{
               color: "#fff",
               fontWeight: 700,
-              fontSize: { xs: "18px", md: "22px" },
-              mb: 0.5,
+              fontSize: { xs: "18px", md: "15px" },
+              mb: { xs: 1, md: 1 },
               textAlign: "center",
             }}
           >
             ثبت کالای جدید
           </Typography>
-          <Typography
-            sx={{
-              color: "rgba(255,255,255,0.6)",
-              fontSize: "13px",
-              textAlign: "center",
-              mb: 2.5,
-            }}
-          >
-            فیلدهای ستاره‌دار را پر کنید
-          </Typography>
+          
 
-          <Grid container spacing={{ xs: 1.5, md: 2 }}>
+          <Grid container spacing={{ xs: 1.5, md: 1 }}>
             <Grid item xs={12} md={6}>
               <Box sx={fieldWrapSx}>
                 <TextInput
@@ -480,10 +689,11 @@ export default function Page() {
               </Box>
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} md={2}>  </Grid>
+            <Grid item xs={12} md={4}>
               <Typography
                 textAlign="right"
-                sx={{ color: "#fff", fontSize: { xs: "14px", md: "15px" }, mt: { xs: 0, md: "10px" }, mb: 0.5 }}
+                sx={{ color: "#fff", fontSize: { xs: "14px", md: "10px" }, mt: { xs: 0, md: "4px" }, mb: { xs: 0.5, md: 0.25 } }}
               >
                 بارکد (اختیاری) :
               </Typography>
@@ -495,8 +705,7 @@ export default function Page() {
                   display: { xs: "block", md: "none" },
                 }}
               >
-                اگر خالی بماند، بعد از ثبت بارکد خودکار برابر شناسه محصول است. در فروشگاه یکتا باشد.
-              </Typography>
+               در فروشگاه یکتا باشد              </Typography>
               <Box
                 sx={{
                   display: "flex",
@@ -528,10 +737,10 @@ export default function Page() {
                   title="اسکن بارکد"
                   sx={{
                     flexShrink: 0,
-                    width: 48,
-                    height: 40,
+                    width: { xs: 48, md: 34 },
+                    height: { xs: 40, md: 28 },
                     alignSelf: "center",
-                    borderRadius: "10px",
+                    borderRadius: { xs: "10px", md: "7px" },
                     background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                     color: "#fff",
                     "&:hover": {
@@ -539,7 +748,7 @@ export default function Page() {
                     },
                   }}
                 >
-                  <QrCodeScannerIcon sx={{ fontSize: 22 }} />
+                  <QrCodeScannerIcon sx={{ fontSize: { xs: 22, md: 16 } }} />
                 </IconButton>
               </Box>
             </Grid>
@@ -600,48 +809,76 @@ export default function Page() {
                 />
               </Box>
             </Grid>
-            <Grid item xs={12} sm={6} md={4}>
-              <FormControl
-                fullWidth
-                sx={{
-                  mt: { xs: 0.5, md: 2 },
-                  "& .MuiInputLabel-root": { color: "rgba(255,255,255,0.85)" },
-                  "& .MuiInputLabel-root.Mui-focused": { color: "#78b568" },
-                }}
-              >
-                <InputLabel>تولیدکننده (اختیاری)</InputLabel>
-                <Select
-                  value={manufacturerId}
-                  onChange={(e) => setManufacturerId(e.target.value as number | "")}
-                  label="تولیدکننده (اختیاری)"
-                  sx={selectSx}
-                >
-                  <MenuItem value="">
-                    <em>هیچکدام</em>
-                  </MenuItem>
-                  {manufacturers.map((manufacturer) => (
-                    <MenuItem key={manufacturer.id} value={manufacturer.id}>
-                      {manufacturer.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
           </Grid>
 
-          <Divider sx={{ my: 2.5, borderColor: "rgba(255,255,255,0.1)" }} />
+          <Divider sx={{ my: { xs: 2.5, md: 1.25 }, borderColor: "rgba(255,255,255,0.1)" }} />
 
-          <Typography sx={sectionTitleSx}>دسته‌بندی‌ها (اختیاری)</Typography>
-          {categoryIds.length > 0 && (
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mb: 1.5 }}>
-              {categoryIds.map((value) => {
-                const flatCats = flattenCategories(categories);
-                const category = flatCats.find((cat) => cat.id === value);
-                return (
+          <Grid container spacing={{ xs: 1.5, md: 1 }} sx={{ alignItems: "stretch" }}>
+            <Grid item xs={12} md={6} sx={{ display: "flex", flexDirection: "column" }}>
+              <Typography sx={sectionTitleSx}>دسته‌بندی‌ها (اختیاری)</Typography>
+              {categoryIds.length > 0 && (
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: { xs: 0.75, md: 0.5 }, mb: { xs: 1.5, md: 0.75 } }}>
+                  {categoryIds.map((value) => {
+                    const flatCats = flattenCategories(categories);
+                    const category = flatCats.find((cat) => cat.id === value);
+                    return (
+                      <Chip
+                        key={value}
+                        label={category?.name || value}
+                        onDelete={() => setCategoryIds(categoryIds.filter((id) => id !== value))}
+                        size="small"
+                        sx={{
+                          backgroundColor: "#78b568",
+                          color: "#fff",
+                          "& .MuiChip-deleteIcon": {
+                            color: "#fff",
+                            "&:hover": { color: "#ff4444" },
+                          },
+                        }}
+                      />
+                    );
+                  })}
+                </Box>
+              )}
+              <TextField
+                size="small"
+                fullWidth
+                placeholder="جستجو در دسته‌بندی‌ها..."
+                value={categorySearch}
+                onChange={(e) => setCategorySearch(e.target.value)}
+                sx={panelSearchSx}
+                InputProps={{
+                  startAdornment: <SearchIcon sx={{ fontSize: { xs: 18, md: 14 }, ml: 0.5 }} />,
+                }}
+              />
+              <Paper sx={optionalPanelSx}>
+                {categoriesLoading ? (
+                  <Typography sx={{ color: "rgba(255,255,255,0.5)", fontSize: { xs: "13px", md: "10px" }, p: 1.5, textAlign: "center" }}>
+                    در حال بارگذاری...
+                  </Typography>
+                ) : filteredCategories.length > 0 ? (
+                  filteredCategories.map((category) => (
+                    <CategoryTreeItem
+                      key={category.id}
+                      category={category}
+                      forceExpanded={!!categorySearch.trim()}
+                    />
+                  ))
+                ) : (
+                  <Typography sx={{ color: "rgba(255,255,255,0.5)", fontSize: { xs: "13px", md: "10px" }, p: 1.5, textAlign: "center" }}>
+                    {categorySearch.trim() ? "موردی یافت نشد" : "دسته‌بندی‌ای یافت نشد"}
+                  </Typography>
+                )}
+              </Paper>
+            </Grid>
+
+            <Grid item xs={12} md={6} sx={{ display: "flex", flexDirection: "column" }}>
+              <Typography sx={sectionTitleSx}>تولیدکننده (اختیاری)</Typography>
+              {manufacturerId !== "" && (
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: { xs: 0.75, md: 0.5 }, mb: { xs: 1.5, md: 0.75 } }}>
                   <Chip
-                    key={value}
-                    label={category?.name || value}
-                    onDelete={() => setCategoryIds(categoryIds.filter((id) => id !== value))}
+                    label={manufacturers.find((m) => m.id === manufacturerId)?.name || manufacturerId}
+                    onDelete={() => setManufacturerId("")}
                     size="small"
                     sx={{
                       backgroundColor: "#78b568",
@@ -652,26 +889,98 @@ export default function Page() {
                       },
                     }}
                   />
-                );
-              })}
-            </Box>
-          )}
-          <Paper
-            sx={{
-              backgroundColor: "#1a1d2e",
-              border: "1px solid rgba(255,255,255,0.1)",
-              borderRadius: "12px",
-              maxHeight: { xs: 220, md: 280 },
-              overflow: "auto",
-              py: 0.5,
-            }}
-          >
-            {categories.map((category) => (
-              <CategoryTreeItem key={category.id} category={category} />
-            ))}
-          </Paper>
+                </Box>
+              )}
+              <TextField
+                size="small"
+                fullWidth
+                placeholder="جستجو در تولیدکنندگان..."
+                value={manufacturerSearch}
+                onChange={(e) => setManufacturerSearch(e.target.value)}
+                sx={panelSearchSx}
+                InputProps={{
+                  startAdornment: <SearchIcon sx={{ fontSize: { xs: 18, md: 14 }, ml: 0.5 }} />,
+                }}
+              />
+              <Paper sx={optionalPanelSx}>
+                {manufacturersLoading ? (
+                  <Typography sx={{ color: "rgba(255,255,255,0.5)", fontSize: { xs: "13px", md: "10px" }, p: 1.5, textAlign: "center" }}>
+                    در حال بارگذاری...
+                  </Typography>
+                ) : (
+                  <>
+                <Box
+                  sx={{
+                    ...panelListRowSx,
+                    backgroundColor: manufacturerId === "" ? "rgba(120, 181, 104, 0.15)" : "transparent",
+                    display:
+                      manufacturerSearch.trim() &&
+                      !"هیچکدام".toLowerCase().includes(manufacturerSearch.trim().toLowerCase())
+                        ? "none"
+                        : undefined,
+                  }}
+                  onClick={() => setManufacturerId("")}
+                >
+                  <Checkbox
+                    checked={manufacturerId === ""}
+                    size="small"
+                    sx={{
+                      color: "#78b568",
+                      p: { md: 0.25 },
+                      "&.Mui-checked": { color: "#78b568" },
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={() => setManufacturerId("")}
+                  />
+                  <Typography sx={{ color: "#fff", fontSize: { xs: "14px", md: "10px" }, flex: 1 }}>
+                    هیچکدام
+                  </Typography>
+                </Box>
+                {filteredManufacturers.length > 0 ? (
+                  filteredManufacturers.map((manufacturer) => {
+                    const isSelected = manufacturerId === manufacturer.id;
+                    return (
+                      <Box
+                        key={manufacturer.id}
+                        sx={{
+                          ...panelListRowSx,
+                          backgroundColor: isSelected ? "rgba(120, 181, 104, 0.15)" : "transparent",
+                        }}
+                        onClick={() => setManufacturerId(manufacturer.id)}
+                      >
+                        <Checkbox
+                          checked={isSelected}
+                          size="small"
+                          sx={{
+                            color: "#78b568",
+                            p: { md: 0.25 },
+                            "&.Mui-checked": { color: "#78b568" },
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={() => setManufacturerId(isSelected ? "" : manufacturer.id)}
+                        />
+                        <Typography sx={{ color: "#fff", fontSize: { xs: "14px", md: "10px" }, flex: 1 }}>
+                          {manufacturer.name}
+                        </Typography>
+                      </Box>
+                    );
+                  })
+                ) : !manufacturerSearch.trim() ? (
+                  <Typography sx={{ color: "rgba(255,255,255,0.5)", fontSize: { xs: "13px", md: "10px" }, p: 1.5, textAlign: "center" }}>
+                    تولیدکننده‌ای یافت نشد
+                  </Typography>
+                ) : (
+                  <Typography sx={{ color: "rgba(255,255,255,0.5)", fontSize: { xs: "13px", md: "10px" }, p: 1.5, textAlign: "center" }}>
+                    موردی یافت نشد
+                  </Typography>
+                )}
+                  </>
+                )}
+              </Paper>
+            </Grid>
+          </Grid>
 
-          <Divider sx={{ my: 2.5, borderColor: "rgba(255,255,255,0.1)" }} />
+          <Divider sx={{ my: { xs: 2.5, md: 1.25 }, borderColor: "rgba(255,255,255,0.1)" }} />
 
           <Typography sx={sectionTitleSx}>تصاویر محصول (اختیاری)</Typography>
           <input
@@ -691,9 +1000,10 @@ export default function Page() {
               sx={{
                 borderColor: "#78b568",
                 color: "#78b568",
-                borderRadius: "12px",
-                py: 1.25,
-                mb: 2,
+                borderRadius: { xs: "12px", md: "8px" },
+                py: { xs: 1.25, md: 0.65 },
+                mb: { xs: 2, md: 1 },
+                fontSize: { md: "0.78rem" },
                 "&:hover": {
                   borderColor: "#5a9a4a",
                   backgroundColor: "rgba(120, 181, 104, 0.1)",
@@ -705,9 +1015,9 @@ export default function Page() {
           </label>
 
           {images.length > 0 && (
-            <Grid container spacing={1.5}>
+            <Grid container spacing={{ xs: 1.5, md: 1 }}>
               {images.map((image, index) => (
-                <Grid item xs={6} sm={4} md={3} key={index}>
+                <Grid item xs={6} sm={4} md={2} key={index}>
                   <Card
                     sx={{
                       position: "relative",
@@ -720,7 +1030,7 @@ export default function Page() {
                       component="img"
                       image={image}
                       alt={`تصویر ${index + 1}`}
-                      sx={{ height: { xs: 120, md: 140 }, objectFit: "cover" }}
+                      sx={{ height: { xs: 120, md: 88 }, objectFit: "cover" }}
                     />
                     <IconButton
                       onClick={() => handleRemoveImage(index)}
@@ -744,30 +1054,31 @@ export default function Page() {
 
           <Box
             sx={{
-              mt: 3,
-              mb: { xs: 2, md: 1 },
-              pt: 1,
+              mt: { xs: 3, md: 1.5 },
+              mb: { xs: 2, md: 0.5 },
+              pt: { xs: 1, md: 0.5 },
               display: "flex",
               flexDirection: { xs: "column", sm: "row" },
-              gap: 1.5,
+              gap: { xs: 1.5, md: 1 },
             }}
           >
             <Button
               onClick={() => confirm()}
               variant="contained"
               fullWidth
+              disabled={isSubmitting}
               sx={{
                 flex: { sm: 2 },
-                borderRadius: "14px",
-                py: 1.5,
+                borderRadius: { xs: "14px", md: "10px" },
+                py: { xs: 1.5, md: 0.75 },
                 bgcolor: "#78b568",
                 fontWeight: 700,
-                fontSize: "16px",
+                fontSize: { xs: "16px", md: "11px" },
                 boxShadow: "none",
                 "&:hover": { bgcolor: "#5a9a4a" },
               }}
             >
-              ثبت کالا
+              {isSubmitting ? "در حال ثبت..." : "ثبت کالا"}
             </Button>
             <Button
               onClick={() => router.push("/admin/product")}
@@ -775,11 +1086,12 @@ export default function Page() {
               fullWidth
               sx={{
                 flex: { sm: 1 },
-                borderRadius: "14px",
-                py: 1.5,
+                borderRadius: { xs: "14px", md: "10px" },
+                py: { xs: 1.5, md: 0.75 },
                 borderColor: "#ff9100",
                 color: "#ff9100",
                 fontWeight: 600,
+                fontSize: { md: "11px" },
                 "&:hover": {
                   borderColor: "#e68100",
                   backgroundColor: "rgba(255, 145, 0, 0.08)",
@@ -791,6 +1103,73 @@ export default function Page() {
           </Box>
         </Paper>
       </Container>
+
+      <Dialog
+        open={successDialogOpen}
+        onClose={(_, reason) => {
+          if (reason === "backdropClick") return;
+        }}
+        PaperProps={{
+          sx: {
+            backgroundColor: "#2b3143",
+            borderRadius: "16px",
+            border: "1px solid #505669",
+            minWidth: { xs: "90%", sm: 400 },
+          },
+        }}
+      >
+        <DialogTitle sx={{ color: "#fff", fontWeight: 700, textAlign: "center", pb: 1 }}>
+          ثبت با موفقیت انجام شد
+        </DialogTitle>
+        <DialogContent>
+          {createdProduct && (
+            <Box sx={{ textAlign: "center", color: "rgba(255,255,255,0.85)", fontSize: "14px" }}>
+              <Typography sx={{ color: "#fff", fontWeight: 600, mb: 0.5 }}>
+                {createdProduct.name}
+              </Typography>
+              <Typography sx={{ fontSize: "13px" }}>
+                بارکد: {createdProduct.barcode}
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions
+          sx={{
+            flexDirection: { xs: "column", sm: "row" },
+            gap: 1,
+            px: 2,
+            pb: 2,
+            "& > button": { m: 0, width: { xs: "100%", sm: "auto" }, flex: { sm: 1 } },
+          }}
+        >
+          <Button
+            variant="contained"
+            startIcon={<PrintIcon />}
+            onClick={handlePrintBarcode}
+            sx={{
+              borderRadius: "12px",
+              bgcolor: "#1f9ad1",
+              fontWeight: 600,
+              "&:hover": { bgcolor: "#178bb8" },
+            }}
+          >
+            پرینت بارکد محصول
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={handleContinueRegister}
+            sx={{
+              borderRadius: "12px",
+              bgcolor: "#78b568",
+              fontWeight: 600,
+              "&:hover": { bgcolor: "#5a9a4a" },
+            }}
+          >
+            ادامه ثبت
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Modal
         open={barcodeScannerOpen}

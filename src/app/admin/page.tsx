@@ -1677,7 +1677,7 @@ console.log("discounttype" , discounttype);
                     </Card>
                   </Grid>
 
-                  <Grid item xs={12}>
+                  {/* <Grid item xs={12}>
                     <Box
                       sx={{
                         p: { xs: 1.25, md: 1.5 },
@@ -1698,7 +1698,7 @@ console.log("discounttype" , discounttype);
                         را بزنید
                       </Typography>
                     </Box>
-                  </Grid>
+                  </Grid> */}
 
                   <Grid item xs={12}>
                     <Box

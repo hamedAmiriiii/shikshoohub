@@ -40,7 +40,7 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import Badge from '@mui/material/Badge';
 import HomeIcon from '@mui/icons-material/Home';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
-import { addToCart, getCartItemCount, isProductInCart, getCartItemQuantity, updateCartItemQuantity, removeFromCart } from '../../lib/cart';
+import { addToCart, getCartItemCount, isProductInCart, getCartItemQuantity, updateCartItemQuantity, removeFromCart } from '../../liberari/cart';
 import { useShopContext } from '../../context/ShopContext';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';

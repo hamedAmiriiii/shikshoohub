@@ -48,7 +48,7 @@ import RemoveShoppingCartIcon from '@mui/icons-material/RemoveShoppingCart';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import { clearCart } from '../liberari/cart';
-import { getCart, removeFromCart, updateCartItemQuantity, syncCartWithServer, type CartItem } from '../lib/cart';
+import { getCart, removeFromCart, updateCartItemQuantity, syncCartWithServer, type CartItem } from '../liberari/cart';
 import { apiRequestError } from '@/app/lib/apiRequestError';
 import { findColorByName, isLightColor } from '../liberari/colors';
 import { toast, ToastContainer } from 'react-toastify';

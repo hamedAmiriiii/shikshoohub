@@ -287,7 +287,8 @@ export default function CardUser(props: any) {
       name: name || "",
       barcode: barcode || "",
       price: salePrice || "",
-      quantity: quantity || "1"
+      quantity: quantity || "1",
+      from: "list",
     });
     router.push(`/admin/printCustom?${params.toString()}`);
   };

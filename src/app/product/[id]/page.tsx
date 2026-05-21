@@ -38,8 +38,8 @@ import RemoveIcon from '@mui/icons-material/Remove';
 import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import { addToCart, isProductInCart, getCartItemQuantity, updateCartItemQuantity, removeFromCart } from '../../lib/cart';
-import { findColorByName, isLightColor } from '../../lib/colors';
+import { addToCart, isProductInCart, getCartItemQuantity, updateCartItemQuantity, removeFromCart } from '../../liberari/cart';
+import { findColorByName, isLightColor } from '../../liberari/colors';
 
 interface ProductImage {
   id: number;

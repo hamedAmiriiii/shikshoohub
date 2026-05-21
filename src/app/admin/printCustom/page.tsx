@@ -16,10 +16,17 @@ const formatNumberEnglish = (num: number | string) => {
   return new Intl.NumberFormat('en-US').format(numValue);
 };
 
+const BACK_ROUTES: Record<string, { path: string; label: string }> = {
+  create: { path: "/admin/product/create", label: "برگشت به ثبت محصول" },
+  list: { path: "/admin/product", label: "برگشت به لیست محصولات" },
+};
+
 function PrintLabelContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const currentPage = typeof window !== 'undefined' ? localStorage.getItem('productListPage') : null;
+  const fromSource = searchParams.get("from") || "list";
+  const backTarget = BACK_ROUTES[fromSource] ?? BACK_ROUTES.list;
   const [quantity, setQuantity] = useState(1);
   
   const [productData, setProductData] = useState({
@@ -307,12 +314,18 @@ function PrintLabelContent() {
 
       {/* کنترل‌های چاپ */}
       <div className="controls">
-        <button onClick={() => {
-          // Keep the product ID in localStorage for scroll back
-          const pageParam = currentPage ? `?page=${currentPage}` : '';
-          router.push(`/admin/product${pageParam}`);
-        }} className="back-btn">
-          ← برگشت
+        <button
+          onClick={() => {
+            if (fromSource === "list") {
+              const pageParam = currentPage ? `?page=${currentPage}` : "";
+              router.push(`${backTarget.path}${pageParam}`);
+            } else {
+              router.push(backTarget.path);
+            }
+          }}
+          className="back-btn"
+        >
+          ← {backTarget.label}
         </button>
         <button
           type="button"

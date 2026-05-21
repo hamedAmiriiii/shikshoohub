@@ -45,7 +45,8 @@ const DesktopActionsCell: React.FC<{
       name: item?.name || "",
       barcode: item?.barcode || "",
       price: item?.sale_price?.toString() || "",
-      quantity: item?.quantity?.toString() || "1"
+      quantity: item?.quantity?.toString() || "1",
+      from: "list",
     });
     router.push(`/admin/printCustom?${params.toString()}`);
   };
@@ -656,7 +657,7 @@ const List: React.FC<Props> = ({
                                   fontSize: "16px",
                                   padding: "16px 24px",
                                   minWidth: '250px',
-                                  width: '250px'
+                                  width: '290px'
                                 }}
                               >
                                 عملیات
