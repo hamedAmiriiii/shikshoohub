@@ -9,9 +9,17 @@ export default function PWAHead() {
     if (!manifestLink) {
       manifestLink = document.createElement('link');
       manifestLink.rel = 'manifest';
-      manifestLink.href = '/manifest.json';
       document.head.appendChild(manifestLink);
     }
+    manifestLink.href = '/manifest.json';
+
+    let appleTouch = document.querySelector('link[rel="apple-touch-icon"]') as HTMLLinkElement;
+    if (!appleTouch) {
+      appleTouch = document.createElement('link');
+      appleTouch.rel = 'apple-touch-icon';
+      document.head.appendChild(appleTouch);
+    }
+    appleTouch.href = '/icon-192.png';
 
     let themeColor = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement;
     if (!themeColor) {

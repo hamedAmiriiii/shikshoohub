@@ -1,26 +1,40 @@
 {
+  "id": "/admin",
   "name": "Webino",
   "short_name": "Webino",
-  "description": "سیستم مدیریت عکاسی",
-  "start_url": "/",
-  "scope": "/",
+  "description": "پنل مدیریت فروشگاه",
+  "start_url": "/admin",
+  "scope": "/admin",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#1f9ad1",
   "orientation": "portrait",
+  "lang": "fa",
+  "dir": "rtl",
   "icons": [
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
-

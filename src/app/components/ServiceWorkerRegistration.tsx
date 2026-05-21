@@ -4,50 +4,58 @@ import { useEffect } from 'react';
 
 export default function ServiceWorkerRegistration() {
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      const registerSW = async () => {
-        try {
-          const registration = await navigator.serviceWorker.register('/sw.js', {
-            scope: '/',
-          });
-          console.log('Service Worker registered successfully:', registration);
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+      return;
+    }
 
-          // Check for updates
-          registration.addEventListener('updatefound', () => {
-            const newWorker = registration.installing;
-            if (newWorker) {
-              newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  // New service worker available, prompt user to reload
-                  if (confirm('نسخه جدیدی از اپلیکیشن موجود است. آیا می‌خواهید صفحه را به‌روز کنید؟')) {
-                    newWorker.postMessage({ type: 'SKIP_WAITING' });
-                    window.location.reload();
-                  }
-                }
-              });
+    const registerSW = async () => {
+      try {
+        const registration = await navigator.serviceWorker.register('/sw.js', {
+          scope: '/',
+        });
+        console.log('Service Worker registered:', registration.scope);
+
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          if (!newWorker) return;
+
+          newWorker.addEventListener('statechange', () => {
+            if (
+              newWorker.state === 'installed' &&
+              navigator.serviceWorker.controller
+            ) {
+              if (confirm('نسخه جدیدی از اپلیکیشن موجود است. صفحه به‌روز شود؟')) {
+                newWorker.postMessage({ type: 'SKIP_WAITING' });
+                window.location.reload();
+              }
             }
           });
-        } catch (error) {
-          console.error('Service Worker registration failed:', error);
-        }
-      };
+        });
+      } catch (error) {
+        console.error('Service Worker registration failed:', error);
+      }
+    };
 
-      // Register service worker after page load
+    if (process.env.NODE_ENV === 'production') {
       if (document.readyState === 'complete') {
         registerSW();
       } else {
-        window.addEventListener('load', registerSW);
+        window.addEventListener('load', registerSW, { once: true });
       }
-
-      // Listen for service worker messages
-      navigator.serviceWorker.addEventListener('message', (event) => {
-        if (event.data && event.data.type === 'SKIP_WAITING') {
-          window.location.reload();
-        }
-      });
+    } else if (process.env.NODE_ENV === 'development') {
+      // در dev هم SW برای تست PWA روی localhost (آیکون + manifest)
+      registerSW().catch(() => {});
     }
+
+    const onControllerChange = () => {
+      window.location.reload();
+    };
+    navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
+
+    return () => {
+      navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
+    };
   }, []);
 
   return null;
 }
-

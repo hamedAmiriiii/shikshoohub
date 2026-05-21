@@ -1,96 +1,111 @@
 # راهنمای تنظیم PWA (Progressive Web App)
 
-## فایل‌های ایجاد شده:
 
-1. **`public/manifest.json`** - تنظیمات PWA
-2. **`public/sw.js`** - Service Worker برای مدیریت offline
-3. **`public/offline.html`** - صفحه نمایش در حالت offline
-4. **`src/app/components/ServiceWorkerRegistration.tsx`** - کامپوننت ثبت Service Worker
-5. **`src/app/offline/page.tsx`** - صفحه offline در Next.js
 
-## مراحل نصب:
+## فایل‌های مهم
 
-### 1. ایجاد آیکون‌های PWA
 
-برای کامل شدن PWA، باید دو آیکون ایجاد کنید:
 
-- `public/icon-192.png` (192x192 پیکسل)
-- `public/icon-512.png` (512x512 پیکسل)
+| فایل | نقش |
 
-می‌توانید از یک لوگوی موجود استفاده کنید و آن را به این سایزها تبدیل کنید.
+|------|-----|
 
-### 2. تست در Development
+| `public/manifest.json` | مانیفست صفحه اصلی (`/`) |
 
-1. پروژه را build کنید:
+| `public/manifest-admin.json` | PWA پنل فروشگاه: `start_url` و `scope` = `/admin` |
+
+| `public/icon-192.png` / `icon-512.png` | آیکون نصب (**الزامی برای دکمه Install**) |
+
+| `public/sw.js` | Service Worker |
+
+| `public/offline.html` | صفحه آفلاین |
+
+| `src/app/components/ServiceWorkerRegistration.tsx` | ثبت SW |
+
+| `src/app/components/PWAInstallPrompt.tsx` | دکمه «نصب اپ» وقتی مرورگر اجازه دهد |
+
+
+
+## تولید آیکون
+
+
+
+```bash
+
+npm run generate:pwa-icons
+
+```
+
+
+
+یا جایگزین با لوگوی واقعی برند در `public/icon-192.png` و `public/icon-512.png`.
+
+
+
+## تست نصب (دکمه address bar)
+
+
+
+1. **HTTPS** یا `localhost` (نه IP بدون گواهی)
+
+2. Build و اجرای production (توصیه می‌شود):
+
    ```bash
+
    npm run build
+
    npm start
+
    ```
 
-2. در مرورگر Chrome:
-   - به `chrome://serviceworker-internals/` بروید
-   - Service Worker را بررسی کنید
+3. Chrome → F12 → **Application** → **Manifest**: باید بدون خطا باشد و آیکون‌ها ۲۰۰ OK
 
-3. DevTools:
-   - F12 را بزنید
-   - به تب "Application" بروید
-   - در بخش "Service Workers" وضعیت را بررسی کنید
+4. **Application** → **Service Workers**: `sw.js` فعال و scope `/`
 
-### 3. تست Offline Mode
+5. اگر قبلاً نصب کرده‌اید یا dismiss کرده‌اید: Application → **Storage** → Clear site data
 
-1. در Chrome DevTools:
-   - F12 را بزنید
-   - به تب "Network" بروید
-   - گزینه "Offline" را انتخاب کنید
-   - صفحه را refresh کنید
-   - باید صفحه offline نمایش داده شود
+6. گاهی Chrome بعد از چند بازدید کوتاه، آیکن Install را در نوار آدرس نشان می‌دهد (heuristic)
 
-### 4. نصب PWA
 
-1. در مرورگر Chrome/Edge:
-   - آیکون نصب در address bar را کلیک کنید
-   - یا از منو: "Install Webino"
 
-2. در موبایل:
-   - در Chrome/Safari: منو → "Add to Home Screen"
+### اگر آیکن نوار آدرس نیامد
 
-## ویژگی‌های پیاده‌سازی شده:
 
-✅ Service Worker برای مدیریت offline
-✅ Cache کردن صفحات
-✅ نمایش صفحه offline سفارشی
-✅ Auto-refresh وقتی آنلاین می‌شود
-✅ Manifest برای نصب PWA
-✅ Metadata برای iOS و Android
 
-## نکات مهم:
+- دکمه شناور **«نصب اپ»** در صفحه (رویداد `beforeinstallprompt`) را امتحان کنید
 
-1. **HTTPS ضروری است**: PWA فقط در HTTPS یا localhost کار می‌کند
-2. **Service Worker Scope**: Service Worker فقط در scope خودش کار می‌کند
-3. **Cache Strategy**: در حال حاضر از "Network First" استفاده می‌شود
-4. **Update Service Worker**: برای به‌روزرسانی، باید cache را clear کنید
+- منوی ⋮ → **Install Webino** / **نصب برنامه**
 
-## عیب‌یابی:
+- موبایل: **Add to Home Screen**
 
-### Service Worker ثبت نمی‌شود:
-- مطمئن شوید که در HTTPS یا localhost هستید
-- Console را بررسی کنید برای خطاها
-- Service Worker را از DevTools unregister کنید و دوباره امتحان کنید
 
-### صفحه offline نمایش داده نمی‌شود:
-- مطمئن شوید که `public/offline.html` وجود دارد
-- Service Worker را بررسی کنید
-- Cache را clear کنید
 
-### PWA نصب نمی‌شود:
-- مطمئن شوید که `manifest.json` درست است
-- آیکون‌ها را بررسی کنید
-- در Chrome DevTools → Application → Manifest را بررسی کنید
+## عیب‌یابی
 
-## بهینه‌سازی‌های پیشنهادی:
 
-1. **Cache Strategy بهتر**: می‌توانید از "Cache First" برای فایل‌های static استفاده کنید
-2. **Background Sync**: برای sync کردن داده‌ها وقتی آنلاین شد
-3. **Push Notifications**: برای اطلاع‌رسانی به کاربر
-4. **App Shortcuts**: برای دسترسی سریع به بخش‌های مهم
+
+| مشکل | علت رایج |
+
+|------|-----------|
+
+| Install در address bar نیست | آیکون ۴۰۴، بدون HTTPS، قبلاً نصب شده، فقط `npm run dev` بدون معیارهای کامل |
+
+| Manifest error | `purpose` باید `any` یا `maskable` جدا باشد (نه `"any maskable"`) |
+
+| SW ثبت نمی‌شود | Console، unregister قدیمی در DevTools |
+
+
+
+## ویژگی‌ها
+
+
+
+- Service Worker (Network first + offline fallback)
+
+- Manifest + آیکون ۱۹۲/۵۱۲
+
+- دکمه نصب در UI
+
+- iOS: Add to Home Screen (آیکن apple-touch)
+
 

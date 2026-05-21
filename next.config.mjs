@@ -22,6 +22,18 @@ const nextConfig = {
   async headers() {
     return [
       {
+        source: '/manifest.json',
+        headers: [
+          { key: 'Content-Type', value: 'application/manifest+json' },
+        ],
+      },
+      {
+        source: '/manifest-admin.json',
+        headers: [
+          { key: 'Content-Type', value: 'application/manifest+json' },
+        ],
+      },
+      {
         source: '/sw.js',
         headers: [
           {

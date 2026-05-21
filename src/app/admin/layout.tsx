@@ -74,7 +74,7 @@ export default function ShikshooLayout({
       setIsChecking(false);
     }
 
-    // تنظیم manifest برای صفحه admin - redirect به root
+    // مانیفست PWA: ورود و scope فقط /admin
     if (typeof window !== 'undefined') {
       let manifestLink = document.querySelector('link[rel="manifest"]') as HTMLLinkElement;
       if (!manifestLink) {
