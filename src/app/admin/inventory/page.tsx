@@ -66,12 +66,12 @@ export default function InventoryPage() {
   };
 
   return (
-    <Box sx={{ width: "100%", direction: "rtl", padding: "16px", minHeight: "100vh", background: "linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%)" }}>
+    <Box sx={{ width: "100%", direction: "rtl", padding: "16px", minHeight: "100vh", background: "var(--admin-bg-gradient)" }}>
      
 
       {loading ? (
         <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "50vh" }}>
-          <CircularProgress sx={{ color: "#78b568" }} />
+          <CircularProgress sx={{ color: "var(--admin-accent)" }} />
         </Box>
       ) : inventory ? (
         <Grid container spacing={3}>
@@ -81,7 +81,7 @@ export default function InventoryPage() {
               elevation={0}
               sx={{
                 padding: "24px",
-                background: "linear-gradient(135deg, #78b568 0%, #5a9a4a 100%)",
+                background: "linear-gradient(135deg, var(--admin-accent) 0%, var(--admin-accent-hover) 100%)",
                 borderRadius: "16px",
                 height: "100%",
                 display: "flex",
@@ -101,7 +101,7 @@ export default function InventoryPage() {
                   right: 0,
                   width: "100px",
                   height: "100px",
-                  background: "rgba(255,255,255,0.1)",
+                  background: "var(--admin-divider)",
                   borderRadius: "50%",
                   transform: "translate(30px, -30px)",
                 },
@@ -112,7 +112,7 @@ export default function InventoryPage() {
                   left: 0,
                   width: "80px",
                   height: "80px",
-                  background: "rgba(255,255,255,0.1)",
+                  background: "var(--admin-divider)",
                   borderRadius: "50%",
                   transform: "translate(-20px, 20px)",
                 },
@@ -120,12 +120,12 @@ export default function InventoryPage() {
             >
               <Box sx={{ position: "relative", zIndex: 1 }}>
                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                  <Typography sx={{ color: "#fff", fontSize: "16px", fontWeight: "700", textShadow: "0 2px 4px rgba(0,0,0,0.2)" }}>
+                  <Typography sx={{ color: "var(--admin-text)", fontSize: "16px", fontWeight: "700", textShadow: "0 2px 4px rgba(0,0,0,0.2)" }}>
                     قیمت خرید کل
                   </Typography>
                   <Box
                     sx={{
-                      backgroundColor: "rgba(255,255,255,0.2)",
+                      backgroundColor: "var(--admin-icon-bg)",
                       borderRadius: "10px",
                       padding: "8px",
                       display: "flex",
@@ -134,13 +134,13 @@ export default function InventoryPage() {
                       backdropFilter: "blur(10px)",
                     }}
                   >
-                    <AttachMoneyIcon sx={{ color: "#fff", fontSize: "24px" }} />
+                    <AttachMoneyIcon sx={{ color: "var(--admin-text)", fontSize: "24px" }} />
                   </Box>
                 </Box>
-                <Typography sx={{ color: "#fff", fontSize: "32px", fontWeight: "700", textShadow: "0 2px 4px rgba(0,0,0,0.2)", marginBottom: "4px" }}>
+                <Typography sx={{ color: "var(--admin-text)", fontSize: "32px", fontWeight: "700", textShadow: "0 2px 4px rgba(0,0,0,0.2)", marginBottom: "4px" }}>
                   {formatNumber(inventory.total_purchase_value)}
                 </Typography>
-                <Typography sx={{ color: "rgba(255,255,255,0.9)", fontSize: "14px" }}>
+                <Typography sx={{ color: "var(--admin-text)", fontSize: "14px" }}>
                   تومان
                 </Typography>
               </Box>
@@ -173,7 +173,7 @@ export default function InventoryPage() {
                   right: 0,
                   width: "100px",
                   height: "100px",
-                  background: "rgba(255,255,255,0.1)",
+                  background: "var(--admin-divider)",
                   borderRadius: "50%",
                   transform: "translate(30px, -30px)",
                 },
@@ -184,7 +184,7 @@ export default function InventoryPage() {
                   left: 0,
                   width: "80px",
                   height: "80px",
-                  background: "rgba(255,255,255,0.1)",
+                  background: "var(--admin-divider)",
                   borderRadius: "50%",
                   transform: "translate(-20px, 20px)",
                 },
@@ -192,12 +192,12 @@ export default function InventoryPage() {
             >
               <Box sx={{ position: "relative", zIndex: 1 }}>
                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                  <Typography sx={{ color: "#fff", fontSize: "16px", fontWeight: "700", textShadow: "0 2px 4px rgba(0,0,0,0.2)" }}>
+                  <Typography sx={{ color: "var(--admin-text)", fontSize: "16px", fontWeight: "700", textShadow: "0 2px 4px rgba(0,0,0,0.2)" }}>
                     قیمت فروش کل
                   </Typography>
                   <Box
                     sx={{
-                      backgroundColor: "rgba(255,255,255,0.2)",
+                      backgroundColor: "var(--admin-icon-bg)",
                       borderRadius: "10px",
                       padding: "8px",
                       display: "flex",
@@ -206,13 +206,13 @@ export default function InventoryPage() {
                       backdropFilter: "blur(10px)",
                     }}
                   >
-                    <TrendingUpIcon sx={{ color: "#fff", fontSize: "24px" }} />
+                    <TrendingUpIcon sx={{ color: "var(--admin-text)", fontSize: "24px" }} />
                   </Box>
                 </Box>
-                <Typography sx={{ color: "#fff", fontSize: "32px", fontWeight: "700", textShadow: "0 2px 4px rgba(0,0,0,0.2)", marginBottom: "4px" }}>
+                <Typography sx={{ color: "var(--admin-text)", fontSize: "32px", fontWeight: "700", textShadow: "0 2px 4px rgba(0,0,0,0.2)", marginBottom: "4px" }}>
                   {formatNumber(inventory.total_sale_value)}
                 </Typography>
-                <Typography sx={{ color: "rgba(255,255,255,0.9)", fontSize: "14px" }}>
+                <Typography sx={{ color: "var(--admin-text)", fontSize: "14px" }}>
                   تومان
                 </Typography>
               </Box>
@@ -245,7 +245,7 @@ export default function InventoryPage() {
                   right: 0,
                   width: "100px",
                   height: "100px",
-                  background: "rgba(255,255,255,0.1)",
+                  background: "var(--admin-divider)",
                   borderRadius: "50%",
                   transform: "translate(30px, -30px)",
                 },
@@ -256,7 +256,7 @@ export default function InventoryPage() {
                   left: 0,
                   width: "80px",
                   height: "80px",
-                  background: "rgba(255,255,255,0.1)",
+                  background: "var(--admin-divider)",
                   borderRadius: "50%",
                   transform: "translate(-20px, 20px)",
                 },
@@ -264,12 +264,12 @@ export default function InventoryPage() {
             >
               <Box sx={{ position: "relative", zIndex: 1 }}>
                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                  <Typography sx={{ color: "#fff", fontSize: "16px", fontWeight: "700", textShadow: "0 2px 4px rgba(0,0,0,0.2)" }}>
+                  <Typography sx={{ color: "var(--admin-text)", fontSize: "16px", fontWeight: "700", textShadow: "0 2px 4px rgba(0,0,0,0.2)" }}>
                     سود احتمالی
                   </Typography>
                   <Box
                     sx={{
-                      backgroundColor: "rgba(255,255,255,0.2)",
+                      backgroundColor: "var(--admin-icon-bg)",
                       borderRadius: "10px",
                       padding: "8px",
                       display: "flex",
@@ -278,24 +278,24 @@ export default function InventoryPage() {
                       backdropFilter: "blur(10px)",
                     }}
                   >
-                    <InventoryIcon sx={{ color: "#fff", fontSize: "24px" }} />
+                    <InventoryIcon sx={{ color: "var(--admin-text)", fontSize: "24px" }} />
                   </Box>
                 </Box>
-                <Typography sx={{ color: "#fff", fontSize: "32px", fontWeight: "700", textShadow: "0 2px 4px rgba(0,0,0,0.2)", marginBottom: "4px" }}>
+                <Typography sx={{ color: "var(--admin-text)", fontSize: "32px", fontWeight: "700", textShadow: "0 2px 4px rgba(0,0,0,0.2)", marginBottom: "4px" }}>
                   {formatNumber(calculateProfit())}
                 </Typography>
                 <Box sx={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "8px" }}>
-                  <Typography sx={{ color: "rgba(255,255,255,0.9)", fontSize: "14px" }}>
+                  <Typography sx={{ color: "var(--admin-text)", fontSize: "14px" }}>
                     تومان
                   </Typography>
                   <Box
                     sx={{
-                      backgroundColor: "rgba(255,255,255,0.25)",
+                      backgroundColor: "var(--admin-icon-bg-hover)",
                       borderRadius: "8px",
                       padding: "4px 12px",
                       fontSize: "14px",
                       fontWeight: "600",
-                      color: "#fff",
+                      color: "var(--admin-text)",
                     }}
                   >
                     {calculateProfitPercentage()}%
@@ -307,7 +307,7 @@ export default function InventoryPage() {
         </Grid>
       ) : (
         <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "50vh" }}>
-          <Typography sx={{ color: "#fff", fontSize: "18px" }}>
+          <Typography sx={{ color: "var(--admin-text)", fontSize: "18px" }}>
             داده‌ای برای نمایش وجود ندارد
           </Typography>
         </Box>

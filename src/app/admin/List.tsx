@@ -23,7 +23,7 @@ export default function ListData() {
         <Box
           onClick={() => router.push("/admin/product/create")}
           style={{
-          backgroundColor: "#78b568", borderRadius: "15px", border: "1px solid #505669", Height: "130px"
+          backgroundColor: "var(--admin-accent)", borderRadius: "15px", border: "1px solid var(--admin-border)", Height: "130px"
         }} m={1} p={1} mt={3}>
   
           <Box style={{

@@ -257,7 +257,7 @@ export default function PrintAllLabels() {
         }
 
         .print-btn {
-          background-color: #78b568;
+          background-color: var(--admin-accent);
           color: white;
           border: none;
           padding: 12px 24px;
@@ -268,7 +268,7 @@ export default function PrintAllLabels() {
         }
 
         .print-btn:hover {
-          background-color: #5a9a4a;
+          background-color: var(--admin-accent-hover);
         }
 
         .back-btn {
@@ -324,7 +324,7 @@ export default function PrintAllLabels() {
         }
 
         .qty-btn {
-          background-color: #78b568;
+          background-color: var(--admin-accent);
           color: white;
           border: none;
           width: 30px;
@@ -338,7 +338,7 @@ export default function PrintAllLabels() {
         }
 
         .qty-btn:hover {
-          background-color: #5a9a4a;
+          background-color: var(--admin-accent-hover);
         }
 
         .qty-input {

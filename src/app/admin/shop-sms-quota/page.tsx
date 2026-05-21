@@ -126,7 +126,7 @@ export default function AdminShopSmsQuotaPage() {
       {
         label: "پیامک",
         field: (item: ShopSmsQuotaRow) => (
-          <Typography component="span" sx={{ color: "#78b568", fontWeight: 700, fontSize: "14px" }}>
+          <Typography component="span" sx={{ color: "var(--admin-accent)", fontWeight: 700, fontSize: "14px" }}>
             {formatNumber(getBalance(item))}
           </Typography>
         ),
@@ -154,7 +154,7 @@ export default function AdminShopSmsQuotaPage() {
           justifyContent: "center",
         }}
       >
-        <CircularProgress sx={{ color: "#78b568" }} />
+        <CircularProgress sx={{ color: "var(--admin-accent)" }} />
       </Box>
     );
   }
@@ -164,7 +164,7 @@ export default function AdminShopSmsQuotaPage() {
       sx={{
         width: "100%",
         minHeight: "100vh",
-        background: "linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%)",
+        background: "var(--admin-bg-gradient)",
         py: 3,
         px: { xs: 2, sm: 3, md: 4 },
         direction: "rtl",
@@ -175,7 +175,7 @@ export default function AdminShopSmsQuotaPage() {
       <Box sx={{ width: "100%", maxWidth: "100%" }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
           <StorefrontIcon sx={{ color: "#ff9800", fontSize: 32 }} />
-          <Typography sx={{ color: "#fff", fontWeight: 700, fontSize: "22px" }}>
+          <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: "22px" }}>
             مدیریت فروشگاه‌ها
           </Typography>
         </Box>

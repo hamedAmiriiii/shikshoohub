@@ -243,7 +243,7 @@ function PrintLabelContent() {
         }
 
         .print-btn {
-          background-color: #78b568;
+          background-color: var(--admin-accent);
           color: white;
           border: none;
           padding: 12px 24px;
@@ -254,7 +254,7 @@ function PrintLabelContent() {
         }
 
         .print-btn:hover {
-          background-color: #5a9a4a;
+          background-color: var(--admin-accent-hover);
         }
 
         .back-btn {

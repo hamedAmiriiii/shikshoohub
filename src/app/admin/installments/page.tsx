@@ -198,7 +198,7 @@ export default function InstallmentsPage() {
 
     return (
         <Suspense fallback={<div>در حال بارگذاری...</div>}>
-            <Box sx={{ width: { xs:"100%", md:"130%" , }, direction: "rtl", padding: "16px", paddingBottom: "100px", minHeight: "100vh", background: "linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%)" }}>
+            <Box sx={{ width: { xs:"100%", md:"130%" , }, direction: "rtl", padding: "16px", paddingBottom: "100px", minHeight: "100vh", background: "var(--admin-bg-gradient)" }}>
                 <List
                     key={`${filterMode}`}
                     disableFilter={true}
@@ -211,6 +211,7 @@ export default function InstallmentsPage() {
                     enablePagination={true}
                     desktopColumns={desktopColumns}
                     onPayInstallmentItem={handleOpenPayInstallmentDialog}
+                    hidePrintAction
                     customActions={
                         <Box sx={{ display: "flex", gap: "8px", alignItems: "center" }}>
                             {hasActiveFilters() && (
@@ -231,13 +232,13 @@ export default function InstallmentsPage() {
                             <IconButton
                                 onClick={() => setFilterSheetOpen(true)}
                                 sx={{
-                                    color: hasActiveFilters() ? "#78b568" : "#000",
-                                    backgroundColor: hasActiveFilters() ? "rgba(120, 181, 104, 0.2)" : "rgba(255, 255, 255, 0.1)",
+                                    color: hasActiveFilters() ? "var(--admin-accent)" : "#000",
+                                    backgroundColor: hasActiveFilters() ? "rgba(120, 181, 104, 0.2)" : "var(--admin-divider)",
                                     border: "1px solid #C9C9C9",
                                     padding: "7px",
                                     borderRadius: "15px",
                                     "&:hover": {
-                                        backgroundColor: hasActiveFilters() ? "rgba(120, 181, 104, 0.3)" : "rgba(255, 255, 255, 0.2)"
+                                        backgroundColor: hasActiveFilters() ? "rgba(120, 181, 104, 0.3)" : "var(--admin-icon-bg)"
                                     }
                                 }}
                                 size="small"
@@ -262,18 +263,18 @@ export default function InstallmentsPage() {
                     onClose={handleClosePayInstallmentDialog}
                     PaperProps={{
                         sx: {
-                            backgroundColor: "#2b3143",
+                            backgroundColor: "var(--admin-surface)",
                             borderRadius: "16px",
                             direction: "rtl",
                             minWidth: "400px",
                         }
                     }}
                 >
-                    <DialogTitle sx={{ color: "#fff", textAlign: "center", fontSize: "18px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <DialogTitle sx={{ color: "var(--admin-text)", textAlign: "center", fontSize: "18px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <Typography sx={{ fontSize: "18px", fontWeight: "600" }}>تایید پرداخت قسط</Typography>
                         <IconButton
                             onClick={handleClosePayInstallmentDialog}
-                            sx={{ color: "#fff" }}
+                            sx={{ color: "var(--admin-text)" }}
                         >
                             <CloseIcon />
                         </IconButton>
@@ -286,17 +287,17 @@ export default function InstallmentsPage() {
                             <Box sx={{ 
                                 marginBottom: "16px", 
                                 padding: "12px", 
-                                backgroundColor: "#1a1d2e", 
+                                backgroundColor: "var(--admin-surface-alt)", 
                                 borderRadius: "8px",
                             }}>
-                                <Typography sx={{ color: "#fff", fontSize: "14px", marginBottom: "8px" }}>
+                                <Typography sx={{ color: "var(--admin-text)", fontSize: "14px", marginBottom: "8px" }}>
                                     قسط شماره: {selectedInstallment.installment_number}
                                 </Typography>
-                                <Typography sx={{ color: "#fff", fontSize: "14px", marginBottom: "8px" }}>
+                                <Typography sx={{ color: "var(--admin-text)", fontSize: "14px", marginBottom: "8px" }}>
                                     مبلغ: {formatNumber(selectedInstallment.amount)} تومان
                                 </Typography>
                                 {selectedInstallment.due_date_jalali && (
-                                    <Typography sx={{ color: "#999", fontSize: "13px" }}>
+                                    <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "13px" }}>
                                         تاریخ سررسید: {selectedInstallment.due_date_jalali}
                                     </Typography>
                                 )}
@@ -311,24 +312,24 @@ export default function InstallmentsPage() {
                             placeholder="یادداشت پرداخت (اختیاری)"
                             sx={{
                                 "& .MuiOutlinedInput-root": {
-                                    backgroundColor: "#1a1d2e",
-                                    color: "#fff",
+                                    backgroundColor: "var(--admin-surface-alt)",
+                                    color: "var(--admin-text)",
                                     "& fieldset": {
                                         borderColor: "#505669",
                                     },
                                     "&:hover fieldset": {
-                                        borderColor: "#78b568",
+                                        borderColor: "var(--admin-accent)",
                                     },
                                     "&.Mui-focused fieldset": {
-                                        borderColor: "#78b568",
+                                        borderColor: "var(--admin-accent)",
                                     },
                                 },
                                 "& .MuiInputBase-input": {
-                                    color: "#fff",
+                                    color: "var(--admin-text)",
                                     fontSize: "14px",
                                 },
                                 "& .MuiInputBase-input::placeholder": {
-                                    color: "rgba(255,255,255,0.4)",
+                                    color: "var(--admin-text-secondary)",
                                     opacity: 1
                                 },
                             }}
@@ -339,11 +340,11 @@ export default function InstallmentsPage() {
                             onClick={handleClosePayInstallmentDialog}
                             variant="outlined"
                             sx={{ 
-                                color: "#fff", 
+                                color: "var(--admin-text)", 
                                 borderColor: "#666",
                                 "&:hover": {
                                     borderColor: "#888",
-                                    backgroundColor: "rgba(255,255,255,0.05)"
+                                    backgroundColor: "var(--admin-surface-alt)"
                                 }
                             }}
                             disabled={payingInstallment}
@@ -354,7 +355,7 @@ export default function InstallmentsPage() {
                             onClick={handlePayInstallment}
                             variant="contained"
                             sx={{ 
-                                backgroundColor: "#78b568",
+                                backgroundColor: "var(--admin-accent)",
                                 "&:hover": {
                                     backgroundColor: "#66a055"
                                 }

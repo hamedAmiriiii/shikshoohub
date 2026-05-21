@@ -9,6 +9,8 @@ import 'react-toastify/dist/ReactToastify.css';
 import { apiRequestError } from "@/app/lib/apiRequestError/client";
 import tokenCode from "@/app/coponent/tokenCode";
 import ShopSmsQuotaCard from "@/app/coponent/ShopSmsQuotaCard";
+import AdminThemeToggle from "@/app/admin/theme/AdminThemeToggle";
+import { adminPageSx } from "@/app/admin/theme/adminTheme";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -190,7 +192,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <Box sx={{ minHeight: "100vh", padding: "16px", direction: "rtl", background: "linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%)" }}>
+    <Box sx={{ ...adminPageSx, padding: "16px" }}>
       {/* Header */}
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
         <Box sx={{ display: "flex", alignItems: "center" }}>
@@ -205,20 +207,26 @@ export default function SettingsPage() {
               width: "48px",
               height: "48px",
               borderRadius: "50%",
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              background: "var(--admin-title-gradient)",
               transition: "all 0.3s ease",
               "&:hover": {
                 transform: "scale(1.1)",
               }
             }}
           >
-            <ArrowBackIcon sx={{ color: "#fff" }} />
+            <ArrowBackIcon sx={{ color: "var(--admin-text)" }} />
           </Box>
-          <Typography sx={{ fontSize: "24px", color: "#fff", fontWeight: "700" }}>
+          <Typography sx={{ fontSize: "24px", color: "var(--admin-text)", fontWeight: "700" }}>
             تنظیمات
           </Typography>
         </Box>
       </Box>
+
+      <Card sx={{ backgroundColor: "var(--admin-surface-alt)", border: "1px solid var(--admin-border)", marginBottom: "16px" }}>
+        <CardContent sx={{ p: 0 }}>
+          <AdminThemeToggle />
+        </CardContent>
+      </Card>
 
       <ShopSmsQuotaCard compact />
       <Alert severity="warning" sx={{ mb: 2, borderRadius: "12px" }}>
@@ -229,19 +237,19 @@ export default function SettingsPage() {
       {/* Settings Cards */}
       {loading ? (
         <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "200px" }}>
-          <Typography sx={{ color: "#999", fontSize: "18px" }}>
+          <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "18px" }}>
             در حال بارگذاری...
           </Typography>
         </Box>
       ) : (
-        <Card sx={{ backgroundColor: "#1a1d2e", border: "1px solid #505669" }}>
+        <Card sx={{ backgroundColor: "var(--admin-surface-alt)", border: "1px solid var(--admin-border)" }}>
           <CardContent>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px" }}>
               <Box sx={{ flex: 1 }}>
-                <Typography sx={{ color: "#fff", fontSize: "18px", fontWeight: "600", marginBottom: "8px" }}>
+                <Typography sx={{ color: "var(--admin-text)", fontSize: "18px", fontWeight: "600", marginBottom: "8px" }}>
                   باشگاه مشتریان
                 </Typography>
-                <Typography sx={{ color: "#999", fontSize: "14px" }}>
+                <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "14px" }}>
                   با فعال کردن این گزینه، سیستم باشگاه مشتریان فعال می‌شود
                 </Typography>
               </Box>
@@ -253,10 +261,10 @@ export default function SettingsPage() {
                     disabled={isUpdating}
                     sx={{
                       "& .MuiSwitch-switchBase.Mui-checked": {
-                        color: "#78b568",
+                        color: "var(--admin-accent)",
                       },
                       "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-                        backgroundColor: "#78b568",
+                        backgroundColor: "var(--admin-accent)",
                       },
                     }}
                   />
@@ -271,13 +279,13 @@ export default function SettingsPage() {
 
       {/* Credit Expiry Days Card */}
       {!loading && (
-        <Card sx={{ backgroundColor: "#1a1d2e", border: "1px solid #505669", marginTop: "16px" }}>
+        <Card sx={{ backgroundColor: "var(--admin-surface-alt)", border: "1px solid var(--admin-border)", marginTop: "16px" }}>
           <CardContent>
             <Box sx={{ padding: "16px" }}>
-              <Typography sx={{ color: "#fff", fontSize: "18px", fontWeight: "600", marginBottom: "8px" }}>
+              <Typography sx={{ color: "var(--admin-text)", fontSize: "18px", fontWeight: "600", marginBottom: "8px" }}>
                 تعداد روز انقضای اعتبار
               </Typography>
-              <Typography sx={{ color: "#999", fontSize: "14px", marginBottom: "16px" }}>
+              <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "14px", marginBottom: "16px" }}>
                 تعداد روزی که اعتبار مشتریان معتبر است (بین 1 تا 365 روز)
               </Typography>
               <Box sx={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
@@ -295,21 +303,21 @@ export default function SettingsPage() {
                   inputProps={{
                     min: 1,
                     max: 365,
-                    style: { color: '#fff', textAlign: 'center' }
+                    style: { color: 'var(--admin-text)', textAlign: 'center' }
                   }}
                   sx={{
                     width: { xs: "100%", sm: "150px" },
                     "& .MuiOutlinedInput-root": {
-                      backgroundColor: "#2b3143",
-                      color: "#fff",
+                      backgroundColor: "var(--admin-surface)",
+                      color: "var(--admin-text)",
                       "& fieldset": {
                         borderColor: "#505669",
                       },
                       "&:hover fieldset": {
-                        borderColor: "#78b568",
+                        borderColor: "var(--admin-accent)",
                       },
                       "&.Mui-focused fieldset": {
-                        borderColor: "#78b568",
+                        borderColor: "var(--admin-accent)",
                       },
                     },
                   }}
@@ -320,14 +328,14 @@ export default function SettingsPage() {
                   onClick={handleSaveExpiryDays}
                   disabled={isSavingExpiry || creditExpiryDays < 1 || creditExpiryDays > 365}
                   sx={{
-                    backgroundColor: "#78b568",
-                    color: "#fff",
+                    backgroundColor: "var(--admin-accent)",
+                    color: "var(--admin-text)",
                     "&:hover": {
-                      backgroundColor: "#5a9a4a",
+                      backgroundColor: "var(--admin-accent-hover)",
                     },
                     "&:disabled": {
                       backgroundColor: "#505669",
-                      color: "#999",
+                      color: "var(--admin-text-secondary)",
                     },
                   }}
                 >
@@ -341,13 +349,13 @@ export default function SettingsPage() {
 
       {/* Installment Interest Rate Card */}
       {!loading && (
-        <Card sx={{ backgroundColor: "#1a1d2e", border: "1px solid #505669", marginTop: "16px" }}>
+        <Card sx={{ backgroundColor: "var(--admin-surface-alt)", border: "1px solid var(--admin-border)", marginTop: "16px" }}>
           <CardContent>
             <Box sx={{ padding: "16px" }}>
-              <Typography sx={{ color: "#fff", fontSize: "18px", fontWeight: "600", marginBottom: "8px" }}>
+              <Typography sx={{ color: "var(--admin-text)", fontSize: "18px", fontWeight: "600", marginBottom: "8px" }}>
                 نرخ سود اقساط
               </Typography>
-              <Typography sx={{ color: "#999", fontSize: "14px", marginBottom: "16px" }}>
+              <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "14px", marginBottom: "16px" }}>
                 نرخ سود ماهانه برای خریدهای اقساطی (بین 0 تا 100 درصد)
               </Typography>
               <Box sx={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
@@ -366,26 +374,26 @@ export default function SettingsPage() {
                     min: 0,
                     max: 100,
                     step: 0.1,
-                    style: { color: '#fff', textAlign: 'center' }
+                    style: { color: 'var(--admin-text)', textAlign: 'center' }
                   }}
                   sx={{
                     width: { xs: "100%", sm: "150px" },
                     "& .MuiOutlinedInput-root": {
-                      backgroundColor: "#2b3143",
-                      color: "#fff",
+                      backgroundColor: "var(--admin-surface)",
+                      color: "var(--admin-text)",
                       "& fieldset": {
                         borderColor: "#505669",
                       },
                       "&:hover fieldset": {
-                        borderColor: "#78b568",
+                        borderColor: "var(--admin-accent)",
                       },
                       "&.Mui-focused fieldset": {
-                        borderColor: "#78b568",
+                        borderColor: "var(--admin-accent)",
                       },
                     },
                   }}
                 />
-                <Typography sx={{ color: "#999", fontSize: "14px" }}>
+                <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "14px" }}>
                   درصد
                 </Typography>
                 <Button
@@ -394,14 +402,14 @@ export default function SettingsPage() {
                   onClick={handleSaveInterestRate}
                   disabled={isSavingInterestRate || installmentInterestRate < 0 || installmentInterestRate > 100}
                   sx={{
-                    backgroundColor: "#78b568",
-                    color: "#fff",
+                    backgroundColor: "var(--admin-accent)",
+                    color: "var(--admin-text)",
                     "&:hover": {
-                      backgroundColor: "#5a9a4a",
+                      backgroundColor: "var(--admin-accent-hover)",
                     },
                     "&:disabled": {
                       backgroundColor: "#505669",
-                      color: "#999",
+                      color: "var(--admin-text-secondary)",
                     },
                   }}
                 >

@@ -41,7 +41,7 @@ export default function CustomerCard({ props: gridProps }: { props: { data?: Rec
   return (
     <Card
       sx={{
-        backgroundColor: "#2b3143",
+        backgroundColor: "var(--admin-surface)",
         borderRadius: "15px",
         border: "1px solid rgba(55, 84, 165, 0.3)",
         marginBottom: "12px",
@@ -57,7 +57,7 @@ export default function CustomerCard({ props: gridProps }: { props: { data?: Rec
         <Box sx={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
           <Box
             sx={{
-              backgroundColor: "#1a1d2e",
+              backgroundColor: "var(--admin-surface-alt)",
               borderRadius: "50%",
               width: "48px",
               height: "48px",
@@ -66,16 +66,16 @@ export default function CustomerCard({ props: gridProps }: { props: { data?: Rec
               justifyContent: "center",
             }}
           >
-            <PhoneIcon sx={{ color: "#78b568", fontSize: "24px" }} />
+            <PhoneIcon sx={{ color: "var(--admin-accent)", fontSize: "24px" }} />
           </Box>
           <Box sx={{ flex: 1 }}>
-            <Typography sx={{ color: "#fff", fontSize: "18px", fontWeight: "600" }}>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: "18px", fontWeight: "600" }}>
               {customer?.phone || "بدون شماره"}
             </Typography>
           </Box>
         </Box>
 
-        <Divider sx={{ backgroundColor: "rgba(255,255,255,0.1)", marginBottom: "16px" }} />
+        <Divider sx={{ backgroundColor: "var(--admin-divider)", marginBottom: "16px" }} />
 
         {/* تعداد کل خریدها */}
         <Box
@@ -86,12 +86,12 @@ export default function CustomerCard({ props: gridProps }: { props: { data?: Rec
             marginBottom: "12px",
           }}
         >
-          <ShoppingCartIcon sx={{ color: "#78b568", fontSize: "20px" }} />
+          <ShoppingCartIcon sx={{ color: "var(--admin-accent)", fontSize: "20px" }} />
           <Box sx={{ flex: 1 }}>
-            <Typography sx={{ color: "rgba(255,255,255,0.6)", fontSize: "12px", marginBottom: "2px" }}>
+            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "12px", marginBottom: "2px" }}>
               تعداد کل خریدها
             </Typography>
-            <Typography sx={{ color: "#fff", fontSize: "16px", fontWeight: "600" }}>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: "16px", fontWeight: "600" }}>
               {customer?.total_purchases ? formatNumber(customer.total_purchases) : "0"} عدد
             </Typography>
           </Box>
@@ -106,12 +106,12 @@ export default function CustomerCard({ props: gridProps }: { props: { data?: Rec
             marginBottom: "12px",
           }}
         >
-          <AttachMoneyIcon sx={{ color: "#78b568", fontSize: "20px" }} />
+          <AttachMoneyIcon sx={{ color: "var(--admin-accent)", fontSize: "20px" }} />
           <Box sx={{ flex: 1 }}>
-            <Typography sx={{ color: "rgba(255,255,255,0.6)", fontSize: "12px", marginBottom: "2px" }}>
+            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "12px", marginBottom: "2px" }}>
               مجموع مبلغ خرید
             </Typography>
-            <Typography sx={{ color: "#fff", fontSize: "16px", fontWeight: "600" }}>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: "16px", fontWeight: "600" }}>
               {customer?.total_spent ? formatNumber(customer.total_spent) : "0"} تومان
             </Typography>
           </Box>
@@ -126,12 +126,12 @@ export default function CustomerCard({ props: gridProps }: { props: { data?: Rec
             marginBottom: "12px",
           }}
         >
-          <CardGiftcardIcon sx={{ color: "#78b568", fontSize: "20px" }} />
+          <CardGiftcardIcon sx={{ color: "var(--admin-accent)", fontSize: "20px" }} />
           <Box sx={{ flex: 1 }}>
-            <Typography sx={{ color: "rgba(255,255,255,0.6)", fontSize: "12px", marginBottom: "2px" }}>
+            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "12px", marginBottom: "2px" }}>
               مجموع اعتبار کسب‌شده
             </Typography>
-            <Typography sx={{ color: "#fff", fontSize: "16px", fontWeight: "600" }}>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: "16px", fontWeight: "600" }}>
               {customer?.total_credit_earned ? formatNumber(customer.total_credit_earned) : "0"} تومان
             </Typography>
           </Box>
@@ -146,12 +146,12 @@ export default function CustomerCard({ props: gridProps }: { props: { data?: Rec
             marginBottom: "12px",
           }}
         >
-          <CalendarTodayIcon sx={{ color: "#78b568", fontSize: "20px" }} />
+          <CalendarTodayIcon sx={{ color: "var(--admin-accent)", fontSize: "20px" }} />
           <Box sx={{ flex: 1 }}>
-            <Typography sx={{ color: "rgba(255,255,255,0.6)", fontSize: "12px", marginBottom: "2px" }}>
+            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "12px", marginBottom: "2px" }}>
               تاریخ آخرین خرید
             </Typography>
-            <Typography sx={{ color: "#fff", fontSize: "16px", fontWeight: "600" }}>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: "16px", fontWeight: "600" }}>
               {customer?.last_purchase_date ? formatDate(customer.last_purchase_date) : "بدون تاریخ"}
             </Typography>
           </Box>
@@ -166,12 +166,12 @@ export default function CustomerCard({ props: gridProps }: { props: { data?: Rec
             marginBottom: "8px",
           }}
         >
-          <AccountBalanceWalletIcon sx={{ color: "#78b568", fontSize: "20px" }} />
+          <AccountBalanceWalletIcon sx={{ color: "var(--admin-accent)", fontSize: "20px" }} />
           <Box sx={{ flex: 1 }}>
-            <Typography sx={{ color: "rgba(255,255,255,0.6)", fontSize: "12px", marginBottom: "2px" }}>
+            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "12px", marginBottom: "2px" }}>
               اعتبار فعلی
             </Typography>
-            <Typography sx={{ color: "#78b568", fontSize: "16px", fontWeight: "600" }}>
+            <Typography sx={{ color: "var(--admin-accent)", fontSize: "16px", fontWeight: "600" }}>
               {customer?.current_credit ? formatNumber(customer.current_credit) : "0"} تومان
             </Typography>
           </Box>

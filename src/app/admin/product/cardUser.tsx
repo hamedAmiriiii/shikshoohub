@@ -379,14 +379,14 @@ export default function CardUser(props: any) {
     <Box 
       data-product-id={productId}
       sx={{
-        backgroundColor: "#2b3143",
+        backgroundColor: "var(--admin-surface)",
         borderRadius: "15px",
-        border: "1px solid #505669",
+        border: "1px solid var(--admin-border)",
         margin: 1,
         padding: 2,
         transition: 'all 0.3s ease',
         '&.highlight-card': {
-          border: '2px solid #78b568',
+          border: '2px solid var(--admin-accent)',
           boxShadow: '0 0 20px rgba(120, 181, 104, 0.5)',
         }
       }}
@@ -395,7 +395,7 @@ export default function CardUser(props: any) {
         {/* نام کالا - full width */}
         <Grid xs={12} sx={{ paddingBottom: 0 }}>
           <Box sx={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "8px" }}>
-            <Typography sx={{ color: "#fff", fontSize: "14px", minWidth: "80px" }}>کالا:</Typography>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: "14px", minWidth: "80px" }}>کالا:</Typography>
             <TextField
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -404,20 +404,20 @@ export default function CardUser(props: any) {
               fullWidth
               sx={{
                 "& .MuiOutlinedInput-root": {
-                  backgroundColor: "#1a1d2e",
-                  color: "#fff",
+                  backgroundColor: "var(--admin-surface-alt)",
+                  color: "var(--admin-text)",
                   "& fieldset": {
                     borderColor: "#505669",
                   },
                   "&:hover fieldset": {
-                    borderColor: "#78b568",
+                    borderColor: "var(--admin-accent)",
                   },
                   "&.Mui-focused fieldset": {
-                    borderColor: "#78b568",
+                    borderColor: "var(--admin-accent)",
                   },
                 },
                 "& .MuiInputBase-input": {
-                  color: "#fff",
+                  color: "var(--admin-text)",
                   fontSize: "14px",
                   padding: "8px 12px"
                 }
@@ -429,7 +429,7 @@ export default function CardUser(props: any) {
         {/* بارکد و قیمت خرید - دو ستون */}
         <Grid xs={6} sx={{ paddingBottom: 0 }}>
           <Box sx={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "4px" }}>
-            <Typography sx={{ color: "#fff", fontSize: "12px" }}>بارکد:</Typography>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: "12px" }}>بارکد:</Typography>
             <TextField
               value={barcode}
               onChange={(e) => setBarcode(e.target.value)}
@@ -438,20 +438,20 @@ export default function CardUser(props: any) {
               fullWidth
               sx={{
                 "& .MuiOutlinedInput-root": {
-                  backgroundColor: "#1a1d2e",
-                  color: "#fff",
+                  backgroundColor: "var(--admin-surface-alt)",
+                  color: "var(--admin-text)",
                   "& fieldset": {
                     borderColor: "#505669",
                   },
                   "&:hover fieldset": {
-                    borderColor: "#78b568",
+                    borderColor: "var(--admin-accent)",
                   },
                   "&.Mui-focused fieldset": {
-                    borderColor: "#78b568",
+                    borderColor: "var(--admin-accent)",
                   },
                 },
                 "& .MuiInputBase-input": {
-                  color: "#fff",
+                  color: "var(--admin-text)",
                   fontSize: "14px",
                   padding: "8px 12px"
                 }
@@ -462,7 +462,7 @@ export default function CardUser(props: any) {
 
         <Grid xs={6} sx={{ paddingBottom: 0 }}>
           <Box sx={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "4px" }}>
-            <Typography sx={{ color: "#fff", fontSize: "12px" }}>قیمت خرید:</Typography>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: "12px" }}>قیمت خرید:</Typography>
             <TextField
               value={purchasePriceFocused ? purchasePrice : (purchasePrice ? formatNumber(purchasePrice) : '')}
               onChange={(e) => {
@@ -481,20 +481,20 @@ export default function CardUser(props: any) {
               type="text"
               sx={{
                 "& .MuiOutlinedInput-root": {
-                  backgroundColor: "#1a1d2e",
-                  color: "#fff",
+                  backgroundColor: "var(--admin-surface-alt)",
+                  color: "var(--admin-text)",
                   "& fieldset": {
                     borderColor: "#505669",
                   },
                   "&:hover fieldset": {
-                    borderColor: "#78b568",
+                    borderColor: "var(--admin-accent)",
                   },
                   "&.Mui-focused fieldset": {
-                    borderColor: "#78b568",
+                    borderColor: "var(--admin-accent)",
                   },
                 },
                 "& .MuiInputBase-input": {
-                  color: "#fff",
+                  color: "var(--admin-text)",
                   fontSize: "14px",
                   padding: "8px 12px"
                 }
@@ -506,7 +506,7 @@ export default function CardUser(props: any) {
         {/* قیمت فروش و درصد تخفیف - دو ستون */}
         <Grid xs={6} sx={{ paddingBottom: 0 }}>
           <Box sx={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "4px" }}>
-            <Typography sx={{ color: "#fff", fontSize: "12px" }}>قیمت فروش:</Typography>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: "12px" }}>قیمت فروش:</Typography>
             <TextField
               value={salePriceFocused ? salePrice : (salePrice ? formatNumber(salePrice) : '')}
               onChange={(e) => {
@@ -525,20 +525,20 @@ export default function CardUser(props: any) {
               type="text"
               sx={{
                 "& .MuiOutlinedInput-root": {
-                  backgroundColor: "#1a1d2e",
-                  color: "#fff",
+                  backgroundColor: "var(--admin-surface-alt)",
+                  color: "var(--admin-text)",
                   "& fieldset": {
                     borderColor: "#505669",
                   },
                   "&:hover fieldset": {
-                    borderColor: "#78b568",
+                    borderColor: "var(--admin-accent)",
                   },
                   "&.Mui-focused fieldset": {
-                    borderColor: "#78b568",
+                    borderColor: "var(--admin-accent)",
                   },
                 },
                 "& .MuiInputBase-input": {
-                  color: "#fff",
+                  color: "var(--admin-text)",
                   fontSize: "14px",
                   padding: "8px 12px"
                 }
@@ -549,7 +549,7 @@ export default function CardUser(props: any) {
 
         <Grid xs={6} sx={{ paddingBottom: 0 }}>
           <Box sx={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "4px" }}>
-            <Typography sx={{ color: "#fff", fontSize: "12px" }}>درصد تخفیف:</Typography>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: "12px" }}>درصد تخفیف:</Typography>
             <TextField
               value={discountPercent}
               onChange={(e) => {
@@ -565,8 +565,8 @@ export default function CardUser(props: any) {
               placeholder="0"
               sx={{
                 "& .MuiOutlinedInput-root": {
-                  backgroundColor: "#1a1d2e",
-                  color: "#fff",
+                  backgroundColor: "var(--admin-surface-alt)",
+                  color: "var(--admin-text)",
                   "& fieldset": {
                     borderColor: "#505669",
                   },
@@ -578,7 +578,7 @@ export default function CardUser(props: any) {
                   },
                 },
                 "& .MuiInputBase-input": {
-                  color: "#fff",
+                  color: "var(--admin-text)",
                   fontSize: "14px",
                   padding: "8px 12px"
                 }
@@ -590,7 +590,7 @@ export default function CardUser(props: any) {
         {/* موجودی و سود - دو ستون */}
         <Grid xs={6} sx={{ paddingBottom: 0 }}>
           <Box sx={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "4px" }}>
-            <Typography sx={{ color: "#fff", fontSize: "12px" }}>موجودی:</Typography>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: "12px" }}>موجودی:</Typography>
             <TextField
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
@@ -600,20 +600,20 @@ export default function CardUser(props: any) {
               type="number"
               sx={{
                 "& .MuiOutlinedInput-root": {
-                  backgroundColor: "#1a1d2e",
-                  color: "#fff",
+                  backgroundColor: "var(--admin-surface-alt)",
+                  color: "var(--admin-text)",
                   "& fieldset": {
                     borderColor: "#505669",
                   },
                   "&:hover fieldset": {
-                    borderColor: "#78b568",
+                    borderColor: "var(--admin-accent)",
                   },
                   "&.Mui-focused fieldset": {
-                    borderColor: "#78b568",
+                    borderColor: "var(--admin-accent)",
                   },
                 },
                 "& .MuiInputBase-input": {
-                  color: "#fff",
+                  color: "var(--admin-text)",
                   fontSize: "14px",
                   padding: "8px 12px"
                 }
@@ -625,12 +625,12 @@ export default function CardUser(props: any) {
         {/* درصد سود */}
         <Grid xs={6} sx={{ paddingBottom: 0 }}>
           <Box sx={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "4px" }}>
-            <Typography sx={{ color: "#fff", fontSize: "12px" }}>سود:</Typography>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: "12px" }}>سود:</Typography>
             <Box sx={{
               backgroundColor: (() => {
                 const purchase = parseFloat(purchasePrice) || 0;
                 const sale = parseFloat(salePrice) || 0;
-                if (purchase <= 0 || sale <= 0) return "#1a1d2e";
+                if (purchase <= 0 || sale <= 0) return "var(--admin-surface-alt)";
                 const profitPercent = ((sale - purchase) / purchase) * 100;
                 if (profitPercent < 30) return "rgba(255, 68, 68, 0.2)";
                 if (profitPercent < 40) return "rgba(255, 145, 0, 0.2)";
@@ -643,7 +643,7 @@ export default function CardUser(props: any) {
                 const profitPercent = ((sale - purchase) / purchase) * 100;
                 if (profitPercent < 30) return "1px solid #ff4444";
                 if (profitPercent < 40) return "1px solid #ff9100";
-                return "1px solid #78b568";
+                return "1px solid var(--admin-accent)";
               })(),
               borderRadius: "4px",
               padding: "8px 12px",
@@ -659,7 +659,7 @@ export default function CardUser(props: any) {
                   const profitPercent = ((sale - purchase) / purchase) * 100;
                   if (profitPercent < 30) return "#ff4444";
                   if (profitPercent < 40) return "#ff9100";
-                  return "#78b568";
+                  return "var(--admin-accent)";
                 })(),
                 fontSize: "14px",
                 fontWeight: "600",
@@ -681,12 +681,12 @@ export default function CardUser(props: any) {
           <Grid xs={12} sx={{ paddingBottom: 0 }}>
             <Box sx={{ marginTop: "10px", padding: "8px", backgroundColor: "rgba(255, 145, 0, 0.1)", borderRadius: "8px" }}>
               <Box sx={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                <Typography sx={{ color: "#999", fontSize: "12px", textDecoration: "line-through" }}>
+                <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "12px", textDecoration: "line-through" }}>
                   قیمت اصلی: {formatNumber(props.props.data.original_sale_price)} تومان
                 </Typography>
               </Box>
               <Box sx={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "space-between" }}>
-                <Typography sx={{ color: "#78b568", fontSize: "14px", fontWeight: "600" }}>
+                <Typography sx={{ color: "var(--admin-accent)", fontSize: "14px", fontWeight: "600" }}>
                   قیمت با تخفیف: {formatNumber(props.props.data.sale_price)} تومان
                 </Typography>
               </Box>
@@ -698,7 +698,7 @@ export default function CardUser(props: any) {
         {images.length > 0 && (
           <Grid xs={12} sx={{ paddingBottom: 0, marginTop: "10px" }}>
             <Box>
-              <Typography sx={{ color: "#fff", fontSize: "12px", marginBottom: "8px" }}>
+              <Typography sx={{ color: "var(--admin-text)", fontSize: "12px", marginBottom: "8px" }}>
                 تصاویر محصول:
               </Typography>
               <Box sx={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
@@ -739,7 +739,7 @@ export default function CardUser(props: any) {
                 onClick={() => onEdit(props.props.data)}
                 sx={{
                   backgroundColor: "#ff9100",
-                  color: "#fff",
+                  color: "var(--admin-text)",
                   "&:hover": { backgroundColor: "#e68000" },
                 }}
               >
@@ -765,7 +765,7 @@ export default function CardUser(props: any) {
               }}
               sx={{
                 backgroundColor: "#9c27b0",
-                color: "#fff",
+                color: "var(--admin-text)",
                 "&:hover": { backgroundColor: "#7b1fa2" },
               }}
             >
@@ -776,9 +776,9 @@ export default function CardUser(props: any) {
             <IconButton
               onClick={handlePrint}
               sx={{
-                backgroundColor: "#78b568",
-                color: "#fff",
-                "&:hover": { backgroundColor: "#5a9a4a" },
+                backgroundColor: "var(--admin-accent)",
+                color: "var(--admin-text)",
+                "&:hover": { backgroundColor: "var(--admin-accent-hover)" },
               }}
             >
               <PrintIcon />
@@ -797,7 +797,7 @@ export default function CardUser(props: any) {
               }}
               sx={{
                 backgroundColor: "#2196f3",
-                color: "#fff",
+                color: "var(--admin-text)",
                 "&:hover": { backgroundColor: "#1976d2" },
               }}
             >
@@ -810,7 +810,7 @@ export default function CardUser(props: any) {
                 onClick={() => onDelete(props.props.data)}
                 sx={{
                   backgroundColor: "#ff4444",
-                  color: "#fff",
+                  color: "var(--admin-text)",
                   "&:hover": { backgroundColor: "#cc0000" },
                 }}
               >
@@ -829,14 +829,14 @@ export default function CardUser(props: any) {
         fullWidth
         PaperProps={{
           sx: {
-            backgroundColor: "#2b3143",
+            backgroundColor: "var(--admin-surface)",
             borderRadius: "20px",
-            border: "1px solid #505669",
+            border: "1px solid var(--admin-border)",
           }
         }}
       >
         <DialogTitle sx={{ 
-          color: "#fff", 
+          color: "var(--admin-text)", 
           display: "flex", 
           justifyContent: "space-between", 
           alignItems: "center",
@@ -848,7 +848,7 @@ export default function CardUser(props: any) {
           </Typography>
           <IconButton 
             onClick={() => setSizeColorModalOpen(false)}
-            sx={{ color: "#fff" }}
+            sx={{ color: "var(--admin-text)" }}
           >
             <CloseIcon />
           </IconButton>
@@ -857,7 +857,7 @@ export default function CardUser(props: any) {
         <DialogContent sx={{ padding: "24px", direction: "rtl" }}>
           {/* Size Selection */}
           <Box sx={{ marginBottom: "32px" }}>
-            <Typography sx={{ color: "#fff", fontSize: "16px", fontWeight: "600", marginBottom: "16px" }}>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: "16px", fontWeight: "600", marginBottom: "16px" }}>
               انتخاب سایز:
             </Typography>
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
@@ -881,12 +881,12 @@ export default function CardUser(props: any) {
                       fontWeight: "600",
                       fontSize: "15px",
                       backgroundColor: isSelected ? "#ff9100" : "transparent",
-                      color: isSelected ? "#fff" : "#9ca3af",
+                      color: isSelected ? "#fff" : "var(--admin-text-secondary)",
                       borderColor: isSelected ? "#ff9100" : "#4b5563",
                       "&:hover": {
                         backgroundColor: isSelected ? "#e68000" : "#1f2937",
                         borderColor: isSelected ? "#e68000" : "#6b7280",
-                        color: "#fff",
+                        color: "var(--admin-text)",
                       },
                     }}
                   >
@@ -899,7 +899,7 @@ export default function CardUser(props: any) {
 
           {/* Color Selection */}
           <Box>
-            <Typography sx={{ color: "#fff", fontSize: "16px", fontWeight: "600", marginBottom: "16px" }}>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: "16px", fontWeight: "600", marginBottom: "16px" }}>
               انتخاب رنگ:
             </Typography>
             
@@ -946,7 +946,7 @@ export default function CardUser(props: any) {
                             }}
                           />
                         )}
-                        <Typography sx={{ color: "#000" }}>
+                        <Typography sx={{ color: "var(--admin-text)" }}>
                           {typeof option === 'string' ? option : option.persianName}
                         </Typography>
                       </Box>
@@ -968,8 +968,8 @@ export default function CardUser(props: any) {
                     }}
                     sx={{
                       "& .MuiOutlinedInput-root": {
-                        backgroundColor: "#1a1d2e",
-                        color: "#fff",
+                        backgroundColor: "var(--admin-surface-alt)",
+                        color: "var(--admin-text)",
                         "& fieldset": {
                           borderColor: "#505669",
                         },
@@ -981,7 +981,7 @@ export default function CardUser(props: any) {
                         },
                       },
                       "& .MuiInputBase-input": {
-                        color: "#fff",
+                        color: "var(--admin-text)",
                         fontSize: "14px",
                       }
                     }}
@@ -990,10 +990,10 @@ export default function CardUser(props: any) {
                 sx={{
                   flex: 1,
                   "& .MuiAutocomplete-popper": {
-                    backgroundColor: "#2b3143",
+                    backgroundColor: "var(--admin-surface)",
                   },
                   "& .MuiAutocomplete-listbox": {
-                    backgroundColor: "#2b3143",
+                    backgroundColor: "var(--admin-surface)",
                   },
                 }}
               />
@@ -1007,7 +1007,7 @@ export default function CardUser(props: any) {
                 disabled={!newColorInput.trim() || colors.includes(newColorInput.trim())}
                 sx={{
                   backgroundColor: "#9c27b0",
-                  color: "#fff",
+                  color: "var(--admin-text)",
                   "&:hover": { backgroundColor: "#7b1fa2" },
                   "&:disabled": { backgroundColor: "#4b5563", color: "#6b7280" }
                 }}
@@ -1026,12 +1026,12 @@ export default function CardUser(props: any) {
                     onDelete={() => setColors(colors.filter((_, i) => i !== index))}
                     sx={{
                       backgroundColor: "#1f2937",
-                      color: "#fff",
+                      color: "var(--admin-text)",
                       border: "1px solid #4b5563",
                       fontSize: "14px",
                       fontWeight: "500",
                       "& .MuiChip-deleteIcon": {
-                        color: "#9ca3af",
+                        color: "var(--admin-text-secondary)",
                         "&:hover": {
                           color: "#ef4444",
                         },
@@ -1048,7 +1048,7 @@ export default function CardUser(props: any) {
           <Button
             onClick={() => setSizeColorModalOpen(false)}
             sx={{
-              color: "#9ca3af",
+              color: "var(--admin-text-secondary)",
               "&:hover": { backgroundColor: "rgba(156, 163, 175, 0.1)" }
             }}
           >
@@ -1104,7 +1104,7 @@ export default function CardUser(props: any) {
             variant="contained"
             sx={{
               backgroundColor: "#9c27b0",
-              color: "#fff",
+              color: "var(--admin-text)",
               "&:hover": { backgroundColor: "#7b1fa2" }
             }}
           >
@@ -1121,14 +1121,14 @@ export default function CardUser(props: any) {
         fullWidth
         PaperProps={{
           sx: {
-            backgroundColor: "#2b3143",
+            backgroundColor: "var(--admin-surface)",
             borderRadius: "20px",
-            border: "1px solid #505669",
+            border: "1px solid var(--admin-border)",
           }
         }}
       >
         <DialogTitle sx={{ 
-          color: "#fff", 
+          color: "var(--admin-text)", 
           display: "flex", 
           justifyContent: "space-between", 
           alignItems: "center",
@@ -1140,7 +1140,7 @@ export default function CardUser(props: any) {
           </Typography>
           <IconButton 
             onClick={() => setManufacturerModalOpen(false)}
-            sx={{ color: "#fff" }}
+            sx={{ color: "var(--admin-text)" }}
           >
             <CloseIcon />
           </IconButton>
@@ -1148,13 +1148,13 @@ export default function CardUser(props: any) {
         
         <DialogContent sx={{ padding: "24px", direction: "rtl" }}>
           <FormControl fullWidth>
-            <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>تولیدکننده</InputLabel>
+            <InputLabel sx={{ color: 'var(--admin-text-muted)' }}>تولیدکننده</InputLabel>
             <Select
               value={selectedManufacturerId}
               onChange={(e) => setSelectedManufacturerId(e.target.value as number | "")}
               label="تولیدکننده"
               sx={{
-                color: '#fff',
+                color: 'var(--admin-text)',
                 '& .MuiOutlinedInput-notchedOutline': {
                   borderColor: '#505669',
                 },
@@ -1165,7 +1165,7 @@ export default function CardUser(props: any) {
                   borderColor: '#2196f3',
                 },
                 '& .MuiSvgIcon-root': {
-                  color: '#fff',
+                  color: 'var(--admin-text)',
                 },
               }}
             >
@@ -1185,7 +1185,7 @@ export default function CardUser(props: any) {
           <Button
             onClick={() => setManufacturerModalOpen(false)}
             sx={{
-              color: "#9ca3af",
+              color: "var(--admin-text-secondary)",
               "&:hover": { backgroundColor: "rgba(156, 163, 175, 0.1)" }
             }}
           >

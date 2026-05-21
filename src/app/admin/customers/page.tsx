@@ -72,7 +72,7 @@ export default function CustomersPage() {
           padding: "16px",
           paddingBottom: "100px",
           minHeight: "100vh",
-          background: "linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%)",
+          background: "var(--admin-bg-gradient)",
         }}
       >
         <CustomersList

@@ -1,0 +1,157 @@
+/* پیش‌فرض متغیرها (برای Grid و کامپوننت‌های مشترک) */
+:root {
+  --admin-bg-gradient: linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%);
+  --admin-surface: #2b3143;
+  --admin-surface-alt: #1a1d2e;
+  --admin-header-bg: #1a1d2e;
+  --admin-text: #ffffff;
+  --admin-text-muted: rgba(255, 255, 255, 0.7);
+  --admin-text-secondary: #999999;
+  --admin-border: #505669;
+  --admin-accent: #78b568;
+  --admin-accent-hover: #5a9a4a;
+  --admin-title-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --admin-menu-hover: rgba(120, 181, 104, 0.15);
+  --admin-icon-bg: rgba(255, 255, 255, 0.1);
+  --admin-icon-bg-hover: rgba(255, 255, 255, 0.2);
+  --admin-divider: rgba(255, 255, 255, 0.1);
+  --admin-header-bar-border: rgba(55, 84, 165, 0.3);
+  --admin-accent-border: rgba(120, 181, 104, 0.2);
+  --admin-bottom-nav-bg: #2b3143;
+  --admin-surface-nested: #353b4f;
+  --admin-surface-deep: #3f4559;
+  --admin-dashboard-card-bg: linear-gradient(145deg, #1e2330 0%, #252b3d 100%);
+  --admin-dashboard-chart-bg: linear-gradient(145deg, #1a1f2e 0%, #232a3f 100%);
+  --admin-stat-on-gradient: #ffffff;
+  --admin-info-bg: rgba(33, 150, 243, 0.12);
+  --admin-info-border: rgba(33, 150, 243, 0.25);
+  --admin-info-icon: #2196f3;
+}
+
+/* تم ادمین — تیره (پیش‌فرض، بدون تغییر ظاهر فعلی) */
+html[data-admin-theme="dark"],
+html:not([data-admin-theme]) {
+  --admin-bg-gradient: linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%);
+  --admin-surface: #2b3143;
+  --admin-surface-alt: #1a1d2e;
+  --admin-header-bg: #1a1d2e;
+  --admin-text: #ffffff;
+  --admin-text-muted: rgba(255, 255, 255, 0.7);
+  --admin-text-secondary: #999999;
+  --admin-border: #505669;
+  --admin-accent: #78b568;
+  --admin-accent-hover: #5a9a4a;
+  --admin-title-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --admin-menu-hover: rgba(120, 181, 104, 0.15);
+  --admin-icon-bg: rgba(255, 255, 255, 0.1);
+  --admin-icon-bg-hover: rgba(255, 255, 255, 0.2);
+  --admin-divider: rgba(255, 255, 255, 0.1);
+  --admin-header-bar-border: rgba(55, 84, 165, 0.3);
+  --admin-accent-border: rgba(120, 181, 104, 0.2);
+  --admin-bottom-nav-bg: #2b3143;
+  --admin-surface-nested: #353b4f;
+  --admin-surface-deep: #3f4559;
+  --admin-dashboard-card-bg: linear-gradient(145deg, #1e2330 0%, #252b3d 100%);
+  --admin-dashboard-chart-bg: linear-gradient(145deg, #1a1f2e 0%, #232a3f 100%);
+  --admin-stat-on-gradient: #ffffff;
+  --admin-info-bg: rgba(33, 150, 243, 0.12);
+  --admin-info-border: rgba(33, 150, 243, 0.25);
+  --admin-info-icon: #2196f3;
+}
+
+/* تم روشن — کمی تیره‌تر از سفید خالص (خوانایی بهتر) */
+html[data-admin-theme="light"] {
+  --admin-bg-gradient: linear-gradient(180deg, #e8edf2 0%, #dfe8e4 45%, #d8e2ea 100%);
+  --admin-surface: #f1f5f9;
+  --admin-surface-alt: #e2e8f0;
+  --admin-header-bg: #eef2f6;
+  --admin-text: #0f172a;
+  --admin-text-muted: #64748b;
+  --admin-text-secondary: #475569;
+  --admin-border: #e2e8f0;
+  --admin-accent: #059669;
+  --admin-accent-hover: #047857;
+  --admin-title-gradient: linear-gradient(135deg, #059669 0%, #047857 100%);
+  --admin-menu-hover: rgba(5, 150, 105, 0.1);
+  --admin-icon-bg: rgba(15, 23, 42, 0.06);
+  --admin-icon-bg-hover: rgba(15, 23, 42, 0.1);
+  --admin-divider: #e2e8f0;
+  --admin-header-bar-border: #e2e8f0;
+  --admin-accent-border: rgba(5, 150, 105, 0.25);
+  --admin-bottom-nav-bg: #eef2f6;
+  --admin-surface-nested: #e2e8f0;
+  --admin-surface-deep: #d8e2ea;
+  --admin-dashboard-card-bg: linear-gradient(145deg, #f1f5f9 0%, #e8edf2 100%);
+  --admin-dashboard-chart-bg: linear-gradient(145deg, #eef2f6 0%, #dfe8e4 100%);
+  --admin-stat-on-gradient: #ffffff;
+  --admin-info-bg: rgba(5, 150, 105, 0.08);
+  --admin-info-border: rgba(5, 150, 105, 0.22);
+  --admin-info-icon: #059669;
+}
+
+html[data-admin-theme="light"] body {
+  background-color: #d8e2ea;
+  color: #0f172a;
+}
+
+html[data-admin-theme="dark"] body,
+html:not([data-admin-theme]) body {
+  background-color: #090d19;
+}
+
+/* گرید و جدول — تم روشن (پشتیبان برای استایل‌های قدیمی) */
+html[data-admin-theme="light"] .MuiTableContainer-root {
+  background-color: var(--admin-surface) !important;
+  border-color: var(--admin-border) !important;
+}
+
+html[data-admin-theme="light"] .MuiTableHead-root .MuiTableCell-root {
+  background-color: var(--admin-surface-alt) !important;
+  color: var(--admin-text) !important;
+}
+
+html[data-admin-theme="light"] .MuiTableBody-root .MuiTableCell-root {
+  color: var(--admin-text) !important;
+}
+
+html[data-admin-theme="light"] .MuiTableBody-root .MuiTableRow-root {
+  background-color: var(--admin-surface) !important;
+}
+
+html[data-admin-theme="light"] .MuiTableBody-root .MuiTableRow-root:nth-of-type(even) {
+  background-color: var(--admin-surface-alt) !important;
+}
+
+html[data-admin-theme="light"] .MuiPaginationItem-root {
+  color: var(--admin-text) !important;
+}
+
+html[data-admin-theme="light"] .MuiPaginationItem-root.Mui-selected {
+  background-color: var(--admin-accent) !important;
+  color: #fff !important;
+}
+
+/* کارت‌های لیست موبایل */
+html[data-admin-theme="light"] .MuiPaper-root.MuiCard-root,
+html[data-admin-theme="light"] .admin-list-card {
+  color: var(--admin-text);
+}
+
+/* متن پیش‌فرض MUI داخل ادمین — تم روشن */
+html[data-admin-theme="light"] .MuiTableCell-root,
+html[data-admin-theme="light"] .MuiTableCell-root .MuiTypography-root {
+  color: var(--admin-text);
+}
+
+html[data-admin-theme="light"] .MuiInputBase-input,
+html[data-admin-theme="light"] .MuiInputLabel-root {
+  color: var(--admin-text);
+}
+
+html[data-admin-theme="light"] .MuiBottomNavigationAction-label {
+  color: var(--admin-text-secondary);
+}
+
+html[data-admin-theme="light"] .MuiBottomNavigationAction-root.Mui-selected .MuiBottomNavigationAction-label {
+  color: var(--admin-accent);
+}

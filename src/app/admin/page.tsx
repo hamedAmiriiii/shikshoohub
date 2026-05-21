@@ -53,8 +53,8 @@ import CategoryIcon from '@mui/icons-material/Category';
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
-    backgroundColor: "#1a1d2e",
-    color: "#fff",
+    backgroundColor: "var(--admin-surface-alt)",
+    color: "var(--admin-text)",
     fontWeight: "600",
     [theme.breakpoints.down('md')]: {
       fontSize: "12px",
@@ -66,7 +66,7 @@ const StyledTableCell = styled(TableCell)(({ theme }) => ({
     },
   },
   [`&.${tableCellClasses.body}`]: {
-    color: "#fff",
+    color: "var(--admin-text)",
     [theme.breakpoints.down('md')]: {
       fontSize: 12,
       padding: "8px 12px",
@@ -258,14 +258,14 @@ export default function ShoppingPage() {
 
   const darkFieldSx = {
     "& .MuiOutlinedInput-root": {
-      backgroundColor: "#1a1d2e",
-      color: "#fff",
+      backgroundColor: "var(--admin-surface-alt)",
+      color: "var(--admin-text)",
       "& fieldset": { borderColor: "#505669" },
-      "&:hover fieldset": { borderColor: "#78b568" },
-      "&.Mui-focused fieldset": { borderColor: "#78b568" },
+      "&:hover fieldset": { borderColor: "var(--admin-accent)" },
+      "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
     },
     "& .MuiInputBase-input": {
-      color: "#fff",
+      color: "var(--admin-text)",
       fontSize: { xs: "13px", md: "14px" },
       padding: { xs: "10px 12px", md: "12px 14px" },
       textAlign: "right",
@@ -312,10 +312,15 @@ export default function ShoppingPage() {
   }, []);
 
   useEffect(() => {
-    setTodayDashboard(readTodayDashboardCache());
+    const cachedToday = readTodayDashboardCache();
+    const todayKey = getLocalDateKey();
+    if (cachedToday?.dateKey === todayKey) {
+      setTodayDashboard(cachedToday);
+    }
     setSalesByDay(readSalesByDayCache());
     setProductsCount(readProductsCountFromCache());
-  }, []);
+    void refreshShopDashboard();
+  }, [refreshShopDashboard]);
 
   useEffect(() => {
     if (items.length > 0) {
@@ -1118,7 +1123,8 @@ console.log("discounttype" , discounttype);
 
     setIsRegisteringUser(true);
     try {
-      const res = await apiRequestError("Post", {}, { phone: normalizedPhone }, `/api/customers/register`, true, true, "");
+      const token = tokenCode() || "";
+      const res = await apiRequestError("Post", {}, { phone: normalizedPhone }, `/api/customers/register`, true, true, token);
 
       if (res.hasError) {
         toast.error(res.errorText || "خطا در ثبت کاربر");
@@ -1128,8 +1134,6 @@ console.log("discounttype" , discounttype);
       if (res.already_exists) {
         toast.info(res.message || "کاربر قبلا در شیک‌شو ثبت شده است");
       } else {
-        console.log("ddddddddddddd" , res);
-        
         toast.success(res.message || "کاربر با موفقیت ثبت شد");
       }
 
@@ -1247,14 +1251,14 @@ console.log("discounttype" , discounttype);
 
 
   return (
-    <Box sx={{ position: 'relative', minHeight: '100vh', direction: "rtl", background: "linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%)" }}>
-      <Container maxWidth="xl" sx={{ padding: { xs: '12px', md: '24px' }, paddingBottom: { xs: '100px', md: '40px' } }}>
+    <Box sx={{ position: 'relative', minHeight: '100vh', direction: "rtl", background: "var(--admin-bg-gradient)" }}>
+      <Container maxWidth="xl" sx={{ padding: { xs: '12px', md: '24px' }, paddingBottom: { xs: '140px', md: '56px' } }}>
 
         {/* Offline Status Banner */}
         {!isOnline && (
           <Box sx={{
             backgroundColor: "#ff9800",
-            color: "#fff",
+            color: "var(--admin-text)",
             padding: { xs: "8px 12px", md: "12px 20px" },
             borderRadius: { xs: "8px", md: "12px" },
             marginBottom: { xs: "12px", md: "16px" },
@@ -1278,7 +1282,7 @@ console.log("discounttype" , discounttype);
             onClick={() => router.push('/admin/pending-purchases')}
             sx={{
               backgroundColor: isOnline ? "#2196f3" : "#ff9800",
-              color: "#fff",
+              color: "var(--admin-text)",
               padding: { xs: "8px 12px", md: "12px 20px" },
               borderRadius: { xs: "8px", md: "12px" },
               marginBottom: { xs: "12px", md: "16px" },
@@ -1318,11 +1322,11 @@ console.log("discounttype" , discounttype);
                   syncPendingPurchases();
                 }}
                 sx={{
-                  color: "#fff",
-                  backgroundColor: "rgba(255,255,255,0.2)",
+                  color: "var(--admin-text)",
+                  backgroundColor: "var(--admin-icon-bg)",
                   padding: { xs: "4px", md: "6px" },
                   "&:hover": {
-                    backgroundColor: "rgba(255,255,255,0.3)",
+                    backgroundColor: "var(--admin-text-secondary)",
                   }
                 }}
               >
@@ -1330,7 +1334,7 @@ console.log("discounttype" , discounttype);
               </IconButton>
             )}
             {isSyncing && (
-              <CircularProgress size={20} sx={{ color: "#fff" }} />
+              <CircularProgress size={20} sx={{ color: "var(--admin-text)" }} />
             )}
           </Box>
         )}
@@ -1364,7 +1368,7 @@ console.log("discounttype" , discounttype);
                     <TableHead>
                       <TableRow>
                         <StyledTableCell align="right" sx={{ 
-                          color: "#fff", 
+                          color: "var(--admin-text)", 
                           fontWeight: "700", 
                           backgroundColor: "#0f1117",
                           fontSize: { xs: "13px", md: "17px" },
@@ -1374,7 +1378,7 @@ console.log("discounttype" , discounttype);
                           کالا
                         </StyledTableCell>
                         <StyledTableCell align="right" sx={{ 
-                          color: "#fff", 
+                          color: "var(--admin-text)", 
                           fontWeight: "700", 
                           backgroundColor: "#0f1117",
                           fontSize: { xs: "13px", md: "17px" },
@@ -1384,7 +1388,7 @@ console.log("discounttype" , discounttype);
                           قیمت
                         </StyledTableCell>
                         <StyledTableCell align="right" sx={{ 
-                          color: "#fff", 
+                          color: "var(--admin-text)", 
                           fontWeight: "700", 
                           backgroundColor: "#0f1117",
                           fontSize: { xs: "13px", md: "17px" },
@@ -1394,7 +1398,7 @@ console.log("discounttype" , discounttype);
                           تعداد
                         </StyledTableCell>
                         <StyledTableCell align="right" sx={{ 
-                          color: "#fff", 
+                          color: "var(--admin-text)", 
                           fontWeight: "700", 
                           backgroundColor: "#0f1117",
                           fontSize: { xs: "13px", md: "17px" },
@@ -1411,7 +1415,7 @@ console.log("discounttype" , discounttype);
                       key={item.id}
                       sx={{
                         backgroundColor: "#1e2330",
-                        borderBottom: "1px solid rgba(120, 181, 104, 0.1)",
+                        borderBottom: "1px solid var(--admin-menu-hover)",
                         transition: "all 0.2s ease",
                         "&:hover": {
                           backgroundColor: "#252a3a",
@@ -1422,7 +1426,7 @@ console.log("discounttype" , discounttype);
                       <StyledTableCell align="right" component="th" scope="row" sx={{ 
                         width: "40%", 
                         whiteSpace: 'nowrap', 
-                        color: "#fff", 
+                        color: "var(--admin-text)", 
                         fontSize: { xs: "12px", md: "16px" },
                         padding: { xs: "8px 12px", md: "16px 24px" }
                       }}>
@@ -1433,11 +1437,11 @@ console.log("discounttype" , discounttype);
                       }}>
                         {item.has_discount ? (
                           <Box sx={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-end" }}>
-                            <Typography sx={{ color: "#999", fontSize: "11px", textDecoration: "line-through" }}>
+                            <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "11px", textDecoration: "line-through" }}>
                               {formatNumber(Number(item.original_sale_price))} تومان
                             </Typography>
                             <Box sx={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                              <Typography sx={{ color: "#78b568", fontSize: { xs: "12px", md: "16px" }, fontWeight: "600" }}>
+                              <Typography sx={{ color: "var(--admin-accent)", fontSize: { xs: "12px", md: "16px" }, fontWeight: "600" }}>
                                 {formatNumber(Number(item.sale_price))} تومان
                               </Typography>
                               <Typography sx={{ 
@@ -1453,28 +1457,28 @@ console.log("discounttype" , discounttype);
                             </Box>
                           </Box>
                         ) : (
-                          <Typography sx={{ color: "#78b568", fontWeight: "600", fontSize: { xs: "14px", md: "19px" } }}>
+                          <Typography sx={{ color: "var(--admin-accent)", fontWeight: "600", fontSize: { xs: "14px", md: "19px" } }}>
                             {formatNumber(Number(item.sale_price))} تومان
                           </Typography>
                         )}
                       </StyledTableCell>
-                      <StyledTableCell align="right" sx={{ color: "#fff", padding: { xs: "8px 12px", md: "16px 24px" } }}>
+                      <StyledTableCell align="right" sx={{ color: "var(--admin-text)", padding: { xs: "8px 12px", md: "16px 24px" } }}>
                         <Box sx={{ display: "flex", alignItems: "center", gap: { xs: "6px", md: "12px" }, justifyContent: "flex-end" }}>
                           <IconButton 
                             onClick={() => updateQuantity(item.id, -1)}
                             sx={{ 
-                              color: "#fff", 
-                              backgroundColor: "#1a1d2e",
+                              color: "var(--admin-text)", 
+                              backgroundColor: "var(--admin-surface-alt)",
                               width: { xs: "24px", md: "32px" },
                               height: { xs: "24px", md: "32px" },
                               fontSize: { xs: "16px", md: "20px" },
-                              "&:hover": { backgroundColor: "#78b568" }
+                              "&:hover": { backgroundColor: "var(--admin-accent)" }
                             }}
                           >
                             -
                           </IconButton>
                           <Typography sx={{ 
-                            color: "#fff", 
+                            color: "var(--admin-text)", 
                             minWidth: { xs: "24px", md: "40px" }, 
                             textAlign: "center", 
                             fontSize: { xs: "12px", md: "16px" } 
@@ -1484,12 +1488,12 @@ console.log("discounttype" , discounttype);
                           <IconButton 
                             onClick={() => updateQuantity(item.id, 1)}
                             sx={{ 
-                              color: "#fff", 
-                              backgroundColor: "#1a1d2e",
+                              color: "var(--admin-text)", 
+                              backgroundColor: "var(--admin-surface-alt)",
                               width: { xs: "24px", md: "32px" },
                               height: { xs: "24px", md: "32px" },
                               fontSize: { xs: "16px", md: "20px" },
-                              "&:hover": { backgroundColor: "#78b568" }
+                              "&:hover": { backgroundColor: "var(--admin-accent)" }
                             }}
                           >
                             +
@@ -1531,7 +1535,7 @@ console.log("discounttype" , discounttype);
                   <Typography sx={{ color: "rgba(26, 180, 77, 0.9)", fontSize: { xs: "15px", md: "18px" }, fontWeight: 600 }}>
                     کالا با موفقیت برگشت خورد
                   </Typography>
-                  <Typography sx={{ color: "rgba(255,255,255,0.55)", fontSize: { xs: "12px", md: "14px" }, mt: 1 }}>
+                  <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: { xs: "12px", md: "14px" }, mt: 1 }}>
                     منتظر کالای جدید هستید
                   </Typography>
                 </CardContent>
@@ -1543,22 +1547,22 @@ console.log("discounttype" , discounttype);
                     <Card
                       sx={{
                         height: "100%",
-                        background: "linear-gradient(145deg, #1e2330 0%, #252b3d 100%)",
+                        background: "var(--admin-dashboard-card-bg)",
                         borderRadius: { xs: "16px", md: "20px" },
-                        border: "1px solid rgba(120, 181, 104, 0.22)",
+                        border: "1px solid var(--admin-accent-border)",
                         overflow: "hidden",
                       }}
                     >
                       <CardContent sx={{ padding: { xs: "16px", md: "20px" }, height: "100%" }}>
                         <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: { xs: 1.5, md: 2 } }}>
-                          <TodayIcon sx={{ color: "#78b568", fontSize: { xs: 22, md: 26 } }} />
+                          <TodayIcon sx={{ color: "var(--admin-accent)", fontSize: { xs: 22, md: 26 } }} />
                           <Box>
-                            <Typography sx={{ color: "#fff", fontWeight: 700, fontSize: { xs: "15px", md: "17px" } }}>
+                            <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: { xs: "15px", md: "17px" } }}>
                               {todayDashboard?.dateKey === getLocalDateKey()
                                 ? "عملکرد امروز"
                                 : "آخرین آمار فروش"}
                             </Typography>
-                            <Typography sx={{ color: "rgba(255,255,255,0.5)", fontSize: { xs: "11px", md: "12px" } }}>
+                            <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: { xs: "11px", md: "12px" } }}>
                               {todayDashboard
                                 ? "بعد از هر خرید به‌روز می‌شود"
                                 : "پس از اولین فروش امروز اینجا نمایش داده می‌شود"}
@@ -1610,9 +1614,9 @@ console.log("discounttype" , discounttype);
                                   justifyContent: "space-between",
                                 }}
                               >
-                                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, color: "rgba(255,255,255,0.9)" }}>
+                                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, color: "var(--admin-stat-on-gradient)" }}>
                                   {stat.icon}
-                                  <Typography sx={{ fontSize: { xs: "10px", md: "11px" }, fontWeight: 500 }}>
+                                  <Typography sx={{ fontSize: { xs: "10px", md: "11px" }, fontWeight: 500, color: "var(--admin-stat-on-gradient)" }}>
                                     {stat.label}
                                   </Typography>
                                 </Box>
@@ -1628,7 +1632,7 @@ console.log("discounttype" , discounttype);
                                 >
                                   <Typography
                                     sx={{
-                                      color: "#fff",
+                                      color: "var(--admin-stat-on-gradient)",
                                       fontWeight: 700,
                                       fontSize: {
                                         xs: stat.value === "—" ? "18px" : "15px",
@@ -1643,7 +1647,7 @@ console.log("discounttype" , discounttype);
                                   {stat.suffix && stat.value !== "—" && (
                                     <Typography
                                       sx={{
-                                        color: "rgba(255,255,255,0.8)",
+                                        color: "rgba(255,255,255,0.85)",
                                         fontSize: { xs: "10px", md: "11px" },
                                         fontWeight: 500,
                                         flexShrink: 0,
@@ -1665,9 +1669,9 @@ console.log("discounttype" , discounttype);
                     <Card
                       sx={{
                         height: "100%",
-                        background: "linear-gradient(145deg, #1a1f2e 0%, #232a3f 100%)",
+                        background: "var(--admin-dashboard-chart-bg)",
                         borderRadius: { xs: "16px", md: "20px" },
-                        border: "1px solid rgba(102, 126, 234, 0.25)",
+                        border: "1px solid var(--admin-accent-border)",
                         overflow: "hidden",
                       }}
                     >
@@ -1689,10 +1693,10 @@ console.log("discounttype" , discounttype);
                         gap: 1,
                       }}
                     >
-                      <AddCircleOutlineIcon sx={{ color: "#78b568", fontSize: { xs: 22, md: 24 } }} />
-                      <Typography sx={{ color: "rgba(255,255,255,0.75)", fontSize: { xs: "12px", md: "13px" } }}>
+                      <AddCircleOutlineIcon sx={{ color: "var(--admin-accent)", fontSize: { xs: 22, md: 24 } }} />
+                      <Typography sx={{ color: "var(--admin-text-muted)", fontSize: { xs: "12px", md: "13px" } }}>
                         برای شروع فروش، بارکد را اسکن کنید یا دکمه{" "}
-                        <Box component="span" sx={{ color: "#78b568", fontWeight: 700 }}>
+                        <Box component="span" sx={{ color: "var(--admin-accent)", fontWeight: 700 }}>
                           +
                         </Box>{" "}
                         را بزنید
@@ -1716,16 +1720,16 @@ console.log("discounttype" , discounttype);
                         sx={{
                           width: { xs: "100%", sm: "33.333%" },
                           flexShrink: 0,
-                          backgroundColor: "#1e2330",
+                          backgroundColor: "var(--admin-surface)",
                           borderRadius: "12px",
-                          border: "1px solid rgba(120, 181, 104, 0.22)",
+                          border: "1px solid var(--admin-border)",
                           boxShadow: "none",
                         }}
                       >
                         <CardContent sx={{ py: 1.25, px: 1.5, "&:last-child": { pb: 1.25 } }}>
                           <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 0.75 }}>
-                            <PersonAddIcon sx={{ color: "#78b568", fontSize: 18 }} />
-                            <Typography sx={{ color: "#fff", fontWeight: 600, fontSize: "13px" }}>
+                            <PersonAddIcon sx={{ color: "var(--admin-accent)", fontSize: 18 }} />
+                            <Typography sx={{ color: "var(--admin-text)", fontWeight: 600, fontSize: "13px" }}>
                               ثبت مشتری جدید
                             </Typography>
                           </Box>
@@ -1748,16 +1752,16 @@ console.log("discounttype" , discounttype);
                               fullWidth
                               sx={{
                                 "& .MuiOutlinedInput-root": {
-                                  backgroundColor: "#1a1d2e",
-                                  color: "#fff",
+                                  backgroundColor: "var(--admin-surface-alt)",
+                                  color: "var(--admin-text)",
                                   borderRadius: "10px",
                                   height: 36,
-                                  "& fieldset": { borderColor: "#505669" },
-                                  "&:hover fieldset": { borderColor: "#78b568" },
-                                  "&.Mui-focused fieldset": { borderColor: "#78b568" },
+                                  "& fieldset": { borderColor: "var(--admin-border)" },
+                                  "&:hover fieldset": { borderColor: "var(--admin-accent)" },
+                                  "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
                                 },
                                 "& .MuiInputBase-input": {
-                                  color: "#fff",
+                                  color: "var(--admin-text)",
                                   fontSize: "12px",
                                   textAlign: "left",
                                   direction: "ltr",
@@ -1776,7 +1780,7 @@ console.log("discounttype" , discounttype);
                                 height: 36,
                                 fontSize: "12px",
                                 fontWeight: 700,
-                                background: "linear-gradient(135deg, #78b568 0%, #5a9a4a 100%)",
+                                background: "linear-gradient(135deg, var(--admin-accent) 0%, var(--admin-accent-hover) 100%)",
                               }}
                             >
                               {isRegisteringUser ? "..." : "ثبت"}
@@ -1788,16 +1792,16 @@ console.log("discounttype" , discounttype);
                       <Card
                         sx={{
                           flex: 1,
-                          backgroundColor: "#1e2330",
+                          backgroundColor: "var(--admin-surface)",
                           borderRadius: "12px",
-                          border: "1px solid rgba(120, 181, 104, 0.18)",
+                          border: "1px solid var(--admin-border)",
                           boxShadow: "none",
                         }}
                       >
                         <CardContent sx={{ py: 1.25, px: 1.5, "&:last-child": { pb: 1.25 } }}>
                           <Typography
                             sx={{
-                              color: "#fff",
+                              color: "var(--admin-text)",
                               fontWeight: 600,
                               fontSize: "13px",
                               mb: 1,
@@ -1878,16 +1882,16 @@ console.log("discounttype" , discounttype);
           {/* Total and Submit - Desktop Sidebar */}
           {cart.length > 0 && (
             <Grid item xs={12} md={4}>
-              <Box sx={{ position: { md: "sticky" }, top: { md: "24px" } }}>
+              <Box sx={{ position: { md: "sticky" }, top: { md: "24px" }, pb: { xs: 3, md: 2 } }}>
                 {/* Phone Number Input */}
                 <Card sx={{ 
-                  backgroundColor: "#1e2330", 
+                  backgroundColor: "var(--admin-surface)", 
                   borderRadius: { xs: "16px", md: "20px" },
                   marginBottom: { xs: "16px", md: "24px" },
-                  border: "1px solid rgba(120, 181, 104, 0.2)",
+                  border: "1px solid var(--admin-border)",
                   transition: "all 0.3s ease",
                   "&:hover": {
-                   border: "1px solid rgba(120, 181, 104, 0.3)",
+                    border: "1px solid var(--admin-accent-border)",
                     transform: "translateY(-2px)",
                   }
                 }}>
@@ -1900,7 +1904,7 @@ console.log("discounttype" , discounttype);
                     />
                     {checkingCredit && (
                       <Typography sx={{ 
-                        color: "rgba(255,255,255,0.6)", 
+                        color: "var(--admin-text-muted)", 
                         fontSize: { xs: "11px", md: "14px" }, 
                         marginTop: { xs: "6px", md: "10px" } 
                       }}>
@@ -1911,11 +1915,11 @@ console.log("discounttype" , discounttype);
                       <Box sx={{ 
                         marginTop: { xs: "8px", md: "12px" }, 
                         padding: { xs: "8px", md: "12px" }, 
-                        backgroundColor: "#1a1d2e", 
+                        backgroundColor: "var(--admin-surface-alt)", 
                         borderRadius: { xs: "6px", md: "8px" } 
                       }}>
                         <Typography sx={{ 
-                          color: "#78b568", 
+                          color: "var(--admin-accent)", 
                           fontSize: { xs: "12px", md: "15px" }
                         }}>
                           اعتبار موجود: {formatNumber(credit)} تومان
@@ -1926,7 +1930,7 @@ console.log("discounttype" , discounttype);
                   {paymentType !== 'installment' && (
                     <CardContent sx={{ padding: { xs: "12px", md: "20px" }, paddingTop: 0 }}>
                       <Typography sx={{ 
-                        color: "#fff", 
+                        color: "var(--admin-text)", 
                         fontSize: { xs: "13px", md: "14px" },
                         marginBottom: { xs: "8px", md: "10px" },
                         fontWeight: "500"
@@ -1978,27 +1982,27 @@ console.log("discounttype" , discounttype);
                       helperText={discountError}
                       sx={{
                         "& .MuiOutlinedInput-root": {
-                          backgroundColor: "#1a1d2e",
-                          color: "#fff",
+                          backgroundColor: "var(--admin-surface-alt)",
+                          color: "var(--admin-text)",
                           "& fieldset": {
-                            borderColor: discountError ? "#ff4444" : "#505669",
+                            borderColor: discountError ? "#ff4444" : "var(--admin-border)",
                           },
                           "&:hover fieldset": {
-                            borderColor: discountError ? "#ff4444" : "#78b568",
+                            borderColor: discountError ? "#ff4444" : "var(--admin-accent)",
                           },
                           "&.Mui-focused fieldset": {
-                            borderColor: discountError ? "#ff4444" : "#78b568",
+                            borderColor: discountError ? "#ff4444" : "var(--admin-accent)",
                           },
                         },
                         "& .MuiInputBase-input": {
-                          color: "#fff",
+                          color: "var(--admin-text)",
                           fontSize: { xs: "13px", md: "14px" },
                           padding: { xs: "10px 12px", md: "12px 14px" },
                           textAlign: "right",
                           direction: "ltr"
                         },
                         "& .MuiInputBase-input::placeholder": {
-                          color: "rgba(255,255,255,0.4)",
+                          color: "var(--admin-text-secondary)",
                           opacity: 1
                         },
                         "& .MuiFormHelperText-root": {
@@ -2012,7 +2016,7 @@ console.log("discounttype" , discounttype);
                   )}
                   <CardContent sx={{ padding: { xs: "12px", md: "20px" }, paddingTop: 0 }}>
                     <Typography sx={{ 
-                      color: "#fff", 
+                      color: "var(--admin-text)", 
                       fontSize: { xs: "13px", md: "14px" },
                       marginBottom: { xs: "8px", md: "10px" },
                       fontWeight: "500"
@@ -2045,15 +2049,15 @@ console.log("discounttype" , discounttype);
                           control={
                             <Radio
                               sx={{
-                                color: "#505669",
+                                color: "var(--admin-text-secondary)",
                                 "&.Mui-checked": {
-                                  color: "#78b568"
+                                  color: "var(--admin-accent)"
                                 }
                               }}
                             />
                           }
                           label={
-                            <Typography sx={{ color: "#fff", fontSize: { xs: "12px", md: "14px" } }}>
+                            <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "14px" } }}>
                               نقدی
                             </Typography>
                           }
@@ -2063,15 +2067,15 @@ console.log("discounttype" , discounttype);
                           control={
                             <Radio
                               sx={{
-                                color: "#505669",
+                                color: "var(--admin-text-secondary)",
                                 "&.Mui-checked": {
-                                  color: "#78b568"
+                                  color: "var(--admin-accent)"
                                 }
                               }}
                             />
                           }
                           label={
-                            <Typography sx={{ color: "#fff", fontSize: { xs: "12px", md: "14px" } }}>
+                            <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "14px" } }}>
                               اقساطی
                             </Typography>
                           }
@@ -2081,7 +2085,7 @@ console.log("discounttype" , discounttype);
                     {paymentType === 'installment' && (
                       <Box sx={{ marginTop: { xs: "12px", md: "16px" } }}>
                         <Typography sx={{ 
-                          color: "#fff", 
+                          color: "var(--admin-text)", 
                           fontSize: { xs: "13px", md: "14px" },
                           marginBottom: { xs: "8px", md: "10px" },
                           fontWeight: "500"
@@ -2102,20 +2106,23 @@ console.log("discounttype" , discounttype);
                           fullWidth
                           sx={{
                             "& .MuiOutlinedInput-root": {
-                              backgroundColor: "#1a1d2e",
-                              color: "#fff",
+                              backgroundColor: "var(--admin-surface-alt)",
+                              color: "var(--admin-text)",
                               "& fieldset": {
-                                borderColor: "#505669",
+                                borderColor: "var(--admin-border)",
                               },
                               "&:hover fieldset": {
-                                borderColor: "#78b568",
+                                borderColor: "var(--admin-accent)",
                               },
                               "&.Mui-focused fieldset": {
-                                borderColor: "#78b568",
+                                borderColor: "var(--admin-accent)",
                               },
                             },
+                            "& .MuiInputLabel-root": {
+                              color: "var(--admin-text-secondary)",
+                            },
                             "& .MuiInputBase-input": {
-                              color: "#fff",
+                              color: "var(--admin-text)",
                               fontSize: { xs: "13px", md: "14px" },
                               padding: { xs: "10px 12px", md: "12px 14px" },
                               textAlign: "right",
@@ -2127,7 +2134,7 @@ console.log("discounttype" , discounttype);
                           <Box sx={{ 
                             marginTop: { xs: "8px", md: "12px" },
                             padding: { xs: "8px", md: "12px" },
-                            backgroundColor: "#1a1d2e",
+                            backgroundColor: "var(--admin-surface-alt)",
                             borderRadius: { xs: "6px", md: "8px" }
                           }}>
                             {!phone || phone.trim() === '' ? (
@@ -2139,9 +2146,9 @@ console.log("discounttype" , discounttype);
                               </Typography>
                             ) : calculatingInstallments ? (
                               <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                <CircularProgress size={16} sx={{ color: "#78b568" }} />
+                                <CircularProgress size={16} sx={{ color: "var(--admin-accent)" }} />
                                 <Typography sx={{ 
-                                  color: "rgba(255,255,255,0.7)", 
+                                  color: "var(--admin-text-muted)", 
                                   fontSize: { xs: "10px", md: "12px" }
                                 }}>
                                   در حال محاسبه...
@@ -2160,7 +2167,7 @@ console.log("discounttype" , discounttype);
                                 {installmentCalculation && installmentCalculation.final_total_amount && (
                                   <>
                                     <Typography sx={{ 
-                                      color: "rgba(255,255,255,0.7)", 
+                                      color: "var(--admin-text-muted)", 
                                       fontSize: { xs: "10px", md: "12px" },
                                       marginBottom: { xs: "2px", md: "4px" }
                                     }}>
@@ -2169,7 +2176,7 @@ console.log("discounttype" , discounttype);
                                     {(installmentCalculation.user_credit !== undefined ||
                                       installmentCalculation.user_installment_credit !== undefined) && (
                                       <Typography sx={{ 
-                                        color: "rgba(255,255,255,0.6)", 
+                                        color: "var(--admin-text-muted)", 
                                         fontSize: { xs: "9px", md: "11px" },
                                         marginBottom: { xs: "2px", md: "4px" }
                                       }}>
@@ -2189,7 +2196,7 @@ console.log("discounttype" , discounttype);
                               </Box>
                             ) : installmentCalculation ? (
                               <Typography sx={{ 
-                                color: "rgba(255,255,255,0.7)", 
+                                color: "var(--admin-text-muted)", 
                                 fontSize: { xs: "10px", md: "12px" }
                               }}>
                                 جزئیات اقساط در پایین صفحه نمایش داده می‌شود
@@ -2197,14 +2204,14 @@ console.log("discounttype" , discounttype);
                             ) : (
                               <>
                                 <Typography sx={{ 
-                                  color: "#78b568", 
+                                  color: "var(--admin-accent)", 
                                   fontSize: { xs: "11px", md: "13px" },
                                   marginBottom: { xs: "4px", md: "6px" }
                                 }}>
                                   مبلغ هر قسط: {formatNumber(Math.floor((Math.max(0, total - useCreditAmount - discounttype)) / installmentCount))} تومان
                                 </Typography>
                                 <Typography sx={{ 
-                                  color: "rgba(255,255,255,0.7)", 
+                                  color: "var(--admin-text-muted)", 
                                   fontSize: { xs: "10px", md: "12px" }
                                 }}>
                                   مبلغ کل: {formatNumber(Math.max(0, total - useCreditAmount - discounttype))} تومان
@@ -2220,14 +2227,14 @@ console.log("discounttype" , discounttype);
                         sx={{
                           marginTop: { xs: "12px", md: "16px" },
                           padding: { xs: "10px", md: "14px" },
-                          backgroundColor: "#1a1d2e",
+                          backgroundColor: "var(--admin-surface-alt)",
                           borderRadius: { xs: "8px", md: "10px" },
                           border: "1px solid rgba(120, 181, 104, 0.25)",
                         }}
                       >
                         <Typography
                           sx={{
-                            color: "#fff",
+                            color: "var(--admin-text)",
                             fontSize: { xs: "13px", md: "14px" },
                             fontWeight: "600",
                             marginBottom: { xs: "4px", md: "6px" },
@@ -2255,13 +2262,13 @@ console.log("discounttype" , discounttype);
                               control={
                                 <Radio
                                   sx={{
-                                    color: "#505669",
-                                    "&.Mui-checked": { color: "#78b568" },
+                                    color: "var(--admin-text-secondary)",
+                                    "&.Mui-checked": { color: "var(--admin-accent)" },
                                   }}
                                 />
                               }
                               label={
-                                <Typography sx={{ color: "#fff", fontSize: { xs: "12px", md: "13px" } }}>
+                                <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "13px" } }}>
                                   کارتخوان
                                 </Typography>
                               }
@@ -2271,13 +2278,13 @@ console.log("discounttype" , discounttype);
                               control={
                                 <Radio
                                   sx={{
-                                    color: "#505669",
-                                    "&.Mui-checked": { color: "#78b568" },
+                                    color: "var(--admin-text-secondary)",
+                                    "&.Mui-checked": { color: "var(--admin-accent)" },
                                   }}
                                 />
                               }
                               label={
-                                <Typography sx={{ color: "#fff", fontSize: { xs: "12px", md: "13px" } }}>
+                                <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "13px" } }}>
                                 نقد
                                 </Typography>
                               }
@@ -2287,13 +2294,13 @@ console.log("discounttype" , discounttype);
                               control={
                                 <Radio
                                   sx={{
-                                    color: "#505669",
-                                    "&.Mui-checked": { color: "#78b568" },
+                                    color: "var(--admin-text-secondary)",
+                                    "&.Mui-checked": { color: "var(--admin-accent)" },
                                   }}
                                 />
                               }
                               label={
-                                <Typography sx={{ color: "#fff", fontSize: { xs: "12px", md: "13px" } }}>
+                                <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "13px" } }}>
                                   کارت + نقد
                                 </Typography>
                               }
@@ -2308,7 +2315,7 @@ console.log("discounttype" , discounttype);
                               onChange={(e) => handleCardAmountChange(e.target.value)}
                               size="small"
                               fullWidth
-                              InputLabelProps={{ sx: { color: "rgba(255,255,255,0.7)" } }}
+                              InputLabelProps={{ sx: { color: "var(--admin-text-muted)" } }}
                               sx={darkFieldSx}
                             />
                             <TextField
@@ -2317,7 +2324,7 @@ console.log("discounttype" , discounttype);
                               onChange={(e) => handleCashAmountChange(e.target.value)}
                               size="small"
                               fullWidth
-                              InputLabelProps={{ sx: { color: "rgba(255,255,255,0.7)" } }}
+                              InputLabelProps={{ sx: { color: "var(--admin-text-muted)" } }}
                               sx={darkFieldSx}
                             />
                             {!paymentFieldsValid && (
@@ -2340,10 +2347,10 @@ console.log("discounttype" , discounttype);
                 </Card>
 
                 <Card sx={{ 
-                  background: "linear-gradient(135deg, #78b568 0%, #5a9a4a 50%, #4a7c3a 100%)",
+                  background: "var(--admin-title-gradient)",
                   borderRadius: { xs: "16px", md: "20px" },
                   marginBottom: { xs: "16px", md: "24px" },
-                  border: "1px solid rgba(120, 181, 104, 0.3)",
+                  border: "1px solid var(--admin-accent-border)",
                   transition: "all 0.3s ease",
                   "&:hover": {
                    transform: "translateY(-2px)",
@@ -2358,13 +2365,13 @@ console.log("discounttype" , discounttype);
                       marginBottom: useCreditAmount > 0 ? { xs: "8px", md: "12px" } : 0
                     }}>
                       <Typography sx={{ 
-                        color: "rgba(255,255,255,0.9)", 
+                        color: "var(--admin-stat-on-gradient)", 
                         fontSize: { xs: "13px", md: "16px" }
                       }}>
                         مجموع خرید:
                       </Typography>
                       <Typography sx={{ 
-                        color: "#fff", 
+                        color: "var(--admin-stat-on-gradient)", 
                         fontSize: { xs: "18px", md: "21px" }, 
                         fontWeight: "700" 
                       }}>
@@ -2379,13 +2386,13 @@ console.log("discounttype" , discounttype);
                       marginBottom: useCreditAmount > 0 ? { xs: "8px", md: "12px" } : 0
                     }}>
                       <Typography sx={{ 
-                        color: "rgba(255,255,255,0.9)", 
+                        color: "var(--admin-stat-on-gradient)", 
                         fontSize: { xs: "13px", md: "16px" }
                       }}>
                           مبلغ برگشتی :
                       </Typography>
                       <Typography sx={{ 
-                        color: "#fff", 
+                        color: "var(--admin-stat-on-gradient)", 
                         fontSize: { xs: "18px", md: "21px" }, 
                         fontWeight: "700" 
                       }}>
@@ -2400,13 +2407,13 @@ console.log("discounttype" , discounttype);
                       marginBottom: useCreditAmount > 0 ? { xs: "8px", md: "12px" } : 0
                     }}>
                       <Typography sx={{ 
-                        color: "rgba(255,255,255,0.9)", 
+                        color: "var(--admin-stat-on-gradient)", 
                         fontSize: { xs: "13px", md: "16px" }
                       }}>
                         مجموع خرید با کسر برگشتی:
                       </Typography>
                       <Typography sx={{ 
-                        color: "#fff", 
+                        color: "var(--admin-stat-on-gradient)", 
                         fontSize: { xs: "18px", md: "21px" }, 
                         fontWeight: "700" 
                       }}>
@@ -2416,7 +2423,7 @@ console.log("discounttype" , discounttype);
                     {(useCreditAmount > 0 || discounttype > 0)  &&  (
                       <Box sx={{ marginTop: { xs: "8px", md: "12px" } }}>
                         <Typography sx={{ 
-                          color: "#fff", 
+                          color: "var(--admin-stat-on-gradient)", 
                           fontSize: { xs: "14px", md: "20px" }, 
                           fontWeight: "600"
                         }}>
@@ -2428,13 +2435,13 @@ console.log("discounttype" , discounttype);
                       <Box sx={{ 
                         marginTop: { xs: "12px", md: "16px" }, 
                         padding: { xs: "12px", md: "16px" }, 
-                        backgroundColor: "rgba(120, 181, 104, 0.1)", 
+                        backgroundColor: "rgba(255, 255, 255, 0.12)", 
                         borderRadius: { xs: "12px", md: "16px" },
-                        border: "1px solid rgba(120, 181, 104, 0.2)",
+                        border: "1px solid rgba(255, 255, 255, 0.28)",
                         backdropFilter: "blur(10px)"
                       }}>
                         <Typography sx={{ 
-                          color: "#fff", 
+                          color: "var(--admin-stat-on-gradient)", 
                           fontSize: { xs: "12px", md: "14px" },
                           marginBottom: { xs: "4px", md: "6px" }
                         }}>
@@ -2447,7 +2454,7 @@ console.log("discounttype" , discounttype);
                          installmentCalculation.installment_details.length > 0 &&
                          installmentCalculation.installment_details[0]?.payment_type === "cash" && (
                           <Typography sx={{ 
-                            color: "#ff9800", 
+                            color: "#fde68a", 
                             fontSize: { xs: "12px", md: "14px" },
                             marginBottom: { xs: "4px", md: "6px" },
                             fontWeight: "600"
@@ -2456,7 +2463,7 @@ console.log("discounttype" , discounttype);
                           </Typography>
                         )}
                         <Typography sx={{ 
-                          color: "rgba(255,255,255,0.9)", 
+                          color: "var(--admin-stat-on-gradient)", 
                           fontSize: { xs: "13px", md: "16px" },
                           fontWeight: "600",
                           marginBottom: { xs: "4px", md: "6px" }
@@ -2467,7 +2474,7 @@ console.log("discounttype" , discounttype);
                         </Typography>
                         {installmentCalculation && installmentCalculation.final_total_amount && (
                           <Typography sx={{ 
-                            color: "rgba(255,255,255,0.7)", 
+                            color: "rgba(255, 255, 255, 0.88)", 
                             fontSize: { xs: "11px", md: "13px" },
                             marginBottom: { xs: "2px", md: "4px" }
                           }}>
@@ -2476,7 +2483,7 @@ console.log("discounttype" , discounttype);
                         )}
                         {installmentCalculation && installmentCalculation.total_amount && (
                           <Typography sx={{ 
-                            color: "rgba(255,255,255,0.6)", 
+                            color: "rgba(255, 255, 255, 0.88)", 
                             fontSize: { xs: "10px", md: "12px" },
                             marginBottom: { xs: "2px", md: "4px" }
                           }}>
@@ -2485,7 +2492,7 @@ console.log("discounttype" , discounttype);
                         )}
                         {installmentCalculation && installmentCalculation.total_interest !== undefined && (
                           <Typography sx={{ 
-                            color: "#ff9800", 
+                            color: "#fde68a", 
                             fontSize: { xs: "10px", md: "12px" },
                             marginBottom: { xs: "2px", md: "4px" }
                           }}>
@@ -2495,8 +2502,9 @@ console.log("discounttype" , discounttype);
                         {(installmentCalculation?.user_credit !== undefined ||
                           installmentCalculation?.user_installment_credit !== undefined) && (
                           <Typography sx={{ 
-                            color: installmentCalculation.has_enough_credit ? "#78b568" : "#ff4444", 
-                            fontSize: { xs: "10px", md: "12px" }
+                            color: installmentCalculation.has_enough_credit ? "#ecfdf5" : "#fecaca", 
+                            fontSize: { xs: "10px", md: "12px" },
+                            fontWeight: 600,
                           }}>
                             اعتبار کاربر: {formatNumber(Math.floor(installmentCalculation.user_credit ?? installmentCalculation.user_installment_credit ?? 0))} تومان
                             {installmentCalculation.has_enough_credit ? ' ✓' : ' ✗'}
@@ -2540,23 +2548,24 @@ console.log("discounttype" , discounttype);
                     color: "#fff",
                     height: { xs: "48px", md: "60px" },
                     borderRadius: { xs: "16px", md: "20px" },
+                    marginBottom: { xs: "24px", md: "12px" },
                     background: total && !isSubmitting 
-                      ? "linear-gradient(135deg, #78b568 0%, #5a9a4a 100%)" 
+                      ? "linear-gradient(135deg, var(--admin-accent) 0%, var(--admin-accent-hover) 100%)" 
                       : "rgba(120, 181, 104, 0.2)",
                     fontWeight: "700",
                     fontSize: { xs: "15px", md: "19px" },
                     transition: "all 0.3s ease",
-                   
                     "&:hover": {
+                      color: "#fff",
                       transform: total && !isSubmitting ? "translateY(-3px) scale(1.02)" : "none",
                      
                       background: total && !isSubmitting 
-                        ? "linear-gradient(135deg, #5a9a4a 0%, #78b568 100%)" 
+                        ? "linear-gradient(135deg, var(--admin-accent-hover) 0%, var(--admin-accent) 100%)" 
                         : "rgba(120, 181, 104, 0.2)",
                     },
                     "&:disabled": {
-                      color: "rgba(255,255,255,0.3)",
-                      background: "rgba(120, 181, 104, 0.1)",
+                      color: "var(--admin-text-secondary)",
+                      background: "var(--admin-menu-hover)",
                     }
                   }}
                 >
@@ -2598,7 +2607,7 @@ console.log("discounttype" , discounttype);
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            bgcolor: '#2b3143',
+            bgcolor: 'var(--admin-surface)',
             p: 3,
             width: '90%',
             maxWidth: '450px',
@@ -2607,17 +2616,17 @@ console.log("discounttype" , discounttype);
           }}
         >
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-            <Typography sx={{ color: '#fff', fontSize: "16px", fontWeight: "700", textAlign: "center", flex: 1 }}>
+            <Typography sx={{ color: 'var(--admin-text)', fontSize: "16px", fontWeight: "700", textAlign: "center", flex: 1 }}>
               اسکن بارکد
             </Typography>
             <IconButton
               onClick={() => setTorchOn(!torchOn)}
               sx={{
-                color: "#fff",
-                backgroundColor: torchOn ? "#78b568" : "#1a1d2e",
+                color: "var(--admin-text)",
+                backgroundColor: torchOn ? "var(--admin-accent)" : "var(--admin-surface-alt)",
                 padding: "6px",
                 "&:hover": {
-                  backgroundColor: torchOn ? "#5a9a4a" : "#2b3143",
+                  backgroundColor: torchOn ? "var(--admin-accent-hover)" : "var(--admin-surface)",
                 }
               }}
             >
@@ -2625,7 +2634,7 @@ console.log("discounttype" , discounttype);
             </IconButton>
           </Box>
           <Box sx={{ 
-            backgroundColor: "#1a1d2e", 
+            backgroundColor: "var(--admin-surface-alt)", 
             borderRadius: "10px", 
             padding: "12px",
             marginBottom: "12px",
@@ -2652,7 +2661,7 @@ console.log("discounttype" , discounttype);
             />
           </Box>
 
-          <Typography sx={{ color: '#fff', marginTop: 1, textAlign: "center", fontSize: "12px" }}>
+          <Typography sx={{ color: 'var(--admin-text)', marginTop: 1, textAlign: "center", fontSize: "12px" }}>
             {scannedCode ? `بارکد اسکن شده: ${scannedCode}` : "بارکد یافت نشد"}
           </Typography>
           <Box sx={{ marginTop: "12px" }}>
@@ -2674,12 +2683,12 @@ console.log("discounttype" , discounttype);
                 width: '100%', 
                 marginTop: '8px', 
                 padding: '10px',
-                backgroundColor: "#1a1d2e",
+                backgroundColor: "var(--admin-surface-alt)",
                 borderRadius: "10px",
-                color: "#fff",
+                color: "var(--admin-text)",
                 fontSize: "12px",
                 "&::placeholder": {
-                  color: "rgba(255,255,255,0.5)"
+                  color: "var(--admin-text-secondary)"
                 }
               }}
             />
@@ -2690,7 +2699,7 @@ console.log("discounttype" , discounttype);
               sx={{ 
                 marginTop: '12px', 
                 background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                color: '#fff',
+                color: 'var(--admin-text)',
                 height: "40px",
                 borderRadius: "10px",
                 fontWeight: "600",

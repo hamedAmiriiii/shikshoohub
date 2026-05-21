@@ -285,11 +285,11 @@ export default function ListExpenses() {
       <IconButton
         onClick={() => setFilterSheetOpen(true)}
         sx={{
-          color: hasFilters ? "#78b568" : "#000",
-          backgroundColor: hasFilters ? "rgba(120, 181, 104, 0.2)" : "rgba(255, 255, 255, 0.1)",
+          color: hasFilters ? "var(--admin-accent)" : "#000",
+          backgroundColor: hasFilters ? "rgba(120, 181, 104, 0.2)" : "var(--admin-divider)",
           border: "1px solid #C9C9C9",
           "&:hover": {
-            backgroundColor: hasFilters ? "rgba(120, 181, 104, 0.3)" : "rgba(255, 255, 255, 0.2)"
+            backgroundColor: hasFilters ? "rgba(120, 181, 104, 0.3)" : "var(--admin-icon-bg)"
           }
         }}
       >
@@ -489,7 +489,7 @@ export default function ListExpenses() {
 
   return (
     <Suspense fallback={<div>در حال بارگذاری...</div>}>
-      <Box sx={{ width: "100%", direction: "rtl", padding: "16px", minHeight: "100vh", paddingBottom: "100px", background: "linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%)" }}>
+      <Box sx={{ width: "100%", direction: "rtl", padding: "16px", minHeight: "100vh", paddingBottom: "100px", background: "var(--admin-bg-gradient)" }}>
         {/* Header */}
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
           
@@ -498,10 +498,11 @@ export default function ListExpenses() {
             startIcon={<AddIcon />}
             onClick={handleOpenBottomSheet}
             sx={{
-              backgroundColor: "#78b568",
+              backgroundColor: "var(--admin-accent)",
               color: "#fff",
               "&:hover": {
-                backgroundColor: "#5a9a4a"
+                backgroundColor: "var(--admin-accent-hover)",
+                color: "#fff",
               },
               borderRadius: "12px",
               padding: "8px 8px"
@@ -544,7 +545,7 @@ export default function ListExpenses() {
           <Box sx={{ display: "flex", flexDirection: "column", gap: "20px", padding: "16px", direction: "rtl" }}>
             {/* Type Radio Buttons - First Field */}
             <Box>
-              <Typography sx={{ color: "#fff", marginBottom: "8px", fontSize: "14px" }}>
+              <Typography sx={{ color: "var(--admin-text)", marginBottom: "8px", fontSize: "14px" }}>
                 نوع هزینه:
               </Typography>
               <RadioGroup
@@ -561,15 +562,15 @@ export default function ListExpenses() {
               >
                 <FormControlLabel
                   value="سرمایه"
-                  control={<Radio sx={{ color: '#78b568', '&.Mui-checked': { color: '#78b568' } }} />}
+                  control={<Radio sx={{ color: 'var(--admin-accent)', '&.Mui-checked': { color: 'var(--admin-accent)' } }} />}
                   label="سرمایه"
-                  sx={{ color: "#fff" }}
+                  sx={{ color: "var(--admin-text)" }}
                 />
                 <FormControlLabel
                   value="جاری"
-                  control={<Radio sx={{ color: '#78b568', '&.Mui-checked': { color: '#78b568' } }} />}
+                  control={<Radio sx={{ color: 'var(--admin-accent)', '&.Mui-checked': { color: 'var(--admin-accent)' } }} />}
                   label="جاری"
-                  sx={{ color: "#fff" }}
+                  sx={{ color: "var(--admin-text)" }}
                 />
               </RadioGroup>
             </Box>
@@ -581,17 +582,17 @@ export default function ListExpenses() {
               sx={{
                 direction: "rtl",
                 "& .MuiOutlinedInput-root": {
-                  backgroundColor: "#1a1d2e",
-                  color: "#fff",
+                  backgroundColor: "var(--admin-surface-alt)",
+                  color: "var(--admin-text)",
                   direction: "rtl",
                   "& fieldset": {
-                    borderColor: "#505669",
+                    borderColor: "var(--admin-border)",
                   },
                   "&:hover fieldset": {
-                    borderColor: "#78b568",
+                    borderColor: "var(--admin-accent)",
                   },
                   "&.Mui-focused fieldset": {
-                    borderColor: "#78b568",
+                    borderColor: "var(--admin-accent)",
                   },
                 },
                 "& .MuiInputBase-input": {
@@ -599,13 +600,13 @@ export default function ListExpenses() {
                   direction: "rtl",
                 },
                 "& .MuiInputLabel-root": {
-                  color: "#fff",
+                  color: "var(--admin-text)",
                   right: "14px",
                   left: "auto",
                   transformOrigin: "top right",
                 },
                 "& .MuiInputLabel-root.Mui-focused": {
-                  color: "#78b568",
+                  color: "var(--admin-accent)",
                   transform: "translate(-14px, -9px) scale(0.75)",
                 },
                 "& .MuiInputLabel-shrink": {
@@ -654,17 +655,17 @@ export default function ListExpenses() {
               sx={{
                 direction: "rtl",
                 "& .MuiOutlinedInput-root": {
-                  backgroundColor: "#1a1d2e",
-                  color: "#fff",
+                  backgroundColor: "var(--admin-surface-alt)",
+                  color: "var(--admin-text)",
                   direction: "rtl",
                   "& fieldset": {
-                    borderColor: "#505669",
+                    borderColor: "var(--admin-border)",
                   },
                   "&:hover fieldset": {
-                    borderColor: "#78b568",
+                    borderColor: "var(--admin-accent)",
                   },
                   "&.Mui-focused fieldset": {
-                    borderColor: "#78b568",
+                    borderColor: "var(--admin-accent)",
                   },
                 },
                 "& .MuiInputBase-input": {
@@ -672,13 +673,13 @@ export default function ListExpenses() {
                   direction: "rtl",
                 },
                 "& .MuiInputLabel-root": {
-                  color: "#fff",
+                  color: "var(--admin-text)",
                   right: "14px",
                   left: "auto",
                   transformOrigin: "top right",
                 },
                 "& .MuiInputLabel-root.Mui-focused": {
-                  color: "#78b568",
+                  color: "var(--admin-accent)",
                   transform: "translate(-14px, -9px) scale(0.75)",
                 },
                 "& .MuiInputLabel-shrink": {
@@ -694,17 +695,17 @@ export default function ListExpenses() {
               sx={{
                 direction: "rtl",
                 "& .MuiOutlinedInput-root": {
-                  backgroundColor: "#1a1d2e",
-                  color: "#fff",
+                  backgroundColor: "var(--admin-surface-alt)",
+                  color: "var(--admin-text)",
                   direction: "rtl",
                   "& fieldset": {
-                    borderColor: "#505669",
+                    borderColor: "var(--admin-border)",
                   },
                   "&:hover fieldset": {
-                    borderColor: "#78b568",
+                    borderColor: "var(--admin-accent)",
                   },
                   "&.Mui-focused fieldset": {
-                    borderColor: "#78b568",
+                    borderColor: "var(--admin-accent)",
                   },
                 },
                 "& .MuiInputBase-input": {
@@ -712,13 +713,13 @@ export default function ListExpenses() {
                   direction: "rtl",
                 },
                 "& .MuiInputLabel-root": {
-                  color: "#fff",
+                  color: "var(--admin-text)",
                   right: "14px",
                   left: "auto",
                   transformOrigin: "top right",
                 },
                 "& .MuiInputLabel-root.Mui-focused": {
-                  color: "#78b568",
+                  color: "var(--admin-accent)",
                   transform: "translate(-14px, -9px) scale(0.75)",
                 },
                 "& .MuiInputLabel-shrink": {
@@ -731,14 +732,15 @@ export default function ListExpenses() {
               onClick={handleUpdateExpense}
               fullWidth
               sx={{
-                backgroundColor: "#78b568",
+                backgroundColor: "var(--admin-accent)",
                 color: "#fff",
                 padding: "12px",
                 fontSize: "16px",
                 fontWeight: "600",
                 direction: "rtl",
                 "&:hover": {
-                  backgroundColor: "#5a9a4a"
+                  backgroundColor: "var(--admin-accent-hover)",
+                  color: "#fff",
                 },
                 marginTop: "8px"
               }}
@@ -757,7 +759,7 @@ export default function ListExpenses() {
           <Box sx={{ display: "flex", flexDirection: "column", gap: "20px", padding: "16px", direction: "rtl" }}>
             {/* Type Radio Buttons - First Field */}
             <Box>
-              <Typography sx={{ color: "#fff", marginBottom: "8px", fontSize: "14px" }}>
+              <Typography sx={{ color: "var(--admin-text)", marginBottom: "8px", fontSize: "14px" }}>
                 نوع هزینه:
               </Typography>
               <RadioGroup
@@ -774,15 +776,15 @@ export default function ListExpenses() {
               >
                 <FormControlLabel
                   value="سرمایه"
-                  control={<Radio sx={{ color: '#78b568', '&.Mui-checked': { color: '#78b568' } }} />}
+                  control={<Radio sx={{ color: 'var(--admin-accent)', '&.Mui-checked': { color: 'var(--admin-accent)' } }} />}
                   label="سرمایه"
-                  sx={{ color: "#fff" }}
+                  sx={{ color: "var(--admin-text)" }}
                 />
                 <FormControlLabel
                   value="جاری"
-                  control={<Radio sx={{ color: '#78b568', '&.Mui-checked': { color: '#78b568' } }} />}
+                  control={<Radio sx={{ color: 'var(--admin-accent)', '&.Mui-checked': { color: 'var(--admin-accent)' } }} />}
                   label="جاری"
-                  sx={{ color: "#fff" }}
+                  sx={{ color: "var(--admin-text)" }}
                 />
               </RadioGroup>
             </Box>
@@ -794,17 +796,17 @@ export default function ListExpenses() {
               sx={{
                 direction: "rtl",
                 "& .MuiOutlinedInput-root": {
-                  backgroundColor: "#1a1d2e",
-                  color: "#fff",
+                  backgroundColor: "var(--admin-surface-alt)",
+                  color: "var(--admin-text)",
                   direction: "rtl",
                   "& fieldset": {
-                    borderColor: "#505669",
+                    borderColor: "var(--admin-border)",
                   },
                   "&:hover fieldset": {
-                    borderColor: "#78b568",
+                    borderColor: "var(--admin-accent)",
                   },
                   "&.Mui-focused fieldset": {
-                    borderColor: "#78b568",
+                    borderColor: "var(--admin-accent)",
                   },
                 },
                 "& .MuiInputBase-input": {
@@ -812,13 +814,13 @@ export default function ListExpenses() {
                   direction: "rtl",
                 },
                 "& .MuiInputLabel-root": {
-                  color: "#fff",
+                  color: "var(--admin-text)",
                   right: "14px",
                   left: "auto",
                   transformOrigin: "top right",
                 },
                 "& .MuiInputLabel-root.Mui-focused": {
-                  color: "#78b568",
+                  color: "var(--admin-accent)",
                   transform: "translate(-14px, -9px) scale(0.75)",
                 },
                 "& .MuiInputLabel-shrink": {
@@ -867,17 +869,17 @@ export default function ListExpenses() {
               sx={{
                 direction: "rtl",
                 "& .MuiOutlinedInput-root": {
-                  backgroundColor: "#1a1d2e",
-                  color: "#fff",
+                  backgroundColor: "var(--admin-surface-alt)",
+                  color: "var(--admin-text)",
                   direction: "rtl",
                   "& fieldset": {
-                    borderColor: "#505669",
+                    borderColor: "var(--admin-border)",
                   },
                   "&:hover fieldset": {
-                    borderColor: "#78b568",
+                    borderColor: "var(--admin-accent)",
                   },
                   "&.Mui-focused fieldset": {
-                    borderColor: "#78b568",
+                    borderColor: "var(--admin-accent)",
                   },
                 },
                 "& .MuiInputBase-input": {
@@ -885,13 +887,13 @@ export default function ListExpenses() {
                   direction: "rtl",
                 },
                 "& .MuiInputLabel-root": {
-                  color: "#fff",
+                  color: "var(--admin-text)",
                   right: "14px",
                   left: "auto",
                   transformOrigin: "top right",
                 },
                 "& .MuiInputLabel-root.Mui-focused": {
-                  color: "#78b568",
+                  color: "var(--admin-accent)",
                   transform: "translate(-14px, -9px) scale(0.75)",
                 },
                 "& .MuiInputLabel-shrink": {
@@ -907,17 +909,17 @@ export default function ListExpenses() {
               sx={{
                 direction: "rtl",
                 "& .MuiOutlinedInput-root": {
-                  backgroundColor: "#1a1d2e",
-                  color: "#fff",
+                  backgroundColor: "var(--admin-surface-alt)",
+                  color: "var(--admin-text)",
                   direction: "rtl",
                   "& fieldset": {
-                    borderColor: "#505669",
+                    borderColor: "var(--admin-border)",
                   },
                   "&:hover fieldset": {
-                    borderColor: "#78b568",
+                    borderColor: "var(--admin-accent)",
                   },
                   "&.Mui-focused fieldset": {
-                    borderColor: "#78b568",
+                    borderColor: "var(--admin-accent)",
                   },
                 },
                 "& .MuiInputBase-input": {
@@ -925,13 +927,13 @@ export default function ListExpenses() {
                   direction: "rtl",
                 },
                 "& .MuiInputLabel-root": {
-                  color: "#fff",
+                  color: "var(--admin-text)",
                   right: "14px",
                   left: "auto",
                   transformOrigin: "top right",
                 },
                 "& .MuiInputLabel-root.Mui-focused": {
-                  color: "#78b568",
+                  color: "var(--admin-accent)",
                   transform: "translate(-14px, -9px) scale(0.75)",
                 },
                 "& .MuiInputLabel-shrink": {
@@ -944,14 +946,15 @@ export default function ListExpenses() {
               onClick={handleSubmitExpense}
               fullWidth
               sx={{
-                backgroundColor: "#78b568",
+                backgroundColor: "var(--admin-accent)",
                 color: "#fff",
                 padding: "12px",
                 fontSize: "16px",
                 fontWeight: "600",
                 direction: "rtl",
                 "&:hover": {
-                  backgroundColor: "#5a9a4a"
+                  backgroundColor: "var(--admin-accent-hover)",
+                  color: "#fff",
                 },
                 marginTop: "8px"
               }}

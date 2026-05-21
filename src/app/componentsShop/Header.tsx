@@ -24,7 +24,7 @@ import CreditCardIcon from '@mui/icons-material/CreditCard';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import Divider from '@mui/material/Divider';
 import { useRouter, usePathname } from 'next/navigation';
-import { isSuperAdminUser } from '@/app/lib/superAdmin';
+import { isSuperAdminUser, getUserPhoneFromRecord } from '@/app/lib/superAdmin';
 import {
   getShopAccessFromUser,
   getAccessMenuSummary,
@@ -39,6 +39,7 @@ import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import CardMembershipIcon from '@mui/icons-material/CardMembership';
+import AdminThemeMenuItem from '@/app/admin/theme/AdminThemeMenuItem';
 
 interface HeaderProps {
   title?: string;
@@ -52,6 +53,8 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
   const pathname = usePathname();
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [financialMenuAnchor, setFinancialMenuAnchor] = useState<null | HTMLElement>(null);
+  const [expensesMenuAnchor, setExpensesMenuAnchor] = useState<null | HTMLElement>(null);
+  const [installmentsMenuAnchor, setInstallmentsMenuAnchor] = useState<null | HTMLElement>(null);
   const [productManagementMenuAnchor, setProductManagementMenuAnchor] = useState<null | HTMLElement>(null);
   const [adminMenuAnchor, setAdminMenuAnchor] = useState<null | HTMLElement>(null);
   const [smsMenuAnchor, setSmsMenuAnchor] = useState<null | HTMLElement>(null);
@@ -105,6 +108,8 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
   const shopAccessSummary =
     !shopAccessExpired && user ? getAccessMenuSummary(shopAccess) : null;
 
+  const displayPhone = user ? getUserPhoneFromRecord(user as Record<string, unknown>) : '';
+
   const handleBuySubscription = () => {
     handleMenuClose();
     window.open(SHOP_SUBSCRIPTION_URL, "_self");
@@ -125,6 +130,8 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
   const handleMenuClose = () => {
     setMenuAnchor(null);
     setFinancialMenuAnchor(null);
+    setExpensesMenuAnchor(null);
+    setInstallmentsMenuAnchor(null);
     setProductManagementMenuAnchor(null);
     setAdminMenuAnchor(null);
     setSmsMenuAnchor(null);
@@ -141,6 +148,26 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
 
   const handleFinancialMenuClose = () => {
     setFinancialMenuAnchor(null);
+    setExpensesMenuAnchor(null);
+    setInstallmentsMenuAnchor(null);
+  };
+
+  const handleExpensesMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    setExpensesMenuAnchor(event.currentTarget);
+  };
+
+  const handleExpensesMenuClose = () => {
+    setExpensesMenuAnchor(null);
+  };
+
+  const handleInstallmentsMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    setInstallmentsMenuAnchor(event.currentTarget);
+  };
+
+  const handleInstallmentsMenuClose = () => {
+    setInstallmentsMenuAnchor(null);
   };
 
   const handleProductManagementMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -177,7 +204,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
       position: 'sticky',
       top: 0,
       zIndex: 1000,
-      backgroundColor: "#1a1d2e",
+      backgroundColor: "var(--admin-header-bg)",
       paddingTop: { xs: '12px', md: '16px' },
       paddingBottom: { xs: '12px', md: '16px' },
       marginBottom: { xs: '12px', md: '16px' }
@@ -214,7 +241,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
                   sx={{
                     fontWeight: 700,
                     fontSize: { xs: "13px", md: "15px" },
-                    color: "#fff",
+                    color: "var(--admin-text)",
                     lineHeight: 1.5,
                   }}
                 >
@@ -224,7 +251,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
                   <Typography
                     sx={{
                       fontSize: "12px",
-                      color: "rgba(255,255,255,0.85)",
+                      color: "var(--admin-text-muted)",
                       mt: 0.5,
                       lineHeight: 1.5,
                       wordBreak: "break-word",
@@ -258,14 +285,14 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
           </Box>
         )}
         <Box sx={{
-          backgroundColor: "#2b3143",
-          color: "#fff",
+          backgroundColor: "var(--admin-surface)",
+          color: "var(--admin-text)",
           padding: { xs: "12px 16px", md: "16px 24px" },
           borderRadius: { xs: "12px", md: "16px" },
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          border: "1px solid rgba(55, 84, 165, 0.3)",
+          border: "1px solid var(--admin-header-bar-border)",
           gap: { xs: "12px", md: "16px" }
         }}>
           {/* Menu and Back Button */}
@@ -274,10 +301,10 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
             <IconButton
               onClick={handleMenuOpen}
               sx={{
-                color: "#fff",
-                backgroundColor: "rgba(255,255,255,0.1)",
+                color: "var(--admin-text)",
+                backgroundColor: "var(--admin-icon-bg)",
                 "&:hover": {
-                  backgroundColor: "rgba(255,255,255,0.2)",
+                  backgroundColor: "var(--admin-icon-bg-hover)",
                 },
                 width: { xs: "40px", md: "48px" },
                 height: { xs: "40px", md: "48px" },
@@ -292,7 +319,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
               <IconButton
                 onClick={() => router.push(backUrl)}
                 sx={{
-                  color: "#fff",
+                  color: "var(--admin-text)",
                   backgroundColor: "rgba(255,255,255,0.1)",
                   "&:hover": {
                     backgroundColor: "rgba(255,255,255,0.2)",
@@ -310,7 +337,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
           {/* Title or Shikshoo */}
           {title ? (
             <Box sx={{
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              background: "var(--admin-title-gradient)",
               padding: { xs: "6px 12px", md: "8px 20px" },
               borderRadius: { xs: "10px", md: "14px" },
               flexShrink: 0
@@ -318,7 +345,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
               <Typography sx={{
                 fontWeight: "700",
                 fontSize: { xs: "14px", md: "18px" },
-                color: "#fff",
+                color: "var(--admin-text)",
                 textShadow: "0 2px 4px rgba(0,0,0,0.2)"
               }}>
                 {title}
@@ -326,7 +353,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
             </Box>
           ) : (
             <Box sx={{
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              background: "var(--admin-title-gradient)",
               padding: { xs: "8px 16px", md: "12px 24px" },
               borderRadius: { xs: "12px", md: "16px" },
               flexShrink: 0
@@ -334,7 +361,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
               <Typography sx={{
                 fontWeight: "700",
                 fontSize: { xs: "16px", md: "20px" },
-                color: "#fff",
+                color: "var(--admin-text)",
                 textShadow: "0 2px 4px rgba(0,0,0,0.2)"
               }}>
           {user?.atelier?.name || "فروشگاه"}
@@ -351,23 +378,36 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
             )}
             {user && (
               <>
-                <Box sx={{ display: { xs: "none", sm: "flex" }, alignItems: "center", gap: { xs: "8px", md: "12px" } }}>
-                  <PersonIcon sx={{ fontSize: { xs: "20px", md: "28px" }, color: "#667eea" }} />
-                  <Box>
-                    <Typography sx={{
-                      fontSize: { xs: "14px", md: "18px" },
-                      fontWeight: "700",
-                      color: "#fff"
-                    }}>
-                      {user.name || user.username || "کاربر"}
+                <Box sx={{ display: "flex", alignItems: "center", gap: { xs: "6px", md: "12px" }, minWidth: 0 }}>
+                  <PersonIcon sx={{ fontSize: { xs: "20px", md: "28px" }, color: "var(--admin-accent)", flexShrink: 0, display: { xs: "none", sm: "block" } }} />
+                  <Box sx={{ minWidth: 0, textAlign: "right" }}>
+                    <Typography
+                      sx={{
+                        fontSize: { xs: "12px", md: "18px" },
+                        fontWeight: "700",
+                        color: "var(--admin-text)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        maxWidth: { xs: "100px", sm: "180px", md: "none" },
+                      }}
+                    >
+                      {user.name || user.fullName || "کاربر"}
                     </Typography>
-                    {user.phone && (
-                      <Typography sx={{
-                        fontSize: { xs: "11px", md: "13px" },
-                        color: "rgba(255,255,255,0.7)",
-                        marginTop: "2px"
-                      }}>
-                        {user.phone}
+                    {displayPhone && (
+                      <Typography
+                        component="span"
+                        dir="ltr"
+                        sx={{
+                          display: "block",
+                          fontSize: { xs: "11px", md: "13px" },
+                          color: "var(--admin-text-muted)",
+                          marginTop: "2px",
+                          letterSpacing: "0.02em",
+                          unicodeBidi: "plaintext",
+                        }}
+                      >
+                        {displayPhone}
                       </Typography>
                     )}
                   </Box>
@@ -407,9 +447,9 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
           }}
           sx={{
             "& .MuiPaper-root": {
-              backgroundColor: "#2b3143",
+              backgroundColor: "var(--admin-surface)",
               borderRadius: "16px",
-              border: "1px solid rgba(120, 181, 104, 0.2)",
+              border: "1px solid var(--admin-accent-border)",
               minWidth: "220px",
               padding: "8px 0",
             }
@@ -430,11 +470,11 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
               >
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
                   <WarningAmberIcon sx={{ color: "#ff5252", fontSize: 20 }} />
-                  <Typography sx={{ color: "#fff", fontSize: "13px", fontWeight: 700 }}>
+                  <Typography sx={{ color: "var(--admin-text)", fontSize: "13px", fontWeight: 700 }}>
                     اعتبار فروشگاه تمام شده
                   </Typography>
                 </Box>
-                <Typography sx={{ color: "rgba(255,255,255,0.85)", fontSize: "12px", lineHeight: 1.6 }}>
+                <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "12px", lineHeight: 1.6 }}>
                   {expiredAccessInfo?.shop_access_ends_at
                     ? `پایان اعتبار: ${formatAccessEndDate(expiredAccessInfo.shop_access_ends_at)}`
                     : "برای ادامه استفاده، اشتراک تهیه کنید."}
@@ -443,7 +483,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
               <MenuItem
                 onClick={handleBuySubscription}
                 sx={{
-                  color: "#fff",
+                  color: "var(--admin-text)",
                   fontSize: "15px",
                   padding: "12px 20px",
                   borderRadius: "8px",
@@ -458,7 +498,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
                 <CardMembershipIcon sx={{ color: "#ff9800", fontSize: 22, ml: 1 }} />
                 خرید اشتراک
               </MenuItem>
-              <Divider sx={{ backgroundColor: "rgba(255, 255, 255, 0.1)", margin: "8px 0" }} />
+              <Divider sx={{ backgroundColor: "var(--admin-divider)", margin: "8px 0" }} />
             </>
           ) : (
             shopAccessSummary && (
@@ -470,21 +510,21 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
                     mx: 1,
                     mb: 0.5,
                     borderRadius: "10px",
-                    backgroundColor: "rgba(33, 150, 243, 0.12)",
-                    border: "1px solid rgba(33, 150, 243, 0.25)",
+                    backgroundColor: "var(--admin-info-bg)",
+                    border: "1px solid var(--admin-info-border)",
                   }}
                 >
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
-                    <EventAvailableIcon sx={{ color: "#2196f3", fontSize: 20 }} />
-                    <Typography sx={{ color: "#fff", fontSize: "13px", fontWeight: 700 }}>
+                    <EventAvailableIcon sx={{ color: "var(--admin-info-icon)", fontSize: 20 }} />
+                    <Typography sx={{ color: "var(--admin-text)", fontSize: "13px", fontWeight: 700 }}>
                       اعتبار کاربری
                     </Typography>
                   </Box>
-                  <Typography sx={{ color: "rgba(255,255,255,0.85)", fontSize: "12px", lineHeight: 1.6 }}>
+                  <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "12px", lineHeight: 1.6 }}>
                     {shopAccessSummary}
                   </Typography>
                 </Box>
-                <Divider sx={{ backgroundColor: "rgba(255, 255, 255, 0.1)", margin: "8px 0" }} />
+                <Divider sx={{ backgroundColor: "var(--admin-divider)", margin: "8px 0" }} />
               </>
             )
           )}
@@ -492,7 +532,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
           <MenuItem
             onClick={handleFinancialMenuOpen}
             sx={{
-              color: "#fff",
+              color: "var(--admin-text)",
               fontSize: "15px",
               padding: "12px 20px",
               borderRadius: "8px",
@@ -503,7 +543,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
               justifyContent: "space-between",
               gap: "12px",
               "&:hover": {
-                backgroundColor: "rgba(120, 181, 104, 0.15)",
+                backgroundColor: "var(--admin-menu-hover)",
                 transform: "translateX(-4px)",
               }
             }}
@@ -518,7 +558,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
           <MenuItem
             onClick={() => handleMenuClick("/admin/customers")}
             sx={{
-              color: "#fff",
+              color: "var(--admin-text)",
               fontSize: "15px",
               padding: "12px 20px",
               borderRadius: "8px",
@@ -528,7 +568,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
               alignItems: "center",
               gap: "12px",
               "&:hover": {
-                backgroundColor: "rgba(120, 181, 104, 0.15)",
+                backgroundColor: "var(--admin-menu-hover)",
                 transform: "translateX(-4px)",
               }
             }}
@@ -539,7 +579,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
           <MenuItem
             onClick={() => handleMenuClick("/admin/orders")}
             sx={{
-              color: "#fff",
+              color: "var(--admin-text)",
               fontSize: "15px",
               padding: "12px 20px",
               borderRadius: "8px",
@@ -549,7 +589,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
               alignItems: "center",
               gap: "12px",
               "&:hover": {
-                backgroundColor: "rgba(120, 181, 104, 0.15)",
+                backgroundColor: "var(--admin-menu-hover)",
                 transform: "translateX(-4px)",
               }
             }}
@@ -561,7 +601,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
           <MenuItem
             onClick={handleProductManagementMenuOpen}
             sx={{
-              color: "#fff",
+              color: "var(--admin-text)",
               fontSize: "15px",
               padding: "12px 20px",
               borderRadius: "8px",
@@ -572,7 +612,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
               justifyContent: "space-between",
               gap: "12px",
               "&:hover": {
-                backgroundColor: "rgba(120, 181, 104, 0.15)",
+                backgroundColor: "var(--admin-menu-hover)",
                 transform: "translateX(-4px)",
               }
             }}
@@ -586,7 +626,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
           <MenuItem
             onClick={handleSmsMenuOpen}
             sx={{
-              color: "#fff",
+              color: "var(--admin-text)",
               fontSize: "15px",
               padding: "12px 20px",
               borderRadius: "8px",
@@ -597,7 +637,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
               justifyContent: "space-between",
               gap: "12px",
               "&:hover": {
-                backgroundColor: "rgba(120, 181, 104, 0.15)",
+                backgroundColor: "var(--admin-menu-hover)",
                 transform: "translateX(-4px)",
               }
             }}
@@ -612,7 +652,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
             <MenuItem
               onClick={handleAdminMenuOpen}
               sx={{
-                color: "#fff",
+                color: "var(--admin-text)",
                 fontSize: "15px",
                 padding: "12px 20px",
                 borderRadius: "8px",
@@ -635,11 +675,11 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
               <ChevronLeftIcon sx={{ fontSize: "20px" }} />
             </MenuItem>
           )}
-          <Divider sx={{ backgroundColor: "rgba(255, 255, 255, 0.1)", margin: "8px 0" }} />
+          <Divider sx={{ backgroundColor: "var(--admin-divider)", margin: "8px 0" }} />
           <MenuItem
             onClick={() => handleMenuClick("/admin/settings")}
             sx={{
-              color: "#fff",
+              color: "var(--admin-text)",
               fontSize: "15px",
               padding: "12px 20px",
               borderRadius: "8px",
@@ -649,14 +689,15 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
               alignItems: "center",
               gap: "12px",
               "&:hover": {
-                backgroundColor: "rgba(120, 181, 104, 0.15)",
+                backgroundColor: "var(--admin-menu-hover)",
                 transform: "translateX(-4px)",
               }
             }}
           >
-            <SettingsIcon sx={{ color: "#78b568", fontSize: "22px" }} />
+            <SettingsIcon sx={{ color: "var(--admin-accent)", fontSize: "22px" }} />
             تنظیمات
           </MenuItem>
+          <AdminThemeMenuItem />
         </Menu>
 
         {/* Financial Submenu */}
@@ -674,9 +715,9 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
           }}
           sx={{
             "& .MuiPaper-root": {
-              backgroundColor: "#2b3143",
+              backgroundColor: "var(--admin-surface)",
               borderRadius: "16px",
-              border: "1px solid rgba(120, 181, 104, 0.2)",
+              border: "1px solid var(--admin-accent-border)",
               minWidth: "220px",
               padding: "8px 0",
             }
@@ -685,7 +726,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
           <MenuItem
             onClick={() => handleMenuClick("/admin/reports")}
             sx={{
-              color: "#fff",
+              color: "var(--admin-text)",
               fontSize: "15px",
               padding: "12px 20px",
               borderRadius: "8px",
@@ -695,7 +736,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
               alignItems: "center",
               gap: "12px",
               "&:hover": {
-                backgroundColor: "rgba(120, 181, 104, 0.15)",
+                backgroundColor: "var(--admin-menu-hover)",
                 transform: "translateX(-4px)",
               }
             }}
@@ -706,7 +747,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
           <MenuItem
             onClick={() => handleMenuClick("/admin/inventory")}
             sx={{
-              color: "#fff",
+              color: "var(--admin-text)",
               fontSize: "15px",
               padding: "12px 20px",
               borderRadius: "8px",
@@ -716,7 +757,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
               alignItems: "center",
               gap: "12px",
               "&:hover": {
-                backgroundColor: "rgba(120, 181, 104, 0.15)",
+                backgroundColor: "var(--admin-menu-hover)",
                 transform: "translateX(-4px)",
               }
             }}
@@ -725,9 +766,9 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
             موجودی انبار
           </MenuItem>
           <MenuItem
-            onClick={() => handleMenuClick("/admin/expenses")}
+            onClick={handleExpensesMenuOpen}
             sx={{
-              color: "#fff",
+              color: "var(--admin-text)",
               fontSize: "15px",
               padding: "12px 20px",
               borderRadius: "8px",
@@ -735,20 +776,24 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
               transition: "all 0.2s ease",
               display: "flex",
               alignItems: "center",
+              justifyContent: "space-between",
               gap: "12px",
               "&:hover": {
-                backgroundColor: "rgba(120, 181, 104, 0.15)",
+                backgroundColor: "var(--admin-menu-hover)",
                 transform: "translateX(-4px)",
               }
             }}
           >
-            <AttachMoneyIcon sx={{ color: "#78b568", fontSize: "22px" }} />
-            هزینه‌ها
+            <Box sx={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <AttachMoneyIcon sx={{ color: "var(--admin-accent)", fontSize: "22px" }} />
+              هزینه‌ها
+            </Box>
+            <ChevronLeftIcon sx={{ fontSize: "20px" }} />
           </MenuItem>
           <MenuItem
-            onClick={() => handleMenuClick("/admin/installments")}
+            onClick={handleInstallmentsMenuOpen}
             sx={{
-              color: "#fff",
+              color: "var(--admin-text)",
               fontSize: "15px",
               padding: "12px 20px",
               borderRadius: "8px",
@@ -756,62 +801,24 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
               transition: "all 0.2s ease",
               display: "flex",
               alignItems: "center",
+              justifyContent: "space-between",
               gap: "12px",
               "&:hover": {
-                backgroundColor: "rgba(120, 181, 104, 0.15)",
+                backgroundColor: "var(--admin-menu-hover)",
                 transform: "translateX(-4px)",
               }
             }}
           >
-            <CreditCardIcon sx={{ color: "#ff9800", fontSize: "22px" }} />
-            اقساط
-          </MenuItem>
-          <MenuItem
-            onClick={() => handleMenuClick("/admin/installment-credits")}
-            sx={{
-              color: "#fff",
-              fontSize: "15px",
-              padding: "12px 20px",
-              borderRadius: "8px",
-              margin: "4px 8px",
-              transition: "all 0.2s ease",
-              display: "flex",
-              alignItems: "center",
-              gap: "12px",
-              "&:hover": {
-                backgroundColor: "rgba(120, 181, 104, 0.15)",
-                transform: "translateX(-4px)",
-              }
-            }}
-          >
-            <CreditCardIcon sx={{ color: "#2196f3", fontSize: "22px" }} />
-            اعتبار اقساطی
-          </MenuItem>
-          <MenuItem
-            onClick={() => handleMenuClick("/admin/expenses-statistics")}
-            sx={{
-              color: "#fff",
-              fontSize: "15px",
-              padding: "12px 20px",
-              borderRadius: "8px",
-              margin: "4px 8px",
-              transition: "all 0.2s ease",
-              display: "flex",
-              alignItems: "center",
-              gap: "12px",
-              "&:hover": {
-                backgroundColor: "rgba(120, 181, 104, 0.15)",
-                transform: "translateX(-4px)",
-              }
-            }}
-          >
-            <ReceiptIcon sx={{ color: "#78b568", fontSize: "22px" }} />
-            گزارش هزینه‌ها
+            <Box sx={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <CreditCardIcon sx={{ color: "var(--admin-accent)", fontSize: "22px" }} />
+              اقساط
+            </Box>
+            <ChevronLeftIcon sx={{ fontSize: "20px" }} />
           </MenuItem>
           <MenuItem
             onClick={() => handleMenuClick("/admin/returned-products")}
             sx={{
-              color: "#fff",
+              color: "var(--admin-text)",
               fontSize: "15px",
               padding: "12px 20px",
               borderRadius: "8px",
@@ -821,7 +828,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
               alignItems: "center",
               gap: "12px",
               "&:hover": {
-                backgroundColor: "rgba(120, 181, 104, 0.15)",
+                backgroundColor: "var(--admin-menu-hover)",
                 transform: "translateX(-4px)",
               }
             }}
@@ -832,7 +839,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
           <MenuItem
             onClick={() => handleMenuClick("/admin/profit-loss")}
             sx={{
-              color: "#fff",
+              color: "var(--admin-text)",
               fontSize: "15px",
               padding: "12px 20px",
               borderRadius: "8px",
@@ -842,13 +849,147 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
               alignItems: "center",
               gap: "12px",
               "&:hover": {
-                backgroundColor: "rgba(120, 181, 104, 0.15)",
+                backgroundColor: "var(--admin-menu-hover)",
                 transform: "translateX(-4px)",
               }
             }}
           >
             <TrendingUpIcon sx={{ color: "#78b568", fontSize: "22px" }} />
             سود و ضرر
+          </MenuItem>
+        </Menu>
+
+        {/* Expenses Submenu */}
+        <Menu
+          anchorEl={expensesMenuAnchor}
+          open={Boolean(expensesMenuAnchor)}
+          onClose={handleExpensesMenuClose}
+          anchorOrigin={{
+            vertical: 'top',
+            horizontal: 'left',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}
+          sx={{
+            "& .MuiPaper-root": {
+              backgroundColor: "var(--admin-surface)",
+              borderRadius: "16px",
+              border: "1px solid var(--admin-accent-border)",
+              minWidth: "220px",
+              padding: "8px 0",
+            }
+          }}
+        >
+          <MenuItem
+            onClick={() => handleMenuClick("/admin/expenses")}
+            sx={{
+              color: "var(--admin-text)",
+              fontSize: "15px",
+              padding: "12px 20px",
+              borderRadius: "8px",
+              margin: "4px 8px",
+              transition: "all 0.2s ease",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              "&:hover": {
+                backgroundColor: "var(--admin-menu-hover)",
+                transform: "translateX(-4px)",
+              }
+            }}
+          >
+            <AttachMoneyIcon sx={{ color: "var(--admin-accent)", fontSize: "22px" }} />
+            لیست هزینه‌ها
+          </MenuItem>
+          <MenuItem
+            onClick={() => handleMenuClick("/admin/expenses-statistics")}
+            sx={{
+              color: "var(--admin-text)",
+              fontSize: "15px",
+              padding: "12px 20px",
+              borderRadius: "8px",
+              margin: "4px 8px",
+              transition: "all 0.2s ease",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              "&:hover": {
+                backgroundColor: "var(--admin-menu-hover)",
+                transform: "translateX(-4px)",
+              }
+            }}
+          >
+            <ReceiptIcon sx={{ color: "var(--admin-accent)", fontSize: "22px" }} />
+            گزارش هزینه‌ها
+          </MenuItem>
+        </Menu>
+
+        {/* Installments Submenu */}
+        <Menu
+          anchorEl={installmentsMenuAnchor}
+          open={Boolean(installmentsMenuAnchor)}
+          onClose={handleInstallmentsMenuClose}
+          anchorOrigin={{
+            vertical: 'top',
+            horizontal: 'left',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}
+          sx={{
+            "& .MuiPaper-root": {
+              backgroundColor: "var(--admin-surface)",
+              borderRadius: "16px",
+              border: "1px solid var(--admin-accent-border)",
+              minWidth: "220px",
+              padding: "8px 0",
+            }
+          }}
+        >
+          <MenuItem
+            onClick={() => handleMenuClick("/admin/installments")}
+            sx={{
+              color: "var(--admin-text)",
+              fontSize: "15px",
+              padding: "12px 20px",
+              borderRadius: "8px",
+              margin: "4px 8px",
+              transition: "all 0.2s ease",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              "&:hover": {
+                backgroundColor: "var(--admin-menu-hover)",
+                transform: "translateX(-4px)",
+              }
+            }}
+          >
+            <CreditCardIcon sx={{ color: "var(--admin-accent)", fontSize: "22px" }} />
+            لیست اقساط
+          </MenuItem>
+          <MenuItem
+            onClick={() => handleMenuClick("/admin/installment-credits")}
+            sx={{
+              color: "var(--admin-text)",
+              fontSize: "15px",
+              padding: "12px 20px",
+              borderRadius: "8px",
+              margin: "4px 8px",
+              transition: "all 0.2s ease",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              "&:hover": {
+                backgroundColor: "var(--admin-menu-hover)",
+                transform: "translateX(-4px)",
+              }
+            }}
+          >
+            <CreditCardIcon sx={{ color: "var(--admin-info-icon)", fontSize: "22px" }} />
+            اعتبار اقساطی
           </MenuItem>
         </Menu>
 
@@ -867,9 +1008,9 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
           }}
           sx={{
             "& .MuiPaper-root": {
-              backgroundColor: "#2b3143",
+              backgroundColor: "var(--admin-surface)",
               borderRadius: "16px",
-              border: "1px solid rgba(120, 181, 104, 0.2)",
+              border: "1px solid var(--admin-accent-border)",
               minWidth: "220px",
               padding: "8px 0",
             }
@@ -878,7 +1019,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
           <MenuItem
             onClick={() => handleMenuClick("/admin/best-selling")}
             sx={{
-              color: "#fff",
+              color: "var(--admin-text)",
               fontSize: "15px",
               padding: "12px 20px",
               borderRadius: "8px",
@@ -888,7 +1029,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
               alignItems: "center",
               gap: "12px",
               "&:hover": {
-                backgroundColor: "rgba(120, 181, 104, 0.15)",
+                backgroundColor: "var(--admin-menu-hover)",
                 transform: "translateX(-4px)",
               }
             }}
@@ -899,7 +1040,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
           <MenuItem
             onClick={() => handleMenuClick("/admin/manufacturers")}
             sx={{
-              color: "#fff",
+              color: "var(--admin-text)",
               fontSize: "15px",
               padding: "12px 20px",
               borderRadius: "8px",
@@ -909,7 +1050,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
               alignItems: "center",
               gap: "12px",
               "&:hover": {
-                backgroundColor: "rgba(120, 181, 104, 0.15)",
+                backgroundColor: "var(--admin-menu-hover)",
                 transform: "translateX(-4px)",
               }
             }}
@@ -920,7 +1061,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
           <MenuItem
             onClick={() => handleMenuClick("/admin/invoices")}
             sx={{
-              color: "#fff",
+              color: "var(--admin-text)",
               fontSize: "15px",
               padding: "12px 20px",
               borderRadius: "8px",
@@ -930,7 +1071,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
               alignItems: "center",
               gap: "12px",
               "&:hover": {
-                backgroundColor: "rgba(120, 181, 104, 0.15)",
+                backgroundColor: "var(--admin-menu-hover)",
                 transform: "translateX(-4px)",
               }
             }}
@@ -941,7 +1082,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
           <MenuItem
             onClick={() => handleMenuClick("/admin/categories")}
             sx={{
-              color: "#fff",
+              color: "var(--admin-text)",
               fontSize: "15px",
               padding: "12px 20px",
               borderRadius: "8px",
@@ -951,7 +1092,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
               alignItems: "center",
               gap: "12px",
               "&:hover": {
-                backgroundColor: "rgba(120, 181, 104, 0.15)",
+                backgroundColor: "var(--admin-menu-hover)",
                 transform: "translateX(-4px)",
               }
             }}
@@ -962,7 +1103,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
           <MenuItem
             onClick={() => handleMenuClick("/admin/bulk-discount")}
             sx={{
-              color: "#fff",
+              color: "var(--admin-text)",
               fontSize: "15px",
               padding: "12px 20px",
               borderRadius: "8px",
@@ -972,7 +1113,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
               alignItems: "center",
               gap: "12px",
               "&:hover": {
-                backgroundColor: "rgba(120, 181, 104, 0.15)",
+                backgroundColor: "var(--admin-menu-hover)",
                 transform: "translateX(-4px)",
               }
             }}
@@ -997,9 +1138,9 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
           }}
           sx={{
             "& .MuiPaper-root": {
-              backgroundColor: "#2b3143",
+              backgroundColor: "var(--admin-surface)",
               borderRadius: "16px",
-              border: "1px solid rgba(120, 181, 104, 0.2)",
+              border: "1px solid var(--admin-accent-border)",
               minWidth: "220px",
               padding: "8px 0",
             }
@@ -1008,7 +1149,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
           <MenuItem
             onClick={() => handleMenuClick("/admin/shop-sms-logs")}
             sx={{
-              color: "#fff",
+              color: "var(--admin-text)",
               fontSize: "15px",
               padding: "12px 20px",
               borderRadius: "8px",
@@ -1018,7 +1159,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
               alignItems: "center",
               gap: "12px",
               "&:hover": {
-                backgroundColor: "rgba(120, 181, 104, 0.15)",
+                backgroundColor: "var(--admin-menu-hover)",
                 transform: "translateX(-4px)",
               }
             }}
@@ -1029,7 +1170,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
           <MenuItem
             onClick={() => handleMenuClick("/admin/broadcast-sms")}
             sx={{
-              color: "#fff",
+              color: "var(--admin-text)",
               fontSize: "15px",
               padding: "12px 20px",
               borderRadius: "8px",
@@ -1039,7 +1180,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
               alignItems: "center",
               gap: "12px",
               "&:hover": {
-                backgroundColor: "rgba(120, 181, 104, 0.15)",
+                backgroundColor: "var(--admin-menu-hover)",
                 transform: "translateX(-4px)",
               }
             }}
@@ -1058,7 +1199,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
           transformOrigin={{ vertical: 'top', horizontal: 'right' }}
           sx={{
             "& .MuiPaper-root": {
-              backgroundColor: "#2b3143",
+              backgroundColor: "var(--admin-surface)",
               borderRadius: "16px",
               border: "1px solid rgba(255, 152, 0, 0.35)",
               minWidth: "240px",
@@ -1069,7 +1210,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
           <MenuItem
             onClick={() => handleMenuClick("/admin/shop-sms-quota")}
             sx={{
-              color: "#fff",
+              color: "var(--admin-text)",
               fontSize: "15px",
               padding: "12px 20px",
               borderRadius: "8px",

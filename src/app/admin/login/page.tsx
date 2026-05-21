@@ -2,7 +2,6 @@
 
 import { Box, Button, TextField, Typography, InputAdornment } from "@mui/material";
 import React, { useState, useEffect, useRef } from "react";
-import PhoneNumberInput from "@/app/coponent/PhoneNumberInput/PhoneNumberInput";
 import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -44,49 +43,48 @@ function parseErrorMessage(res: { errorText?: string; message?: string }): strin
   return message || "خطا در انجام عملیات";
 }
 
-const passwordFieldSx = {
+const loginFieldSx = {
   "& .MuiInputLabel-root": {
-    color: "#ff9100",
-    fontSize: { xs: "14px", md: "16px" },
+    color: "var(--admin-text-secondary)",
+    fontSize: { xs: "14px", md: "15px" },
   },
   "& .MuiOutlinedInput-root": {
-    color: "#ff9100",
+    borderRadius: { xs: "12px", md: "14px" },
+    backgroundColor: "var(--admin-surface-alt)",
+    color: "var(--admin-text)",
+    minHeight: { xs: "48px", md: "52px" },
     fontSize: { xs: "14px", md: "16px" },
     "& fieldset": {
-      borderRadius: { xs: "12px", md: "15px" },
-      borderColor: "#1976d2",
+      borderColor: "var(--admin-border)",
     },
-    "&.Mui-focused fieldset": { borderColor: "#1976d2" },
+    "&:hover fieldset": {
+      borderColor: "var(--admin-accent)",
+    },
+    "&.Mui-focused fieldset": {
+      borderColor: "var(--admin-accent)",
+    },
   },
-  "& input": {
+  "& .MuiInputBase-input": {
     padding: { xs: "12px 14px", md: "14px 16px" },
+    fontSize: { xs: "14px", md: "16px" },
+    color: "var(--admin-text)",
+    "&:-webkit-autofill": {
+      WebkitBoxShadow: "0 0 0 100px var(--admin-surface-alt) inset !important",
+      WebkitTextFillColor: "var(--admin-text) !important",
+    },
   },
 } as const;
 
-const forgotInputSx = {
-  "& .MuiOutlinedInput-root": {
-    borderRadius: "14px",
-    backgroundColor: "#1a1d2e",
-    color: "#fff",
-    "& fieldset": { borderColor: "#505669" },
-    "&:hover fieldset": { borderColor: "#78b568" },
-    "&.Mui-focused fieldset": { borderColor: "#78b568" },
-  },
-  "& .MuiInputBase-input": {
-    padding: "14px 16px",
-    fontSize: "15px",
-    color: "#fff",
-  },
-} as const;
+const forgotInputSx = loginFieldSx;
 
 const cardSx = {
   width: "100%",
   maxWidth: { xs: "calc(100% - 0px)", sm: "420px", md: "450px" },
-  backgroundColor: "#2b3143",
+  backgroundColor: "var(--admin-surface)",
   borderRadius: { xs: "16px", md: "20px" },
   padding: { xs: "16px", sm: "28px", md: "32px" },
-  border: "1px solid rgba(55, 84, 165, 0.3)",
-  boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
+  border: "1px solid var(--admin-border)",
+  boxShadow: "0 8px 24px rgba(15, 23, 42, 0.12)",
   marginTop: { xs: "20px", sm: "0" },
   boxSizing: "border-box",
 } as const;
@@ -347,13 +345,13 @@ export default function ShikshooLoginPage() {
             direction: "ltr",
             "& .MuiOutlinedInput-root": {
               borderRadius: "12px",
-              backgroundColor: "#1a1d2e",
-              color: "#fff",
+              backgroundColor: "var(--admin-surface-alt)",
+              color: "var(--admin-text)",
               "& fieldset": { borderColor: "#505669" },
-              "&:hover fieldset": { borderColor: "#78b568" },
-              "&.Mui-focused fieldset": { borderColor: "#78b568" },
+              "&:hover fieldset": { borderColor: "var(--admin-accent)" },
+              "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
             },
-            "& .MuiInputBase-input": { color: "#fff" },
+            "& .MuiInputBase-input": { color: "var(--admin-text)" },
           }}
         />
       ))}
@@ -366,7 +364,7 @@ export default function ShikshooLoginPage() {
         variant="h5"
         sx={{
           fontWeight: 700,
-          color: "#fff",
+          color: "var(--admin-text)",
           textAlign: "center",
           mb: { xs: 3, md: 4 },
           fontSize: { xs: "18px", sm: "20px", md: "24px" },
@@ -375,11 +373,49 @@ export default function ShikshooLoginPage() {
         ورود به فروشگاه
       </Typography>
 
-      <Box sx={{ mb: { xs: 2, md: 3 }, overflow: "hidden" }}>
-        <PhoneNumberInput defaultValue="" onChange={onChangePhone} name="phoneNumber" />
+      <Box sx={{ mb: { xs: 2, md: 2 } }}>
+        <TextField
+          fullWidth
+          name="phoneNumber"
+          label="شماره موبایل"
+          variant="outlined"
+          value={phon}
+          onChange={(e) => onChangePhone(e.target.value.replace(/\D/g, "").slice(0, 11))}
+          placeholder="09123456789"
+          disabled={isLoading}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <PhoneIcon sx={{ color: "var(--admin-accent)", fontSize: { xs: 20, md: 22 } }} />
+              </InputAdornment>
+            ),
+            endAdornment: (
+              <InputAdornment position="end">
+                <Typography
+                  component="span"
+                  sx={{
+                    color: "var(--admin-text-secondary)",
+                    fontSize: { xs: "13px", md: "14px" },
+                    fontWeight: 600,
+                    direction: "ltr",
+                    px: 0.5,
+                  }}
+                >
+                  +98
+                </Typography>
+              </InputAdornment>
+            ),
+          }}
+          inputProps={{
+            maxLength: 11,
+            inputMode: "numeric",
+            style: { direction: "ltr", textAlign: "left" },
+          }}
+          sx={loginFieldSx}
+        />
       </Box>
 
-      <Box sx={{ mb: 1 }}>
+      <Box sx={{ mb: { xs: 2, md: 2 } }}>
         <TextField
           fullWidth
           name="password"
@@ -391,7 +427,14 @@ export default function ShikshooLoginPage() {
           inputProps={{ maxLength: 15, minLength: 6 }}
           required
           disabled={isLoading}
-          sx={passwordFieldSx}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <LockIcon sx={{ color: "var(--admin-accent)", fontSize: { xs: 20, md: 22 } }} />
+              </InputAdornment>
+            ),
+          }}
+          sx={loginFieldSx}
         />
       </Box>
 
@@ -401,7 +444,7 @@ export default function ShikshooLoginPage() {
           onClick={() => setView("forgot-phone")}
           disabled={isLoading}
           sx={{
-            color: "#78b568",
+            color: "var(--admin-accent)",
             textTransform: "none",
             fontSize: "13px",
             p: 0,
@@ -420,8 +463,11 @@ export default function ShikshooLoginPage() {
           variant="contained"
           sx={{
             ...primaryBtnSx,
-            bgcolor: phon && password && !isLoading ? "#1976d2" : "#8e9191",
-            "&:hover": { bgcolor: phon && password && !isLoading ? "#1565c0" : "#8e9191" },
+            bgcolor: phon && password && !isLoading ? "var(--admin-accent)" : "var(--admin-border)",
+            color: "#fff",
+            "&:hover": {
+              bgcolor: phon && password && !isLoading ? "var(--admin-accent-hover)" : "var(--admin-border)",
+            },
           }}
         >
           {isLoading ? "در حال ورود..." : "ورود"}
@@ -432,9 +478,12 @@ export default function ShikshooLoginPage() {
           variant="outlined"
           sx={{
             ...primaryBtnSx,
-            borderColor: "#78b568",
-            color: "#78b568",
-            "&:hover": { borderColor: "#5a9a4a", bgcolor: "rgba(120, 181, 104, 0.08)" },
+            borderColor: "var(--admin-accent)",
+            color: "var(--admin-accent)",
+            "&:hover": {
+              borderColor: "var(--admin-accent-hover)",
+              bgcolor: "var(--admin-menu-hover)",
+            },
           }}
         >
           ثبت‌نام فروشگاه
@@ -447,13 +496,13 @@ export default function ShikshooLoginPage() {
     <>
       <Typography
         variant="h5"
-        sx={{ fontWeight: 700, color: "#fff", textAlign: "center", mb: 1, fontSize: "20px" }}
+        sx={{ fontWeight: 700, color: "var(--admin-text)", textAlign: "center", mb: 1, fontSize: "20px" }}
       >
         بازیابی رمز عبور
       </Typography>
       <Typography
         variant="body2"
-        sx={{ mb: 3, color: "rgba(255,255,255,0.75)", textAlign: "center", lineHeight: 1.7 }}
+        sx={{ mb: 3, color: "var(--admin-text-muted)", textAlign: "center", lineHeight: 1.7 }}
       >
         شماره همراه ثبت‌شده را وارد کنید. کد ۵ رقمی پیامکی ارسال می‌شود (اعتبار ۱۰ دقیقه).
       </Typography>
@@ -467,7 +516,7 @@ export default function ShikshooLoginPage() {
         InputProps={{
           startAdornment: (
             <InputAdornment position="start">
-              <PhoneIcon sx={{ color: "rgba(255,255,255,0.7)", fontSize: 20 }} />
+              <PhoneIcon sx={{ color: "var(--admin-text-muted)", fontSize: 20 }} />
             </InputAdornment>
           ),
         }}
@@ -482,8 +531,8 @@ export default function ShikshooLoginPage() {
         sx={{
           ...primaryBtnSx,
           borderRadius: "14px",
-          bgcolor: isPhoneValid ? "#78b568" : "#505669",
-          "&:hover": { bgcolor: isPhoneValid ? "#5a9a4a" : "#505669" },
+          bgcolor: isPhoneValid ? "var(--admin-accent)" : "#505669",
+          "&:hover": { bgcolor: isPhoneValid ? "var(--admin-accent-hover)" : "#505669" },
         }}
       >
         {isLoading ? "در حال ارسال..." : "دریافت کد پیامکی"}
@@ -510,21 +559,21 @@ export default function ShikshooLoginPage() {
     <>
       <Typography
         variant="h5"
-        sx={{ fontWeight: 700, color: "#fff", textAlign: "center", mb: 1, fontSize: "20px" }}
+        sx={{ fontWeight: 700, color: "var(--admin-text)", textAlign: "center", mb: 1, fontSize: "20px" }}
       >
         رمز عبور جدید
       </Typography>
-      <Typography sx={{ textAlign: "center", color: "rgba(255,255,255,0.7)", mb: 2, fontSize: "14px" }}>
-        کد به شماره <strong style={{ color: "#fff" }}>{phon}</strong> ارسال شد.
+      <Typography sx={{ textAlign: "center", color: "var(--admin-text-muted)", mb: 2, fontSize: "14px" }}>
+        کد به شماره <strong style={{ color: "var(--admin-text)" }}>{phon}</strong> ارسال شد.
       </Typography>
 
-      <Typography sx={{ color: "rgba(255,255,255,0.85)", fontSize: "14px", mb: 0.5 }}>
+      <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "14px", mb: 0.5 }}>
         کد تأیید ۵ رقمی
       </Typography>
       {codeTimer > 0 ? (
-        <Typography sx={{ mb: 1, fontSize: "13px", color: "rgba(255,255,255,0.65)", textAlign: "center" }}>
+        <Typography sx={{ mb: 1, fontSize: "13px", color: "var(--admin-text-secondary)", textAlign: "center" }}>
           اعتبار کد:{" "}
-          <Box component="span" sx={{ color: "#78b568", fontWeight: 700 }}>
+          <Box component="span" sx={{ color: "var(--admin-accent)", fontWeight: 700 }}>
             {formatCountdown(codeTimer)}
           </Box>
         </Typography>
@@ -541,7 +590,7 @@ export default function ShikshooLoginPage() {
           disabled={resendTimer > 0 || isLoading}
           onClick={handleSendResetCode}
           sx={{
-            color: resendTimer > 0 ? "rgba(255,255,255,0.35)" : "#78b568",
+            color: resendTimer > 0 ? "var(--admin-text-secondary)" : "var(--admin-accent)",
             textTransform: "none",
           }}
         >
@@ -561,7 +610,7 @@ export default function ShikshooLoginPage() {
         InputProps={{
           startAdornment: (
             <InputAdornment position="start">
-              <LockIcon sx={{ color: "rgba(255,255,255,0.7)", fontSize: 20 }} />
+              <LockIcon sx={{ color: "var(--admin-text-muted)", fontSize: 20 }} />
             </InputAdornment>
           ),
         }}
@@ -577,7 +626,7 @@ export default function ShikshooLoginPage() {
         InputProps={{
           startAdornment: (
             <InputAdornment position="start">
-              <LockIcon sx={{ color: "rgba(255,255,255,0.7)", fontSize: 20 }} />
+              <LockIcon sx={{ color: "var(--admin-text-muted)", fontSize: 20 }} />
             </InputAdornment>
           ),
         }}
@@ -622,7 +671,7 @@ export default function ShikshooLoginPage() {
           variant="text"
           onClick={goToLogin}
           sx={{
-            color: "rgba(255,255,255,0.65)",
+            color: "var(--admin-text-secondary)",
             textTransform: "none",
             fontSize: "14px",
             "&:hover": { backgroundColor: "transparent", textDecoration: "underline" },
@@ -641,7 +690,7 @@ export default function ShikshooLoginPage() {
         width: "100%",
         maxWidth: "100vw",
         overflowX: "hidden",
-        background: "linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%)",
+        background: "var(--admin-bg-gradient)",
         display: "flex",
         flexDirection: "column",
         justifyContent: { xs: "flex-start", sm: "center" },

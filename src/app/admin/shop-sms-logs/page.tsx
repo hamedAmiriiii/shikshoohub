@@ -51,26 +51,26 @@ import CloseIcon from '@mui/icons-material/Close';
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
-    backgroundColor: "#1a1d2e",
-    color: "#fff",
+    backgroundColor: "var(--admin-surface-alt)",
+    color: "var(--admin-text)",
     fontWeight: "600",
     fontSize: "16px",
     padding: "16px 24px",
   },
   [`&.${tableCellClasses.body}`]: {
-    color: "#fff",
+    color: "var(--admin-text)",
     fontSize: 16,
     padding: "16px 24px",
   },
 }));
 
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
-  backgroundColor: "#2b3143",
+  backgroundColor: "var(--admin-surface)",
   '&:nth-of-type(even)': {
-    backgroundColor: "#1a1d2e",
+    backgroundColor: "var(--admin-surface-alt)",
   },
   '&:hover': {
-    backgroundColor: "rgba(120, 181, 104, 0.1)",
+    backgroundColor: "var(--admin-menu-hover)",
   },
   '&:last-child td, &:last-child th': {
     border: 0,
@@ -103,7 +103,7 @@ const getSmsTypeLabel = (type: string) => {
 
 const getSmsTypeColor = (type: string) => {
   const colors: { [key: string]: string } = {
-    purchase: '#78b568',
+    purchase: 'var(--admin-accent)',
     credit: '#2196f3',
     warning: '#ff9100',
   };
@@ -261,7 +261,7 @@ export default function ShopSmsLogsPage() {
   return (
     <Box sx={{ 
       minHeight: '100vh', 
-      background: "linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%)",
+      background: "var(--admin-bg-gradient)",
       paddingTop: { xs: '12px', md: '24px' },
       paddingBottom: { xs: '100px', md: '40px' },
       direction: 'rtl'
@@ -270,8 +270,8 @@ export default function ShopSmsLogsPage() {
         {/* Header */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <SmsIcon sx={{ color: '#78b568', fontSize: '32px' }} />
-            {/* <Typography variant="h4" sx={{ color: '#fff', fontWeight: '600' }}>
+            <SmsIcon sx={{ color: 'var(--admin-accent)', fontSize: '32px' }} />
+            {/* <Typography variant="h4" sx={{ color: 'var(--admin-text)', fontWeight: '600' }}>
               لیست پیامک‌های فروشگاه
             </Typography> */}
           </Box>
@@ -280,9 +280,9 @@ export default function ShopSmsLogsPage() {
             startIcon={<FilterListIcon />}
             onClick={() => setOpenFilterSheet(true)}
             sx={{
-              backgroundColor: '#78b568',
-              color: '#fff',
-              '&:hover': { backgroundColor: '#5a9a4a' }
+              backgroundColor: 'var(--admin-accent)',
+              color: 'var(--admin-text)',
+              '&:hover': { backgroundColor: 'var(--admin-accent-hover)' }
             }}
           >
             فیلتر
@@ -292,10 +292,10 @@ export default function ShopSmsLogsPage() {
         {/* Summary */}
         {/* {!loading && (
           <Box sx={{ marginBottom: '24px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-            <Card sx={{ backgroundColor: '#2b3143', border: '1px solid rgba(55, 84, 165, 0.3)' }}>
+            <Card sx={{ backgroundColor: 'var(--admin-surface)', border: '1px solid rgba(55, 84, 165, 0.3)' }}>
               <CardContent>
-                <Typography sx={{ color: '#999', fontSize: '14px' }}>تعداد کل</Typography>
-                <Typography sx={{ color: '#fff', fontSize: '24px', fontWeight: '600' }}>
+                <Typography sx={{ color: 'var(--admin-text-secondary)', fontSize: '14px' }}>تعداد کل</Typography>
+                <Typography sx={{ color: 'var(--admin-text)', fontSize: '24px', fontWeight: '600' }}>
                   {formatNumber(total)}
                 </Typography>
               </CardContent>
@@ -310,7 +310,7 @@ export default function ShopSmsLogsPage() {
           </Box>
         ) : logs.length === 0 ? (
           <Box sx={{ textAlign: 'center', padding: '40px' }}>
-            <Typography sx={{ color: '#999', fontSize: '18px' }}>
+            <Typography sx={{ color: 'var(--admin-text-secondary)', fontSize: '18px' }}>
               پیامکی یافت نشد
             </Typography>
           </Box>
@@ -321,7 +321,7 @@ export default function ShopSmsLogsPage() {
               <Card 
                 key={log.id} 
                 sx={{ 
-                  backgroundColor: '#2b3143', 
+                  backgroundColor: 'var(--admin-surface)', 
                   border: '1px solid rgba(55, 84, 165, 0.3)',
                   borderRadius: '12px'
                 }}
@@ -329,7 +329,7 @@ export default function ShopSmsLogsPage() {
                 <CardContent>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                     <Box>
-                      <Typography sx={{ color: '#fff', fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>
+                      <Typography sx={{ color: 'var(--admin-text)', fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>
                         {log.phone}
                       </Typography>
                       <Chip 
@@ -337,14 +337,14 @@ export default function ShopSmsLogsPage() {
                         size="small"
                         sx={{ 
                           backgroundColor: getSmsTypeColor(log.sms_type),
-                          color: '#fff',
+                          color: 'var(--admin-text)',
                           fontSize: '12px'
                         }}
                       />
                     </Box>
                     <IconButton 
                       onClick={() => handleViewDetail(log.id)}
-                      sx={{ color: '#78b568' }}
+                      sx={{ color: 'var(--admin-accent)' }}
                     >
                       <VisibilityIcon />
                     </IconButton>
@@ -363,16 +363,16 @@ export default function ShopSmsLogsPage() {
                   >
                     {log.message}
                   </Typography>
-                  <Typography sx={{ color: '#999', fontSize: '12px' }}>
+                  <Typography sx={{ color: 'var(--admin-text-secondary)', fontSize: '12px' }}>
                     {log.created_at}
                   </Typography>
                   {log.purchase_id && (
-                    <Typography sx={{ color: '#999', fontSize: '12px', marginTop: '4px' }}>
+                    <Typography sx={{ color: 'var(--admin-text-secondary)', fontSize: '12px', marginTop: '4px' }}>
                       شناسه خرید: {log.purchase_id}
                     </Typography>
                   )}
                   {log.credit_amount && (
-                    <Typography sx={{ color: '#78b568', fontSize: '14px', marginTop: '4px', fontWeight: '600' }}>
+                    <Typography sx={{ color: 'var(--admin-accent)', fontSize: '14px', marginTop: '4px', fontWeight: '600' }}>
                       مبلغ اعتبار: {formatNumber(parseFloat(log.credit_amount))} تومان
                     </Typography>
                   )}
@@ -386,7 +386,7 @@ export default function ShopSmsLogsPage() {
             <TableContainer 
               component={Paper} 
               sx={{ 
-                backgroundColor: '#2b3143',
+                backgroundColor: 'var(--admin-surface)',
                 borderRadius: '16px',
                 border: '1px solid rgba(55, 84, 165, 0.3)',
                 overflowX: 'auto'
@@ -414,7 +414,7 @@ export default function ShopSmsLogsPage() {
                           size="small"
                           sx={{ 
                             backgroundColor: getSmsTypeColor(log.sms_type),
-                            color: '#fff',
+                            color: 'var(--admin-text)',
                             fontSize: '12px'
                           }}
                         />
@@ -438,7 +438,7 @@ export default function ShopSmsLogsPage() {
                       <StyledTableCell align="center">
                         <IconButton 
                           onClick={() => handleViewDetail(log.id)}
-                          sx={{ color: '#78b568' }}
+                          sx={{ color: 'var(--admin-accent)' }}
                         >
                           <VisibilityIcon />
                         </IconButton>
@@ -460,11 +460,11 @@ export default function ShopSmsLogsPage() {
                   size="large"
                   sx={{
                     '& .MuiPaginationItem-root': {
-                      color: '#fff',
+                      color: 'var(--admin-text)',
                     },
                     '& .Mui-selected': {
-                      backgroundColor: '#78b568',
-                      color: '#fff',
+                      backgroundColor: 'var(--admin-accent)',
+                      color: 'var(--admin-text)',
                     },
                   }}
                 />
@@ -481,14 +481,14 @@ export default function ShopSmsLogsPage() {
           fullWidth
           PaperProps={{
             sx: {
-              backgroundColor: "#2b3143",
+              backgroundColor: "var(--admin-surface)",
               borderRadius: "20px",
-              border: "1px solid #505669",
+              border: "1px solid var(--admin-border)",
             }
           }}
         >
           <DialogTitle sx={{ 
-            color: "#fff", 
+            color: "var(--admin-text)", 
             display: "flex", 
             justifyContent: "space-between", 
             alignItems: "center",
@@ -500,7 +500,7 @@ export default function ShopSmsLogsPage() {
             </Typography>
             <IconButton 
               onClick={() => setOpenDetailDialog(false)}
-              sx={{ color: "#fff" }}
+              sx={{ color: "var(--admin-text)" }}
             >
               <CloseIcon />
             </IconButton>
@@ -509,48 +509,48 @@ export default function ShopSmsLogsPage() {
             {selectedLog && (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <Box>
-                  <Typography sx={{ color: '#999', fontSize: '14px', marginBottom: '4px' }}>شماره تلفن</Typography>
-                  <Typography sx={{ color: '#fff', fontSize: '16px' }}>{selectedLog.phone}</Typography>
+                  <Typography sx={{ color: 'var(--admin-text-secondary)', fontSize: '14px', marginBottom: '4px' }}>شماره تلفن</Typography>
+                  <Typography sx={{ color: 'var(--admin-text)', fontSize: '16px' }}>{selectedLog.phone}</Typography>
                 </Box>
                 <Box>
-                  <Typography sx={{ color: '#999', fontSize: '14px', marginBottom: '4px' }}>نوع پیامک</Typography>
+                  <Typography sx={{ color: 'var(--admin-text-secondary)', fontSize: '14px', marginBottom: '4px' }}>نوع پیامک</Typography>
                   <Chip 
                     label={getSmsTypeLabel(selectedLog.sms_type)} 
                     size="small"
                     sx={{ 
                       backgroundColor: getSmsTypeColor(selectedLog.sms_type),
-                      color: '#fff',
+                      color: 'var(--admin-text)',
                       fontSize: '12px'
                     }}
                   />
                 </Box>
                 <Box>
-                  <Typography sx={{ color: '#999', fontSize: '14px', marginBottom: '4px' }}>پیام</Typography>
-                  <Typography sx={{ color: '#fff', fontSize: '16px', whiteSpace: 'pre-wrap' }}>
+                  <Typography sx={{ color: 'var(--admin-text-secondary)', fontSize: '14px', marginBottom: '4px' }}>پیام</Typography>
+                  <Typography sx={{ color: 'var(--admin-text)', fontSize: '16px', whiteSpace: 'pre-wrap' }}>
                     {selectedLog.message}
                   </Typography>
                 </Box>
                 {selectedLog.purchase_id && (
                   <Box>
-                    <Typography sx={{ color: '#999', fontSize: '14px', marginBottom: '4px' }}>شناسه خرید</Typography>
-                    <Typography sx={{ color: '#fff', fontSize: '16px' }}>{selectedLog.purchase_id}</Typography>
+                    <Typography sx={{ color: 'var(--admin-text-secondary)', fontSize: '14px', marginBottom: '4px' }}>شناسه خرید</Typography>
+                    <Typography sx={{ color: 'var(--admin-text)', fontSize: '16px' }}>{selectedLog.purchase_id}</Typography>
                   </Box>
                 )}
                 {selectedLog.credit_amount && (
                   <Box>
-                    <Typography sx={{ color: '#999', fontSize: '14px', marginBottom: '4px' }}>مبلغ اعتبار</Typography>
-                    <Typography sx={{ color: '#78b568', fontSize: '18px', fontWeight: '600' }}>
+                    <Typography sx={{ color: 'var(--admin-text-secondary)', fontSize: '14px', marginBottom: '4px' }}>مبلغ اعتبار</Typography>
+                    <Typography sx={{ color: 'var(--admin-accent)', fontSize: '18px', fontWeight: '600' }}>
                       {formatNumber(parseFloat(selectedLog.credit_amount))} تومان
                     </Typography>
                   </Box>
                 )}
                 <Box>
-                  <Typography sx={{ color: '#999', fontSize: '14px', marginBottom: '4px' }}>تاریخ ایجاد</Typography>
-                  <Typography sx={{ color: '#fff', fontSize: '16px' }}>{selectedLog.created_at}</Typography>
+                  <Typography sx={{ color: 'var(--admin-text-secondary)', fontSize: '14px', marginBottom: '4px' }}>تاریخ ایجاد</Typography>
+                  <Typography sx={{ color: 'var(--admin-text)', fontSize: '16px' }}>{selectedLog.created_at}</Typography>
                 </Box>
                 <Box>
-                  <Typography sx={{ color: '#999', fontSize: '14px', marginBottom: '4px' }}>تاریخ به‌روزرسانی</Typography>
-                  <Typography sx={{ color: '#fff', fontSize: '16px' }}>{selectedLog.updated_at}</Typography>
+                  <Typography sx={{ color: 'var(--admin-text-secondary)', fontSize: '14px', marginBottom: '4px' }}>تاریخ به‌روزرسانی</Typography>
+                  <Typography sx={{ color: 'var(--admin-text)', fontSize: '16px' }}>{selectedLog.updated_at}</Typography>
                 </Box>
               </Box>
             )}
@@ -558,7 +558,7 @@ export default function ShopSmsLogsPage() {
           <DialogActions sx={{ padding: '16px 24px', borderTop: '1px solid #505669' }}>
             <Button 
               onClick={() => setOpenDetailDialog(false)}
-              sx={{ color: '#fff' }}
+              sx={{ color: 'var(--admin-text)' }}
             >
               بستن
             </Button>
@@ -574,7 +574,7 @@ export default function ShopSmsLogsPage() {
           <Box sx={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {/* Search */}
             <Box>
-              <Typography sx={{ color: '#fff', marginBottom: '8px', fontSize: '14px' }}>
+              <Typography sx={{ color: 'var(--admin-text)', marginBottom: '8px', fontSize: '14px' }}>
                 جستجو
               </Typography>
               <TextField
@@ -583,37 +583,37 @@ export default function ShopSmsLogsPage() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="جستجو..."
                 sx={{
-                  backgroundColor: '#1a1d2e',
+                  backgroundColor: 'var(--admin-surface-alt)',
                   borderRadius: '8px',
                   '& .MuiOutlinedInput-root': {
-                    color: '#fff',
+                    color: 'var(--admin-text)',
                     '& fieldset': {
                       borderColor: '#505669',
                     },
                     '&:hover fieldset': {
-                      borderColor: '#78b568',
+                      borderColor: 'var(--admin-accent)',
                     },
                     '&.Mui-focused fieldset': {
-                      borderColor: '#78b568',
+                      borderColor: 'var(--admin-accent)',
                     },
                   },
                 }}
               />
               {/* <FormControl fullWidth sx={{ marginTop: '12px' }}>
-                <InputLabel sx={{ color: '#999' }}>فیلد جستجو</InputLabel>
+                <InputLabel sx={{ color: 'var(--admin-text-secondary)' }}>فیلد جستجو</InputLabel>
                 <Select
                   value={searchField}
                   onChange={(e) => setSearchField(e.target.value as any)}
                   sx={{
-                    color: '#fff',
+                    color: 'var(--admin-text)',
                     '& .MuiOutlinedInput-notchedOutline': {
                       borderColor: '#505669',
                     },
                     '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#78b568',
+                      borderColor: 'var(--admin-accent)',
                     },
                     '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#78b568',
+                      borderColor: 'var(--admin-accent)',
                     },
                   }}
                 >
@@ -627,24 +627,24 @@ export default function ShopSmsLogsPage() {
 
             {/* SMS Type Filter */}
             {/* <Box>
-              <Typography sx={{ color: '#fff', marginBottom: '8px', fontSize: '14px' }}>
+              <Typography sx={{ color: 'var(--admin-text)', marginBottom: '8px', fontSize: '14px' }}>
                 نوع پیامک
               </Typography>
               <FormControl fullWidth>
-                <InputLabel sx={{ color: '#999' }}>نوع</InputLabel>
+                <InputLabel sx={{ color: 'var(--admin-text-secondary)' }}>نوع</InputLabel>
                 <Select
                   value={smsTypeFilter}
                   onChange={(e) => setSmsTypeFilter(e.target.value)}
                   sx={{
-                    color: '#fff',
+                    color: 'var(--admin-text)',
                     '& .MuiOutlinedInput-notchedOutline': {
                       borderColor: '#505669',
                     },
                     '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#78b568',
+                      borderColor: 'var(--admin-accent)',
                     },
                     '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#78b568',
+                      borderColor: 'var(--admin-accent)',
                     },
                   }}
                 >
@@ -658,7 +658,7 @@ export default function ShopSmsLogsPage() {
 
             {/* Date Filter */}
             <Box>
-              <Typography sx={{ color: '#fff', marginBottom: '8px', fontSize: '14px' }}>
+              <Typography sx={{ color: 'var(--admin-text)', marginBottom: '8px', fontSize: '14px' }}>
                 فیلتر تاریخ
               </Typography>
               <RadioGroup
@@ -667,28 +667,28 @@ export default function ShopSmsLogsPage() {
               >
                 <FormControlLabel 
                   value="today" 
-                  control={<Radio sx={{ color: '#78b568', '&.Mui-checked': { color: '#78b568' } }} />} 
-                  label={<Typography sx={{ color: '#fff' }}>امروز</Typography>} 
+                  control={<Radio sx={{ color: 'var(--admin-accent)', '&.Mui-checked': { color: 'var(--admin-accent)' } }} />} 
+                  label={<Typography sx={{ color: 'var(--admin-text)' }}>امروز</Typography>} 
                 />
                 <FormControlLabel 
                   value="week" 
-                  control={<Radio sx={{ color: '#78b568', '&.Mui-checked': { color: '#78b568' } }} />} 
-                  label={<Typography sx={{ color: '#fff' }}>هفته جاری</Typography>} 
+                  control={<Radio sx={{ color: 'var(--admin-accent)', '&.Mui-checked': { color: 'var(--admin-accent)' } }} />} 
+                  label={<Typography sx={{ color: 'var(--admin-text)' }}>هفته جاری</Typography>} 
                 />
                 <FormControlLabel 
                   value="month" 
-                  control={<Radio sx={{ color: '#78b568', '&.Mui-checked': { color: '#78b568' } }} />} 
-                  label={<Typography sx={{ color: '#fff' }}>ماه جاری</Typography>} 
+                  control={<Radio sx={{ color: 'var(--admin-accent)', '&.Mui-checked': { color: 'var(--admin-accent)' } }} />} 
+                  label={<Typography sx={{ color: 'var(--admin-text)' }}>ماه جاری</Typography>} 
                 />
                 <FormControlLabel 
                   value="year" 
-                  control={<Radio sx={{ color: '#78b568', '&.Mui-checked': { color: '#78b568' } }} />} 
-                  label={<Typography sx={{ color: '#fff' }}>سال جاری</Typography>} 
+                  control={<Radio sx={{ color: 'var(--admin-accent)', '&.Mui-checked': { color: 'var(--admin-accent)' } }} />} 
+                  label={<Typography sx={{ color: 'var(--admin-text)' }}>سال جاری</Typography>} 
                 />
                 <FormControlLabel 
                   value="range" 
-                  control={<Radio sx={{ color: '#78b568', '&.Mui-checked': { color: '#78b568' } }} />} 
-                  label={<Typography sx={{ color: '#fff' }}>بازه تاریخ</Typography>} 
+                  control={<Radio sx={{ color: 'var(--admin-accent)', '&.Mui-checked': { color: 'var(--admin-accent)' } }} />} 
+                  label={<Typography sx={{ color: 'var(--admin-text)' }}>بازه تاریخ</Typography>} 
                 />
               </RadioGroup>
               {filterMode === 'range' && (
@@ -702,7 +702,7 @@ export default function ShopSmsLogsPage() {
                     calendarPosition="bottom-right"
                     style={{
                       width: '100%',
-                      backgroundColor: '#1a1d2e',
+                      backgroundColor: 'var(--admin-surface-alt)',
                       borderRadius: '8px',
                       padding: '8px',
                     }}
@@ -719,9 +719,9 @@ export default function ShopSmsLogsPage() {
                 fullWidth
                 sx={{
                   borderColor: '#505669',
-                  color: '#fff',
+                  color: 'var(--admin-text)',
                   '&:hover': {
-                    borderColor: '#78b568',
+                    borderColor: 'var(--admin-accent)',
                   },
                 }}
               >
@@ -735,9 +735,9 @@ export default function ShopSmsLogsPage() {
                 variant="contained"
                 fullWidth
                 sx={{
-                  backgroundColor: '#78b568',
-                  color: '#fff',
-                  '&:hover': { backgroundColor: '#5a9a4a' }
+                  backgroundColor: 'var(--admin-accent)',
+                  color: 'var(--admin-text)',
+                  '&:hover': { backgroundColor: 'var(--admin-accent-hover)' }
                 }}
               >
                 اعمال فیلتر

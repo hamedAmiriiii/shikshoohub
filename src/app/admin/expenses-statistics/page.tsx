@@ -287,7 +287,7 @@ export default function ExpensesStatisticsPage() {
           right: 0,
           width: "100px",
           height: "100px",
-          background: "rgba(255,255,255,0.1)",
+          background: "var(--admin-divider)",
           borderRadius: "50%",
           transform: "translate(30px, -30px)",
         },
@@ -298,7 +298,7 @@ export default function ExpensesStatisticsPage() {
           left: 0,
           width: "80px",
           height: "80px",
-          background: "rgba(255,255,255,0.1)",
+          background: "var(--admin-divider)",
           borderRadius: "50%",
           transform: "translate(-20px, 20px)",
         },
@@ -306,12 +306,12 @@ export default function ExpensesStatisticsPage() {
     >
       <Box sx={{ position: "relative", zIndex: 1 }}>
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-          <Typography sx={{ color: "#fff", fontSize: "16px", fontWeight: "700", textShadow: "0 2px 4px rgba(0,0,0,0.2)" }}>
+          <Typography sx={{ color: "var(--admin-text)", fontSize: "16px", fontWeight: "700", textShadow: "0 2px 4px rgba(0,0,0,0.2)" }}>
             {title}
           </Typography>
           <Box
             sx={{
-              backgroundColor: "rgba(255,255,255,0.2)",
+              backgroundColor: "var(--admin-icon-bg)",
               borderRadius: "10px",
               padding: "8px",
               display: "flex",
@@ -323,10 +323,10 @@ export default function ExpensesStatisticsPage() {
             {icon}
           </Box>
         </Box>
-        <Typography sx={{ color: "#fff", fontSize: "32px", fontWeight: "700", textShadow: "0 2px 4px rgba(0,0,0,0.2)", marginBottom: "4px" }}>
+        <Typography sx={{ color: "var(--admin-text)", fontSize: "32px", fontWeight: "700", textShadow: "0 2px 4px rgba(0,0,0,0.2)", marginBottom: "4px" }}>
           {formatNumber(value)}
         </Typography>
-        <Typography sx={{ color: "rgba(255,255,255,0.9)", fontSize: "14px" }}>
+        <Typography sx={{ color: "var(--admin-text)", fontSize: "14px" }}>
           تومان
         </Typography>
       </Box>
@@ -334,12 +334,12 @@ export default function ExpensesStatisticsPage() {
   );
 
   return (
-    <Box sx={{ width: "100%", direction: "rtl", padding: "16px", paddingBottom: "100px", minHeight: "100vh", background: "linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%)" }}>
+    <Box sx={{ width: "100%", direction: "rtl", padding: "16px", paddingBottom: "100px", minHeight: "100vh", background: "var(--admin-bg-gradient)" }}>
      
 
       {loading ? (
         <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "50vh" }}>
-          <CircularProgress sx={{ color: "#78b568" }} />
+          <CircularProgress sx={{ color: "var(--admin-accent)" }} />
         </Box>
       ) : data ? (
         <>
@@ -349,15 +349,15 @@ export default function ExpensesStatisticsPage() {
               <StatCard
                 title="کل هزینه‌ها"
                 value={data.total_expenses}
-                icon={<AttachMoneyIcon sx={{ color: "#fff", fontSize: "24px" }} />}
-                gradient="linear-gradient(135deg, #78b568 0%, #5a9a4a 100%)"
+                icon={<AttachMoneyIcon sx={{ color: "var(--admin-text)", fontSize: "24px" }} />}
+                gradient="linear-gradient(135deg, var(--admin-accent) 0%, var(--admin-accent-hover) 100%)"
               />
             </Grid>
             <Grid item xs={12} sm={6} md={4}>
               <StatCard
                 title="هزینه‌های جاری"
                 value={data.total_current_expenses}
-                icon={<AccountBalanceWalletIcon sx={{ color: "#fff", fontSize: "24px" }} />}
+                icon={<AccountBalanceWalletIcon sx={{ color: "var(--admin-text)", fontSize: "24px" }} />}
                 gradient="linear-gradient(135deg, #ff9100 0%, #e68100 100%)"
               />
             </Grid>
@@ -365,7 +365,7 @@ export default function ExpensesStatisticsPage() {
               <StatCard
                 title="هزینه‌های سرمایه"
                 value={data.total_capital_expenses}
-                icon={<BusinessIcon sx={{ color: "#fff", fontSize: "24px" }} />}
+                icon={<BusinessIcon sx={{ color: "var(--admin-text)", fontSize: "24px" }} />}
                 gradient="linear-gradient(135deg, #9c27b0 0%, #673ab7 100%)"
               />
             </Grid>
@@ -376,29 +376,29 @@ export default function ExpensesStatisticsPage() {
             <Paper
               elevation={0}
               sx={{
-                backgroundColor: "#2b3143",
+                backgroundColor: "var(--admin-surface)",
                 borderRadius: "16px",
                 padding: "24px",
                 border: "1px solid rgba(55, 84, 165, 0.3)",
               }}
             >
-              <Typography sx={{ fontSize: "20px", color: "#fff", fontWeight: "700", marginBottom: "20px" }}>
+              <Typography sx={{ fontSize: "20px", color: "var(--admin-text)", fontWeight: "700", marginBottom: "20px" }}>
                 تفکیک هزینه‌ها بر اساس کاربر
               </Typography>
               <TableContainer>
                 <Table>
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{ color: "#fff", fontWeight: "600", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                      <TableCell sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)" }}>
                         نام کاربر
                       </TableCell>
-                      <TableCell align="right" sx={{ color: "#fff", fontWeight: "600", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                      <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)" }}>
                         هزینه‌های جاری
                       </TableCell>
-                      <TableCell align="right" sx={{ color: "#fff", fontWeight: "600", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                      <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)" }}>
                         هزینه‌های سرمایه
                       </TableCell>
-                      <TableCell align="right" sx={{ color: "#fff", fontWeight: "600", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                      <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)" }}>
                         مجموع
                       </TableCell>
                     </TableRow>
@@ -409,24 +409,24 @@ export default function ExpensesStatisticsPage() {
                         key={index}
                         sx={{
                           "&:hover": {
-                            backgroundColor: "rgba(255,255,255,0.05)",
+                            backgroundColor: "var(--admin-surface-alt)",
                           },
                           "&:last-child td": {
                             borderBottom: "none",
                           },
                         }}
                       >
-                        <TableCell sx={{ color: "#fff", display: "flex", alignItems: "center", gap: "8px" }}>
-                          <PersonIcon sx={{ fontSize: "20px", color: "#78b568" }} />
+                        <TableCell sx={{ color: "var(--admin-text)", display: "flex", alignItems: "center", gap: "8px" }}>
+                          <PersonIcon sx={{ fontSize: "20px", color: "var(--admin-accent)" }} />
                           {user.user_name}
                         </TableCell>
-                        <TableCell align="right" sx={{ color: "#fff" }}>
+                        <TableCell align="right" sx={{ color: "var(--admin-text)" }}>
                           {formatNumber(user.total_current)} تومان
                         </TableCell>
-                        <TableCell align="right" sx={{ color: "#fff" }}>
+                        <TableCell align="right" sx={{ color: "var(--admin-text)" }}>
                           {formatNumber(user.total_capital)} تومان
                         </TableCell>
-                        <TableCell align="right" sx={{ color: "#78b568", fontWeight: "600" }}>
+                        <TableCell align="right" sx={{ color: "var(--admin-accent)", fontWeight: "600" }}>
                           {formatNumber(user.total)} تومان
                         </TableCell>
                       </TableRow>
@@ -439,7 +439,7 @@ export default function ExpensesStatisticsPage() {
         </>
       ) : (
         <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "50vh" }}>
-          <Typography sx={{ color: "#fff", fontSize: "18px" }}>
+          <Typography sx={{ color: "var(--admin-text)", fontSize: "18px" }}>
             داده‌ای برای نمایش وجود ندارد
           </Typography>
         </Box>

@@ -155,7 +155,7 @@ export default function PendingPurchasesPage() {
   };
 
   return (
-    <Box sx={{ position: 'relative', minHeight: '100vh', direction: "rtl", background: "linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%)" }}>
+    <Box sx={{ position: 'relative', minHeight: '100vh', direction: "rtl", background: "var(--admin-bg-gradient)" }}>
       <Container maxWidth="xl" sx={{ padding: { xs: '12px', md: '24px' }, paddingBottom: { xs: '100px', md: '40px' } }}>
         {/* Header */}
         <Box sx={{ 
@@ -167,10 +167,10 @@ export default function PendingPurchasesPage() {
           <IconButton
             onClick={() => router.push('/admin')}
             sx={{
-              color: "#fff",
-              backgroundColor: "rgba(255,255,255,0.1)",
+              color: "var(--admin-text)",
+              backgroundColor: "var(--admin-divider)",
               "&:hover": {
-                backgroundColor: "rgba(255,255,255,0.2)",
+                backgroundColor: "var(--admin-icon-bg)",
               },
             }}
           >
@@ -179,7 +179,7 @@ export default function PendingPurchasesPage() {
           <Typography sx={{ 
             fontWeight: "700", 
             fontSize: { xs: "18px", md: "24px" }, 
-            color: "#fff"
+            color: "var(--admin-text)"
           }}>
             خریدهای در انتظار
           </Typography>
@@ -190,7 +190,7 @@ export default function PendingPurchasesPage() {
         {!isOnline && (
           <Box sx={{
             backgroundColor: "#ff9800",
-            color: "#fff",
+            color: "var(--admin-text)",
             padding: { xs: "8px 12px", md: "12px 20px" },
             borderRadius: { xs: "8px", md: "12px" },
             marginBottom: { xs: "12px", md: "16px" },
@@ -219,7 +219,7 @@ export default function PendingPurchasesPage() {
                 variant="contained"
                 sx={{
                   background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                  color: "#fff",
+                  color: "var(--admin-text)",
                   fontWeight: "600",
                   "&:hover": {
                     transform: "translateY(-2px)",
@@ -233,10 +233,10 @@ export default function PendingPurchasesPage() {
               <Button
                 disabled
                 variant="contained"
-                startIcon={<CircularProgress size={20} sx={{ color: "#fff" }} />}
+                startIcon={<CircularProgress size={20} sx={{ color: "var(--admin-text)" }} />}
                 sx={{
-                  background: "rgba(255,255,255,0.1)",
-                  color: "#fff",
+                  background: "var(--admin-divider)",
+                  color: "var(--admin-text)",
                 }}
               >
                 در حال همگام‌سازی...
@@ -265,26 +265,26 @@ export default function PendingPurchasesPage() {
             component={Paper} 
             sx={{ 
               borderRadius: { xs: "12px", md: "16px" },
-              backgroundColor: "#2b3143",
+              backgroundColor: "var(--admin-surface)",
               border: "1px solid rgba(55, 84, 165, 0.3)",
             }}
           >
             <Table>
               <TableHead>
-                <TableRow sx={{ backgroundColor: "#1a1d2e" }}>
-                  <TableCell align="right" sx={{ color: "#fff", fontWeight: "600" }}>
+                <TableRow sx={{ backgroundColor: "var(--admin-surface-alt)" }}>
+                  <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600" }}>
                     تاریخ
                   </TableCell>
-                  <TableCell align="right" sx={{ color: "#fff", fontWeight: "600" }}>
+                  <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600" }}>
                     شماره تلفن
                   </TableCell>
-                  <TableCell align="right" sx={{ color: "#fff", fontWeight: "600" }}>
+                  <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600" }}>
                     تعداد کالا
                   </TableCell>
-                  <TableCell align="right" sx={{ color: "#fff", fontWeight: "600" }}>
+                  <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600" }}>
                     مجموع
                   </TableCell>
-                  <TableCell align="right" sx={{ color: "#fff", fontWeight: "600" }}>
+                  <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600" }}>
                     عملیات
                   </TableCell>
                 </TableRow>
@@ -294,22 +294,22 @@ export default function PendingPurchasesPage() {
                   <TableRow 
                     key={purchase.id}
                     sx={{
-                      backgroundColor: "#2b3143",
+                      backgroundColor: "var(--admin-surface)",
                       "&:hover": {
-                        backgroundColor: "#1a1d2e",
+                        backgroundColor: "var(--admin-surface-alt)",
                       }
                     }}
                   >
-                    <TableCell align="right" sx={{ color: "#fff" }}>
+                    <TableCell align="right" sx={{ color: "var(--admin-text)" }}>
                       {formatDate(purchase.timestamp)}
                     </TableCell>
-                    <TableCell align="right" sx={{ color: "#fff" }}>
+                    <TableCell align="right" sx={{ color: "var(--admin-text)" }}>
                       {purchase.phone || "بدون شماره تلفن"}
                     </TableCell>
-                    <TableCell align="right" sx={{ color: "#fff" }}>
+                    <TableCell align="right" sx={{ color: "var(--admin-text)" }}>
                       {purchase.cart?.length || purchase.data?.products?.length || 0} کالا
                     </TableCell>
-                    <TableCell align="right" sx={{ color: "#78b568", fontWeight: "600" }}>
+                    <TableCell align="right" sx={{ color: "var(--admin-accent)", fontWeight: "600" }}>
                       {formatNumber(purchase.total || calculateTotal(purchase.cart || []))} تومان
                     </TableCell>
                     <TableCell align="right">
@@ -332,7 +332,7 @@ export default function PendingPurchasesPage() {
           </TableContainer>
         ) : (
           <Card sx={{ 
-            backgroundColor: "#2b3143", 
+            backgroundColor: "var(--admin-surface)", 
             borderRadius: { xs: "12px", md: "16px" },
             border: "1px solid rgba(55, 84, 165, 0.3)",
             textAlign: "center",
@@ -341,11 +341,11 @@ export default function PendingPurchasesPage() {
             <CardContent>
               <CloudQueueIcon sx={{ 
                 fontSize: { xs: "48px", md: "80px" }, 
-                color: "rgba(255,255,255,0.3)", 
+                color: "var(--admin-text-secondary)", 
                 marginBottom: { xs: "12px", md: "20px" } 
               }} />
               <Typography sx={{ 
-                color: "rgba(255,255,255,0.6)", 
+                color: "var(--admin-text-muted)", 
                 fontSize: { xs: "14px", md: "20px" } 
               }}>
                 هیچ خرید در انتظاری وجود ندارد

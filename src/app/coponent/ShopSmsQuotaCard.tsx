@@ -135,7 +135,7 @@ export default function ShopSmsQuotaCard({
       <CardContent sx={{ py: compact ? 1.5 : 2, "&:last-child": { pb: compact ? 1.5 : 2 } }}>
         <Box sx={{ display: "flex",justifyContent:"space-between" , alignItems: "center", gap: 1, mb: 1 }}>
           
-          <Typography sx={{ color: "#fff", fontWeight: 700, fontSize: compact ? "14px" : "16px" }}>
+          <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: compact ? "14px" : "16px" }}>
           <SmsIcon sx={{ color: "#78b568" }} />
             اعتبار پیامک فروشگاه
           </Typography>
@@ -168,7 +168,7 @@ export default function ShopSmsQuotaCard({
               >
                 <Typography sx={{ color: "rgba(255,255,255,0.75)", fontSize: "13px" }}>
                   برآورد این ارسال:{" "}
-                  <Box component="span" sx={{ color: "#fff", fontWeight: 600 }}>
+                  <Box component="span" sx={{ color: "var(--admin-text)", fontWeight: 600 }}>
                     {formatNumber(neededUnits)} واحد
                   </Box>{" "}
                   ({formatNumber(estimateRecipientCount)} گیرنده × {formatNumber(localUnitsPerSms)}{" "}

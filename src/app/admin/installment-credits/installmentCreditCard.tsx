@@ -57,13 +57,13 @@ export default function InstallmentCreditCard({ props, onEdit, onDelete }: Insta
   return (
     <Card
       sx={{
-        backgroundColor: "#1a1d2e",
-        border: "1px solid #505669",
+        backgroundColor: "var(--admin-surface-alt)",
+        border: "1px solid var(--admin-border)",
         borderRadius: "12px",
         marginBottom: "12px",
         transition: "all 0.3s ease",
         "&:hover": {
-          borderColor: "#78b568",
+          borderColor: "var(--admin-accent)",
           transform: "translateY(-2px)",
           boxShadow: "0 4px 12px rgba(120, 181, 104, 0.2)",
         },
@@ -80,12 +80,12 @@ export default function InstallmentCreditCard({ props, onEdit, onDelete }: Insta
           }}
         >
           <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <CreditCardIcon sx={{ color: "#78b568", fontSize: "24px" }} />
+            <CreditCardIcon sx={{ color: "var(--admin-accent)", fontSize: "24px" }} />
             <Typography
               sx={{
                 fontSize: { xs: "16px", md: "18px" },
                 fontWeight: "600",
-                color: "#fff",
+                color: "var(--admin-text)",
               }}
             >
               {data.phone || "بدون شماره"}
@@ -95,8 +95,8 @@ export default function InstallmentCreditCard({ props, onEdit, onDelete }: Insta
             <IconButton
               onClick={() => onEdit(data)}
               sx={{
-                color: "#78b568",
-                backgroundColor: "rgba(120, 181, 104, 0.1)",
+                color: "var(--admin-accent)",
+                backgroundColor: "var(--admin-menu-hover)",
                 padding: "6px",
                 "&:hover": {
                   backgroundColor: "rgba(120, 181, 104, 0.2)",
@@ -135,7 +135,7 @@ export default function InstallmentCreditCard({ props, onEdit, onDelete }: Insta
           {/* Installment Credit */}
           <Box
             sx={{
-              backgroundColor: "#2b3143",
+              backgroundColor: "var(--admin-surface)",
               borderRadius: "8px",
               padding: { xs: "10px", md: "12px" },
             }}
@@ -143,7 +143,7 @@ export default function InstallmentCreditCard({ props, onEdit, onDelete }: Insta
             <Typography
               sx={{
                 fontSize: { xs: "12px", md: "14px" },
-                color: "rgba(255,255,255,0.7)",
+                color: "var(--admin-text-muted)",
                 marginBottom: "4px",
               }}
             >
@@ -153,7 +153,7 @@ export default function InstallmentCreditCard({ props, onEdit, onDelete }: Insta
               sx={{
                 fontSize: { xs: "18px", md: "22px" },
                 fontWeight: "700",
-                color: "#78b568",
+                color: "var(--admin-accent)",
               }}
             >
               {formatNumber(data.installment_credit || 0)} تومان
@@ -163,7 +163,7 @@ export default function InstallmentCreditCard({ props, onEdit, onDelete }: Insta
           {/* Regular Credit */}
           <Box
             sx={{
-              backgroundColor: "#2b3143",
+              backgroundColor: "var(--admin-surface)",
               borderRadius: "8px",
               padding: { xs: "10px", md: "12px" },
             }}
@@ -171,7 +171,7 @@ export default function InstallmentCreditCard({ props, onEdit, onDelete }: Insta
             <Typography
               sx={{
                 fontSize: { xs: "12px", md: "14px" },
-                color: "rgba(255,255,255,0.7)",
+                color: "var(--admin-text-muted)",
                 marginBottom: "4px",
               }}
             >
@@ -208,7 +208,7 @@ export default function InstallmentCreditCard({ props, onEdit, onDelete }: Insta
               <Typography
                 sx={{
                   fontSize: { xs: "11px", md: "12px" },
-                  color: "rgba(255,255,255,0.6)",
+                  color: "var(--admin-text-muted)",
                 }}
               >
                 تاریخ ایجاد:
@@ -216,7 +216,7 @@ export default function InstallmentCreditCard({ props, onEdit, onDelete }: Insta
               <Typography
                 sx={{
                   fontSize: { xs: "11px", md: "12px" },
-                  color: "rgba(255,255,255,0.8)",
+                  color: "var(--admin-text)",
                 }}
               >
                 {formatDate(data.created_at)}
@@ -234,7 +234,7 @@ export default function InstallmentCreditCard({ props, onEdit, onDelete }: Insta
               <Typography
                 sx={{
                   fontSize: { xs: "11px", md: "12px" },
-                  color: "rgba(255,255,255,0.6)",
+                  color: "var(--admin-text-muted)",
                 }}
               >
                 آخرین بروزرسانی:
@@ -242,7 +242,7 @@ export default function InstallmentCreditCard({ props, onEdit, onDelete }: Insta
               <Typography
                 sx={{
                   fontSize: { xs: "11px", md: "12px" },
-                  color: "rgba(255,255,255,0.8)",
+                  color: "var(--admin-text)",
                 }}
               >
                 {formatDate(data.updated_at)}

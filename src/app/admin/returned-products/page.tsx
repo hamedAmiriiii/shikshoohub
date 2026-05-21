@@ -115,7 +115,7 @@ export default function ReturnedProductsPage() {
 
   return (
     <Suspense fallback={<div>در حال بارگذاری...</div>}>
-      <Box sx={{ width: "100%", direction: "rtl", padding: "16px", minHeight: "100vh", paddingBottom: "100px", background: "linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%)" }}>
+      <Box sx={{ width: "100%", direction: "rtl", padding: "16px", minHeight: "100vh", paddingBottom: "100px", background: "var(--admin-bg-gradient)" }}>
         {/* Header */}
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
           <Box sx={{ display: "flex", alignItems: "center" }}>
@@ -137,9 +137,9 @@ export default function ReturnedProductsPage() {
                 }
               }}
             >
-              <ArrowBackIcon sx={{ color: "#fff" }} />
+              <ArrowBackIcon sx={{ color: "var(--admin-text)" }} />
             </Box>
-            <Typography sx={{ fontSize: "24px", color: "#fff", fontWeight: "700" }}>
+            <Typography sx={{ fontSize: "24px", color: "var(--admin-text)", fontWeight: "700" }}>
               برگشت خرید
             </Typography>
           </Box>
@@ -150,10 +150,10 @@ export default function ReturnedProductsPage() {
             startIcon={<AddIcon />}
             onClick={() => setOpenBottomSheet(true)}
             sx={{
-              backgroundColor: "#78b568",
-              color: "#fff",
+              backgroundColor: "var(--admin-accent)",
+              color: "var(--admin-text)",
               "&:hover": {
-                backgroundColor: "#5a9a4a"
+                backgroundColor: "var(--admin-accent-hover)"
               },
               borderRadius: "12px",
               padding: "8px 16px"
@@ -196,11 +196,11 @@ export default function ReturnedProductsPage() {
                 startIcon={<QrCodeScannerIcon />}
                 onClick={() => setShowScanner(!showScanner)}
                 sx={{
-                  backgroundColor: showScanner ? "#78b568" : "transparent",
-                  color: showScanner ? "#fff" : "#78b568",
-                  borderColor: "#78b568",
+                  backgroundColor: showScanner ? "var(--admin-accent)" : "transparent",
+                  color: showScanner ? "#fff" : "var(--admin-accent)",
+                  borderColor: "var(--admin-accent)",
                   "&:hover": {
-                    backgroundColor: showScanner ? "#5a9a4a" : "rgba(120, 181, 104, 0.1)"
+                    backgroundColor: showScanner ? "var(--admin-accent-hover)" : "var(--admin-menu-hover)"
                   }
                 }}
               >
@@ -228,7 +228,7 @@ export default function ReturnedProductsPage() {
                     onClick={() => setTorchOn(!torchOn)}
                     sx={{
                       backgroundColor: "rgba(0, 0, 0, 0.5)",
-                      color: "#fff",
+                      color: "var(--admin-text)",
                       "&:hover": {
                         backgroundColor: "rgba(0, 0, 0, 0.7)"
                       }
@@ -257,17 +257,17 @@ export default function ReturnedProductsPage() {
               disabled={isSubmitting || !barcode.trim()}
               fullWidth
               sx={{
-                backgroundColor: "#78b568",
-                color: "#fff",
+                backgroundColor: "var(--admin-accent)",
+                color: "var(--admin-text)",
                 padding: "12px",
                 fontSize: "16px",
                 fontWeight: "600",
                 "&:hover": {
-                  backgroundColor: "#5a9a4a"
+                  backgroundColor: "var(--admin-accent-hover)"
                 },
                 "&:disabled": {
                   backgroundColor: "#666",
-                  color: "#999"
+                  color: "var(--admin-text-secondary)"
                 },
                 marginTop: "8px"
               }}

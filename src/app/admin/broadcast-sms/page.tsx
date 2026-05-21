@@ -177,7 +177,7 @@ export default function BroadcastSMSPage() {
   const recipientCount = selectedPhones.length;
 
   return (
-    <Box sx={{ minHeight: "100vh", padding: "16px", paddingBottom: "100px", direction: "rtl", background: "linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%)" }}>
+    <Box sx={{ minHeight: "100vh", padding: "16px", paddingBottom: "100px", direction: "rtl", background: "var(--admin-bg-gradient)" }}>
       <ShopSmsQuotaCard
         estimateMessage={message}
         estimateRecipientCount={recipientCount}
@@ -186,9 +186,9 @@ export default function BroadcastSMSPage() {
       <Grid container spacing={2} sx={{ marginBottom: "20px" }}>
         {/* Manual Phone Input */}
         <Grid item xs={12} md={4}>
-          <Card sx={{ backgroundColor: "#1a1d2e", height: "100%", border: "1px solid #505669" }}>
+          <Card sx={{ backgroundColor: "var(--admin-surface-alt)", height: "100%", border: "1px solid var(--admin-border)" }}>
             <CardContent>
-              <Typography sx={{ color: "#fff", fontSize: "16px", fontWeight: "600", marginBottom: "12px" }}>
+              <Typography sx={{ color: "var(--admin-text)", fontSize: "16px", fontWeight: "600", marginBottom: "12px" }}>
                 ارسال به شماره :
               </Typography>
               <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, gap: "8px", marginBottom: "12px" }}>
@@ -204,8 +204,8 @@ export default function BroadcastSMSPage() {
                   }}
                   sx={{
                     "& .MuiOutlinedInput-root": {
-                      backgroundColor: "#2b3143",
-                      color: "#fff",
+                      backgroundColor: "var(--admin-surface)",
+                      color: "var(--admin-text)",
                       direction: "ltr",
                       "& fieldset": {
                         borderColor: "#505669",
@@ -220,10 +220,10 @@ export default function BroadcastSMSPage() {
                     "& .MuiInputBase-input": {
                       textAlign: "left",
                       direction: "ltr",
-                      color: "#fff",
+                      color: "var(--admin-text)",
                     },
                     "& .MuiInputBase-input::placeholder": {
-                      color: "#999",
+                      color: "var(--admin-text-secondary)",
                       opacity: 1,
                     },
                   }}
@@ -233,7 +233,7 @@ export default function BroadcastSMSPage() {
                   onClick={handleAddManualPhone}
                   sx={{
                     backgroundColor: "#2196f3",
-                    color: "#fff",
+                    color: "var(--admin-text)",
                     minWidth: { xs: "100%", sm: "120px" },
                     "&:hover": {
                       backgroundColor: "#1976d2"
@@ -254,9 +254,9 @@ export default function BroadcastSMSPage() {
                       deleteIcon={<DeleteIcon />}
                       sx={{
                         backgroundColor: "#2196f3",
-                        color: "#fff",
+                        color: "var(--admin-text)",
                         "& .MuiChip-deleteIcon": {
-                          color: "#fff",
+                          color: "var(--admin-text)",
                           "&:hover": {
                             color: "#ff4444"
                           }
@@ -272,9 +272,9 @@ export default function BroadcastSMSPage() {
 
         {/* Message Input */}
         <Grid item xs={12} md={8}>
-          <Card sx={{ backgroundColor: "#1a1d2e", height: "100%", border: "1px solid #505669" }}>
+          <Card sx={{ backgroundColor: "var(--admin-surface-alt)", height: "100%", border: "1px solid var(--admin-border)" }}>
             <CardContent>
-              <Typography sx={{ color: "#fff", fontSize: "16px", fontWeight: "600", marginBottom: "12px" }}>
+              <Typography sx={{ color: "var(--admin-text)", fontSize: "16px", fontWeight: "600", marginBottom: "12px" }}>
                 متن پیام:
               </Typography>
               <TextField
@@ -286,26 +286,26 @@ export default function BroadcastSMSPage() {
                 placeholder="متن پیام خود را وارد کنید..."
                 sx={{
                   "& .MuiOutlinedInput-root": {
-                    backgroundColor: "#2b3143",
-                    color: "#fff",
+                    backgroundColor: "var(--admin-surface)",
+                    color: "var(--admin-text)",
                     direction: "rtl",
                     "& fieldset": {
                       borderColor: "#505669",
                     },
                     "&:hover fieldset": {
-                      borderColor: "#78b568",
+                      borderColor: "var(--admin-accent)",
                     },
                     "&.Mui-focused fieldset": {
-                      borderColor: "#78b568",
+                      borderColor: "var(--admin-accent)",
                     },
                   },
                   "& .MuiInputBase-input": {
                     textAlign: "right",
                     direction: "rtl",
-                    color: "#fff",
+                    color: "var(--admin-text)",
                   },
                   "& .MuiInputBase-input::placeholder": {
-                    color: "#999",
+                    color: "var(--admin-text-secondary)",
                     opacity: 1,
                   },
                 }}
@@ -316,18 +316,18 @@ export default function BroadcastSMSPage() {
                 disabled={isSubmitting || selectedPhones.length === 0 || !message.trim()}
                 fullWidth
                 sx={{
-                  backgroundColor: "#78b568",
-                  color: "#fff",
+                  backgroundColor: "var(--admin-accent)",
+                  color: "var(--admin-text)",
                   padding: "12px",
                   fontSize: "16px",
                   fontWeight: "600",
                   marginTop: "16px",
                   "&:hover": {
-                    backgroundColor: "#5a9a4a"
+                    backgroundColor: "var(--admin-accent-hover)"
                   },
                   "&:disabled": {
                     backgroundColor: "#505669",
-                    color: "#999"
+                    color: "var(--admin-text-secondary)"
                   }
                 }}
               >
@@ -345,14 +345,14 @@ export default function BroadcastSMSPage() {
         </Box>
       ) : customers.length === 0 ? (
         <Box sx={{ textAlign: "center", padding: "40px" }}>
-          <Typography sx={{ color: "#999", fontSize: "18px" }}>
+          <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "18px" }}>
             مشتریی یافت نشد
           </Typography>
         </Box>
       ) : (
         <>
           {/* Select All */}
-          <Card sx={{ backgroundColor: "#1a1d2e", marginBottom: "12px", border: "1px solid #505669" }}>
+          <Card sx={{ backgroundColor: "var(--admin-surface-alt)", marginBottom: "12px", border: "1px solid var(--admin-border)" }}>
             <CardContent>
               <Box sx={{ display: "flex", alignItems: "center", gap: "12px" }}>
                 <Checkbox
@@ -365,7 +365,7 @@ export default function BroadcastSMSPage() {
                     }
                   }}
                 />
-                <Typography sx={{ color: "#fff", fontSize: "16px", fontWeight: "600" }}>
+                <Typography sx={{ color: "var(--admin-text)", fontSize: "16px", fontWeight: "600" }}>
                   انتخاب همه ({customers.length} مشتری)
                 </Typography>
               </Box>
@@ -379,7 +379,7 @@ export default function BroadcastSMSPage() {
               <Grid item xs={12} key={`manual-${phone}`}>
                 <Card
                   sx={{
-                    backgroundColor: "#1a1d2e",
+                    backgroundColor: "var(--admin-surface-alt)",
                     border: selectedPhones.includes(phone) ? "2px solid #ff9100" : "1px solid #505669",
                     transition: "all 0.3s ease",
                     "&:hover": {
@@ -402,7 +402,7 @@ export default function BroadcastSMSPage() {
                       />
                       <Box sx={{ flex: 1 }}>
                         <Box sx={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                          <Typography sx={{ color: "#fff", fontSize: "16px", fontWeight: "600" }}>
+                          <Typography sx={{ color: "var(--admin-text)", fontSize: "16px", fontWeight: "600" }}>
                             {phone}
                           </Typography>
                           <Chip
@@ -410,7 +410,7 @@ export default function BroadcastSMSPage() {
                             size="small"
                             sx={{
                               backgroundColor: "#ff9100",
-                              color: "#fff",
+                              color: "var(--admin-text)",
                               fontSize: "11px",
                               height: "20px"
                             }}
@@ -437,7 +437,7 @@ export default function BroadcastSMSPage() {
               <Grid item xs={12} key={customer.phone || index}>
                 <Card
                   sx={{
-                    backgroundColor: "#1a1d2e",
+                    backgroundColor: "var(--admin-surface-alt)",
                     border: selectedPhones.includes(customer.phone) ? "2px solid #2196f3" : "1px solid #505669",
                     transition: "all 0.3s ease",
                     "&:hover": {
@@ -460,7 +460,7 @@ export default function BroadcastSMSPage() {
                       />
                       <Box sx={{ flex: 1 }}>
                         <Box sx={{ display: "flex", alignItems: "center", gap: "2px" }}>
-                          <Typography sx={{ color: "#fff", fontSize: "14px", fontWeight: "600" }}>
+                          <Typography sx={{ color: "var(--admin-text)", fontSize: "14px", fontWeight: "600" }}>
                             {customer.phone || "بدون شماره"}
                           </Typography>
                         </Box>

@@ -180,7 +180,7 @@ export default function ListPurches() {
   
     return (
       <Suspense fallback={<div>در حال بارگذاری...</div>}>
-        <Box sx={{ width: "100%", direction: "rtl", padding: "16px", paddingBottom: "100px", minHeight: "100vh", background: "linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%)" }}>
+        <Box sx={{ width: "100%", direction: "rtl", padding: "16px", paddingBottom: "100px", minHeight: "100vh", background: "var(--admin-bg-gradient)" }}>
          
   
           {/* List Section */}
@@ -215,13 +215,13 @@ export default function ListPurches() {
                   <IconButton
                     onClick={() => setFilterSheetOpen(true)}
                     sx={{
-                      color: hasActiveFilters() ? "#78b568" : "#000",
-                      backgroundColor: hasActiveFilters() ? "rgba(120, 181, 104, 0.2)" : "rgba(255, 255, 255, 0.1)",
+                      color: hasActiveFilters() ? "var(--admin-accent)" : "#000",
+                      backgroundColor: hasActiveFilters() ? "rgba(120, 181, 104, 0.2)" : "var(--admin-divider)",
                       border: "1px solid #C9C9C9",
                       padding: "7px",
                       borderRadius: "15px",
                       "&:hover": {
-                        backgroundColor: hasActiveFilters() ? "rgba(120, 181, 104, 0.3)" : "rgba(255, 255, 255, 0.2)"
+                        backgroundColor: hasActiveFilters() ? "rgba(120, 181, 104, 0.3)" : "var(--admin-icon-bg)"
                       }
                     }}
                     size="small"

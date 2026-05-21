@@ -46,7 +46,7 @@ export default function ExpenseCard(props: any) {
   const onEdit = props?.props?.onEdit || props?.onEdit;
 
   return load ? (
-    <Box style={{ backgroundColor: "#2b3143", borderRadius: "15px", border: "1px solid rgb(55, 84, 165)" }} m={1} p={2}>
+    <Box style={{ backgroundColor: "var(--admin-surface)", borderRadius: "15px", border: "1px solid rgb(55, 84, 165)" }} m={1} p={2}>
       <Grid
         xs={12}
         style={{
@@ -64,12 +64,12 @@ export default function ExpenseCard(props: any) {
           {props?.props?.data?.type && (
             <Box
               sx={{
-                backgroundColor: "rgba(255, 255, 255, 0.2)",
+                backgroundColor: "var(--admin-icon-bg)",
                 borderRadius: "8px",
                 padding: "2px 8px",
                 fontSize: "12px",
                 fontWeight: "600",
-                color: "#fff",
+                color: "var(--admin-text)",
                 whiteSpace: "nowrap"
               }}
             >
@@ -89,13 +89,13 @@ export default function ExpenseCard(props: any) {
                 }
               }}
               sx={{
-                color: "#fff",
+                color: "var(--admin-text)",
                 padding: "6px",
                 minWidth: "36px",
                 minHeight: "36px",
-                backgroundColor: "rgba(255, 255, 255, 0.1)",
+                backgroundColor: "var(--admin-icon-bg)",
                 "&:hover": {
-                  backgroundColor: "rgba(255, 255, 255, 0.3)"
+                  backgroundColor: "var(--admin-icon-bg-hover)"
                 }
               }}
               size="small"

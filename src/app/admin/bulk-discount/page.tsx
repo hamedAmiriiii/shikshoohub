@@ -165,11 +165,11 @@ export default function BulkDiscountPage() {
   };
 
   return (
-    <Box sx={{ minHeight: "100vh", padding: "16px", direction: "rtl", background: "linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%)" }}>
+    <Box sx={{ minHeight: "100vh", padding: "16px", direction: "rtl", background: "var(--admin-bg-gradient)" }}>
     
 
       {/* Discount Input */}
-      <Card sx={{ backgroundColor: "#1a1d2e", marginBottom: "20px", border: "1px solid #505669" }}>
+      <Card sx={{ backgroundColor: "var(--admin-surface-alt)", marginBottom: "20px", border: "1px solid var(--admin-border)" }}>
         <CardContent>
           <TextInput
             value={discountPercent}
@@ -184,18 +184,18 @@ export default function BulkDiscountPage() {
             disabled={isSubmitting || selectedProducts.length === 0 || !discountPercent}
             fullWidth
             sx={{
-              backgroundColor: "#78b568",
-              color: "#fff",
+              backgroundColor: "var(--admin-accent)",
+              color: "var(--admin-text)",
               padding: "12px",
               fontSize: "16px",
               fontWeight: "600",
               marginTop: "16px",
               "&:hover": {
-                backgroundColor: "#5a9a4a"
+                backgroundColor: "var(--admin-accent-hover)"
               },
               "&:disabled": {
                 backgroundColor: "#505669",
-                color: "#999"
+                color: "var(--admin-text-secondary)"
               }
             }}
           >
@@ -211,14 +211,14 @@ export default function BulkDiscountPage() {
         </Box>
       ) : products.length === 0 ? (
         <Box sx={{ textAlign: "center", padding: "40px" }}>
-          <Typography sx={{ color: "#999", fontSize: "18px" }}>
+          <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "18px" }}>
             محصولی یافت نشد
           </Typography>
         </Box>
       ) : (
         <>
           {/* Select All */}
-          <Card sx={{ backgroundColor: "#1a1d2e", marginBottom: "12px", border: "1px solid #505669" }}>
+          <Card sx={{ backgroundColor: "var(--admin-surface-alt)", marginBottom: "12px", border: "1px solid var(--admin-border)" }}>
             <CardContent>
               <Box sx={{ display: "flex", alignItems: "center", gap: "12px" }}>
                 <Checkbox
@@ -231,7 +231,7 @@ export default function BulkDiscountPage() {
                     }
                   }}
                 />
-                <Typography sx={{ color: "#fff", fontSize: "16px", fontWeight: "600" }}>
+                <Typography sx={{ color: "var(--admin-text)", fontSize: "16px", fontWeight: "600" }}>
                   انتخاب همه ({products.length} محصول)
                 </Typography>
               </Box>
@@ -244,7 +244,7 @@ export default function BulkDiscountPage() {
               <Grid item xs={12} key={product.id}>
                 <Card
                   sx={{
-                    backgroundColor: "#1a1d2e",
+                    backgroundColor: "var(--admin-surface-alt)",
                     border: selectedProducts.includes(product.id) ? "2px solid #ff9100" : "1px solid #505669",
                     transition: "all 0.3s ease",
                     "&:hover": {
@@ -266,21 +266,21 @@ export default function BulkDiscountPage() {
                         }}
                       />
                       <Box sx={{ flex: 1 }}>
-                        <Typography sx={{ color: "#fff", fontSize: "16px", fontWeight: "600", marginBottom: "8px" }}>
+                        <Typography sx={{ color: "var(--admin-text)", fontSize: "16px", fontWeight: "600", marginBottom: "8px" }}>
                           {product.name || "بدون نام"}
                         </Typography>
                         <Box sx={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center" }}>
                           {product.barcode && (
-                            <Typography sx={{ color: "#999", fontSize: "14px" }}>
+                            <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "14px" }}>
                               بارکد: {product.barcode}
                             </Typography>
                           )}
                           {product.has_discount ? (
                             <Box sx={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
-                              <Typography sx={{ color: "#999", fontSize: "14px", textDecoration: "line-through" }}>
+                              <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "14px", textDecoration: "line-through" }}>
                                 قیمت اصلی: {formatNumber(product.original_sale_price)} تومان
                               </Typography>
-                              <Typography sx={{ color: "#78b568", fontSize: "14px", fontWeight: "600" }}>
+                              <Typography sx={{ color: "var(--admin-accent)", fontSize: "14px", fontWeight: "600" }}>
                                 قیمت با تخفیف: {formatNumber(product.sale_price)} تومان
                               </Typography>
                               <Typography sx={{ 
@@ -296,13 +296,13 @@ export default function BulkDiscountPage() {
                             </Box>
                           ) : (
                             product.sale_price && (
-                              <Typography sx={{ color: "#999", fontSize: "14px" }}>
+                              <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "14px" }}>
                                 قیمت فروش: {formatNumber(product.sale_price)} تومان
                               </Typography>
                             )
                           )}
                           {product.quantity !== undefined && (
-                            <Typography sx={{ color: "#999", fontSize: "14px" }}>
+                            <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "14px" }}>
                               موجودی: {formatNumber(product.quantity)}
                             </Typography>
                           )}

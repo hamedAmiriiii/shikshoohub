@@ -200,9 +200,9 @@ export default function ProfitLossPage() {
                     height: "45px",
                     fontSize: "14px",
                     fontWeight: isSelected ? "700" : "500",
-                    backgroundColor: isSelected ? "#78b568" : isDisabled ? "#f0f0f0" : "#f5f5f5",
-                    color: isSelected ? "#fff" : isDisabled ? "#999" : "#333",
-                    border: isSelected ? "2px solid #78b568" : "1px solid #e0e0e0",
+                    backgroundColor: isSelected ? "var(--admin-accent)" : isDisabled ? "#f0f0f0" : "#f5f5f5",
+                    color: isSelected ? "#fff" : isDisabled ? "var(--admin-text-secondary)" : "var(--admin-text)",
+                    border: isSelected ? "2px solid var(--admin-accent)" : "1px solid #e0e0e0",
                     cursor: isDisabled ? "not-allowed" : "pointer",
                     opacity: isDisabled ? 0.6 : 1,
                     transition: "all 0.2s ease",
@@ -242,7 +242,7 @@ export default function ProfitLossPage() {
   );
 
   return (
-    <Box sx={{ width: "100%", direction: "rtl", minHeight: "100vh", background: "linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%)" }}>
+    <Box sx={{ width: "100%", direction: "rtl", minHeight: "100vh", background: "var(--admin-bg-gradient)" }}>
       <Box sx={{ padding: "16px", paddingBottom: "100px" }}>
         {/* Filter Button */}
         <Box sx={{ display: "flex", justifyContent: "flex-end", marginBottom: "16px" }}>
@@ -251,12 +251,12 @@ export default function ProfitLossPage() {
             startIcon={<FilterListIcon />}
             onClick={() => setFilterSheetOpen(true)}
             sx={{
-              backgroundColor: "#78b568",
-              color: "#fff",
+              backgroundColor: "var(--admin-accent)",
+              color: "var(--admin-text)",
               borderRadius: "12px",
               padding: "10px 20px",
               "&:hover": {
-                backgroundColor: "#5a9a4a",
+                backgroundColor: "var(--admin-accent-hover)",
               },
             }}
           >
@@ -266,7 +266,7 @@ export default function ProfitLossPage() {
 
         {loading ? (
           <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "50vh" }}>
-            <CircularProgress sx={{ color: "#78b568" }} />
+            <CircularProgress sx={{ color: "var(--admin-accent)" }} />
           </Box>
         ) : data && data.data && data.data.length > 0 ? (
           <>
@@ -274,7 +274,7 @@ export default function ProfitLossPage() {
             <Paper
               elevation={0}
               sx={{
-                backgroundColor: "#2b3143",
+                backgroundColor: "var(--admin-surface)",
                 borderRadius: "16px",
                 padding: "24px",
                 border: "1px solid rgba(55, 84, 165, 0.3)",
@@ -282,35 +282,35 @@ export default function ProfitLossPage() {
                 overflowX: "auto",
               }}
             >
-              <Typography sx={{ fontSize: "20px", color: "#fff", fontWeight: "700", marginBottom: "20px" }}>
+              <Typography sx={{ fontSize: "20px", color: "var(--admin-text)", fontWeight: "700", marginBottom: "20px" }}>
                 گزارش ماهانه
               </Typography>
               <TableContainer>
                 <Table>
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{ color: "#fff", fontWeight: "600", borderBottom: "1px solid rgba(255,255,255,0.1)", whiteSpace: "nowrap" }}>
+                      <TableCell sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)", whiteSpace: "nowrap" }}>
                         ماه
                       </TableCell>
-                      <TableCell align="right" sx={{ color: "#fff", fontWeight: "600", borderBottom: "1px solid rgba(255,255,255,0.1)", whiteSpace: "nowrap" }}>
+                      <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)", whiteSpace: "nowrap" }}>
                         کل فروش
                       </TableCell>
-                      <TableCell align="right" sx={{ color: "#fff", fontWeight: "600", borderBottom: "1px solid rgba(255,255,255,0.1)", whiteSpace: "nowrap" }}>
+                      <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)", whiteSpace: "nowrap" }}>
                         کل مبلغ خرید
                       </TableCell>
-                      <TableCell align="right" sx={{ color: "#fff", fontWeight: "600", borderBottom: "1px solid rgba(255,255,255,0.1)", whiteSpace: "nowrap" }}>
+                      <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)", whiteSpace: "nowrap" }}>
                         کل سود
                       </TableCell>
-                      <TableCell align="right" sx={{ color: "#fff", fontWeight: "600", borderBottom: "1px solid rgba(255,255,255,0.1)", whiteSpace: "nowrap" }}>
+                      <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)", whiteSpace: "nowrap" }}>
                         کل هزینه‌های جاری
                       </TableCell>
-                      <TableCell align="right" sx={{ color: "#fff", fontWeight: "600", borderBottom: "1px solid rgba(255,255,255,0.1)", whiteSpace: "nowrap" }}>
+                      <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)", whiteSpace: "nowrap" }}>
                         کل فاکتورها
                       </TableCell>
-                      <TableCell align="right" sx={{ color: "#fff", fontWeight: "600", borderBottom: "1px solid rgba(255,255,255,0.1)", whiteSpace: "nowrap" }}>
+                      <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)", whiteSpace: "nowrap" }}>
                         خالص سود
                       </TableCell>
-                      <TableCell align="right" sx={{ color: "#fff", fontWeight: "600", borderBottom: "1px solid rgba(255,255,255,0.1)", whiteSpace: "nowrap" }}>
+                      <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)", whiteSpace: "nowrap" }}>
                         موجودی حساب
                       </TableCell>
                     </TableRow>
@@ -321,32 +321,32 @@ export default function ProfitLossPage() {
                         key={index}
                         sx={{
                           "&:hover": {
-                            backgroundColor: "rgba(255,255,255,0.05)",
+                            backgroundColor: "var(--admin-surface-alt)",
                           },
                           "&:last-child td": {
                             borderBottom: "none",
                           },
                         }}
                       >
-                        <TableCell sx={{ color: "#fff", whiteSpace: "nowrap" }}>
+                        <TableCell sx={{ color: "var(--admin-text)", whiteSpace: "nowrap" }}>
                           {report.month_name} {report.year}
                         </TableCell>
-                        <TableCell align="right" sx={{ color: "#fff" }}>
+                        <TableCell align="right" sx={{ color: "var(--admin-text)" }}>
                           {formatNumber(report.total_sales)} 
                         </TableCell>
-                        <TableCell align="right" sx={{ color: "#fff" }}>
+                        <TableCell align="right" sx={{ color: "var(--admin-text)" }}>
                           {formatNumber(report.total_purchases)} 
                         </TableCell>
-                        <TableCell align="right" sx={{ color: "#78b568", fontWeight: "600" }}>
+                        <TableCell align="right" sx={{ color: "var(--admin-accent)", fontWeight: "600" }}>
                           {formatNumber(report.total_profit)} 
                         </TableCell>
                         <TableCell align="right" sx={{ color: "#ff9800" }}>
                           {formatNumber(report.total_expenses)} 
                         </TableCell>
-                        <TableCell align="right" sx={{ color: "#fff" }}>
+                        <TableCell align="right" sx={{ color: "var(--admin-text)" }}>
                           {formatNumber(report.total_invoices)} 
                         </TableCell>
-                        <TableCell align="right" sx={{ color: report.net_profit >= 0 ? "#78b568" : "#ff4444", fontWeight: "600" }}>
+                        <TableCell align="right" sx={{ color: report.net_profit >= 0 ? "var(--admin-accent)" : "#ff4444", fontWeight: "600" }}>
                           {formatNumber(report.net_profit)} 
                         </TableCell>
                         <TableCell align="right" sx={{ color: report.account_balance >= 0 ? "#2196f3" : "#ff4444", fontWeight: "600" }}>
@@ -364,23 +364,23 @@ export default function ProfitLossPage() {
               <Paper
                 elevation={0}
                 sx={{
-                  backgroundColor: "#2b3143",
+                  backgroundColor: "var(--admin-surface)",
                   borderRadius: "16px",
                   padding: "24px",
                   border: "1px solid rgba(55, 84, 165, 0.3)",
                 }}
               >
-                <Typography sx={{ fontSize: "20px", color: "#fff", fontWeight: "700", marginBottom: "20px" }}>
+                <Typography sx={{ fontSize: "20px", color: "var(--admin-text)", fontWeight: "700", marginBottom: "20px" }}>
                   مجموع کلی
                 </Typography>
                 <TableContainer>
                   <Table>
                     <TableHead>
                       <TableRow>
-                        <TableCell sx={{ color: "#fff", fontWeight: "600", borderBottom: "1px solid rgba(255,255,255,0.1)", whiteSpace: "nowrap" }}>
+                        <TableCell sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)", whiteSpace: "nowrap" }}>
                           عنوان
                         </TableCell>
-                        <TableCell align="right" sx={{ color: "#fff", fontWeight: "600", borderBottom: "1px solid rgba(255,255,255,0.1)", whiteSpace: "nowrap" }}>
+                        <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)", whiteSpace: "nowrap" }}>
                           مبلغ
                         </TableCell>
                       </TableRow>
@@ -389,47 +389,47 @@ export default function ProfitLossPage() {
                       <TableRow
                         sx={{
                           "&:hover": {
-                            backgroundColor: "rgba(255,255,255,0.05)",
+                            backgroundColor: "var(--admin-surface-alt)",
                           },
                         }}
                       >
-                        <TableCell sx={{ color: "#fff" }}>کل فروش</TableCell>
-                        <TableCell align="right" sx={{ color: "#fff", fontWeight: "600" }}>
+                        <TableCell sx={{ color: "var(--admin-text)" }}>کل فروش</TableCell>
+                        <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600" }}>
                           {formatNumber(data.totals.total_sales)} تومان
                         </TableCell>
                       </TableRow>
                       <TableRow
                         sx={{
                           "&:hover": {
-                            backgroundColor: "rgba(255,255,255,0.05)",
+                            backgroundColor: "var(--admin-surface-alt)",
                           },
                         }}
                       >
-                        <TableCell sx={{ color: "#fff" }}>کل مبلغ خرید</TableCell>
-                        <TableCell align="right" sx={{ color: "#fff", fontWeight: "600" }}>
+                        <TableCell sx={{ color: "var(--admin-text)" }}>کل مبلغ خرید</TableCell>
+                        <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600" }}>
                           {formatNumber(data.totals.total_purchases)} تومان
                         </TableCell>
                       </TableRow>
                       <TableRow
                         sx={{
                           "&:hover": {
-                            backgroundColor: "rgba(255,255,255,0.05)",
+                            backgroundColor: "var(--admin-surface-alt)",
                           },
                         }}
                       >
-                        <TableCell sx={{ color: "#fff" }}>کل سود</TableCell>
-                        <TableCell align="right" sx={{ color: "#78b568", fontWeight: "600" }}>
+                        <TableCell sx={{ color: "var(--admin-text)" }}>کل سود</TableCell>
+                        <TableCell align="right" sx={{ color: "var(--admin-accent)", fontWeight: "600" }}>
                           {formatNumber(data.totals.total_profit)} تومان
                         </TableCell>
                       </TableRow>
                       <TableRow
                         sx={{
                           "&:hover": {
-                            backgroundColor: "rgba(255,255,255,0.05)",
+                            backgroundColor: "var(--admin-surface-alt)",
                           },
                         }}
                       >
-                        <TableCell sx={{ color: "#fff" }}>کل هزینه‌های جاری</TableCell>
+                        <TableCell sx={{ color: "var(--admin-text)" }}>کل هزینه‌های جاری</TableCell>
                         <TableCell align="right" sx={{ color: "#ff9800", fontWeight: "600" }}>
                           {formatNumber(data.totals.total_expenses)} تومان
                         </TableCell>
@@ -437,35 +437,35 @@ export default function ProfitLossPage() {
                       <TableRow
                         sx={{
                           "&:hover": {
-                            backgroundColor: "rgba(255,255,255,0.05)",
+                            backgroundColor: "var(--admin-surface-alt)",
                           },
                         }}
                       >
-                        <TableCell sx={{ color: "#fff" }}>کل فاکتورها</TableCell>
-                        <TableCell align="right" sx={{ color: "#fff", fontWeight: "600" }}>
+                        <TableCell sx={{ color: "var(--admin-text)" }}>کل فاکتورها</TableCell>
+                        <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600" }}>
                           {formatNumber(data.totals.total_invoices)} تومان
                         </TableCell>
                       </TableRow>
                       <TableRow
                         sx={{
                           "&:hover": {
-                            backgroundColor: "rgba(255,255,255,0.05)",
+                            backgroundColor: "var(--admin-surface-alt)",
                           },
                         }}
                       >
-                        <TableCell sx={{ color: "#fff" }}>خالص سود</TableCell>
-                        <TableCell align="right" sx={{ color: data.totals.total_net_profit >= 0 ? "#78b568" : "#ff4444", fontWeight: "700", fontSize: "18px" }}>
+                        <TableCell sx={{ color: "var(--admin-text)" }}>خالص سود</TableCell>
+                        <TableCell align="right" sx={{ color: data.totals.total_net_profit >= 0 ? "var(--admin-accent)" : "#ff4444", fontWeight: "700", fontSize: "18px" }}>
                           {formatNumber(data.totals.total_net_profit)} تومان
                         </TableCell>
                       </TableRow>
                       <TableRow
                         sx={{
                           "&:hover": {
-                            backgroundColor: "rgba(255,255,255,0.05)",
+                            backgroundColor: "var(--admin-surface-alt)",
                           },
                         }}
                       >
-                        <TableCell sx={{ color: "#fff" }}>موجودی حساب</TableCell>
+                        <TableCell sx={{ color: "var(--admin-text)" }}>موجودی حساب</TableCell>
                         <TableCell align="right" sx={{ color: data.totals.total_account_balance >= 0 ? "#2196f3" : "#ff4444", fontWeight: "700", fontSize: "18px" }}>
                           {formatNumber(data.totals.total_account_balance)} تومان
                         </TableCell>
@@ -478,7 +478,7 @@ export default function ProfitLossPage() {
           </>
         ) : (
           <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "50vh" }}>
-            <Typography sx={{ color: "#fff", fontSize: "18px" }}>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: "18px" }}>
               داده‌ای برای نمایش وجود ندارد
             </Typography>
           </Box>

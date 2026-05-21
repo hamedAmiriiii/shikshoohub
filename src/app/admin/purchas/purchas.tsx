@@ -219,7 +219,7 @@ export default function purchas(props: any) {
 
  
   return load ? (
-    <Box style={{ backgroundColor: "#2b3143", borderRadius: "15px"  , border:"1px solid rgb(55, 84, 165)" }} m={1} p={1}
+    <Box style={{ backgroundColor: "var(--admin-surface)", borderRadius: "15px"  , border:"1px solid rgb(55, 84, 165)" }} m={1} p={1}
     >
       <Grid
         xs={12} style={{backgroundColor:"#1f9ad1" ,
@@ -235,12 +235,12 @@ export default function purchas(props: any) {
               size="small"
               sx={{
                 backgroundColor: "#ff9800",
-                color: "#fff",
+                color: "var(--admin-text)",
                 fontWeight: "600",
                 fontSize: "11px",
                 height: "24px",
                 "& .MuiChip-icon": {
-                  color: "#fff",
+                  color: "var(--admin-text)",
                   fontSize: "16px"
                 }
               }}
@@ -300,7 +300,7 @@ export default function purchas(props: any) {
                 .filter((item: any) => !deletedItems.includes(item.id))
                 .map((item: any, index: number) => (
                 <Box key={item.id || index} sx={{ 
-                  backgroundColor: "#1a1d2e", 
+                  backgroundColor: "var(--admin-surface-alt)", 
                   borderRadius: "8px", 
                   padding: "8px", 
                   marginBottom: "8px" ,
@@ -334,7 +334,7 @@ export default function purchas(props: any) {
                         onClick={() => handleOpenDeleteDialog(item)}
                         sx={{
                           backgroundColor: "#ff5252",
-                          color: "#fff",
+                          color: "var(--admin-text)",
                           padding: "6px",
                           marginRight: "4px",
                           "&:hover": {
@@ -382,7 +382,7 @@ export default function purchas(props: any) {
             }}
             sx={{
               backgroundColor: "#ff9800",
-              color: "#fff",
+              color: "var(--admin-text)",
               "&:hover": {
                 backgroundColor: "#f57c00",
               },
@@ -401,26 +401,26 @@ export default function purchas(props: any) {
         onClose={handleCloseDeleteDialog}
         PaperProps={{
           sx: {
-            backgroundColor: "#2b3143",
+            backgroundColor: "var(--admin-surface)",
             borderRadius: "16px",
             direction: "rtl",
             minWidth: "300px",
           }
         }}
       >
-        <DialogTitle sx={{ color: "#fff", textAlign: "center", fontSize: "18px" }}>
+        <DialogTitle sx={{ color: "var(--admin-text)", textAlign: "center", fontSize: "18px" }}>
           تایید برگشت کالا
         </DialogTitle>
         <DialogContent>
-          <DialogContentText sx={{ color: "#ccc", textAlign: "center" }}>
+          <DialogContentText sx={{ color: "var(--admin-text-secondary)", textAlign: "center" }}>
             آیا از برگشت این کالا مطمئن هستید؟
             {selectedItem && (
               <Box sx={{ 
                 marginTop: "12px", 
                 padding: "8px", 
-                backgroundColor: "#1a1d2e", 
+                backgroundColor: "var(--admin-surface-alt)", 
                 borderRadius: "8px",
-                color: "#fff"
+                color: "var(--admin-text)"
               }}>
                 <Typography variant="body2">
                   {selectedItem.product?.name} - {selectedItem.quantity} عدد
@@ -434,11 +434,11 @@ export default function purchas(props: any) {
             onClick={handleCloseDeleteDialog}
             variant="outlined"
             sx={{ 
-              color: "#fff", 
+              color: "var(--admin-text)", 
               borderColor: "#666",
               "&:hover": {
                 borderColor: "#888",
-                backgroundColor: "rgba(255,255,255,0.05)"
+                backgroundColor: "var(--admin-surface-alt)"
               }
             }}
             // disabled={deleting}
@@ -488,14 +488,14 @@ export default function purchas(props: any) {
         fullWidth
         PaperProps={{
           sx: {
-            backgroundColor: "#2b3143",
+            backgroundColor: "var(--admin-surface)",
             borderRadius: "16px",
             direction: "rtl",
           }
         }}
       >
         <DialogTitle sx={{ 
-          color: "#fff", 
+          color: "var(--admin-text)", 
           display: "flex", 
           justifyContent: "space-between", 
           alignItems: "center",
@@ -507,14 +507,14 @@ export default function purchas(props: any) {
           </Typography>
           <IconButton
             onClick={() => setInstallmentsDialogOpen(false)}
-            sx={{ color: "#fff" }}
+            sx={{ color: "var(--admin-text)" }}
           >
             <CloseIcon />
           </IconButton>
         </DialogTitle>
         <DialogContent sx={{ padding: "24px", maxHeight: "70vh", overflowY: "auto" }}>
           {(!installmentsData || installmentsData.length === 0) && (!data?.installments || !Array.isArray(data.installments) || data.installments.length === 0) ? (
-            <Typography sx={{ color: "#999", textAlign: "center", padding: "40px" }}>
+            <Typography sx={{ color: "var(--admin-text-secondary)", textAlign: "center", padding: "40px" }}>
               هیچ قسطی یافت نشد
             </Typography>
           ) : (
@@ -525,33 +525,33 @@ export default function purchas(props: any) {
                 return (
                   <>
                     <Box sx={{ 
-                      backgroundColor: "#1a1d2e", 
+                      backgroundColor: "var(--admin-surface-alt)", 
                       borderRadius: "8px", 
                       padding: "16px",
                       marginBottom: "16px"
                     }}>
                       <Box sx={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                        <Typography sx={{ color: "#999", fontSize: "14px" }}>تعداد کل اقساط:</Typography>
-                        <Typography sx={{ color: "#fff", fontSize: "14px", fontWeight: "600" }}>
+                        <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "14px" }}>تعداد کل اقساط:</Typography>
+                        <Typography sx={{ color: "var(--admin-text)", fontSize: "14px", fontWeight: "600" }}>
                           {installments.length} قسط
                         </Typography>
                       </Box>
                       <Box sx={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                        <Typography sx={{ color: "#999", fontSize: "14px" }}>قسط‌های پرداخت شده:</Typography>
-                        <Typography sx={{ color: "#78b568", fontSize: "14px", fontWeight: "600" }}>
+                        <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "14px" }}>قسط‌های پرداخت شده:</Typography>
+                        <Typography sx={{ color: "var(--admin-accent)", fontSize: "14px", fontWeight: "600" }}>
                           {installments.filter((inst: any) => inst.is_paid).length} قسط
                         </Typography>
                       </Box>
                       <Box sx={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                        <Typography sx={{ color: "#999", fontSize: "14px" }}>قسط‌های باقیمانده:</Typography>
+                        <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "14px" }}>قسط‌های باقیمانده:</Typography>
                         <Typography sx={{ color: "#ff9800", fontSize: "14px", fontWeight: "600" }}>
                           {installments.filter((inst: any) => !inst.is_paid).length} قسط
                         </Typography>
                       </Box>
                       <Divider sx={{ borderColor: "#505669", marginY: "8px" }} />
                       <Box sx={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                        <Typography sx={{ color: "#999", fontSize: "14px" }}>مبلغ کل پرداخت شده:</Typography>
-                        <Typography sx={{ color: "#78b568", fontSize: "15px", fontWeight: "700" }}>
+                        <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "14px" }}>مبلغ کل پرداخت شده:</Typography>
+                        <Typography sx={{ color: "var(--admin-accent)", fontSize: "15px", fontWeight: "700" }}>
                           {formatNumber(
                             installments
                               .filter((inst: any) => inst.is_paid)
@@ -560,7 +560,7 @@ export default function purchas(props: any) {
                         </Typography>
                       </Box>
                       <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                        <Typography sx={{ color: "#999", fontSize: "14px" }}>مبلغ باقیمانده:</Typography>
+                        <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "14px" }}>مبلغ باقیمانده:</Typography>
                         <Typography sx={{ color: "#ff9800", fontSize: "15px", fontWeight: "700" }}>
                           {formatNumber(
                             installments
@@ -578,10 +578,10 @@ export default function purchas(props: any) {
                 <Box
                   key={installment.id || index}
                   sx={{
-                    backgroundColor: installment.is_paid ? "#1a3a1a" : "#1a1d2e",
+                    backgroundColor: installment.is_paid ? "#1a3a1a" : "var(--admin-surface-alt)",
                     borderRadius: "8px",
                     padding: "16px",
-                    border: `1px solid ${installment.is_paid ? "#78b568" : "#505669"}`,
+                    border: `1px solid ${installment.is_paid ? "var(--admin-accent)" : "#505669"}`,
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center"
@@ -590,7 +590,7 @@ export default function purchas(props: any) {
                   <Box sx={{ flex: 1 }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
                       <Typography sx={{ 
-                        color: "#fff", 
+                        color: "var(--admin-text)", 
                         fontSize: "16px", 
                         fontWeight: "600" 
                       }}>
@@ -602,8 +602,8 @@ export default function purchas(props: any) {
                           label="پرداخت شده"
                           size="small"
                           sx={{
-                            backgroundColor: "#78b568",
-                            color: "#fff",
+                            backgroundColor: "var(--admin-accent)",
+                            color: "var(--admin-text)",
                             fontSize: "11px",
                             height: "22px"
                           }}
@@ -615,28 +615,28 @@ export default function purchas(props: any) {
                           size="small"
                           sx={{
                             backgroundColor: "#ff9800",
-                            color: "#fff",
+                            color: "var(--admin-text)",
                             fontSize: "11px",
                             height: "22px"
                           }}
                         />
                       )}
                     </Box>
-                    <Typography sx={{ color: "#999", fontSize: "13px", marginBottom: "4px" }}>
+                    <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "13px", marginBottom: "4px" }}>
                       مبلغ: {formatNumber(installment.amount)} تومان
                     </Typography>
                     {installment.due_date && (
-                      <Typography sx={{ color: "#999", fontSize: "13px", marginBottom: "4px" }}>
+                      <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "13px", marginBottom: "4px" }}>
                         تاریخ سررسید: {installment.due_date_jalali || formatDate(installment.due_date)}
                       </Typography>
                     )}
                     {installment.is_paid && installment.paid_at && (
-                      <Typography sx={{ color: "#78b568", fontSize: "13px" }}>
+                      <Typography sx={{ color: "var(--admin-accent)", fontSize: "13px" }}>
                         تاریخ پرداخت: {installment.paid_at_jalali || formatDateTime(installment.paid_at)}
                       </Typography>
                     )}
                     {installment.notes && (
-                      <Typography sx={{ color: "#999", fontSize: "12px", marginTop: "8px", fontStyle: "italic" }}>
+                      <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "12px", marginTop: "8px", fontStyle: "italic" }}>
                         یادداشت: {installment.notes}
                       </Typography>
                     )}
@@ -647,8 +647,8 @@ export default function purchas(props: any) {
                       // startIcon={<PaymentIcon />}
                       onClick={() => handleOpenPayInstallmentDialog(installment)}
                       sx={{
-                        backgroundColor: "#78b568",
-                        color: "#fff",
+                        backgroundColor: "var(--admin-accent)",
+                        color: "var(--admin-text)",
                         fontSize: "12px",
                         padding: "6px 12px",
                         minWidth: "auto",
@@ -674,7 +674,7 @@ export default function purchas(props: any) {
             variant="contained"
             sx={{
               backgroundColor: "#505669",
-              color: "#fff",
+              color: "var(--admin-text)",
               "&:hover": {
                 backgroundColor: "#666"
               }
@@ -691,35 +691,35 @@ export default function purchas(props: any) {
         onClose={handleClosePayInstallmentDialog}
         PaperProps={{
           sx: {
-            backgroundColor: "#2b3143",
+            backgroundColor: "var(--admin-surface)",
             borderRadius: "16px",
             direction: "rtl",
             minWidth: "400px",
           }
         }}
       >
-        <DialogTitle sx={{ color: "#fff", textAlign: "center", fontSize: "18px" }}>
+        <DialogTitle sx={{ color: "var(--admin-text)", textAlign: "center", fontSize: "18px" }}>
           تایید پرداخت قسط
         </DialogTitle>
         <DialogContent>
-          <DialogContentText sx={{ color: "#ccc", textAlign: "center", marginBottom: "16px" }}>
+          <DialogContentText sx={{ color: "var(--admin-text-secondary)", textAlign: "center", marginBottom: "16px" }}>
             آیا از پرداخت این قسط مطمئن هستید؟
           </DialogContentText>
           {selectedInstallment && (
             <Box sx={{ 
               marginBottom: "16px", 
               padding: "12px", 
-              backgroundColor: "#1a1d2e", 
+              backgroundColor: "var(--admin-surface-alt)", 
               borderRadius: "8px",
             }}>
-              <Typography sx={{ color: "#fff", fontSize: "14px", marginBottom: "8px" }}>
+              <Typography sx={{ color: "var(--admin-text)", fontSize: "14px", marginBottom: "8px" }}>
                 قسط شماره: {selectedInstallment.installment_number}
               </Typography>
-              <Typography sx={{ color: "#fff", fontSize: "14px", marginBottom: "8px" }}>
+              <Typography sx={{ color: "var(--admin-text)", fontSize: "14px", marginBottom: "8px" }}>
                 مبلغ: {formatNumber(selectedInstallment.amount)} تومان
               </Typography>
               {selectedInstallment.due_date && (
-                <Typography sx={{ color: "#999", fontSize: "13px" }}>
+                <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "13px" }}>
                   تاریخ سررسید: {selectedInstallment.due_date_jalali || formatDate(selectedInstallment.due_date)}
                 </Typography>
               )}
@@ -734,24 +734,24 @@ export default function purchas(props: any) {
             placeholder="یادداشت پرداخت (اختیاری)"
             sx={{
               "& .MuiOutlinedInput-root": {
-                backgroundColor: "#1a1d2e",
-                color: "#fff",
+                backgroundColor: "var(--admin-surface-alt)",
+                color: "var(--admin-text)",
                 "& fieldset": {
                   borderColor: "#505669",
                 },
                 "&:hover fieldset": {
-                  borderColor: "#78b568",
+                  borderColor: "var(--admin-accent)",
                 },
                 "&.Mui-focused fieldset": {
-                  borderColor: "#78b568",
+                  borderColor: "var(--admin-accent)",
                 },
               },
               "& .MuiInputBase-input": {
-                color: "#fff",
+                color: "var(--admin-text)",
                 fontSize: "14px",
               },
               "& .MuiInputBase-input::placeholder": {
-                color: "rgba(255,255,255,0.4)",
+                color: "var(--admin-text-secondary)",
                 opacity: 1
               },
             }}
@@ -762,11 +762,11 @@ export default function purchas(props: any) {
             onClick={handleClosePayInstallmentDialog}
             variant="outlined"
             sx={{ 
-              color: "#fff", 
+              color: "var(--admin-text)", 
               borderColor: "#666",
               "&:hover": {
                 borderColor: "#888",
-                backgroundColor: "rgba(255,255,255,0.05)"
+                backgroundColor: "var(--admin-surface-alt)"
               }
             }}
             disabled={payingInstallment}
@@ -777,7 +777,7 @@ export default function purchas(props: any) {
             onClick={handlePayInstallment}
             variant="contained"
             sx={{ 
-              backgroundColor: "#78b568",
+              backgroundColor: "var(--admin-accent)",
               "&:hover": {
                 backgroundColor: "#66a055"
               }

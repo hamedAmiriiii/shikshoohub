@@ -206,7 +206,7 @@ export default function CategoriesPage() {
         <Card
           sx={{
             marginLeft: `${indent}px`,
-            backgroundColor: level === 0 ? '#2b3143' : level === 1 ? '#353b4f' : '#3f4559',
+            backgroundColor: level === 0 ? 'var(--admin-surface)' : level === 1 ? 'var(--admin-surface-nested)' : 'var(--admin-surface-deep)',
             border: '1px solid rgba(120, 181, 104, 0.2)',
             borderRadius: '12px',
           }}
@@ -220,14 +220,14 @@ export default function CategoriesPage() {
                     size="small"
                     sx={{
                       backgroundColor: 'rgba(120, 181, 104, 0.2)',
-                      color: '#78b568',
+                      color: 'var(--admin-accent)',
                       fontSize: '11px',
                     }}
                   />
                 )}
                 <Typography
                   sx={{
-                    color: '#fff',
+                    color: 'var(--admin-text)',
                     fontWeight: level === 0 ? '600' : '500',
                     fontSize: level === 0 ? '16px' : '14px',
                   }}
@@ -240,8 +240,8 @@ export default function CategoriesPage() {
                   onClick={() => handleOpenDialog(category)}
                   size="small"
                   sx={{
-                    color: '#78b568',
-                    backgroundColor: 'rgba(120, 181, 104, 0.1)',
+                    color: 'var(--admin-accent)',
+                    backgroundColor: 'var(--admin-menu-hover)',
                     '&:hover': {
                       backgroundColor: 'rgba(120, 181, 104, 0.2)',
                     },
@@ -312,10 +312,10 @@ export default function CategoriesPage() {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', padding: '16px', paddingBottom: '100px', direction: 'rtl', background: 'linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%)' }}>
+    <Box sx={{ minHeight: '100vh', padding: '16px', paddingBottom: '100px', direction: 'rtl', background: 'var(--admin-bg-gradient)' }}>
       <Container maxWidth="lg">
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <Typography variant="h5" sx={{ color: '#fff', fontWeight: 'bold' }}>
+          <Typography variant="h5" sx={{ color: 'var(--admin-text)', fontWeight: 'bold' }}>
             مدیریت دسته‌بندی‌ها
           </Typography>
           <Button
@@ -323,7 +323,7 @@ export default function CategoriesPage() {
             startIcon={<AddIcon />}
             onClick={() => handleOpenDialog()}
             sx={{
-              backgroundColor: '#78b568',
+              backgroundColor: 'var(--admin-accent)',
               '&:hover': {
                 backgroundColor: '#6aa558',
               },
@@ -335,11 +335,11 @@ export default function CategoriesPage() {
 
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
-            <CircularProgress sx={{ color: '#78b568' }} />
+            <CircularProgress sx={{ color: 'var(--admin-accent)' }} />
           </Box>
         ) : categories.length === 0 ? (
-          <Card sx={{ backgroundColor: '#2b3143', padding: '40px', textAlign: 'center' }}>
-            <Typography sx={{ color: '#fff' }}>هیچ دسته‌بندی‌ای وجود ندارد</Typography>
+          <Card sx={{ backgroundColor: 'var(--admin-surface)', padding: '40px', textAlign: 'center' }}>
+            <Typography sx={{ color: 'var(--admin-text)' }}>هیچ دسته‌بندی‌ای وجود ندارد</Typography>
           </Card>
         ) : (
           <Box>
@@ -355,12 +355,12 @@ export default function CategoriesPage() {
           fullWidth
           PaperProps={{
             sx: {
-              backgroundColor: '#2b3143',
+              backgroundColor: 'var(--admin-surface)',
               borderRadius: '16px',
             },
           }}
         >
-          <DialogTitle sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+          <DialogTitle sx={{ color: 'var(--admin-text)', borderBottom: '1px solid var(--admin-divider)' }}>
             {editingCategory ? 'ویرایش دسته‌بندی' : 'ایجاد دسته‌بندی جدید'}
           </DialogTitle>
           <DialogContent sx={{ paddingTop: '24px' }}>
@@ -372,21 +372,21 @@ export default function CategoriesPage() {
               sx={{
                 marginBottom: '16px',
                 '& .MuiOutlinedInput-root': {
-                  color: '#fff',
+                  color: 'var(--admin-text)',
                   '& fieldset': {
-                    borderColor: 'rgba(255,255,255,0.2)',
+                    borderColor: 'var(--admin-icon-bg)',
                   },
                   '&:hover fieldset': {
-                    borderColor: 'rgba(255,255,255,0.3)',
+                    borderColor: 'var(--admin-text-secondary)',
                   },
                   '&.Mui-focused fieldset': {
-                    borderColor: '#78b568',
+                    borderColor: 'var(--admin-accent)',
                   },
                 },
                 '& .MuiInputLabel-root': {
-                  color: 'rgba(255,255,255,0.7)',
+                  color: 'var(--admin-text-muted)',
                   '&.Mui-focused': {
-                    color: '#78b568',
+                    color: 'var(--admin-accent)',
                   },
                 },
               }}
@@ -401,21 +401,21 @@ export default function CategoriesPage() {
               sx={{
                 marginBottom: '16px',
                 '& .MuiOutlinedInput-root': {
-                  color: '#fff',
+                  color: 'var(--admin-text)',
                   '& fieldset': {
-                    borderColor: 'rgba(255,255,255,0.2)',
+                    borderColor: 'var(--admin-icon-bg)',
                   },
                   '&:hover fieldset': {
-                    borderColor: 'rgba(255,255,255,0.3)',
+                    borderColor: 'var(--admin-text-secondary)',
                   },
                   '&.Mui-focused fieldset': {
-                    borderColor: '#78b568',
+                    borderColor: 'var(--admin-accent)',
                   },
                 },
                 '& .MuiInputLabel-root': {
-                  color: 'rgba(255,255,255,0.7)',
+                  color: 'var(--admin-text-muted)',
                   '&.Mui-focused': {
-                    color: '#78b568',
+                    color: 'var(--admin-accent)',
                   },
                 },
               }}
@@ -432,28 +432,28 @@ export default function CategoriesPage() {
               sx={{
                 marginBottom: '16px',
                 '& .MuiOutlinedInput-root': {
-                  color: '#fff',
+                  color: 'var(--admin-text)',
                   '& fieldset': {
-                    borderColor: 'rgba(255,255,255,0.2)',
+                    borderColor: 'var(--admin-icon-bg)',
                   },
                   '&:hover fieldset': {
-                    borderColor: 'rgba(255,255,255,0.3)',
+                    borderColor: 'var(--admin-text-secondary)',
                   },
                   '&.Mui-focused fieldset': {
-                    borderColor: '#78b568',
+                    borderColor: 'var(--admin-accent)',
                   },
                 },
                 '& .MuiInputLabel-root': {
-                  color: 'rgba(255,255,255,0.7)',
+                  color: 'var(--admin-text-muted)',
                   '&.Mui-focused': {
-                    color: '#78b568',
+                    color: 'var(--admin-accent)',
                   },
                 },
               }}
             >
               <option value="">بدون والد (دسته‌بندی اصلی)</option>
               {getAvailableParents(editingCategory?.id).map(cat => (
-                <option key={cat.id} value={cat.id} style={{ backgroundColor: '#2b3143', color: '#fff' }}>
+                <option key={cat.id} value={cat.id} style={{ backgroundColor: 'var(--admin-surface)', color: 'var(--admin-text)' }}>
                   {cat.name}
                 </option>
               ))}
@@ -468,21 +468,21 @@ export default function CategoriesPage() {
               sx={{
                 marginBottom: '16px',
                 '& .MuiOutlinedInput-root': {
-                  color: '#fff',
+                  color: 'var(--admin-text)',
                   '& fieldset': {
-                    borderColor: 'rgba(255,255,255,0.2)',
+                    borderColor: 'var(--admin-icon-bg)',
                   },
                   '&:hover fieldset': {
-                    borderColor: 'rgba(255,255,255,0.3)',
+                    borderColor: 'var(--admin-text-secondary)',
                   },
                   '&.Mui-focused fieldset': {
-                    borderColor: '#78b568',
+                    borderColor: 'var(--admin-accent)',
                   },
                 },
                 '& .MuiInputLabel-root': {
-                  color: 'rgba(255,255,255,0.7)',
+                  color: 'var(--admin-text-muted)',
                   '&.Mui-focused': {
-                    color: '#78b568',
+                    color: 'var(--admin-accent)',
                   },
                 },
               }}
@@ -494,30 +494,30 @@ export default function CategoriesPage() {
                   onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
                   sx={{
                     '& .MuiSwitch-switchBase.Mui-checked': {
-                      color: '#78b568',
+                      color: 'var(--admin-accent)',
                     },
                     '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                      backgroundColor: '#78b568',
+                      backgroundColor: 'var(--admin-accent)',
                     },
                   }}
                 />
               }
               label="فعال"
               sx={{
-                color: '#fff',
+                color: 'var(--admin-text)',
                 marginTop: '8px',
               }}
             />
           </DialogContent>
-          <DialogActions sx={{ padding: '16px 24px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-            <Button onClick={handleCloseDialog} sx={{ color: '#fff' }}>
+          <DialogActions sx={{ padding: '16px 24px', borderTop: '1px solid var(--admin-divider)' }}>
+            <Button onClick={handleCloseDialog} sx={{ color: 'var(--admin-text)' }}>
               انصراف
             </Button>
             <Button
               onClick={handleSubmit}
               variant="contained"
               sx={{
-                backgroundColor: '#78b568',
+                backgroundColor: 'var(--admin-accent)',
                 '&:hover': {
                   backgroundColor: '#6aa558',
                 },

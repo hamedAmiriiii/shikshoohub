@@ -42,12 +42,12 @@ const BottomSheet: React.FC<BottomSheetProps> = ({open, onClose, icon, title, ch
       <Transition in={open}>
         <Box
           sx={{
-            borderTop:'3px solid #ff9100 ',
-            width: {xs: "100%", sm: "100%", md: "50%", lg:"50%", xl: "50%"},
+            borderTop: "3px solid var(--admin-accent)",
+            width: { xs: "100%", sm: "100%", md: "50%", lg: "50%", xl: "50%" },
             display: "flex",
             flexDirection: "column",
             justifyContent: "center",
-            backgroundColor: "#21242b",
+            backgroundColor: "var(--admin-surface)",
             borderTopLeftRadius: "1.5rem",
             borderTopRightRadius: "1.5rem",
             boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
@@ -66,11 +66,10 @@ const BottomSheet: React.FC<BottomSheetProps> = ({open, onClose, icon, title, ch
                   }}>
               <IconButton
                 edge="end"
-                color="inherit"
                 onClick={onClose as any}
                 aria-label="close"
-                sx={{marginRight: "1rem"}}>
-                <CloseIcon/>
+                sx={{ marginRight: "1rem", color: "var(--admin-text-muted)" }}>
+                <CloseIcon />
               </IconButton>
               <Grid item xs={12}
                     sx={{
@@ -85,8 +84,9 @@ const BottomSheet: React.FC<BottomSheetProps> = ({open, onClose, icon, title, ch
                 <Typography
                   id="bottom-sheet-title"
                   sx={{
-                    fontSize: "font-size: 0.35rem",
-                    fontWeight: "400",
+                    fontSize: "1rem",
+                    fontWeight: 600,
+                    color: "var(--admin-text)",
                   }}>
                   {title}
                 </Typography>}

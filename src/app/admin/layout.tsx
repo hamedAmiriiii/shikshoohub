@@ -2,8 +2,11 @@
 import SimpleBottomNavigationAtelier from './SimpleBottomNavigationAtelier';
 import Header from '../componentsShop/Header';
 import ShopAccessWatcher from '../componentsShop/ShopAccessWatcher';
+import AdminThemeProvider from './theme/AdminThemeProvider';
+import './theme/admin-theme.css';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import Box from '@mui/material/Box';
 
 // Map pathname to page title
 const getPageTitle = (pathname: string | null): string | undefined => {
@@ -65,6 +68,14 @@ export default function ShikshooLayout({
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
+    const stored = localStorage.getItem("admin_theme_mode");
+    document.documentElement.setAttribute(
+      "data-admin-theme",
+      stored === "light" ? "light" : "dark"
+    );
+  }, []);
+
+  useEffect(() => {
     // بررسی توکن - اگر توکن نداشت و در صفحهٔ مهمان ادمین نیست، به لاگین بفرست
     const token = localStorage.getItem('token');
     
@@ -86,27 +97,29 @@ export default function ShikshooLayout({
     }
   }, [pathname, router, isPublicAdminPage]);
 
-  // اگر در حال بررسی هستیم، چیزی نمایش نده
-  if (isChecking && !isPublicAdminPage) {
-    return null;
-  }
-
   const pageTitle = getPageTitle(pathname);
   const showBack = shouldShowBack(pathname);
+  const showShell = !isChecking || isPublicAdminPage;
 
   return (
-    <>
-      {!isPublicAdminPage && <ShopAccessWatcher />}
-      {!isPrintPage && !isPublicAdminPage && (
-        <Header 
-          title={pageTitle} 
-          showBack={showBack}
-          backUrl="/admin"
-        />
+    <AdminThemeProvider>
+      <Box className="admin-app" sx={{ minHeight: "100vh", color: "var(--admin-text)" }}>
+      {showShell && (
+        <>
+          {!isPublicAdminPage && <ShopAccessWatcher />}
+          {!isPrintPage && !isPublicAdminPage && (
+            <Header
+              title={pageTitle}
+              showBack={showBack}
+              backUrl="/admin"
+            />
+          )}
+          {children}
+          {!isPrintPage && !isPublicAdminPage && <SimpleBottomNavigationAtelier />}
+        </>
       )}
-      {children}
-      {!isPrintPage && !isPublicAdminPage && <SimpleBottomNavigationAtelier />}
-    </>
+      </Box>
+    </AdminThemeProvider>
   );
 }
 

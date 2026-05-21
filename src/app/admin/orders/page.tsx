@@ -322,7 +322,7 @@ export default function OrdersPage() {
         padding: "16px",
         minHeight: "100vh",
         paddingBottom: "100px",
-        background: "linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%)",
+        background: "var(--admin-bg-gradient)",
       }}
     >
       <ToastContainer rtl position="top-center" />
@@ -346,21 +346,21 @@ export default function OrdersPage() {
               width: "44px",
               height: "44px",
               borderRadius: "12px",
-              backgroundColor: "rgba(255,255,255,0.2)",
+              backgroundColor: "var(--admin-icon-bg)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
             }}
           >
-            <ShoppingBagIcon sx={{ color: "#fff", fontSize: "24px" }} />
+            <ShoppingBagIcon sx={{ color: "var(--admin-text)", fontSize: "24px" }} />
           </Box>
           <Box>
             <Typography
-              sx={{ color: "#fff", fontWeight: "700", fontSize: "18px" }}
+              sx={{ color: "var(--admin-text)", fontWeight: "700", fontSize: "18px" }}
             >
               سفارشات
             </Typography>
-            <Typography sx={{ color: "rgba(255,255,255,0.8)", fontSize: "13px" }}>
+            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "13px" }}>
               {orders.length} سفارش
             </Typography>
           </Box>
@@ -370,9 +370,9 @@ export default function OrdersPage() {
           <IconButton
             onClick={fetchOrders}
             sx={{
-              backgroundColor: "rgba(255,255,255,0.2)",
-              color: "#fff",
-              "&:hover": { backgroundColor: "rgba(255,255,255,0.3)" },
+              backgroundColor: "var(--admin-icon-bg)",
+              color: "var(--admin-text)",
+              "&:hover": { backgroundColor: "var(--admin-text-secondary)" },
             }}
           >
             <RefreshIcon />
@@ -380,9 +380,9 @@ export default function OrdersPage() {
           <IconButton
             onClick={() => router.back()}
             sx={{
-              backgroundColor: "rgba(255,255,255,0.2)",
-              color: "#fff",
-              "&:hover": { backgroundColor: "rgba(255,255,255,0.3)" },
+              backgroundColor: "var(--admin-icon-bg)",
+              color: "var(--admin-text)",
+              "&:hover": { backgroundColor: "var(--admin-text-secondary)" },
             }}
           >
             <ArrowBackIcon />
@@ -403,11 +403,11 @@ export default function OrdersPage() {
           label="همه"
           onClick={() => setStatusFilter("all")}
           sx={{
-            backgroundColor: statusFilter === "all" ? "#667eea" : "rgba(255,255,255,0.1)",
-            color: "#fff",
+            backgroundColor: statusFilter === "all" ? "#667eea" : "var(--admin-divider)",
+            color: "var(--admin-text)",
             cursor: "pointer",
             "&:hover": {
-              backgroundColor: statusFilter === "all" ? "#5a6fd6" : "rgba(255,255,255,0.2)",
+              backgroundColor: statusFilter === "all" ? "#5a6fd6" : "var(--admin-icon-bg)",
             },
             fontWeight: statusFilter === "all" ? "700" : "500",
           }}
@@ -416,11 +416,11 @@ export default function OrdersPage() {
           label="ارسال شده"
           onClick={() => setStatusFilter("shipped")}
           sx={{
-            backgroundColor: statusFilter === "shipped" ? "#9c27b0" : "rgba(255,255,255,0.1)",
-            color: "#fff",
+            backgroundColor: statusFilter === "shipped" ? "#9c27b0" : "var(--admin-divider)",
+            color: "var(--admin-text)",
             cursor: "pointer",
             "&:hover": {
-              backgroundColor: statusFilter === "shipped" ? "#7b1fa2" : "rgba(255,255,255,0.2)",
+              backgroundColor: statusFilter === "shipped" ? "#7b1fa2" : "var(--admin-icon-bg)",
             },
             fontWeight: statusFilter === "shipped" ? "700" : "500",
           }}
@@ -429,11 +429,11 @@ export default function OrdersPage() {
           label="تکمیل شده"
           onClick={() => setStatusFilter("completed")}
           sx={{
-            backgroundColor: statusFilter === "completed" ? "#4caf50" : "rgba(255,255,255,0.1)",
-            color: "#fff",
+            backgroundColor: statusFilter === "completed" ? "#4caf50" : "var(--admin-divider)",
+            color: "var(--admin-text)",
             cursor: "pointer",
             "&:hover": {
-              backgroundColor: statusFilter === "completed" ? "#388e3c" : "rgba(255,255,255,0.2)",
+              backgroundColor: statusFilter === "completed" ? "#388e3c" : "var(--admin-icon-bg)",
             },
             fontWeight: statusFilter === "completed" ? "700" : "500",
           }}
@@ -458,13 +458,13 @@ export default function OrdersPage() {
             padding: "40px",
             textAlign: "center",
             borderRadius: "16px",
-            backgroundColor: "rgba(255,255,255,0.05)",
+            backgroundColor: "var(--admin-surface-alt)",
           }}
         >
           <ShoppingBagIcon
             sx={{ fontSize: "60px", color: "#666", marginBottom: "16px" }}
           />
-          <Typography sx={{ color: "#999", fontSize: "16px" }}>
+          <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "16px" }}>
             هیچ سفارشی یافت نشد
           </Typography>
         </Paper>
@@ -475,8 +475,8 @@ export default function OrdersPage() {
               <Card
                 sx={{
                   borderRadius: "16px",
-                  backgroundColor: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(255,255,255,0.1)",
+                  backgroundColor: "var(--admin-surface-alt)",
+                  border: "1px solid var(--admin-divider)",
                   transition: "transform 0.2s, box-shadow 0.2s",
                   "&:hover": {
                     transform: "translateY(-4px)",
@@ -497,7 +497,7 @@ export default function OrdersPage() {
                     <Box>
                       <Typography
                         sx={{
-                          color: "#fff",
+                          color: "var(--admin-text)",
                           fontWeight: "700",
                           fontSize: "16px",
                           marginBottom: "4px",
@@ -523,7 +523,7 @@ export default function OrdersPage() {
                         sx={{
                           backgroundColor:
                             statusColors[order.status] || "#666",
-                          color: "#fff",
+                          color: "var(--admin-text)",
                           fontSize: "11px",
                           height: "24px",
                         }}
@@ -537,7 +537,7 @@ export default function OrdersPage() {
                         sx={{
                           backgroundColor:
                             paymentStatusColors[order.payment_status] || "#666",
-                          color: "#fff",
+                          color: "var(--admin-text)",
                           fontSize: "11px",
                           height: "24px",
                         }}
@@ -545,7 +545,7 @@ export default function OrdersPage() {
                     </Box>
                   </Box>
 
-                  <Divider sx={{ borderColor: "rgba(255,255,255,0.1)", marginBottom: "16px" }} />
+                  <Divider sx={{ borderColor: "var(--admin-divider)", marginBottom: "16px" }} />
 
                   {/* Customer Info */}
                   <Box sx={{ marginBottom: "16px" }}>
@@ -558,7 +558,7 @@ export default function OrdersPage() {
                       }}
                     >
                       <PersonIcon sx={{ fontSize: "18px", color: "#667eea" }} />
-                      <Typography sx={{ color: "#fff", fontSize: "14px" }}>
+                      <Typography sx={{ color: "var(--admin-text)", fontSize: "14px" }}>
                         {getCustomerName(order)}
                       </Typography>
                     </Box>
@@ -595,7 +595,7 @@ export default function OrdersPage() {
                     )}
                   </Box>
 
-                  <Divider sx={{ borderColor: "rgba(255,255,255,0.1)", marginBottom: "16px" }} />
+                  <Divider sx={{ borderColor: "var(--admin-divider)", marginBottom: "16px" }} />
 
                   {/* Total & Actions */}
                   <Box
@@ -633,7 +633,7 @@ export default function OrdersPage() {
                         disabled={detailsLoading}
                         sx={{
                           backgroundColor: "#667eea",
-                          color: "#fff",
+                          color: "var(--admin-text)",
                           borderRadius: "12px",
                           fontSize: "13px",
                           "&:hover": { backgroundColor: "#5a6fd6" },
@@ -662,14 +662,14 @@ export default function OrdersPage() {
         PaperProps={{
           sx: {
             borderRadius: "16px",
-            backgroundColor: "#1a1d2e",
-            color: "#fff",
+            backgroundColor: "var(--admin-surface-alt)",
+            color: "var(--admin-text)",
           },
         }}
       >
         <DialogTitle
           sx={{
-            borderBottom: "1px solid rgba(255,255,255,0.1)",
+            borderBottom: "1px solid var(--admin-divider)",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
@@ -686,7 +686,7 @@ export default function OrdersPage() {
                 size="small"
                 sx={{
                   backgroundColor: statusColors[selectedOrder.status] || "#666",
-                  color: "#fff",
+                  color: "var(--admin-text)",
                 }}
               />
             </Box>
@@ -700,7 +700,7 @@ export default function OrdersPage() {
                 sx={{
                   padding: "20px",
                   borderRadius: "12px",
-                  backgroundColor: "rgba(255,255,255,0.05)",
+                  backgroundColor: "var(--admin-surface-alt)",
                   marginBottom: "16px",
                 }}
               >
@@ -711,7 +711,7 @@ export default function OrdersPage() {
                     gap: "12px",
                     marginBottom: "20px",
                     paddingBottom: "16px",
-                    borderBottom: "1px solid rgba(255,255,255,0.1)",
+                    borderBottom: "1px solid var(--admin-divider)",
                   }}
                 >
                   <Box
@@ -731,7 +731,7 @@ export default function OrdersPage() {
                     sx={{
                       fontWeight: "700",
                       fontSize: "18px",
-                      color: "#fff",
+                      color: "var(--admin-text)",
                     }}
                   >
                     اطلاعات مشتری
@@ -748,7 +748,7 @@ export default function OrdersPage() {
                           نام و نام خانوادگی
                         </Typography>
                       </Box>
-                      <Typography sx={{ color: "#fff", fontSize: "15px", fontWeight: "500" }}>
+                      <Typography sx={{ color: "var(--admin-text)", fontSize: "15px", fontWeight: "500" }}>
                         {getCustomerName(selectedOrder)}
                       </Typography>
                     </Box>
@@ -760,7 +760,7 @@ export default function OrdersPage() {
                         </Typography>
                       </Box>
                       <Typography
-                        sx={{ color: "#fff", fontSize: "15px", fontWeight: "500", direction: "ltr" }}
+                        sx={{ color: "var(--admin-text)", fontSize: "15px", fontWeight: "500", direction: "ltr" }}
                       >
                         {getCustomerPhone(selectedOrder)}
                       </Typography>
@@ -776,7 +776,7 @@ export default function OrdersPage() {
                           آدرس
                         </Typography>
                       </Box>
-                      <Typography sx={{ color: "#fff", fontSize: "15px", lineHeight: 1.6 }}>
+                      <Typography sx={{ color: "var(--admin-text)", fontSize: "15px", lineHeight: 1.6 }}>
                         {selectedOrder.customer.address}
                       </Typography>
                     </Box>
@@ -790,7 +790,7 @@ export default function OrdersPage() {
                           <Typography sx={{ color: "#888", fontSize: "12px", fontWeight: "500", marginBottom: "6px" }}>
                             کد پستی
                           </Typography>
-                          <Typography sx={{ color: "#fff", fontSize: "15px", direction: "ltr" }}>
+                          <Typography sx={{ color: "var(--admin-text)", fontSize: "15px", direction: "ltr" }}>
                             {selectedOrder.customer.postal_code}
                           </Typography>
                         </Box>
@@ -800,7 +800,7 @@ export default function OrdersPage() {
                           <Typography sx={{ color: "#888", fontSize: "12px", fontWeight: "500", marginBottom: "6px" }}>
                             استان / شهر
                           </Typography>
-                          <Typography sx={{ color: "#fff", fontSize: "15px" }}>
+                          <Typography sx={{ color: "var(--admin-text)", fontSize: "15px" }}>
                             {selectedOrder.customer.state_id ? `استان ${selectedOrder.customer.state_id}` : ""}
                             {selectedOrder.customer.state_id && selectedOrder.customer.city_id ? " - " : ""}
                             {selectedOrder.customer.city_id ? `شهر ${selectedOrder.customer.city_id}` : ""}
@@ -817,7 +817,7 @@ export default function OrdersPage() {
                 <Paper
                   sx={{
                     borderRadius: "12px",
-                    backgroundColor: "rgba(255,255,255,0.05)",
+                    backgroundColor: "var(--admin-surface-alt)",
                     overflow: "hidden",
                   }}
                 >
@@ -826,7 +826,7 @@ export default function OrdersPage() {
                       fontWeight: "600",
                       padding: "16px",
                       color: "#667eea",
-                      borderBottom: "1px solid rgba(255,255,255,0.1)",
+                      borderBottom: "1px solid var(--admin-divider)",
                     }}
                   >
                     محصولات
@@ -835,16 +835,16 @@ export default function OrdersPage() {
                     <Table size="small">
                       <TableHead>
                         <TableRow>
-                          <TableCell sx={{ color: "#888", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                          <TableCell sx={{ color: "#888", borderBottom: "1px solid var(--admin-divider)" }}>
                             محصول
                           </TableCell>
-                          <TableCell sx={{ color: "#888", borderBottom: "1px solid rgba(255,255,255,0.1)" }} align="center">
+                          <TableCell sx={{ color: "#888", borderBottom: "1px solid var(--admin-divider)" }} align="center">
                             تعداد
                           </TableCell>
-                          <TableCell sx={{ color: "#888", borderBottom: "1px solid rgba(255,255,255,0.1)" }} align="center">
+                          <TableCell sx={{ color: "#888", borderBottom: "1px solid var(--admin-divider)" }} align="center">
                             قیمت واحد
                           </TableCell>
-                          <TableCell sx={{ color: "#888", borderBottom: "1px solid rgba(255,255,255,0.1)" }} align="left">
+                          <TableCell sx={{ color: "#888", borderBottom: "1px solid var(--admin-divider)" }} align="left">
                             جمع
                           </TableCell>
                         </TableRow>
@@ -852,9 +852,9 @@ export default function OrdersPage() {
                       <TableBody>
                         {selectedOrder.items.map((item) => (
                           <TableRow key={item.id}>
-                            <TableCell sx={{ color: "#fff", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                            <TableCell sx={{ color: "var(--admin-text)", borderBottom: "1px solid var(--admin-surface-alt)" }}>
                               <Box>
-                                <Typography sx={{ color: "#fff", fontSize: "14px" }}>
+                                <Typography sx={{ color: "var(--admin-text)", fontSize: "14px" }}>
                                   {getProductName(item)}
                                 </Typography>
                                 {(item.size || item.color) && (
@@ -887,13 +887,13 @@ export default function OrdersPage() {
                                 )}
                               </Box>
                             </TableCell>
-                            <TableCell sx={{ color: "#fff", borderBottom: "1px solid rgba(255,255,255,0.05)" }} align="center">
+                            <TableCell sx={{ color: "var(--admin-text)", borderBottom: "1px solid var(--admin-surface-alt)" }} align="center">
                               {item.quantity}
                             </TableCell>
-                            <TableCell sx={{ color: "#ccc", borderBottom: "1px solid rgba(255,255,255,0.05)" }} align="center">
+                            <TableCell sx={{ color: "#ccc", borderBottom: "1px solid var(--admin-surface-alt)" }} align="center">
                               {formatPrice(item.price)} تومان
                             </TableCell>
-                            <TableCell sx={{ color: "#4caf50", fontWeight: "600", borderBottom: "1px solid rgba(255,255,255,0.05)" }} align="left">
+                            <TableCell sx={{ color: "#4caf50", fontWeight: "600", borderBottom: "1px solid var(--admin-surface-alt)" }} align="left">
                               {formatPrice(getItemTotal(item))} تومان
                             </TableCell>
                           </TableRow>
@@ -917,7 +917,7 @@ export default function OrdersPage() {
                   border: "1px solid rgba(76, 175, 80, 0.3)",
                 }}
               >
-                <Typography sx={{ color: "#fff", fontWeight: "600" }}>
+                <Typography sx={{ color: "var(--admin-text)", fontWeight: "600" }}>
                   مبلغ کل سفارش
                 </Typography>
                 <Typography
@@ -932,7 +932,7 @@ export default function OrdersPage() {
         <DialogActions
           sx={{ 
             padding: "20px 24px", 
-            borderTop: "1px solid rgba(255,255,255,0.1)",
+            borderTop: "1px solid var(--admin-divider)",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
@@ -948,25 +948,25 @@ export default function OrdersPage() {
                 sx={{ 
                   minWidth: "180px",
                   "& .MuiOutlinedInput-root": {
-                    color: "#fff",
+                    color: "var(--admin-text)",
                     "& fieldset": {
-                      borderColor: "rgba(255,255,255,0.2)",
+                      borderColor: "var(--admin-icon-bg)",
                     },
                     "&:hover fieldset": {
-                      borderColor: "rgba(255,255,255,0.3)",
+                      borderColor: "var(--admin-text-secondary)",
                     },
                     "&.Mui-focused fieldset": {
                       borderColor: "#ff9800",
                     },
                   },
                   "& .MuiInputLabel-root": {
-                    color: "rgba(255,255,255,0.7)",
+                    color: "var(--admin-text-muted)",
                     "&.Mui-focused": {
                       color: "#ff9800",
                     },
                   },
                   "& .MuiSvgIcon-root": {
-                    color: "#fff",
+                    color: "var(--admin-text)",
                   },
                 }}
               >
@@ -999,13 +999,13 @@ export default function OrdersPage() {
                 variant="contained"
                 sx={{
                   backgroundColor: "#ff9800",
-                  color: "#fff",
+                  color: "var(--admin-text)",
                   borderRadius: "12px",
                   padding: "8px 20px",
                   "&:hover": { backgroundColor: "#f57c00" },
                   "&:disabled": { 
                     backgroundColor: "rgba(255, 152, 0, 0.3)", 
-                    color: "rgba(255,255,255,0.5)" 
+                    color: "var(--admin-text-secondary)" 
                   },
                 }}
               >
@@ -1019,10 +1019,10 @@ export default function OrdersPage() {
               setNewStatus("");
             }}
             sx={{
-              color: "#fff",
+              color: "var(--admin-text)",
               borderRadius: "12px",
               padding: "8px 20px",
-              "&:hover": { backgroundColor: "rgba(255,255,255,0.1)" },
+              "&:hover": { backgroundColor: "var(--admin-divider)" },
             }}
           >
             بستن

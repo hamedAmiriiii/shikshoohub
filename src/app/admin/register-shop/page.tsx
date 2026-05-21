@@ -83,30 +83,45 @@ export default function RegisterShopPage() {
 
   const isCodeExpired = step === "register" && codeTimer === 0;
 
-  const gradientBg = "linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%)";
+  const gradientBg = "var(--admin-bg-gradient)";
+
+  const containedBtnSx = {
+    py: "12px",
+    borderRadius: "14px",
+    fontSize: "15px",
+    fontWeight: 600,
+    textTransform: "none",
+    boxShadow: "none",
+    color: "#fff",
+    "&:hover": { color: "#fff" },
+    "&.Mui-disabled": {
+      bgcolor: "var(--admin-border)",
+      color: "var(--admin-text-secondary)",
+    },
+  } as const;
 
   const inputSx = {
     "& .MuiOutlinedInput-root": {
       borderRadius: "14px",
-      backgroundColor: "#2b3143",
-      color: "#fff",
+      backgroundColor: "var(--admin-surface)",
+      color: "var(--admin-text)",
       "& fieldset": { borderColor: "#505669" },
-      "&:hover fieldset": { borderColor: "#78b568" },
-      "&.Mui-focused fieldset": { borderColor: "#78b568" },
+      "&:hover fieldset": { borderColor: "var(--admin-accent)" },
+      "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
     },
     "& .MuiInputBase-input": {
       padding: "14px 16px",
       fontSize: "15px",
-      color: "#fff",
+      color: "var(--admin-text)",
       "&:-webkit-autofill": {
-        WebkitBoxShadow: "0 0 0 100px #2b3143 inset !important",
+        WebkitBoxShadow: "0 0 0 100px var(--admin-surface) inset !important",
         WebkitTextFillColor: "#fff !important",
         caretColor: "#fff",
         transition: "background-color 5000s ease-in-out 0s",
       },
     },
     "& .MuiInputBase-input::placeholder": {
-      color: "rgba(255,255,255,0.5)",
+      color: "var(--admin-text-secondary)",
       opacity: 1,
     },
   } as const;
@@ -271,14 +286,14 @@ export default function RegisterShopPage() {
             direction: "ltr",
             "& .MuiOutlinedInput-root": {
               borderRadius: "12px",
-              backgroundColor: "#2b3143",
-              color: "#fff",
+              backgroundColor: "var(--admin-surface)",
+              color: "var(--admin-text)",
               direction: "ltr",
               "& fieldset": { borderColor: "#505669" },
-              "&:hover fieldset": { borderColor: "#78b568" },
-              "&.Mui-focused fieldset": { borderColor: "#78b568" },
+              "&:hover fieldset": { borderColor: "var(--admin-accent)" },
+              "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
             },
-            "& .MuiInputBase-input": { color: "#fff", direction: "ltr" },
+            "& .MuiInputBase-input": { color: "var(--admin-text)", direction: "ltr" },
           }}
         />
       ))}
@@ -289,16 +304,11 @@ export default function RegisterShopPage() {
     <>
       <Typography
         variant="h5"
-        sx={{ mb: 1, fontSize: "20px", color: "#fff", textAlign: "center", fontWeight: 700 }}
+        sx={{ mb: 6, fontSize: "20px", color: "var(--admin-text)", textAlign: "center", fontWeight: 700 }}
       >
         ثبت فروشگاه
       </Typography>
-      <Typography
-        variant="body2"
-        sx={{ mb: 3, color: "rgba(255,255,255,0.75)", textAlign: "center" }}
-      >
-        ابتدا شماره همراه را وارد کنید تا کد تأیید پیامکی برای شما ارسال شود.
-      </Typography>
+      
 
       <TextField
         value={phone}
@@ -308,7 +318,7 @@ export default function RegisterShopPage() {
         InputProps={{
           startAdornment: (
             <InputAdornment position="start">
-              <PhoneIcon sx={{ color: "rgba(255,255,255,0.7)", fontSize: "20px" }} />
+              <PhoneIcon sx={{ color: "var(--admin-text-muted)", fontSize: "20px" }} />
             </InputAdornment>
           ),
         }}
@@ -321,16 +331,12 @@ export default function RegisterShopPage() {
         disabled={!isPhoneValid || isLoading}
         fullWidth
         sx={{
-          py: "12px",
-          borderRadius: "14px",
-          fontSize: "15px",
-          fontWeight: 600,
-          textTransform: "none",
-          backgroundColor: isPhoneValid ? "#78b568" : "#505669",
-          color: "#fff",
-          boxShadow: "none",
-          "&:hover": { backgroundColor: isPhoneValid ? "#5a9a4a" : "#505669" },
-          "&:disabled": { backgroundColor: "#505669", color: "rgba(255,255,255,0.5)" },
+          ...containedBtnSx,
+          bgcolor: isPhoneValid && !isLoading ? "var(--admin-accent)" : "var(--admin-border)",
+          "&:hover": {
+            bgcolor: isPhoneValid && !isLoading ? "var(--admin-accent-hover)" : "var(--admin-border)",
+            color: "#fff",
+          },
         }}
       >
         {isLoading ? "در حال ارسال..." : "دریافت کد پیامکی"}
@@ -341,7 +347,7 @@ export default function RegisterShopPage() {
           variant="text"
           onClick={() => router.push("/admin/login")}
           sx={{
-            color: "#78b568",
+            color: "var(--admin-accent)",
             textTransform: "none",
             fontSize: "14px",
             "&:hover": { backgroundColor: "transparent", textDecoration: "underline" },
@@ -357,12 +363,12 @@ export default function RegisterShopPage() {
     <>
       <Typography
         variant="h5"
-        sx={{ mb: 1, fontSize: "20px", color: "#fff", textAlign: "center", fontWeight: 700 }}
+        sx={{ mb: 1, fontSize: "20px", color: "var(--admin-text)", textAlign: "center", fontWeight: 700 }}
       >
         تکمیل ثبت‌نام
       </Typography>
-      <Typography sx={{ textAlign: "center", color: "rgba(255,255,255,0.7)", mb: 2 }}>
-        کد به شماره <strong style={{ color: "#fff" }}>{phone}</strong> ارسال شده است.
+      <Typography sx={{ textAlign: "center", color: "var(--admin-text-muted)", mb: 2 }}>
+        کد به شماره <strong style={{ color: "var(--admin-text)" }}>{phone}</strong> ارسال شده است.
       </Typography>
 
       <Box sx={{ display: "flex", flexDirection: "column", gap: "14px" }}>
@@ -373,7 +379,7 @@ export default function RegisterShopPage() {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <PhoneIcon sx={{ color: "rgba(255,255,255,0.5)", fontSize: "20px" }} />
+                <PhoneIcon sx={{ color: "var(--admin-text-secondary)", fontSize: "20px" }} />
               </InputAdornment>
             ),
           }}
@@ -387,7 +393,7 @@ export default function RegisterShopPage() {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <PersonIcon sx={{ color: "rgba(255,255,255,0.7)", fontSize: "20px" }} />
+                <PersonIcon sx={{ color: "var(--admin-text-muted)", fontSize: "20px" }} />
               </InputAdornment>
             ),
           }}
@@ -401,7 +407,7 @@ export default function RegisterShopPage() {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <PersonIcon sx={{ color: "rgba(255,255,255,0.7)", fontSize: "20px" }} />
+                <PersonIcon sx={{ color: "var(--admin-text-muted)", fontSize: "20px" }} />
               </InputAdornment>
             ),
           }}
@@ -415,7 +421,7 @@ export default function RegisterShopPage() {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <StorefrontIcon sx={{ color: "rgba(255,255,255,0.7)", fontSize: "20px" }} />
+                <StorefrontIcon sx={{ color: "var(--admin-text-muted)", fontSize: "20px" }} />
               </InputAdornment>
             ),
           }}
@@ -429,7 +435,7 @@ export default function RegisterShopPage() {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <PermIdentityIcon sx={{ color: "rgba(255,255,255,0.7)", fontSize: "20px" }} />
+                <PermIdentityIcon sx={{ color: "var(--admin-text-muted)", fontSize: "20px" }} />
               </InputAdornment>
             ),
           }}
@@ -444,7 +450,7 @@ export default function RegisterShopPage() {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <LockIcon sx={{ color: "rgba(255,255,255,0.7)", fontSize: "20px" }} />
+                <LockIcon sx={{ color: "var(--admin-text-muted)", fontSize: "20px" }} />
               </InputAdornment>
             ),
           }}
@@ -459,7 +465,7 @@ export default function RegisterShopPage() {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <LockIcon sx={{ color: "rgba(255,255,255,0.7)", fontSize: "20px" }} />
+                <LockIcon sx={{ color: "var(--admin-text-muted)", fontSize: "20px" }} />
               </InputAdornment>
             ),
           }}
@@ -467,13 +473,13 @@ export default function RegisterShopPage() {
         />
       </Box>
 
-      <Typography sx={{ mt: 2, mb: 0.5, color: "rgba(255,255,255,0.85)", fontSize: "14px" }}>
+      <Typography sx={{ mt: 2, mb: 0.5, color: "var(--admin-text-muted)", fontSize: "14px" }}>
         کد تأیید ۵ رقمی
       </Typography>
       {codeTimer > 0 ? (
-        <Typography sx={{ mb: 1, fontSize: "13px", color: "rgba(255,255,255,0.65)", textAlign: "center" }}>
+        <Typography sx={{ mb: 1, fontSize: "13px", color: "var(--admin-text-secondary)", textAlign: "center" }}>
           زمان باقی‌مانده:{" "}
-          <Box component="span" sx={{ color: "#78b568", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+          <Box component="span" sx={{ color: "var(--admin-accent)", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
             {formatCountdown(codeTimer)}
           </Box>
         </Typography>
@@ -490,7 +496,7 @@ export default function RegisterShopPage() {
           disabled={codeTimer > 0 || isLoading}
           onClick={handleSendPhoneCode}
           sx={{
-            color: codeTimer > 0 ? "rgba(255,255,255,0.35)" : "#78b568",
+            color: codeTimer > 0 ? "var(--admin-text-secondary)" : "var(--admin-accent)",
             textTransform: "none",
             fontWeight: 500,
           }}
@@ -505,19 +511,19 @@ export default function RegisterShopPage() {
         disabled={!isFormValid || !isCodeValid || isLoading || isCodeExpired}
         fullWidth
         sx={{
+          ...containedBtnSx,
           mt: 1,
-          py: "12px",
-          borderRadius: "14px",
-          fontSize: "15px",
-          fontWeight: 600,
-          textTransform: "none",
-          backgroundColor: isFormValid && isCodeValid && !isCodeExpired ? "#78b568" : "#505669",
-          color: "#fff",
-          boxShadow: "none",
+          bgcolor:
+            isFormValid && isCodeValid && !isCodeExpired && !isLoading
+              ? "var(--admin-accent)"
+              : "var(--admin-border)",
           "&:hover": {
-            backgroundColor: isFormValid && isCodeValid && !isCodeExpired ? "#5a9a4a" : "#505669",
+            bgcolor:
+              isFormValid && isCodeValid && !isCodeExpired && !isLoading
+                ? "var(--admin-accent-hover)"
+                : "var(--admin-border)",
+            color: "#fff",
           },
-          "&:disabled": { backgroundColor: "#505669", color: "rgba(255,255,255,0.5)" },
         }}
       >
         {isLoading ? "در حال ثبت..." : "ثبت فروشگاه"}
@@ -562,8 +568,8 @@ export default function RegisterShopPage() {
           sx={{
             padding: { xs: "24px", md: "28px" },
             borderRadius: "22px",
-            backgroundColor: "#1a1d2e",
-            border: "1px solid #505669",
+            backgroundColor: "var(--admin-surface-alt)",
+            border: "1px solid var(--admin-border)",
             boxShadow: "0 12px 32px rgba(0,0,0,0.3)",
           }}
         >

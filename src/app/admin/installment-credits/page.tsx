@@ -225,7 +225,7 @@ export default function InstallmentCreditsPage() {
 
   return (
     <Suspense fallback={<div>در حال بارگذاری...</div>}>
-      <Box sx={{width: { xs:"100%", md:"130%" , },  direction: "rtl", padding: "16px", minHeight: "100vh", paddingBottom: "100px", background: "linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%)" }}>
+      <Box sx={{width: { xs:"100%", md:"130%" , },  direction: "rtl", padding: "16px", minHeight: "100vh", paddingBottom: "100px", background: "var(--admin-bg-gradient)" }}>
         {/* Header with Create Button */}
         <Box sx={{ 
           display: "flex", 
@@ -239,10 +239,10 @@ export default function InstallmentCreditsPage() {
             startIcon={<AddIcon />}
             onClick={handleOpenCreateDialog}
             sx={{
-              backgroundColor: "#78b568",
-              color: "#fff",
+              backgroundColor: "var(--admin-accent)",
+              color: "var(--admin-text)",
               "&:hover": {
-                backgroundColor: "#5a9a4a",
+                backgroundColor: "var(--admin-accent-hover)",
               },
               padding: { xs: "8px 16px", md: "10px 20px" },
               fontSize: { xs: "12px", md: "14px" }
@@ -272,6 +272,7 @@ export default function InstallmentCreditsPage() {
             desktopColumns={desktopColumns}
             onEditItem={handleEditCredit}
             onDeleteItem={handleDeleteCredit}
+            hidePrintAction
           />
         </div>
 
@@ -283,13 +284,13 @@ export default function InstallmentCreditsPage() {
           fullWidth
           sx={{
             "& .MuiDialog-paper": {
-              backgroundColor: "#1a1d2e",
+              backgroundColor: "var(--admin-surface-alt)",
               borderRadius: "16px",
-              border: "1px solid #505669"
+              border: "1px solid var(--admin-border)"
             }
           }}
         >
-          <DialogTitle sx={{ color: "#fff", fontSize: "20px", fontWeight: "600" }}>
+          <DialogTitle sx={{ color: "var(--admin-text)", fontSize: "20px", fontWeight: "600" }}>
             {editingCredit ? "ویرایش اعتبار" : "ایجاد اعتبار جدید"}
           </DialogTitle>
           <DialogContent>
@@ -312,23 +313,23 @@ export default function InstallmentCreditsPage() {
                 required
                 sx={{
                   "& .MuiOutlinedInput-root": {
-                    backgroundColor: "#2b3143",
-                    color: "#fff",
+                    backgroundColor: "var(--admin-surface)",
+                    color: "var(--admin-text)",
                     "& fieldset": {
                       borderColor: "#505669",
                     },
                     "&:hover fieldset": {
-                      borderColor: "#78b568",
+                      borderColor: "var(--admin-accent)",
                     },
                     "&.Mui-focused fieldset": {
-                      borderColor: "#78b568",
+                      borderColor: "var(--admin-accent)",
                     },
                   },
                   "& .MuiInputLabel-root": {
-                    color: "rgba(255,255,255,0.7)",
+                    color: "var(--admin-text-muted)",
                   },
                   "& .MuiInputLabel-root.Mui-focused": {
-                    color: "#78b568",
+                    color: "var(--admin-accent)",
                   },
                 }}
               />
@@ -371,23 +372,23 @@ export default function InstallmentCreditsPage() {
                 required
                 sx={{
                   "& .MuiOutlinedInput-root": {
-                    backgroundColor: "#2b3143",
-                    color: "#fff",
+                    backgroundColor: "var(--admin-surface)",
+                    color: "var(--admin-text)",
                     "& fieldset": {
                       borderColor: "#505669",
                     },
                     "&:hover fieldset": {
-                      borderColor: "#78b568",
+                      borderColor: "var(--admin-accent)",
                     },
                     "&.Mui-focused fieldset": {
-                      borderColor: "#78b568",
+                      borderColor: "var(--admin-accent)",
                     },
                   },
                   "& .MuiInputLabel-root": {
-                    color: "rgba(255,255,255,0.7)",
+                    color: "var(--admin-text-muted)",
                   },
                   "& .MuiInputLabel-root.Mui-focused": {
-                    color: "#78b568",
+                    color: "var(--admin-accent)",
                   },
                 }}
               />
@@ -428,23 +429,23 @@ export default function InstallmentCreditsPage() {
                 required
                 sx={{
                   "& .MuiOutlinedInput-root": {
-                    backgroundColor: "#2b3143",
-                    color: "#fff",
+                    backgroundColor: "var(--admin-surface)",
+                    color: "var(--admin-text)",
                     "& fieldset": {
                       borderColor: "#505669",
                     },
                     "&:hover fieldset": {
-                      borderColor: "#78b568",
+                      borderColor: "var(--admin-accent)",
                     },
                     "&.Mui-focused fieldset": {
-                      borderColor: "#78b568",
+                      borderColor: "var(--admin-accent)",
                     },
                   },
                   "& .MuiInputLabel-root": {
-                    color: "rgba(255,255,255,0.7)",
+                    color: "var(--admin-text-muted)",
                   },
                   "& .MuiInputLabel-root.Mui-focused": {
-                    color: "#78b568",
+                    color: "var(--admin-accent)",
                   },
                 }}
               />
@@ -454,9 +455,9 @@ export default function InstallmentCreditsPage() {
             <Button
               onClick={handleCloseCreateDialog}
               sx={{
-                color: "rgba(255,255,255,0.7)",
+                color: "var(--admin-text-muted)",
                 "&:hover": {
-                  backgroundColor: "rgba(255,255,255,0.1)",
+                  backgroundColor: "var(--admin-divider)",
                 }
               }}
             >
@@ -467,14 +468,14 @@ export default function InstallmentCreditsPage() {
               disabled={isSubmitting}
               variant="contained"
               sx={{
-                backgroundColor: "#78b568",
-                color: "#fff",
+                backgroundColor: "var(--admin-accent)",
+                color: "var(--admin-text)",
                 "&:hover": {
-                  backgroundColor: "#5a9a4a",
+                  backgroundColor: "var(--admin-accent-hover)",
                 },
                 "&:disabled": {
                   backgroundColor: "#505669",
-                  color: "#999",
+                  color: "var(--admin-text-secondary)",
                 },
               }}
             >

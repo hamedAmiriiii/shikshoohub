@@ -332,16 +332,16 @@ export default function ListData() {
                         paddingRight: `${12 + level * 24}px`,
                         cursor: hasChildren ? 'pointer' : 'default',
                         '&:hover': {
-                            backgroundColor: 'rgba(120, 181, 104, 0.1)',
+                            backgroundColor: 'var(--admin-menu-hover)',
                         },
                     }}
                     onClick={handleToggle}
                 >
                     {hasChildren ? (
                         expanded ? (
-                            <ExpandMoreIcon sx={{ color: '#78b568', fontSize: '20px', marginLeft: '8px' }} />
+                            <ExpandMoreIcon sx={{ color: 'var(--admin-accent)', fontSize: '20px', marginLeft: '8px' }} />
                         ) : (
-                            <ChevronRightIcon sx={{ color: '#78b568', fontSize: '20px', marginLeft: '8px' }} />
+                            <ChevronRightIcon sx={{ color: 'var(--admin-accent)', fontSize: '20px', marginLeft: '8px' }} />
                         )
                     ) : (
                         <Box sx={{ width: '20px', marginLeft: '8px' }} />
@@ -351,13 +351,13 @@ export default function ListData() {
                         onChange={handleCheckboxChange}
                         onClick={(e) => e.stopPropagation()}
                         sx={{
-                            color: '#78b568',
+                            color: 'var(--admin-accent)',
                             '&.Mui-checked': {
-                                color: '#78b568',
+                                color: 'var(--admin-accent)',
                             },
                         }}
                     />
-                    <Typography sx={{ color: '#fff', fontSize: '14px', flex: 1 }}>
+                    <Typography sx={{ color: 'var(--admin-text)', fontSize: '14px', flex: 1 }}>
                         {category.name}
                     </Typography>
                 </Box>
@@ -396,11 +396,11 @@ export default function ListData() {
           if (item?.has_discount) {
             return (
               <Box sx={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                <Typography sx={{ color: "#999", fontSize: "12px", textDecoration: "line-through" }}>
+                <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "12px", textDecoration: "line-through" }}>
                   {formatNumber(item.original_sale_price)} تومان
                 </Typography>
                 <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <Typography sx={{ color: "#78b568", fontSize: "14px", fontWeight: "600" }}>
+                  <Typography sx={{ color: "var(--admin-accent)", fontSize: "14px", fontWeight: "600" }}>
                     {formatNumber(item.sale_price)} تومان
                   </Typography>
                   <Typography sx={{ 
@@ -427,8 +427,8 @@ export default function ListData() {
           const sale = parseFloat(item?.sale_price) || 0;
           if (purchase <= 0 || sale <= 0) return '-';
           const profitPercent = ((sale - purchase) / purchase) * 100;
-          const color = profitPercent < 30 ? "#ff4444" : profitPercent < 40 ? "#ff9100" : "#78b568";
-          const bgColor = profitPercent < 30 ? "rgba(255, 68, 68, 0.1)" : profitPercent < 40 ? "rgba(255, 145, 0, 0.1)" : "rgba(120, 181, 104, 0.1)";
+          const color = profitPercent < 30 ? "#ff4444" : profitPercent < 40 ? "#ff9100" : "var(--admin-accent)";
+          const bgColor = profitPercent < 30 ? "rgba(255, 68, 68, 0.1)" : profitPercent < 40 ? "rgba(255, 145, 0, 0.1)" : "var(--admin-menu-hover)";
           return (
             <Typography sx={{ 
               color: color, 
@@ -817,7 +817,7 @@ export default function ListData() {
   
     return (
       <Suspense fallback={<div>در حال بارگذاری...</div>}>
-        <Box sx={{ minHeight: "100vh", width: { xs:"100%", md:"130%" , }, padding: { xs: "16px", md: "24px" }, paddingBottom: "100px", direction: "rtl", background: "linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%)" }}>
+        <Box sx={{ minHeight: "100vh", width: { xs:"100%", md:"130%" , }, padding: { xs: "16px", md: "24px" }, paddingBottom: "100px", direction: "rtl", background: "var(--admin-bg-gradient)" }}>
           {/* Header with Back Button and Action Buttons */}
           <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "-30px", padding: "4px" ,paddingRight:"100px" }}>
          
@@ -830,7 +830,7 @@ export default function ListData() {
               sx={{
                 backgroundColor: "#ff9100",
                 borderRadius: "12px",
-                border: "1px solid #505669",
+                border: "1px solid var(--admin-border)",
                 width: "120px",
                 height: "48px",
                 padding: "8px",
@@ -846,8 +846,8 @@ export default function ListData() {
                 }
               }}
             >
-              <PrintIcon sx={{ fontSize: "20px", color: "#fff" }} />
-              <span style={{ color: "#fff", fontSize: "12px", textAlign: "center" }}>
+              <PrintIcon sx={{ fontSize: "20px", color: "var(--admin-text)" }} />
+              <span style={{ color: "var(--admin-text)", fontSize: "12px", textAlign: "center" }}>
                 چاپ همه
               </span>
             </Box>
@@ -855,9 +855,9 @@ export default function ListData() {
             <Box
               onClick={() => router.push("/admin/product/create")}
               sx={{
-                backgroundColor: "#78b568",
+                backgroundColor: "var(--admin-accent)",
                 borderRadius: "12px",
-                border: "1px solid #505669",
+                border: "1px solid var(--admin-border)",
                 width: "120px",
                 height: "48px",
                 padding: "8px",
@@ -873,8 +873,8 @@ export default function ListData() {
                 }
               }}
             >
-              <AddIcon sx={{ fontSize: "20px", color: "#fff" }} />
-              <span style={{ color: "#fff", fontSize: "12px", textAlign: "center" }}>
+              <AddIcon sx={{ fontSize: "20px", color: "var(--admin-text)" }} />
+              <span style={{ color: "var(--admin-text)", fontSize: "12px", textAlign: "center" }}>
                 ثبت کالا
               </span>
             </Box>
@@ -905,15 +905,15 @@ export default function ListData() {
                   displayEmpty
                   onChange={(e) => handleProductSortChange(e.target.value as string)}
                   sx={{
-                    backgroundColor: "#2b3143",
-                    color: "#fff",
+                    backgroundColor: "var(--admin-surface)",
+                    color: "var(--admin-text)",
                     borderRadius: "12px",
                     fontSize: "13px",
                     height: "40px",
                     "& .MuiOutlinedInput-notchedOutline": { borderColor: "#505669" },
-                    "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#78b568" },
-                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#78b568" },
-                    "& .MuiSvgIcon-root": { color: "#fff" },
+                    "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "var(--admin-accent)" },
+                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "var(--admin-accent)" },
+                    "& .MuiSvgIcon-root": { color: "var(--admin-text)" },
                   }}
                   renderValue={(selected) => {
                     if (!selected) return "مرتب‌سازی";
@@ -941,7 +941,7 @@ export default function ListData() {
           <Box sx={{ display: "flex", flexDirection: "column", gap: "20px", padding: "16px", direction: "rtl" }}>
             {/* ID - Read Only */}
             {/* <Box>
-              <Typography sx={{ color: "#fff", marginBottom: "8px", fontSize: "14px" }}>
+              <Typography sx={{ color: "var(--admin-text)", marginBottom: "8px", fontSize: "14px" }}>
                 شناسه کالا:
               </Typography>
               <TextField
@@ -951,8 +951,8 @@ export default function ListData() {
                 sx={{
                   direction: "rtl",
                   "& .MuiOutlinedInput-root": {
-                    backgroundColor: "#1a1d2e",
-                    color: "#999",
+                    backgroundColor: "var(--admin-surface-alt)",
+                    color: "var(--admin-text-secondary)",
                     direction: "rtl",
                     "& fieldset": {
                       borderColor: "#505669",
@@ -967,7 +967,7 @@ export default function ListData() {
             </Box> */}
 
             <Box>
-              <Typography sx={{ color: "#fff", marginBottom: "8px", fontSize: "14px", fontWeight: 600 }}>
+              <Typography sx={{ color: "var(--admin-text)", marginBottom: "8px", fontSize: "14px", fontWeight: 600 }}>
                 بارکد *
               </Typography>
               <Box
@@ -978,7 +978,7 @@ export default function ListData() {
                   p: 1,
                   borderRadius: "12px",
                   border: "1px solid rgba(120, 181, 104, 0.25)",
-                  backgroundColor: "#1a1d2e",
+                  backgroundColor: "var(--admin-surface-alt)",
                 }}
               >
                 <TextField
@@ -990,17 +990,17 @@ export default function ListData() {
                   inputProps={{ maxLength: 255 }}
                   sx={{
                     "& .MuiOutlinedInput-root": {
-                      backgroundColor: "#1a1d2e",
-                      color: "#fff",
+                      backgroundColor: "var(--admin-surface-alt)",
+                      color: "var(--admin-text)",
                       borderRadius: "10px",
                       "& fieldset": { borderColor: "#505669" },
-                      "&:hover fieldset": { borderColor: "#78b568" },
-                      "&.Mui-focused fieldset": { borderColor: "#78b568" },
+                      "&:hover fieldset": { borderColor: "var(--admin-accent)" },
+                      "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
                     },
                     "& .MuiInputBase-input": {
                       direction: "ltr",
                       textAlign: "left",
-                      color: "#fff",
+                      color: "var(--admin-text)",
                     },
                   }}
                 />
@@ -1017,7 +1017,7 @@ export default function ListData() {
                     alignSelf: "center",
                     borderRadius: "10px",
                     background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                    color: "#fff",
+                    color: "var(--admin-text)",
                     "&:hover": {
                       background: "linear-gradient(135deg, #764ba2 0%, #667eea 100%)",
                     },
@@ -1084,7 +1084,7 @@ export default function ListData() {
 
             {/* Image Upload Section */}
             <Box sx={{ marginTop: "20px", marginBottom: "20px" }}>
-              <Typography sx={{ color: "#fff", fontSize: "16px", fontWeight: "600", marginBottom: "12px" }}>
+              <Typography sx={{ color: "var(--admin-text)", fontSize: "16px", fontWeight: "600", marginBottom: "12px" }}>
                 تصاویر محصول (اختیاری)
               </Typography>
               
@@ -1103,11 +1103,11 @@ export default function ListData() {
                   variant="outlined"
                   startIcon={<AddPhotoAlternateIcon />}
                   sx={{
-                    borderColor: "#78b568",
-                    color: "#78b568",
+                    borderColor: "var(--admin-accent)",
+                    color: "var(--admin-accent)",
                     "&:hover": {
-                      borderColor: "#5a9a4a",
-                      backgroundColor: "rgba(120, 181, 104, 0.1)",
+                      borderColor: "var(--admin-accent-hover)",
+                      backgroundColor: "var(--admin-menu-hover)",
                     },
                     width: "100%",
                     marginBottom: "16px",
@@ -1145,7 +1145,7 @@ export default function ListData() {
                             top: 8,
                             right: 8,
                             backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                            color: '#fff',
+                            color: 'var(--admin-text)',
                             '&:hover': {
                               backgroundColor: 'rgba(0, 0, 0, 0.7)',
                             },
@@ -1162,7 +1162,7 @@ export default function ListData() {
 
             {/* Category Selection */}
             <Box>
-              <Typography sx={{ color: "#fff", fontSize: "16px", fontWeight: "600", marginBottom: "12px" }}>
+              <Typography sx={{ color: "var(--admin-text)", fontSize: "16px", fontWeight: "600", marginBottom: "12px" }}>
                 دسته‌بندی‌ها (اختیاری)
               </Typography>
               
@@ -1178,11 +1178,11 @@ export default function ListData() {
                         label={category?.name || value}
                         onDelete={() => setCategoryIds(categoryIds.filter(id => id !== value))}
                         sx={{
-                          backgroundColor: '#78b568',
-                          color: '#fff',
+                          backgroundColor: 'var(--admin-accent)',
+                          color: 'var(--admin-text)',
                           fontSize: '12px',
                           '& .MuiChip-deleteIcon': {
-                            color: '#fff',
+                            color: 'var(--admin-text)',
                             '&:hover': {
                               color: '#ff4444',
                             },
@@ -1197,8 +1197,8 @@ export default function ListData() {
               {/* Category Tree */}
               <Paper
                 sx={{
-                  backgroundColor: '#1a1d2e',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  backgroundColor: 'var(--admin-surface-alt)',
+                  border: '1px solid var(--admin-divider)',
                   borderRadius: '8px',
                   maxHeight: '300px',
                   overflow: 'auto',
@@ -1217,14 +1217,14 @@ export default function ListData() {
               onClick={handleUpdateProduct}
               fullWidth
               sx={{
-                backgroundColor: "#78b568",
-                color: "#fff",
+                backgroundColor: "var(--admin-accent)",
+                color: "var(--admin-text)",
                 padding: "12px",
                 fontSize: "16px",
                 fontWeight: "600",
                 direction: "rtl",
                 "&:hover": {
-                  backgroundColor: "#5a9a4a"
+                  backgroundColor: "var(--admin-accent-hover)"
                 },
                 marginTop: "8px"
               }}
@@ -1248,7 +1248,7 @@ export default function ListData() {
               top: "50%",
               left: "50%",
               transform: "translate(-50%, -50%)",
-              bgcolor: "#2b3143",
+              bgcolor: "var(--admin-surface)",
               p: 3,
               width: "90%",
               maxWidth: "450px",
@@ -1257,16 +1257,16 @@ export default function ListData() {
             }}
           >
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
-              <Typography sx={{ color: "#fff", fontSize: "16px", fontWeight: 700, flex: 1, textAlign: "center" }}>
+              <Typography sx={{ color: "var(--admin-text)", fontSize: "16px", fontWeight: 700, flex: 1, textAlign: "center" }}>
                 اسکن بارکد کالا
               </Typography>
               <IconButton
                 onClick={() => setEditTorchOn(!editTorchOn)}
                 sx={{
-                  color: "#fff",
-                  backgroundColor: editTorchOn ? "#78b568" : "#1a1d2e",
+                  color: "var(--admin-text)",
+                  backgroundColor: editTorchOn ? "var(--admin-accent)" : "var(--admin-surface-alt)",
                   p: 0.75,
-                  "&:hover": { backgroundColor: editTorchOn ? "#5a9a4a" : "#2b3143" },
+                  "&:hover": { backgroundColor: editTorchOn ? "var(--admin-accent-hover)" : "var(--admin-surface)" },
                 }}
               >
                 {editTorchOn ? <FlashlightOnIcon /> : <FlashlightOffIcon />}
@@ -1274,7 +1274,7 @@ export default function ListData() {
             </Box>
             <Box
               sx={{
-                backgroundColor: "#1a1d2e",
+                backgroundColor: "var(--admin-surface-alt)",
                 borderRadius: "10px",
                 p: 1.5,
                 mb: 1.5,
@@ -1308,15 +1308,15 @@ export default function ListData() {
               placeholder="یا بارکد را اینجا وارد کنید"
               fullWidth
               sx={{
-                backgroundColor: "#1a1d2e",
+                backgroundColor: "var(--admin-surface-alt)",
                 borderRadius: "10px",
-                color: "#fff",
+                color: "var(--admin-text)",
                 fontSize: "13px",
                 p: 1.25,
                 mb: 1,
                 direction: "ltr",
                 textAlign: "left",
-                "&::placeholder": { color: "rgba(255,255,255,0.45)", opacity: 1 },
+                "&::placeholder": { color: "var(--admin-text-secondary)", opacity: 1 },
               }}
             />
             <Button
@@ -1344,14 +1344,14 @@ export default function ListData() {
           fullWidth
           PaperProps={{
             sx: {
-              backgroundColor: "#2b3143",
+              backgroundColor: "var(--admin-surface)",
               borderRadius: "20px",
-              border: "1px solid #505669",
+              border: "1px solid var(--admin-border)",
             }
           }}
         >
           <DialogTitle sx={{ 
-            color: "#fff", 
+            color: "var(--admin-text)", 
             display: "flex", 
             justifyContent: "space-between", 
             alignItems: "center",
@@ -1363,7 +1363,7 @@ export default function ListData() {
             </Typography>
             <IconButton 
               onClick={() => setSizeColorModalOpen(false)}
-              sx={{ color: "#fff" }}
+              sx={{ color: "var(--admin-text)" }}
             >
               <CloseIcon />
             </IconButton>
@@ -1372,7 +1372,7 @@ export default function ListData() {
           <DialogContent sx={{ padding: "24px", direction: "rtl" }}>
             {/* Size Selection */}
             <Box sx={{ marginBottom: "32px" }}>
-              <Typography sx={{ color: "#fff", fontSize: "16px", fontWeight: "600", marginBottom: "16px" }}>
+              <Typography sx={{ color: "var(--admin-text)", fontSize: "16px", fontWeight: "600", marginBottom: "16px" }}>
                 انتخاب سایز:
               </Typography>
               <Box sx={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
@@ -1396,12 +1396,12 @@ export default function ListData() {
                         fontWeight: "600",
                         fontSize: "15px",
                         backgroundColor: isSelected ? "#ff9100" : "transparent",
-                        color: isSelected ? "#fff" : "#9ca3af",
+                        color: isSelected ? "#fff" : "var(--admin-text-secondary)",
                         borderColor: isSelected ? "#ff9100" : "#4b5563",
                         "&:hover": {
                           backgroundColor: isSelected ? "#e68000" : "#1f2937",
                           borderColor: isSelected ? "#e68000" : "#6b7280",
-                          color: "#fff",
+                          color: "var(--admin-text)",
                         },
                       }}
                     >
@@ -1414,7 +1414,7 @@ export default function ListData() {
 
             {/* Color Selection */}
             <Box>
-              <Typography sx={{ color: "#fff", fontSize: "16px", fontWeight: "600", marginBottom: "16px" }}>
+              <Typography sx={{ color: "var(--admin-text)", fontSize: "16px", fontWeight: "600", marginBottom: "16px" }}>
                 انتخاب رنگ:
               </Typography>
               
@@ -1483,8 +1483,8 @@ export default function ListData() {
                       }}
                       sx={{
                         "& .MuiOutlinedInput-root": {
-                          backgroundColor: "#1a1d2e",
-                          color: "#fff",
+                          backgroundColor: "var(--admin-surface-alt)",
+                          color: "var(--admin-text)",
                           "& fieldset": {
                             borderColor: "#505669",
                           },
@@ -1496,7 +1496,7 @@ export default function ListData() {
                           },
                         },
                         "& .MuiInputBase-input": {
-                          color: "#fff",
+                          color: "var(--admin-text)",
                           fontSize: "14px",
                         }
                       }}
@@ -1505,10 +1505,10 @@ export default function ListData() {
                   sx={{
                     flex: 1,
                     "& .MuiAutocomplete-popper": {
-                      backgroundColor: "#2b3143",
+                      backgroundColor: "var(--admin-surface)",
                     },
                     "& .MuiAutocomplete-listbox": {
-                      backgroundColor: "#2b3143",
+                      backgroundColor: "var(--admin-surface)",
                     },
                   }}
                 />
@@ -1522,7 +1522,7 @@ export default function ListData() {
                   disabled={!newColorInput.trim() || colors.includes(newColorInput.trim())}
                   sx={{
                     backgroundColor: "#9c27b0",
-                    color: "#fff",
+                    color: "var(--admin-text)",
                     "&:hover": { backgroundColor: "#7b1fa2" },
                     "&:disabled": { backgroundColor: "#4b5563", color: "#6b7280" }
                   }}
@@ -1541,7 +1541,7 @@ export default function ListData() {
                       onDelete={() => setColors(colors.filter((_, i) => i !== index))}
                       sx={{
                         backgroundColor: "#1f2937",
-                        color: "#fff",
+                        color: "var(--admin-text)",
                         border: "1px solid #4b5563",
                         fontSize: "14px",
                         fontWeight: "500",
@@ -1623,7 +1623,7 @@ export default function ListData() {
               variant="contained"
               sx={{
                 backgroundColor: "#9c27b0",
-                color: "#fff",
+                color: "var(--admin-text)",
                 "&:hover": { backgroundColor: "#7b1fa2" }
               }}
             >
@@ -1640,14 +1640,14 @@ export default function ListData() {
           fullWidth
           PaperProps={{
             sx: {
-              backgroundColor: "#2b3143",
+              backgroundColor: "var(--admin-surface)",
               borderRadius: "20px",
-              border: "1px solid #505669",
+              border: "1px solid var(--admin-border)",
             }
           }}
         >
           <DialogTitle sx={{ 
-            color: "#fff", 
+            color: "var(--admin-text)", 
             display: "flex", 
             justifyContent: "space-between", 
             alignItems: "center",
@@ -1659,7 +1659,7 @@ export default function ListData() {
             </Typography>
             <IconButton 
               onClick={() => setManufacturerModalOpen(false)}
-              sx={{ color: "#fff" }}
+              sx={{ color: "var(--admin-text)" }}
             >
               <CloseIcon />
             </IconButton>
@@ -1667,13 +1667,13 @@ export default function ListData() {
           
           <DialogContent sx={{ padding: "24px", direction: "rtl" }}>
             <FormControl fullWidth>
-              <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>تولیدکننده</InputLabel>
+              <InputLabel sx={{ color: 'var(--admin-text-muted)' }}>تولیدکننده</InputLabel>
               <Select
                 value={selectedManufacturerId}
                 onChange={(e) => setSelectedManufacturerId(e.target.value as number | "")}
                 label="تولیدکننده"
                 sx={{
-                  color: '#fff',
+                  color: 'var(--admin-text)',
                   '& .MuiOutlinedInput-notchedOutline': {
                     borderColor: '#505669',
                   },
@@ -1684,7 +1684,7 @@ export default function ListData() {
                     borderColor: '#2196f3',
                   },
                   '& .MuiSvgIcon-root': {
-                    color: '#fff',
+                    color: 'var(--admin-text)',
                   },
                 }}
               >
@@ -1728,35 +1728,35 @@ export default function ListData() {
           onClose={handleCloseDeleteDialog}
           PaperProps={{
             sx: {
-              backgroundColor: "#2b3143",
+              backgroundColor: "var(--admin-surface)",
               borderRadius: "16px",
               direction: "rtl",
               minWidth: { xs: "280px", sm: "360px" },
-              border: "1px solid #505669",
+              border: "1px solid var(--admin-border)",
             },
           }}
         >
-          <DialogTitle sx={{ color: "#fff", textAlign: "center", fontSize: "18px", fontWeight: 700 }}>
+          <DialogTitle sx={{ color: "var(--admin-text)", textAlign: "center", fontSize: "18px", fontWeight: 700 }}>
             تایید حذف محصول
           </DialogTitle>
           <DialogContent>
-            <DialogContentText sx={{ color: "rgba(255,255,255,0.75)", textAlign: "center" }}>
+            <DialogContentText sx={{ color: "var(--admin-text-muted)", textAlign: "center" }}>
               آیا از حذف این محصول مطمئن هستید؟
               {productToDelete && (
                 <Box
                   sx={{
                     mt: 1.5,
                     p: 1.25,
-                    backgroundColor: "#1a1d2e",
+                    backgroundColor: "var(--admin-surface-alt)",
                     borderRadius: "8px",
-                    color: "#fff",
+                    color: "var(--admin-text)",
                   }}
                 >
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
                     {productToDelete.name || productToDelete.barcode || `شناسه ${productToDelete.id}`}
                   </Typography>
                   {productToDelete.barcode && productToDelete.name && (
-                    <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.55)" }}>
+                    <Typography variant="caption" sx={{ color: "var(--admin-text-secondary)" }}>
                       بارکد: {productToDelete.barcode}
                     </Typography>
                   )}
@@ -1770,12 +1770,12 @@ export default function ListData() {
               variant="outlined"
               disabled={deletingProduct}
               sx={{
-                color: "#fff",
+                color: "var(--admin-text)",
                 borderColor: "#666",
                 minWidth: 100,
                 "&:hover": {
                   borderColor: "#888",
-                  backgroundColor: "rgba(255,255,255,0.05)",
+                  backgroundColor: "var(--admin-surface-alt)",
                 },
               }}
             >

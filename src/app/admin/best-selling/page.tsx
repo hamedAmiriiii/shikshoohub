@@ -24,26 +24,26 @@ const formatNumber = (num: number) => {
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
-    backgroundColor: "#1a1d2e",
-    color: "#fff",
+    backgroundColor: "var(--admin-surface-alt)",
+    color: "var(--admin-text)",
     fontWeight: "600",
     fontSize: "16px",
     padding: "16px 24px",
   },
   [`&.${tableCellClasses.body}`]: {
-    color: "#fff",
+    color: "var(--admin-text)",
     fontSize: 16,
     padding: "16px 24px",
   },
 }));
 
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
-  backgroundColor: "#2b3143",
+  backgroundColor: "var(--admin-surface)",
   '&:nth-of-type(even)': {
-    backgroundColor: "#1a1d2e",
+    backgroundColor: "var(--admin-surface-alt)",
   },
   '&:hover': {
-    backgroundColor: "rgba(120, 181, 104, 0.1)",
+    backgroundColor: "var(--admin-menu-hover)",
   },
   '&:last-child td, &:last-child th': {
     border: 0,
@@ -91,7 +91,7 @@ export default function BestSellingPage() {
         minHeight: '50vh',
         direction: 'rtl'
       }}>
-        <CircularProgress sx={{ color: '#78b568' }} />
+        <CircularProgress sx={{ color: 'var(--admin-accent)' }} />
       </Box>
     );
   }
@@ -99,7 +99,7 @@ export default function BestSellingPage() {
   return (
     <Box sx={{ 
       minHeight: '100vh', 
-      background: "linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%)",
+      background: "var(--admin-bg-gradient)",
       paddingTop: { xs: '12px', md: '24px' },
       paddingBottom: { xs: '100px', md: '40px' },
       direction: 'rtl'
@@ -114,12 +114,12 @@ export default function BestSellingPage() {
         }}>
           <TrendingUpIcon sx={{ 
             fontSize: { xs: '28px', md: '36px' }, 
-            color: '#78b568' 
+            color: 'var(--admin-accent)' 
           }} />
           <Typography sx={{ 
             fontSize: { xs: '20px', md: '28px' }, 
             fontWeight: '700', 
-            color: '#fff' 
+            color: 'var(--admin-text)' 
           }}>
             محصولات پرفروش
           </Typography>
@@ -129,17 +129,17 @@ export default function BestSellingPage() {
           <Box sx={{ 
             textAlign: 'center', 
             padding: { xs: '40px 20px', md: '60px 40px' },
-            backgroundColor: '#2b3143',
+            backgroundColor: 'var(--admin-surface)',
             borderRadius: '16px',
             border: '1px solid rgba(55, 84, 165, 0.3)'
           }}>
             <ShoppingCartIcon sx={{ 
               fontSize: { xs: '48px', md: '64px' }, 
-              color: 'rgba(255,255,255,0.3)', 
+              color: 'var(--admin-text-secondary)', 
               marginBottom: '16px' 
             }} />
             <Typography sx={{ 
-              color: 'rgba(255,255,255,0.6)', 
+              color: 'var(--admin-text-muted)', 
               fontSize: { xs: '16px', md: '20px' } 
             }}>
               محصولی یافت نشد
@@ -152,7 +152,7 @@ export default function BestSellingPage() {
               <TableContainer 
                 component={Paper} 
                 sx={{ 
-                  backgroundColor: '#2b3143',
+                  backgroundColor: 'var(--admin-surface)',
                   borderRadius: '16px',
                   border: '1px solid rgba(55, 84, 165, 0.3)',
                   overflowX: 'auto'
@@ -176,8 +176,8 @@ export default function BestSellingPage() {
                           <Chip 
                             label={`#${index + 1}`}
                             sx={{
-                              backgroundColor: index < 3 ? '#78b568' : 'rgba(120, 181, 104, 0.3)',
-                              color: '#fff',
+                              backgroundColor: index < 3 ? 'var(--admin-accent)' : 'rgba(120, 181, 104, 0.3)',
+                              color: 'var(--admin-text)',
                               fontWeight: '700',
                               fontSize: '14px'
                             }}
@@ -191,14 +191,14 @@ export default function BestSellingPage() {
                               width: 60,
                               height: 60,
                               borderRadius: '8px',
-                              backgroundColor: '#1a1d2e'
+                              backgroundColor: 'var(--admin-surface-alt)'
                             }}
                             variant="rounded"
                           />
                         </StyledTableCell>
                         <StyledTableCell align="right">
                           <Typography sx={{ 
-                            color: '#fff', 
+                            color: 'var(--admin-text)', 
                             fontSize: '16px',
                             fontWeight: '600'
                           }}>
@@ -214,10 +214,10 @@ export default function BestSellingPage() {
                           }}>
                             <ShoppingCartIcon sx={{ 
                               fontSize: '20px', 
-                              color: '#78b568' 
+                              color: 'var(--admin-accent)' 
                             }} />
                             <Typography sx={{ 
-                              color: '#78b568', 
+                              color: 'var(--admin-accent)', 
                               fontSize: '16px',
                               fontWeight: '700'
                             }}>
@@ -227,7 +227,7 @@ export default function BestSellingPage() {
                         </StyledTableCell>
                         <StyledTableCell align="right">
                           <Typography sx={{ 
-                            color: '#78b568', 
+                            color: 'var(--admin-accent)', 
                             fontSize: '16px',
                             fontWeight: '700'
                           }}>
@@ -236,7 +236,7 @@ export default function BestSellingPage() {
                         </StyledTableCell>
                         <StyledTableCell align="right">
                           <Typography sx={{ 
-                            color: product.quantity !== undefined && product.quantity > 0 ? '#78b568' : '#ff4444', 
+                            color: product.quantity !== undefined && product.quantity > 0 ? 'var(--admin-accent)' : '#ff4444', 
                             fontSize: '16px',
                             fontWeight: '600'
                           }}>
@@ -256,7 +256,7 @@ export default function BestSellingPage() {
                 {products.map((product, index) => (
                   <Grid item xs={12} sm={6} key={product.id}>
                     <Card sx={{ 
-                      backgroundColor: '#2b3143',
+                      backgroundColor: 'var(--admin-surface)',
                       borderRadius: '16px',
                       border: '1px solid rgba(55, 84, 165, 0.3)',
                       height: '100%',
@@ -280,8 +280,8 @@ export default function BestSellingPage() {
                         <Chip 
                           label={`#${index + 1}`}
                           sx={{
-                            backgroundColor: index < 3 ? '#78b568' : 'rgba(120, 181, 104, 0.3)',
-                            color: '#fff',
+                            backgroundColor: index < 3 ? 'var(--admin-accent)' : 'rgba(120, 181, 104, 0.3)',
+                            color: 'var(--admin-text)',
                             fontWeight: '700',
                             fontSize: '12px'
                           }}
@@ -296,7 +296,7 @@ export default function BestSellingPage() {
                         alt={product.name}
                         sx={{
                           objectFit: 'cover',
-                          backgroundColor: '#1a1d2e'
+                          backgroundColor: 'var(--admin-surface-alt)'
                         }}
                       />
 
@@ -309,7 +309,7 @@ export default function BestSellingPage() {
                         {/* Product Name */}
                         <Typography 
                           sx={{ 
-                            color: '#fff', 
+                            color: 'var(--admin-text)', 
                             fontSize: '14px',
                             fontWeight: '600',
                             marginBottom: '12px',
@@ -330,15 +330,15 @@ export default function BestSellingPage() {
                           gap: '8px',
                           marginBottom: '12px',
                           padding: '8px 12px',
-                          backgroundColor: 'rgba(120, 181, 104, 0.1)',
+                          backgroundColor: 'var(--admin-menu-hover)',
                           borderRadius: '8px'
                         }}>
                           <ShoppingCartIcon sx={{ 
                             fontSize: '18px', 
-                            color: '#78b568' 
+                            color: 'var(--admin-accent)' 
                           }} />
                           <Typography sx={{ 
-                            color: '#78b568', 
+                            color: 'var(--admin-accent)', 
                             fontSize: '14px',
                             fontWeight: '700'
                           }}>
@@ -354,13 +354,13 @@ export default function BestSellingPage() {
                           marginTop: 'auto'
                         }}>
                           <Typography sx={{ 
-                            color: 'rgba(255,255,255,0.7)', 
+                            color: 'var(--admin-text-muted)', 
                             fontSize: '12px'
                           }}>
                             قیمت:
                           </Typography>
                           <Typography sx={{ 
-                            color: '#78b568', 
+                            color: 'var(--admin-accent)', 
                             fontSize: '16px',
                             fontWeight: '700'
                           }}>
@@ -377,13 +377,13 @@ export default function BestSellingPage() {
                             alignItems: 'center'
                           }}>
                             <Typography sx={{ 
-                              color: 'rgba(255,255,255,0.7)', 
+                              color: 'var(--admin-text-muted)', 
                               fontSize: '12px'
                             }}>
                               موجودی:
                             </Typography>
                             <Typography sx={{ 
-                              color: product.quantity > 0 ? '#78b568' : '#ff4444', 
+                              color: product.quantity > 0 ? 'var(--admin-accent)' : '#ff4444', 
                               fontSize: '14px',
                               fontWeight: '600'
                             }}>

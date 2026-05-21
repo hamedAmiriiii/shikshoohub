@@ -12,11 +12,26 @@ export function isSuperAdminPhone(phone: string | null | undefined): boolean {
   return normalizePhone(phone) === SUPER_ADMIN_PHONE;
 }
 
+/** استخراج شماره از آبجکت کاربر (API اغلب username = موبایل است) */
+export function getUserPhoneFromRecord(
+  user: Record<string, unknown> | null | undefined
+): string {
+  if (!user) return '';
+  const atelier = user.atelier as { phone?: string } | undefined;
+  return normalizePhone(
+    (user.phone as string) ||
+      (user.mobile as string) ||
+      (user.username as string) ||
+      atelier?.phone ||
+      ''
+  );
+}
+
 export function getStoredUserPhone(): string {
   if (typeof window === 'undefined') return '';
   try {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
-    return normalizePhone(user.phone || user.username || user.mobile || '');
+    return getUserPhoneFromRecord(user);
   } catch {
     return '';
   }

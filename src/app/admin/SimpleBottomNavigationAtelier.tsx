@@ -57,7 +57,7 @@ export default function SimpleBottomNavigationAtelier() {
 
   return (
     <Box sx={{ width: 500, height:"65" }}>
-      <Paper sx={{width:"94%", position: 'fixed', bottom: 12, left: '3%', right: 0 ,borderRadius:'30px', height:"65"}} elevation={2}>
+      <Paper sx={{width:"94%", position: 'fixed', bottom: 12, left: '3%', right: 0 ,borderRadius:'30px', height:"65", backgroundColor: 'var(--admin-bottom-nav-bg)', border: '1px solid var(--admin-border)'}} elevation={2}>
         <BottomNavigation
           sx={{borderRadius:'25px'}}
           showLabels
@@ -76,7 +76,7 @@ export default function SimpleBottomNavigationAtelier() {
         open={productsSheetOpen}
         title={
           <Grid item sx={{ display: "flex", alignItems: "center" }}>
-            <Typography color="#ffffff" fontSize={"1rem"} ml={3} mt={1}>
+            <Typography color="var(--admin-text)" fontSize={"1rem"} ml={3} mt={1}>
               کالاها
             </Typography>
           </Grid>
@@ -98,7 +98,7 @@ export default function SimpleBottomNavigationAtelier() {
         open={purchasesSheetOpen}
         title={
           <Grid item sx={{ display: "flex", alignItems: "center" }}>
-            <Typography color="#ffffff" fontSize={"1rem"} ml={3} mt={1}>
+            <Typography color="var(--admin-text)" fontSize={"1rem"} ml={3} mt={1}>
               خرید ها
             </Typography>
           </Grid>

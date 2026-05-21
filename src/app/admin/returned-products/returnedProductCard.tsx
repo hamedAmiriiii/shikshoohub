@@ -31,7 +31,7 @@ export default function ReturnedProductCard(props: any) {
   }, []);
 
   return load ? (
-    <Box style={{ backgroundColor: "#2b3143", borderRadius: "15px", border: "1px solid rgb(55, 84, 165)" }} m={1} p={2}>
+    <Box style={{ backgroundColor: "var(--admin-surface)", borderRadius: "15px", border: "1px solid rgb(55, 84, 165)" }} m={1} p={2}>
       <Grid
         xs={12}
         style={{

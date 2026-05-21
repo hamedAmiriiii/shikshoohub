@@ -68,8 +68,7 @@ export default function ReportsPage() {
       const token = tokenCode();
       try {
         const res = await apiRequestError("Get", {}, {}, "/api/reports", true, true, token);
-        console.log("ddddddddddddddd" , res);
-        
+
         if (res.hasError) {
           const parsedResponse = JSON.parse(res.errorText);
           const readableMessage = parsedResponse.message;
@@ -125,16 +124,20 @@ export default function ReportsPage() {
     }
   };
 
+  const gradientCardText = "#ffffff";
+  const gradientCardMuted = "rgba(255, 255, 255, 0.85)";
+
   const ReportCard = ({ title, sales, profit, returns, icon }: { title: string; sales: number; profit: number; returns: number; icon: React.ReactNode }) => {
     const profitPercentage = sales > 0 ? ((profit / sales) * 100).toFixed(1) : 0;
-    
+
     return (
       <Paper
         elevation={0}
+        className="admin-report-gradient-card"
         sx={{
           padding: "17px",
           background: getGradient(title),
-          borderRadius: "14px",
+          borderRadius: "16px",
           height: "100%",
           display: "flex",
           flexDirection: "column",
@@ -143,47 +146,53 @@ export default function ReportsPage() {
           overflow: "hidden",
           transition: "all 0.3s ease",
           cursor: "pointer",
+          boxShadow: "0 4px 14px rgba(15, 23, 42, 0.12)",
+          border: "1px solid rgba(255, 255, 255, 0.12)",
           "&:hover": {
-            transform: "translateY(-6px)",
-           },
+            transform: "translateY(-4px)",
+            boxShadow: "0 8px 20px rgba(15, 23, 42, 0.18)",
+          },
           "&::before": {
             content: '""',
             position: "absolute",
             top: 0,
             right: 0,
-            width: "70px",
-            height: "70px",
-            background: "rgba(255,255,255,0.1)",
+            width: "72px",
+            height: "72px",
+            background: "rgba(255, 255, 255, 0.12)",
             borderRadius: "50%",
-            transform: "translate(21px, -21px)",
+            transform: "translate(24px, -24px)",
+            pointerEvents: "none",
           },
           "&::after": {
             content: '""',
             position: "absolute",
             bottom: 0,
             left: 0,
-            width: "56px",
-            height: "56px",
-            background: "rgba(255,255,255,0.1)",
+            width: "58px",
+            height: "58px",
+            background: "rgba(255, 255, 255, 0.08)",
             borderRadius: "50%",
-            transform: "translate(-14px, 14px)",
+            transform: "translate(-16px, 16px)",
+            pointerEvents: "none",
           },
         }}
       >
         <Box sx={{ position: "relative", zIndex: 1 }}>
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
-            <Typography sx={{ color: "#fff", fontSize: "14px", fontWeight: "700", textShadow: "0 2px 4px rgba(0,0,0,0.2)" }}>
+            <Typography sx={{ color: gradientCardText, fontSize: "14px", fontWeight: "700", textShadow: "0 1px 3px rgba(0,0,0,0.25)" }}>
               {title}
             </Typography>
             <Box
               sx={{
-                backgroundColor: "rgba(255,255,255,0.2)",
-                borderRadius: "8px",
+                backgroundColor: "rgba(255, 255, 255, 0.2)",
+                borderRadius: "10px",
                 padding: "6px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                backdropFilter: "blur(10px)",
+                color: gradientCardText,
+                "& .MuiSvgIcon-root": { color: gradientCardText },
               }}
             >
               {icon}
@@ -192,41 +201,41 @@ export default function ReportsPage() {
 
           <Box sx={{ marginBottom: "11px" }}>
             <Box sx={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "3px" }}>
-              <AttachMoneyIcon sx={{ color: "#fff", fontSize: "13px", opacity: 0.9 }} />
-              <Typography sx={{ color: "rgba(255,255,255,0.9)", fontSize: "9px", fontWeight: "500" }}>
+              <AttachMoneyIcon sx={{ color: gradientCardText, fontSize: "13px", opacity: 0.95 }} />
+              <Typography sx={{ color: gradientCardMuted, fontSize: "9px", fontWeight: "500" }}>
                 فروش کل
               </Typography>
             </Box>
-            <Typography sx={{ color: "#fff", fontSize: "18px", fontWeight: "700", textShadow: "0 2px 4px rgba(0,0,0,0.2)" }}>
+            <Typography sx={{ color: gradientCardText, fontSize: "18px", fontWeight: "700", textShadow: "0 1px 3px rgba(0,0,0,0.25)" }}>
               {formatNumber(sales)}
             </Typography>
-            <Typography sx={{ color: "rgba(255,255,255,0.8)", fontSize: "8px", marginTop: "1px" }}>
+            <Typography sx={{ color: gradientCardMuted, fontSize: "8px", marginTop: "1px" }}>
               تومان
             </Typography>
           </Box>
 
           <Box sx={{ marginBottom: "11px" }}>
             <Box sx={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "3px" }}>
-              <TrendingUpIcon sx={{ color: "#fff", fontSize: "13px", opacity: 0.9 }} />
-              <Typography sx={{ color: "rgba(255,255,255,0.9)", fontSize: "9px", fontWeight: "500" }}>
+              <TrendingUpIcon sx={{ color: gradientCardText, fontSize: "13px", opacity: 0.95 }} />
+              <Typography sx={{ color: gradientCardMuted, fontSize: "9px", fontWeight: "500" }}>
                 سود
               </Typography>
             </Box>
-            <Typography sx={{ color: "#fff", fontSize: "18px", fontWeight: "700", textShadow: "0 2px 4px rgba(0,0,0,0.2)" }}>
+            <Typography sx={{ color: gradientCardText, fontSize: "18px", fontWeight: "700", textShadow: "0 1px 3px rgba(0,0,0,0.25)" }}>
               {formatNumber(profit)}
             </Typography>
             <Box sx={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "3px" }}>
-              <Typography sx={{ color: "rgba(255,255,255,0.8)", fontSize: "8px" }}>
+              <Typography sx={{ color: gradientCardMuted, fontSize: "8px" }}>
                 تومان
               </Typography>
               <Box
                 sx={{
-                  backgroundColor: "rgba(255,255,255,0.25)",
+                  backgroundColor: "rgba(255, 255, 255, 0.22)",
                   borderRadius: "6px",
                   padding: "1px 6px",
                   fontSize: "8px",
                   fontWeight: "600",
-                  color: "#fff",
+                  color: gradientCardText,
                 }}
               >
                 {profitPercentage}%
@@ -236,15 +245,15 @@ export default function ReportsPage() {
 
           {/* <Box>
             <Box sx={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "3px" }}>
-              <UndoIcon sx={{ color: "#fff", fontSize: "13px", opacity: 0.9 }} />
-              <Typography sx={{ color: "rgba(255,255,255,0.9)", fontSize: "9px", fontWeight: "500" }}>
+              <UndoIcon sx={{ color: "var(--admin-text)", fontSize: "13px", opacity: 0.9 }} />
+              <Typography sx={{ color: "var(--admin-text)", fontSize: "9px", fontWeight: "500" }}>
                 برگشت خرید
               </Typography>
             </Box>
-            <Typography sx={{ color: "#fff", fontSize: "18px", fontWeight: "700", textShadow: "0 2px 4px rgba(0,0,0,0.2)" }}>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: "18px", fontWeight: "700", textShadow: "0 2px 4px rgba(0,0,0,0.2)" }}>
               {formatNumber(returns)}
             </Typography>
-            <Typography sx={{ color: "rgba(255,255,255,0.8)", fontSize: "8px", marginTop: "1px" }}>
+            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "8px", marginTop: "1px" }}>
               تومان
             </Typography>
           </Box> */}
@@ -262,7 +271,7 @@ export default function ReportsPage() {
     reports.month.total_profit + reports.last_month.total_profit + reports.year.total_profit : 0;
 
   return (
-    <Box sx={{ width: "100%", direction: "rtl", padding: "16px", paddingBottom: "100px", minHeight: "100vh", background: "linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%)" }}>
+    <Box sx={{ width: "100%", direction: "rtl", padding: "16px", paddingBottom: "100px", minHeight: "100vh", background: "var(--admin-bg-gradient)" }}>
       {/* Header */}
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
         
@@ -274,34 +283,44 @@ export default function ReportsPage() {
           <Grid container spacing={2} sx={{ marginBottom: "24px" }}>
             <Grid item xs={12} sm={6}>
               <Paper
+                elevation={0}
+                className="admin-report-gradient-card"
                 sx={{
                   padding: "20px",
                   background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                   borderRadius: "16px",
-                  color: "#fff",
+                  color: gradientCardText,
+                  overflow: "hidden",
+                  boxShadow: "0 4px 14px rgba(15, 23, 42, 0.12)",
+                  border: "1px solid rgba(255, 255, 255, 0.12)",
                 }}
               >
-                <Typography sx={{ fontSize: "14px", opacity: 0.9, marginBottom: "8px" }}>
+                <Typography sx={{ fontSize: "14px", color: gradientCardMuted, marginBottom: "8px" }}>
                   مجموع فروش
                 </Typography>
-                <Typography sx={{ fontSize: "32px", fontWeight: "700" }}>
+                <Typography sx={{ fontSize: "32px", fontWeight: "700", color: gradientCardText }}>
                   {formatNumber(reports.month.total_sales)} تومان
                 </Typography>
               </Paper>
             </Grid>
             <Grid item xs={12} sm={6}>
               <Paper
+                elevation={0}
+                className="admin-report-gradient-card"
                 sx={{
                   padding: "20px",
-                  background: "linear-gradient(135deg, #43e97b 0%,rgb(8, 141, 117) 100%)",
+                  background: "linear-gradient(135deg, #43e97b 0%, rgb(8, 141, 117) 100%)",
                   borderRadius: "16px",
-                  color: "#fff",
-                 }}
+                  color: gradientCardText,
+                  overflow: "hidden",
+                  boxShadow: "0 4px 14px rgba(15, 23, 42, 0.12)",
+                  border: "1px solid rgba(255, 255, 255, 0.12)",
+                }}
               >
-                <Typography sx={{ fontSize: "14px", opacity: 0.9, marginBottom: "8px" }}>
+                <Typography sx={{ fontSize: "14px", color: gradientCardMuted, marginBottom: "8px" }}>
                   مجموع سود
                 </Typography>
-                <Typography sx={{ fontSize: "32px", fontWeight: "700" }}>
+                <Typography sx={{ fontSize: "32px", fontWeight: "700", color: gradientCardText }}>
                   {formatNumber(reports.month.total_profit)} تومان
                 </Typography>
               </Paper>
@@ -313,7 +332,7 @@ export default function ReportsPage() {
 
       {loading ? (
         <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "50vh" }}>
-          <CircularProgress sx={{ color: "#78b568" }} />
+          <CircularProgress sx={{ color: "var(--admin-accent)" }} />
         </Box>
       ) : reports ? (
         <Grid container spacing={3}>
@@ -374,7 +393,7 @@ export default function ReportsPage() {
         </Grid>
       ) : (
         <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "50vh" }}>
-          <Typography sx={{ color: "#fff", fontSize: "18px" }}>
+          <Typography sx={{ color: "var(--admin-text)", fontSize: "18px" }}>
             داده‌ای برای نمایش وجود ندارد
           </Typography>
         </Box>

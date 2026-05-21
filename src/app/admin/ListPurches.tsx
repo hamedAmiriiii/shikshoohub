@@ -27,7 +27,7 @@ const AntSwitch = styled(Switch)(({ theme }) => ({
     padding: 2,
     '&.Mui-checked': {
       transform: 'translateX(12px)',
-      color: '#fff',
+      color: 'var(--admin-text)',
       '& + .MuiSwitch-track': {
         opacity: 1,
         backgroundColor: '#1890ff',
@@ -52,7 +52,7 @@ const AntSwitch = styled(Switch)(({ theme }) => ({
     backgroundColor: 'rgba(0,0,0,.25)',
     boxSizing: 'border-box',
     ...theme.applyStyles('dark', {
-      backgroundColor: 'rgba(255,255,255,.35)',
+      backgroundColor: 'var(--admin-icon-bg-hover)',
     }),
   },
 }));

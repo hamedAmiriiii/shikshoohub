@@ -43,12 +43,12 @@ export default function SalesByDayChart({ data, formatNumber }: Props) {
       }}
     >
       <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1, mb: { xs: 1.5, md: 2 } }}>
-        <ShowChartIcon sx={{ color: "#78b568", fontSize: { xs: 22, md: 26 } }} />
+        <ShowChartIcon sx={{ color: "var(--admin-accent)", fontSize: { xs: 22, md: 26 } }} />
         <Box sx={{ flex: 1 }}>
-          <Typography sx={{ color: "#fff", fontWeight: 700, fontSize: { xs: "15px", md: "17px" } }}>
+          <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: { xs: "15px", md: "17px" } }}>
             فروش ۱۰ روز اخیر
           </Typography>
-          <Typography sx={{ color: "rgba(255,255,255,0.5)", fontSize: { xs: "11px", md: "12px" } }}>
+          <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: { xs: "11px", md: "12px" } }}>
             {data?.from_date_jalali && data?.to_date_jalali
               ? `${data.from_date_jalali} تا ${data.to_date_jalali}`
               : "پس از اولین فروش نمایش داده می‌شود"}
@@ -56,10 +56,10 @@ export default function SalesByDayChart({ data, formatNumber }: Props) {
         </Box>
         {data && (
           <Box sx={{ textAlign: "left" }}>
-            <Typography sx={{ color: "#78b568", fontWeight: 700, fontSize: { xs: "13px", md: "15px" } }}>
+            <Typography sx={{ color: "var(--admin-accent)", fontWeight: 700, fontSize: { xs: "13px", md: "15px" } }}>
               {formatNumber(data.period_total_sales)}
             </Typography>
-            <Typography sx={{ color: "rgba(255,255,255,0.45)", fontSize: "10px" }}>جمع دوره</Typography>
+            <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "10px" }}>جمع دوره</Typography>
           </Box>
         )}
       </Box>
@@ -84,70 +84,70 @@ export default function SalesByDayChart({ data, formatNumber }: Props) {
         >
           {hasData ? (
             daily.map((day) => (
-                <Tooltip
-                  key={day.date}
-                  title={
-                    <Box sx={{ textAlign: "right", p: 0.5 }}>
-                      <Typography variant="caption" display="block">
-                        {day.date_jalali || day.date}
-                      </Typography>
-                      <Typography variant="caption" display="block">
-                        فروش: {formatNumber(day.total_sales)} تومان
-                      </Typography>
-                      <Typography variant="caption" display="block">
-                        {day.purchases_count} فاکتور
-                      </Typography>
-                    </Box>
-                  }
-                  arrow
-                  placement="top"
+              <Tooltip
+                key={day.date}
+                title={
+                  <Box sx={{ textAlign: "right", p: 0.5 }}>
+                    <Typography variant="caption" display="block">
+                      {day.date_jalali || day.date}
+                    </Typography>
+                    <Typography variant="caption" display="block">
+                      فروش: {formatNumber(day.total_sales)} تومان
+                    </Typography>
+                    <Typography variant="caption" display="block">
+                      {day.purchases_count} فاکتور
+                    </Typography>
+                  </Box>
+                }
+                arrow
+                placement="top"
+              >
+                <Box
+                  sx={{
+                    flex: 1,
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "flex-end",
+                    minWidth: 0,
+                    cursor: "default",
+                  }}
                 >
                   <Box
                     sx={{
-                      flex: 1,
-                      height: "100%",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "flex-end",
-                      minWidth: 0,
-                      cursor: "default",
+                      width: "100%",
+                      maxWidth: { xs: 28, md: 40 },
+                      height: {
+                        xs: `${barHeightPx(day.total_sales, CHART_BAR_AREA_PX.xs)}px`,
+                        md: `${barHeightPx(day.total_sales, CHART_BAR_AREA_PX.md)}px`,
+                      },
+                      flexShrink: 0,
+                      borderRadius: "6px 6px 2px 2px",
+                      background:
+                        day.total_sales > 0
+                          ? "linear-gradient(180deg, var(--admin-accent) 0%, var(--admin-accent-hover) 100%)"
+                          : "var(--admin-border)",
+                      transition: "height 0.35s ease, filter 0.2s ease",
+                      "&:hover": {
+                        filter: day.total_sales > 0 ? "brightness(1.1)" : "none",
+                      },
+                    }}
+                  />
+                  <Typography
+                    sx={{
+                      color: "var(--admin-text-secondary)",
+                      fontSize: { xs: "9px", md: "10px" },
+                      mt: 0.75,
+                      lineHeight: 1,
+                      flexShrink: 0,
                     }}
                   >
-                    <Box
-                      sx={{
-                        width: "100%",
-                        maxWidth: { xs: 28, md: 40 },
-                        height: {
-                          xs: `${barHeightPx(day.total_sales, CHART_BAR_AREA_PX.xs)}px`,
-                          md: `${barHeightPx(day.total_sales, CHART_BAR_AREA_PX.md)}px`,
-                        },
-                        flexShrink: 0,
-                        borderRadius: "6px 6px 2px 2px",
-                        background:
-                          day.total_sales > 0
-                            ? "linear-gradient(180deg, #8fd67a 0%, #5a9a4a 55%, #3d7a35 100%)"
-                            : "rgba(255,255,255,0.08)",
-                        transition: "height 0.35s ease, filter 0.2s ease",
-                        "&:hover": {
-                          filter: day.total_sales > 0 ? "brightness(1.1)" : "none",
-                        },
-                      }}
-                    />
-                    <Typography
-                      sx={{
-                        color: "rgba(255,255,255,0.55)",
-                        fontSize: { xs: "9px", md: "10px" },
-                        mt: 0.75,
-                        lineHeight: 1,
-                        flexShrink: 0,
-                      }}
-                    >
-                      {shortJalaliLabel(day.date_jalali)}
-                    </Typography>
-                  </Box>
-                </Tooltip>
-              ))
+                    {shortJalaliLabel(day.date_jalali)}
+                  </Typography>
+                </Box>
+              </Tooltip>
+            ))
           ) : (
             Array.from({ length: 10 }).map((_, i) => (
               <Box
@@ -166,10 +166,10 @@ export default function SalesByDayChart({ data, formatNumber }: Props) {
                     maxWidth: 40,
                     height: 12,
                     borderRadius: "6px 6px 2px 2px",
-                    backgroundColor: "rgba(255,255,255,0.06)",
+                    backgroundColor: "var(--admin-border)",
                   }}
                 />
-                <Typography sx={{ color: "rgba(255,255,255,0.25)", fontSize: "10px", mt: 0.75 }}>
+                <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "10px", mt: 0.75 }}>
                   —
                 </Typography>
               </Box>
@@ -183,13 +183,13 @@ export default function SalesByDayChart({ data, formatNumber }: Props) {
             justifyContent: "space-between",
             mt: 1,
             pt: 1,
-            borderTop: "1px solid rgba(255,255,255,0.06)",
+            borderTop: "1px solid var(--admin-border)",
           }}
         >
-          <Typography sx={{ color: "rgba(255,255,255,0.4)", fontSize: "10px" }}>
+          <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "10px" }}>
             بیشترین فروش: {formatCompact(maxSales)}
           </Typography>
-          <Typography sx={{ color: "rgba(255,255,255,0.4)", fontSize: "10px" }}>
+          <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "10px" }}>
             خالص فروش (تومان)
           </Typography>
         </Box>

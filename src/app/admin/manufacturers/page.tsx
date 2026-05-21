@@ -35,26 +35,26 @@ import { useRouter } from 'next/navigation';
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
-    backgroundColor: "#1a1d2e",
-    color: "#fff",
+    backgroundColor: "var(--admin-surface-alt)",
+    color: "var(--admin-text)",
     fontWeight: "600",
     fontSize: "16px",
     padding: "16px 24px",
   },
   [`&.${tableCellClasses.body}`]: {
-    color: "#fff",
+    color: "var(--admin-text)",
     fontSize: 16,
     padding: "16px 24px",
   },
 }));
 
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
-  backgroundColor: "#2b3143",
+  backgroundColor: "var(--admin-surface)",
   '&:nth-of-type(even)': {
-    backgroundColor: "#1a1d2e",
+    backgroundColor: "var(--admin-surface-alt)",
   },
   '&:hover': {
-    backgroundColor: "rgba(120, 181, 104, 0.1)",
+    backgroundColor: "var(--admin-menu-hover)",
   },
   '&:last-child td, &:last-child th': {
     border: 0,
@@ -208,7 +208,7 @@ export default function ManufacturersPage() {
   return (
     <Box sx={{ 
       minHeight: '100vh', 
-      background: "linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%)",
+      background: "var(--admin-bg-gradient)",
       paddingTop: { xs: '12px', md: '24px' },
       paddingBottom: { xs: '100px', md: '40px' },
       direction: 'rtl'
@@ -226,12 +226,12 @@ export default function ManufacturersPage() {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <FactoryIcon sx={{ 
               fontSize: { xs: '28px', md: '36px' }, 
-              color: '#78b568' 
+              color: 'var(--admin-accent)' 
             }} />
             <Typography sx={{ 
               fontSize: { xs: '20px', md: '28px' }, 
               fontWeight: '700', 
-              color: '#fff' 
+              color: 'var(--admin-text)' 
             }}>
               تولیدکنندگان
             </Typography>
@@ -246,10 +246,10 @@ export default function ManufacturersPage() {
                 setOpenCreateDialog(true);
               }}
               sx={{
-                backgroundColor: '#78b568',
-                color: '#fff',
+                backgroundColor: 'var(--admin-accent)',
+                color: 'var(--admin-text)',
                 '&:hover': {
-                  backgroundColor: '#5a9a4a',
+                  backgroundColor: 'var(--admin-accent-hover)',
                 },
                 borderRadius: '12px',
                 padding: { xs: '8px 16px', md: '10px 24px' }
@@ -263,7 +263,7 @@ export default function ManufacturersPage() {
               onClick={() => router.push('/admin/manufacturers/report')}
               sx={{
                 backgroundColor: '#2196f3',
-                color: '#fff',
+                color: 'var(--admin-text)',
                 '&:hover': {
                   backgroundColor: '#1976d2',
                 },
@@ -279,23 +279,23 @@ export default function ManufacturersPage() {
         {/* Manufacturers Table */}
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
-            <CircularProgress sx={{ color: '#78b568' }} />
+            <CircularProgress sx={{ color: 'var(--admin-accent)' }} />
           </Box>
         ) : manufacturers.length === 0 ? (
           <Box sx={{ 
             textAlign: 'center', 
             padding: { xs: '40px 20px', md: '60px 40px' },
-            backgroundColor: '#2b3143',
+            backgroundColor: 'var(--admin-surface)',
             borderRadius: '16px',
             border: '1px solid rgba(55, 84, 165, 0.3)'
           }}>
             <FactoryIcon sx={{ 
               fontSize: { xs: '48px', md: '64px' }, 
-              color: 'rgba(255,255,255,0.3)', 
+              color: 'var(--admin-text-secondary)', 
               marginBottom: '16px' 
             }} />
             <Typography sx={{ 
-              color: 'rgba(255,255,255,0.6)', 
+              color: 'var(--admin-text-muted)', 
               fontSize: { xs: '16px', md: '20px' } 
             }}>
               تولیدکننده‌ای یافت نشد
@@ -305,7 +305,7 @@ export default function ManufacturersPage() {
           <TableContainer 
             component={Paper} 
             sx={{ 
-              backgroundColor: '#2b3143',
+              backgroundColor: 'var(--admin-surface)',
               borderRadius: '16px',
               border: '1px solid rgba(55, 84, 165, 0.3)',
               overflowX: 'auto'
@@ -324,12 +324,12 @@ export default function ManufacturersPage() {
                 {manufacturers.map((manufacturer) => (
                   <StyledTableRow key={manufacturer.id}>
                     <StyledTableCell align="right">
-                      <Typography sx={{ color: '#fff', fontWeight: '600' }}>
+                      <Typography sx={{ color: 'var(--admin-text)', fontWeight: '600' }}>
                         {manufacturer.name}
                       </Typography>
                     </StyledTableCell>
                     <StyledTableCell align="right">
-                      <Typography sx={{ color: '#78b568', fontWeight: '600' }}>
+                      <Typography sx={{ color: 'var(--admin-accent)', fontWeight: '600' }}>
                         {formatNumber(manufacturer.products_count || 0)}
                       </Typography>
                     </StyledTableCell>
@@ -343,9 +343,9 @@ export default function ManufacturersPage() {
                         <IconButton
                           onClick={() => openEditDialogHandler(manufacturer)}
                           sx={{
-                            color: '#78b568',
+                            color: 'var(--admin-accent)',
                             '&:hover': {
-                              backgroundColor: 'rgba(120, 181, 104, 0.1)',
+                              backgroundColor: 'var(--admin-menu-hover)',
                             }
                           }}
                         >
@@ -382,13 +382,13 @@ export default function ManufacturersPage() {
           fullWidth
           PaperProps={{
             sx: {
-              backgroundColor: '#2b3143',
+              backgroundColor: 'var(--admin-surface)',
               borderRadius: '16px',
               border: '1px solid rgba(55, 84, 165, 0.3)'
             }
           }}
         >
-          <DialogTitle sx={{ color: '#fff', fontWeight: '700' }}>
+          <DialogTitle sx={{ color: 'var(--admin-text)', fontWeight: '700' }}>
             ثبت تولیدکننده جدید
           </DialogTitle>
           <DialogContent>
@@ -401,19 +401,19 @@ export default function ManufacturersPage() {
                 fullWidth
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    color: '#fff',
+                    color: 'var(--admin-text)',
                     '& fieldset': {
                       borderColor: '#505669',
                     },
                     '&:hover fieldset': {
-                      borderColor: '#78b568',
+                      borderColor: 'var(--admin-accent)',
                     },
                     '&.Mui-focused fieldset': {
-                      borderColor: '#78b568',
+                      borderColor: 'var(--admin-accent)',
                     },
                   },
                   '& .MuiInputLabel-root': {
-                    color: 'rgba(255,255,255,0.7)',
+                    color: 'var(--admin-text-muted)',
                   },
                 }}
               />
@@ -425,7 +425,7 @@ export default function ManufacturersPage() {
                 setOpenCreateDialog(false);
                 resetForm();
               }}
-              sx={{ color: 'rgba(255,255,255,0.7)' }}
+              sx={{ color: 'var(--admin-text-muted)' }}
             >
               انصراف
             </Button>
@@ -433,9 +433,9 @@ export default function ManufacturersPage() {
               onClick={handleCreateManufacturer}
               variant="contained"
               sx={{
-                backgroundColor: '#78b568',
+                backgroundColor: 'var(--admin-accent)',
                 '&:hover': {
-                  backgroundColor: '#5a9a4a',
+                  backgroundColor: 'var(--admin-accent-hover)',
                 },
               }}
             >
@@ -456,13 +456,13 @@ export default function ManufacturersPage() {
           fullWidth
           PaperProps={{
             sx: {
-              backgroundColor: '#2b3143',
+              backgroundColor: 'var(--admin-surface)',
               borderRadius: '16px',
               border: '1px solid rgba(55, 84, 165, 0.3)'
             }
           }}
         >
-          <DialogTitle sx={{ color: '#fff', fontWeight: '700' }}>
+          <DialogTitle sx={{ color: 'var(--admin-text)', fontWeight: '700' }}>
             ویرایش تولیدکننده
           </DialogTitle>
           <DialogContent>
@@ -475,19 +475,19 @@ export default function ManufacturersPage() {
                 fullWidth
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    color: '#fff',
+                    color: 'var(--admin-text)',
                     '& fieldset': {
                       borderColor: '#505669',
                     },
                     '&:hover fieldset': {
-                      borderColor: '#78b568',
+                      borderColor: 'var(--admin-accent)',
                     },
                     '&.Mui-focused fieldset': {
-                      borderColor: '#78b568',
+                      borderColor: 'var(--admin-accent)',
                     },
                   },
                   '& .MuiInputLabel-root': {
-                    color: 'rgba(255,255,255,0.7)',
+                    color: 'var(--admin-text-muted)',
                   },
                 }}
               />
@@ -500,7 +500,7 @@ export default function ManufacturersPage() {
                 setEditingManufacturer(null);
                 resetForm();
               }}
-              sx={{ color: 'rgba(255,255,255,0.7)' }}
+              sx={{ color: 'var(--admin-text-muted)' }}
             >
               انصراف
             </Button>
@@ -508,9 +508,9 @@ export default function ManufacturersPage() {
               onClick={handleEditManufacturer}
               variant="contained"
               sx={{
-                backgroundColor: '#78b568',
+                backgroundColor: 'var(--admin-accent)',
                 '&:hover': {
-                  backgroundColor: '#5a9a4a',
+                  backgroundColor: 'var(--admin-accent-hover)',
                 },
               }}
             >
@@ -528,17 +528,17 @@ export default function ManufacturersPage() {
           }}
           PaperProps={{
             sx: {
-              backgroundColor: '#2b3143',
+              backgroundColor: 'var(--admin-surface)',
               borderRadius: '16px',
               border: '1px solid rgba(55, 84, 165, 0.3)'
             }
           }}
         >
-          <DialogTitle sx={{ color: '#fff', fontWeight: '700' }}>
+          <DialogTitle sx={{ color: 'var(--admin-text)', fontWeight: '700' }}>
             حذف تولیدکننده
           </DialogTitle>
           <DialogContent>
-            <Typography sx={{ color: 'rgba(255,255,255,0.7)' }}>
+            <Typography sx={{ color: 'var(--admin-text-muted)' }}>
               آیا از حذف این تولیدکننده اطمینان دارید؟
             </Typography>
           </DialogContent>
@@ -548,7 +548,7 @@ export default function ManufacturersPage() {
                 setOpenDeleteDialog(false);
                 setDeletingManufacturerId(null);
               }}
-              sx={{ color: 'rgba(255,255,255,0.7)' }}
+              sx={{ color: 'var(--admin-text-muted)' }}
             >
               انصراف
             </Button>

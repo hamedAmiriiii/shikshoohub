@@ -28,27 +28,38 @@ export const Container = styled(Box)({
   
   export const StyledTextField = styled(TextField)({
     '& .MuiOutlinedInput-root': {
-      borderRadius: '15px',
+      borderRadius: '14px',
+      backgroundColor: 'var(--admin-surface-alt, transparent)',
+      color: 'var(--admin-text, inherit)',
+      '& fieldset': {
+        borderColor: 'var(--admin-border, rgba(0, 0, 0, 0.23))',
+      },
+      '&:hover fieldset': {
+        borderColor: 'var(--admin-accent, #1976d2)',
+      },
+      '&.Mui-focused fieldset': {
+        borderColor: 'var(--admin-accent, #1976d2)',
+      },
     },
     '& .MuiInputBase-input': {
-      // حذف استایل autocomplete
+      color: 'var(--admin-text, inherit)',
       '&:-webkit-autofill': {
-        WebkitBoxShadow: '0 0 0 100px #2b3143 inset !important',
-        WebkitTextFillColor: '#ff9100 !important',
-        caretColor: '#ff9100',
+        WebkitBoxShadow: '0 0 0 100px var(--admin-surface-alt, #fff) inset !important',
+        WebkitTextFillColor: 'var(--admin-text, inherit) !important',
+        caretColor: 'var(--admin-text, inherit)',
         transition: 'background-color 5000s ease-in-out 0s',
       },
       '&:-webkit-autofill:hover': {
-        WebkitBoxShadow: '0 0 0 100px #2b3143 inset !important',
-        WebkitTextFillColor: '#ff9100 !important',
+        WebkitBoxShadow: '0 0 0 100px var(--admin-surface-alt, #fff) inset !important',
+        WebkitTextFillColor: 'var(--admin-text, inherit) !important',
       },
       '&:-webkit-autofill:focus': {
-        WebkitBoxShadow: '0 0 0 100px #2b3143 inset !important',
-        WebkitTextFillColor: '#ff9100 !important',
+        WebkitBoxShadow: '0 0 0 100px var(--admin-surface-alt, #fff) inset !important',
+        WebkitTextFillColor: 'var(--admin-text, inherit) !important',
       },
       '&:-webkit-autofill:active': {
-        WebkitBoxShadow: '0 0 0 100px #2b3143 inset !important',
-        WebkitTextFillColor: '#ff9100 !important',
+        WebkitBoxShadow: '0 0 0 100px var(--admin-surface-alt, #fff) inset !important',
+        WebkitTextFillColor: 'var(--admin-text, inherit) !important',
       },
     },
   });

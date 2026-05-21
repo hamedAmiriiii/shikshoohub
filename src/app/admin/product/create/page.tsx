@@ -277,16 +277,16 @@ export default function Page() {
             paddingRight: { xs: `${12 + level * 24}px`, md: `${8 + level * 16}px` },
             cursor: hasChildren ? 'pointer' : 'default',
             '&:hover': {
-              backgroundColor: 'rgba(120, 181, 104, 0.1)',
+              backgroundColor: 'var(--admin-menu-hover)',
             },
           }}
           onClick={handleToggle}
         >
           {hasChildren ? (
             expanded ? (
-              <ExpandMoreIcon sx={{ color: '#78b568', fontSize: { xs: 20, md: 14 }, marginLeft: { xs: '8px', md: '4px' } }} />
+              <ExpandMoreIcon sx={{ color: 'var(--admin-accent)', fontSize: { xs: 20, md: 14 }, marginLeft: { xs: '8px', md: '4px' } }} />
             ) : (
-              <ChevronRightIcon sx={{ color: '#78b568', fontSize: { xs: 20, md: 14 }, marginLeft: { xs: '8px', md: '4px' } }} />
+              <ChevronRightIcon sx={{ color: 'var(--admin-accent)', fontSize: { xs: 20, md: 14 }, marginLeft: { xs: '8px', md: '4px' } }} />
             )
           ) : (
             <Box sx={{ width: { xs: 20, md: 14 }, marginLeft: { xs: '8px', md: '4px' }, flexShrink: 0 }} />
@@ -297,14 +297,14 @@ export default function Page() {
             onClick={(e) => e.stopPropagation()}
             size="small"
             sx={{
-              color: '#78b568',
+              color: 'var(--admin-accent)',
               p: { md: 0.25 },
               '&.Mui-checked': {
-                color: '#78b568',
+                color: 'var(--admin-accent)',
               },
             }}
           />
-          <Typography sx={{ color: '#fff', fontSize: { xs: '14px', md: '10px' }, flex: 1 }}>
+          <Typography sx={{ color: 'var(--admin-text)', fontSize: { xs: '14px', md: '10px' }, flex: 1 }}>
             {category.name}
           </Typography>
         </Box>
@@ -559,7 +559,7 @@ export default function Page() {
     "& > div": { marginTop: 0, width: "100%" },
     "& > div > div:last-of-type": { width: "100%" },
     "& > div > div:last-of-type > div": { width: "100% !important", maxWidth: "100%" },
-    "& .MuiTypography-root": { color: "#fff", fontSize: { xs: "14px", md: "10px" } },
+    "& .MuiTypography-root": { color: "var(--admin-text)", fontSize: { xs: "14px", md: "10px" } },
     md: {
       "& > div": { marginTop: "4px" },
       "& .MuiOutlinedInput-root": { borderRadius: "8px" },
@@ -568,15 +568,15 @@ export default function Page() {
   } as const;
 
   const sectionTitleSx = {
-    color: "#fff",
+    color: "var(--admin-text)",
     fontSize: { xs: "15px", md: "11px" },
     fontWeight: 700,
     mb: { xs: 1.5, md: 1 },
   } as const;
 
   const optionalPanelSx = {
-    backgroundColor: "#1a1d2e",
-    border: "1px solid rgba(255,255,255,0.1)",
+    backgroundColor: "var(--admin-surface-alt)",
+    border: "1px solid var(--admin-divider)",
     borderRadius: { xs: "12px", md: "8px" },
     maxHeight: { xs: 220, md: 160 },
     minHeight: { md: 160 },
@@ -591,50 +591,50 @@ export default function Page() {
     padding: { xs: "8px 12px", md: "4px 8px" },
     cursor: "pointer",
     "&:hover": {
-      backgroundColor: "rgba(120, 181, 104, 0.1)",
+      backgroundColor: "var(--admin-menu-hover)",
     },
   } as const;
 
   const panelSearchSx = {
     mb: { xs: 1, md: 0.75 },
     "& .MuiOutlinedInput-root": {
-      backgroundColor: "#1a1d2e",
-      color: "#fff",
+      backgroundColor: "var(--admin-surface-alt)",
+      color: "var(--admin-text)",
       borderRadius: { xs: "12px", md: "8px" },
       fontSize: { xs: "13px", md: "10px" },
       "& fieldset": { borderColor: "#505669" },
-      "&:hover fieldset": { borderColor: "#78b568" },
-      "&.Mui-focused fieldset": { borderColor: "#78b568" },
+      "&:hover fieldset": { borderColor: "var(--admin-accent)" },
+      "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
     },
     "& .MuiInputBase-input": {
-      color: "#fff",
+      color: "var(--admin-text)",
       py: { md: 0.75 },
     },
     "& .MuiInputBase-input::placeholder": {
-      color: "rgba(255,255,255,0.45)",
+      color: "var(--admin-text-secondary)",
       opacity: 1,
     },
-    "& .MuiSvgIcon-root": { color: "rgba(255,255,255,0.5)" },
+    "& .MuiSvgIcon-root": { color: "var(--admin-text-secondary)" },
   } as const;
 
   const barcodeFieldSx = {
     "& .MuiOutlinedInput-root": {
-      backgroundColor: "#1a1d2e",
-      color: "#fff",
+      backgroundColor: "var(--admin-surface-alt)",
+      color: "var(--admin-text)",
       borderRadius: { xs: "12px", md: "8px" },
       "& fieldset": { borderColor: "#505669" },
-      "&:hover fieldset": { borderColor: "#78b568" },
-      "&.Mui-focused fieldset": { borderColor: "#78b568" },
+      "&:hover fieldset": { borderColor: "var(--admin-accent)" },
+      "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
     },
     "& .MuiInputBase-input": {
-      color: "#fff",
+      color: "var(--admin-text)",
       fontSize: { xs: "13px", md: "10px" },
       direction: "ltr",
       textAlign: "left",
       py: { md: 0.75 },
     },
     "& .MuiInputBase-input::placeholder": {
-      color: "rgba(255,255,255,0.4)",
+      color: "var(--admin-text-secondary)",
       opacity: 1,
     },
   } as const;
@@ -644,7 +644,7 @@ export default function Page() {
       sx={{
         minHeight: "100vh",
         direction: "rtl",
-        background: "linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%)",
+        background: "var(--admin-bg-gradient)",
         px: { xs: 1, sm: 2, md: 2 },
         py: { xs: 1.5, md: 1.25 },
         pb: { xs: "calc(100px + env(safe-area-inset-bottom, 0px))", md: "60px" },
@@ -657,7 +657,7 @@ export default function Page() {
           sx={{
             p: { xs: 2, sm: 2.5, md: 1.75 },
             borderRadius: { xs: "14px", md: "12px" },
-            backgroundColor: "#2b3143",
+            backgroundColor: "var(--admin-surface)",
             border: "1px solid rgba(55, 84, 165, 0.35)",
             boxShadow: "0 8px 32px rgba(0,0,0,0.25)",
             ...desktopFormCompactSx,
@@ -665,7 +665,7 @@ export default function Page() {
         >
           <Typography
             sx={{
-              color: "#fff",
+              color: "var(--admin-text)",
               fontWeight: 700,
               fontSize: { xs: "18px", md: "15px" },
               mb: { xs: 1, md: 1 },
@@ -693,13 +693,13 @@ export default function Page() {
             <Grid item xs={12} md={4}>
               <Typography
                 textAlign="right"
-                sx={{ color: "#fff", fontSize: { xs: "14px", md: "10px" }, mt: { xs: 0, md: "4px" }, mb: { xs: 0.5, md: 0.25 } }}
+                sx={{ color: "var(--admin-text)", fontSize: { xs: "14px", md: "10px" }, mt: { xs: 0, md: "4px" }, mb: { xs: 0.5, md: 0.25 } }}
               >
                 بارکد (اختیاری) :
               </Typography>
               <Typography
                 sx={{
-                  color: "rgba(255,255,255,0.55)",
+                  color: "var(--admin-text-secondary)",
                   fontSize: "12px",
                   mb: 1,
                   display: { xs: "block", md: "none" },
@@ -715,7 +715,7 @@ export default function Page() {
                   mt: { md: 0 },
                   borderRadius: "12px",
                   border: { xs: "1px solid rgba(120, 181, 104, 0.25)", md: "none" },
-                  backgroundColor: { xs: "#1a1d2e", md: "transparent" },
+                  backgroundColor: { xs: "var(--admin-surface-alt)", md: "transparent" },
                 }}
               >
                 <TextField
@@ -742,7 +742,7 @@ export default function Page() {
                     alignSelf: "center",
                     borderRadius: { xs: "10px", md: "7px" },
                     background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                    color: "#fff",
+                    color: "var(--admin-text)",
                     "&:hover": {
                       background: "linear-gradient(135deg, #764ba2 0%, #667eea 100%)",
                     },
@@ -811,7 +811,7 @@ export default function Page() {
             </Grid>
           </Grid>
 
-          <Divider sx={{ my: { xs: 2.5, md: 1.25 }, borderColor: "rgba(255,255,255,0.1)" }} />
+          <Divider sx={{ my: { xs: 2.5, md: 1.25 }, borderColor: "var(--admin-divider)" }} />
 
           <Grid container spacing={{ xs: 1.5, md: 1 }} sx={{ alignItems: "stretch" }}>
             <Grid item xs={12} md={6} sx={{ display: "flex", flexDirection: "column" }}>
@@ -828,10 +828,10 @@ export default function Page() {
                         onDelete={() => setCategoryIds(categoryIds.filter((id) => id !== value))}
                         size="small"
                         sx={{
-                          backgroundColor: "#78b568",
-                          color: "#fff",
+                          backgroundColor: "var(--admin-accent)",
+                          color: "var(--admin-text)",
                           "& .MuiChip-deleteIcon": {
-                            color: "#fff",
+                            color: "var(--admin-text)",
                             "&:hover": { color: "#ff4444" },
                           },
                         }}
@@ -853,7 +853,7 @@ export default function Page() {
               />
               <Paper sx={optionalPanelSx}>
                 {categoriesLoading ? (
-                  <Typography sx={{ color: "rgba(255,255,255,0.5)", fontSize: { xs: "13px", md: "10px" }, p: 1.5, textAlign: "center" }}>
+                  <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: { xs: "13px", md: "10px" }, p: 1.5, textAlign: "center" }}>
                     در حال بارگذاری...
                   </Typography>
                 ) : filteredCategories.length > 0 ? (
@@ -865,7 +865,7 @@ export default function Page() {
                     />
                   ))
                 ) : (
-                  <Typography sx={{ color: "rgba(255,255,255,0.5)", fontSize: { xs: "13px", md: "10px" }, p: 1.5, textAlign: "center" }}>
+                  <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: { xs: "13px", md: "10px" }, p: 1.5, textAlign: "center" }}>
                     {categorySearch.trim() ? "موردی یافت نشد" : "دسته‌بندی‌ای یافت نشد"}
                   </Typography>
                 )}
@@ -881,10 +881,10 @@ export default function Page() {
                     onDelete={() => setManufacturerId("")}
                     size="small"
                     sx={{
-                      backgroundColor: "#78b568",
-                      color: "#fff",
+                      backgroundColor: "var(--admin-accent)",
+                      color: "var(--admin-text)",
                       "& .MuiChip-deleteIcon": {
-                        color: "#fff",
+                        color: "var(--admin-text)",
                         "&:hover": { color: "#ff4444" },
                       },
                     }}
@@ -904,7 +904,7 @@ export default function Page() {
               />
               <Paper sx={optionalPanelSx}>
                 {manufacturersLoading ? (
-                  <Typography sx={{ color: "rgba(255,255,255,0.5)", fontSize: { xs: "13px", md: "10px" }, p: 1.5, textAlign: "center" }}>
+                  <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: { xs: "13px", md: "10px" }, p: 1.5, textAlign: "center" }}>
                     در حال بارگذاری...
                   </Typography>
                 ) : (
@@ -912,7 +912,7 @@ export default function Page() {
                 <Box
                   sx={{
                     ...panelListRowSx,
-                    backgroundColor: manufacturerId === "" ? "rgba(120, 181, 104, 0.15)" : "transparent",
+                    backgroundColor: manufacturerId === "" ? "var(--admin-menu-hover)" : "transparent",
                     display:
                       manufacturerSearch.trim() &&
                       !"هیچکدام".toLowerCase().includes(manufacturerSearch.trim().toLowerCase())
@@ -925,14 +925,14 @@ export default function Page() {
                     checked={manufacturerId === ""}
                     size="small"
                     sx={{
-                      color: "#78b568",
+                      color: "var(--admin-accent)",
                       p: { md: 0.25 },
-                      "&.Mui-checked": { color: "#78b568" },
+                      "&.Mui-checked": { color: "var(--admin-accent)" },
                     }}
                     onClick={(e) => e.stopPropagation()}
                     onChange={() => setManufacturerId("")}
                   />
-                  <Typography sx={{ color: "#fff", fontSize: { xs: "14px", md: "10px" }, flex: 1 }}>
+                  <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "14px", md: "10px" }, flex: 1 }}>
                     هیچکدام
                   </Typography>
                 </Box>
@@ -944,7 +944,7 @@ export default function Page() {
                         key={manufacturer.id}
                         sx={{
                           ...panelListRowSx,
-                          backgroundColor: isSelected ? "rgba(120, 181, 104, 0.15)" : "transparent",
+                          backgroundColor: isSelected ? "var(--admin-menu-hover)" : "transparent",
                         }}
                         onClick={() => setManufacturerId(manufacturer.id)}
                       >
@@ -952,25 +952,25 @@ export default function Page() {
                           checked={isSelected}
                           size="small"
                           sx={{
-                            color: "#78b568",
+                            color: "var(--admin-accent)",
                             p: { md: 0.25 },
-                            "&.Mui-checked": { color: "#78b568" },
+                            "&.Mui-checked": { color: "var(--admin-accent)" },
                           }}
                           onClick={(e) => e.stopPropagation()}
                           onChange={() => setManufacturerId(isSelected ? "" : manufacturer.id)}
                         />
-                        <Typography sx={{ color: "#fff", fontSize: { xs: "14px", md: "10px" }, flex: 1 }}>
+                        <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "14px", md: "10px" }, flex: 1 }}>
                           {manufacturer.name}
                         </Typography>
                       </Box>
                     );
                   })
                 ) : !manufacturerSearch.trim() ? (
-                  <Typography sx={{ color: "rgba(255,255,255,0.5)", fontSize: { xs: "13px", md: "10px" }, p: 1.5, textAlign: "center" }}>
+                  <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: { xs: "13px", md: "10px" }, p: 1.5, textAlign: "center" }}>
                     تولیدکننده‌ای یافت نشد
                   </Typography>
                 ) : (
-                  <Typography sx={{ color: "rgba(255,255,255,0.5)", fontSize: { xs: "13px", md: "10px" }, p: 1.5, textAlign: "center" }}>
+                  <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: { xs: "13px", md: "10px" }, p: 1.5, textAlign: "center" }}>
                     موردی یافت نشد
                   </Typography>
                 )}
@@ -980,7 +980,7 @@ export default function Page() {
             </Grid>
           </Grid>
 
-          <Divider sx={{ my: { xs: 2.5, md: 1.25 }, borderColor: "rgba(255,255,255,0.1)" }} />
+          <Divider sx={{ my: { xs: 2.5, md: 1.25 }, borderColor: "var(--admin-divider)" }} />
 
           <Typography sx={sectionTitleSx}>تصاویر محصول (اختیاری)</Typography>
           <input
@@ -998,15 +998,15 @@ export default function Page() {
               fullWidth
               startIcon={<AddPhotoAlternateIcon />}
               sx={{
-                borderColor: "#78b568",
-                color: "#78b568",
+                borderColor: "var(--admin-accent)",
+                color: "var(--admin-accent)",
                 borderRadius: { xs: "12px", md: "8px" },
                 py: { xs: 1.25, md: 0.65 },
                 mb: { xs: 2, md: 1 },
                 fontSize: { md: "0.78rem" },
                 "&:hover": {
-                  borderColor: "#5a9a4a",
-                  backgroundColor: "rgba(120, 181, 104, 0.1)",
+                  borderColor: "var(--admin-accent-hover)",
+                  backgroundColor: "var(--admin-menu-hover)",
                 },
               }}
             >
@@ -1023,7 +1023,7 @@ export default function Page() {
                       position: "relative",
                       borderRadius: "12px",
                       overflow: "hidden",
-                      border: "1px solid rgba(255,255,255,0.08)",
+                      border: "1px solid var(--admin-border)",
                     }}
                   >
                     <CardMedia
@@ -1040,7 +1040,7 @@ export default function Page() {
                         top: 6,
                         right: 6,
                         backgroundColor: "rgba(0,0,0,0.55)",
-                        color: "#fff",
+                        color: "var(--admin-text)",
                         "&:hover": { backgroundColor: "rgba(244,67,54,0.9)" },
                       }}
                     >
@@ -1071,11 +1071,11 @@ export default function Page() {
                 flex: { sm: 2 },
                 borderRadius: { xs: "14px", md: "10px" },
                 py: { xs: 1.5, md: 0.75 },
-                bgcolor: "#78b568",
+                bgcolor: "var(--admin-accent)",
                 fontWeight: 700,
                 fontSize: { xs: "16px", md: "11px" },
                 boxShadow: "none",
-                "&:hover": { bgcolor: "#5a9a4a" },
+                "&:hover": { bgcolor: "var(--admin-accent-hover)" },
               }}
             >
               {isSubmitting ? "در حال ثبت..." : "ثبت کالا"}
@@ -1111,20 +1111,20 @@ export default function Page() {
         }}
         PaperProps={{
           sx: {
-            backgroundColor: "#2b3143",
+            backgroundColor: "var(--admin-surface)",
             borderRadius: "16px",
-            border: "1px solid #505669",
+            border: "1px solid var(--admin-border)",
             minWidth: { xs: "90%", sm: 400 },
           },
         }}
       >
-        <DialogTitle sx={{ color: "#fff", fontWeight: 700, textAlign: "center", pb: 1 }}>
+        <DialogTitle sx={{ color: "var(--admin-text)", fontWeight: 700, textAlign: "center", pb: 1 }}>
           ثبت با موفقیت انجام شد
         </DialogTitle>
         <DialogContent>
           {createdProduct && (
-            <Box sx={{ textAlign: "center", color: "rgba(255,255,255,0.85)", fontSize: "14px" }}>
-              <Typography sx={{ color: "#fff", fontWeight: 600, mb: 0.5 }}>
+            <Box sx={{ textAlign: "center", color: "var(--admin-text-muted)", fontSize: "14px" }}>
+              <Typography sx={{ color: "var(--admin-text)", fontWeight: 600, mb: 0.5 }}>
                 {createdProduct.name}
               </Typography>
               <Typography sx={{ fontSize: "13px" }}>
@@ -1161,9 +1161,9 @@ export default function Page() {
             onClick={handleContinueRegister}
             sx={{
               borderRadius: "12px",
-              bgcolor: "#78b568",
+              bgcolor: "var(--admin-accent)",
               fontWeight: 600,
-              "&:hover": { bgcolor: "#5a9a4a" },
+              "&:hover": { bgcolor: "var(--admin-accent-hover)" },
             }}
           >
             ادامه ثبت
@@ -1185,7 +1185,7 @@ export default function Page() {
             top: "50%",
             left: "50%",
             transform: "translate(-50%, -50%)",
-            bgcolor: "#2b3143",
+            bgcolor: "var(--admin-surface)",
             p: 3,
             width: "90%",
             maxWidth: "450px",
@@ -1194,16 +1194,16 @@ export default function Page() {
           }}
         >
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
-            <Typography sx={{ color: "#fff", fontSize: "16px", fontWeight: 700, flex: 1, textAlign: "center" }}>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: "16px", fontWeight: 700, flex: 1, textAlign: "center" }}>
               اسکن بارکد کالا
             </Typography>
             <IconButton
               onClick={() => setTorchOn(!torchOn)}
               sx={{
-                color: "#fff",
-                backgroundColor: torchOn ? "#78b568" : "#1a1d2e",
+                color: "var(--admin-text)",
+                backgroundColor: torchOn ? "var(--admin-accent)" : "var(--admin-surface-alt)",
                 p: 0.75,
-                "&:hover": { backgroundColor: torchOn ? "#5a9a4a" : "#2b3143" },
+                "&:hover": { backgroundColor: torchOn ? "var(--admin-accent-hover)" : "var(--admin-surface)" },
               }}
             >
               {torchOn ? <FlashlightOnIcon /> : <FlashlightOffIcon />}
@@ -1211,7 +1211,7 @@ export default function Page() {
           </Box>
           <Box
             sx={{
-              backgroundColor: "#1a1d2e",
+              backgroundColor: "var(--admin-surface-alt)",
               borderRadius: "10px",
               p: 1.5,
               mb: 1.5,
@@ -1245,15 +1245,15 @@ export default function Page() {
             placeholder="یا بارکد را اینجا وارد کنید"
             fullWidth
             sx={{
-              backgroundColor: "#1a1d2e",
+              backgroundColor: "var(--admin-surface-alt)",
               borderRadius: "10px",
-              color: "#fff",
+              color: "var(--admin-text)",
               fontSize: "13px",
               p: 1.25,
               mb: 1,
               direction: "ltr",
               textAlign: "left",
-              "&::placeholder": { color: "rgba(255,255,255,0.45)", opacity: 1 },
+              "&::placeholder": { color: "var(--admin-text-secondary)", opacity: 1 },
             }}
           />
           <Button

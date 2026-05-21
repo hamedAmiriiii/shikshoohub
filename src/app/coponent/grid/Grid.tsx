@@ -27,7 +27,8 @@ const DesktopActionsCell: React.FC<{
   onManufacturer?: (item: any) => void;
   onPayInstallment?: (item: any) => void;
   onDelete?: (item: any) => void;
-}> = ({ item, CartComponent, onCheck, refetch, onEdit, onSizeColor, onManufacturer, onPayInstallment, onDelete }) => {
+  hidePrint?: boolean;
+}> = ({ item, CartComponent, onCheck, refetch, onEdit, onSizeColor, onManufacturer, onPayInstallment, onDelete, hidePrint }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -100,9 +101,9 @@ const DesktopActionsCell: React.FC<{
           <IconButton
             onClick={() => onPayInstallment(item)}
             sx={{
-              backgroundColor: "#78b568",
+              backgroundColor: "var(--admin-accent)",
               color: "#fff",
-              "&:hover": { backgroundColor: "#66a055" },
+              "&:hover": { backgroundColor: "var(--admin-accent-hover)" },
             }}
           >
             <PaymentIcon />
@@ -123,18 +124,20 @@ const DesktopActionsCell: React.FC<{
           </IconButton>
         </Tooltip>
       )}
-      <Tooltip title="چاپ برچسب" arrow placement="top">
-        <IconButton
-          onClick={handlePrint}
-          sx={{
-            backgroundColor: "#78b568",
-            color: "#fff",
-            "&:hover": { backgroundColor: "#5a9a4a" },
-          }}
-        >
-          <PrintIcon />
-        </IconButton>
-      </Tooltip>
+      {!hidePrint && (
+        <Tooltip title="چاپ برچسب" arrow placement="top">
+          <IconButton
+            onClick={handlePrint}
+            sx={{
+              backgroundColor: "var(--admin-accent)",
+              color: "#fff",
+              "&:hover": { backgroundColor: "var(--admin-accent-hover)" },
+            }}
+          >
+            <PrintIcon />
+          </IconButton>
+        </Tooltip>
+      )}
     </Box>
   );
 };
@@ -176,6 +179,8 @@ interface Props {
   onDeleteItem?: (item: any) => void;
   /** ستون عملیات سفارشی دسکتاپ (مثلاً مدیریت فروشگاه‌ها) */
   renderRowActions?: (item: any) => ReactNode;
+  /** مخفی کردن دکمه چاپ برچسب در ستون عملیات */
+  hidePrintAction?: boolean;
 }
 
 let totalData = null;
@@ -288,6 +293,7 @@ const List: React.FC<Props> = ({
   onPayInstallmentItem,
   onDeleteItem,
   renderRowActions,
+  hidePrintAction = false,
 }) => {
   const { ref, inView } = useInView();
   const searchParams = useSearchParams();
@@ -598,8 +604,8 @@ const List: React.FC<Props> = ({
             <Grid display="flex" item sx={{ width: "100%", maxWidth: isDesktop ? "100%" : "480px", justifyContent: "space-between", mt: 2 }}>
               {showTotal && (
                 <Box display="flex" flexDirection="column">
-                  <Typography>تعداد کل {textTotal[0]}: {total}{textTotal[1]}</Typography>
-                 {Price && <Typography sx={{ mt: 1, fontWeight: "bold", color: "#1976d2" }}>
+                  <Typography sx={{ color: "var(--admin-text)" }}>تعداد کل {textTotal[0]}: {total}{textTotal[1]}</Typography>
+                 {Price && <Typography sx={{ mt: 1, fontWeight: "bold", color: "var(--admin-accent)" }}>
                     مجموع مبلغ خرید: {Number(totalPurchasePrice || 0).toLocaleString()} تومان
                   </Typography>}
                 </Box>
@@ -622,9 +628,9 @@ const List: React.FC<Props> = ({
                       sx={{ 
                         width: "100%", 
                         mt: 2,
-                        backgroundColor: '#2b3143',
+                        backgroundColor: 'var(--admin-surface)',
                         borderRadius: '16px',
-                        border: '1px solid rgba(55, 84, 165, 0.3)',
+                        border: '1px solid var(--admin-border)',
                         overflowX: 'auto'
                       }}
                     >
@@ -637,8 +643,8 @@ const List: React.FC<Props> = ({
                                 align="right" 
                                 sx={{ 
                                   fontWeight: "600",
-                                  backgroundColor: "#1a1d2e",
-                                  color: "#fff",
+                                  backgroundColor: "var(--admin-surface-alt)",
+                                  color: "var(--admin-text)",
                                   fontSize: "16px",
                                   padding: "16px 24px",
                                   ...(idx === 0 ? { minWidth: '300px', width: '300px' } : {}),
@@ -652,8 +658,8 @@ const List: React.FC<Props> = ({
                                 align="center" 
                                 sx={{ 
                                   fontWeight: "600",
-                                  backgroundColor: "#1a1d2e",
-                                  color: "#fff",
+                                  backgroundColor: "var(--admin-surface-alt)",
+                                  color: "var(--admin-text)",
                                   fontSize: "16px",
                                   padding: "16px 24px",
                                   minWidth: '250px',
@@ -670,12 +676,12 @@ const List: React.FC<Props> = ({
                             <TableRow
                               key={`desktop-${desktopPage}-${index}`}
                               sx={{ 
-                                backgroundColor: "#2b3143",
+                                backgroundColor: "var(--admin-surface)",
                                 '&:nth-of-type(even)': {
-                                  backgroundColor: "#1a1d2e",
+                                  backgroundColor: "var(--admin-surface-alt)",
                                 },
                                 '&:hover': {
-                                  backgroundColor: "rgba(120, 181, 104, 0.1)",
+                                  backgroundColor: "var(--admin-menu-hover)",
                                 },
                                 '&:last-child td, &:last-child th': { border: 0 } 
                               }}
@@ -685,7 +691,7 @@ const List: React.FC<Props> = ({
                                   key={colIdx} 
                                   align="right"
                                   sx={{
-                                    color: "#fff",
+                                    color: "var(--admin-text)",
                                     fontSize: 16,
                                     padding: "16px 24px",
                                     ...(colIdx === 0 ? { minWidth: '300px', width: '300px' } : {}),
@@ -698,7 +704,7 @@ const List: React.FC<Props> = ({
                                 <TableCell 
                                   align="center"
                                   sx={{
-                                    color: "#fff",
+                                    color: "var(--admin-text)",
                                     fontSize: 16,
                                     padding: "16px 24px",
                                     minWidth: '250px',
@@ -718,6 +724,7 @@ const List: React.FC<Props> = ({
                                       onManufacturer={onManufacturerItem}
                                       onPayInstallment={onPayInstallmentItem}
                                       onDelete={onDeleteItem}
+                                      hidePrint={hidePrintAction}
                                     />
                                   )}
                                 </TableCell>
@@ -737,9 +744,9 @@ const List: React.FC<Props> = ({
                           size="large"
                           sx={{
                             '& .MuiPaginationItem-root': {
-                              color: '#fff',
+                              color: 'var(--admin-text)',
                               '&.Mui-selected': {
-                                backgroundColor: '#1976d2',
+                                backgroundColor: 'var(--admin-accent)',
                                 color: '#fff',
                               },
                             },
@@ -771,9 +778,9 @@ const List: React.FC<Props> = ({
                           size="large"
                           sx={{
                             '& .MuiPaginationItem-root': {
-                              color: '#fff',
+                              color: 'var(--admin-text)',
                               '&.Mui-selected': {
-                                backgroundColor: '#1976d2',
+                                backgroundColor: 'var(--admin-accent)',
                                 color: '#fff',
                               },
                             },
@@ -821,7 +828,7 @@ const List: React.FC<Props> = ({
               </>
             ) : (
               <Box sx={{ width: "100%", display: "flex", justifyContent: "center", padding: "40px" }}>
-                <Typography>موردی یافت نشد</Typography>
+                <Typography sx={{ color: "var(--admin-text)" }}>موردی یافت نشد</Typography>
               </Box>
             )}
           </Grid>

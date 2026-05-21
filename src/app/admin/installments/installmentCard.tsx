@@ -62,11 +62,11 @@ export default function InstallmentCard(props: any) {
   };
 
   return (
-    <Box style={{ backgroundColor: "#2b3143", borderRadius: "15px", border: "1px solid rgb(55, 84, 165)" }} m={1} p={1}>
+    <Box style={{ backgroundColor: "var(--admin-surface)", borderRadius: "15px", border: "1px solid rgb(55, 84, 165)" }} m={1} p={1}>
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
         <Box sx={{ flex: 1 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-            <Typography sx={{ color: "#fff", fontSize: "16px", fontWeight: "600" }}>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: "16px", fontWeight: "600" }}>
               قسط شماره {data?.installment_number}
             </Typography>
             {data?.is_paid ? (
@@ -75,8 +75,8 @@ export default function InstallmentCard(props: any) {
                 label="پرداخت شده"
                 size="small"
                 sx={{
-                  backgroundColor: "#78b568",
-                  color: "#fff",
+                  backgroundColor: "var(--admin-accent)",
+                  color: "var(--admin-text)",
                   fontSize: "11px",
                   height: "22px"
                 }}
@@ -88,7 +88,7 @@ export default function InstallmentCard(props: any) {
                 size="small"
                 sx={{
                   backgroundColor: "#ff9800",
-                  color: "#fff",
+                  color: "var(--admin-text)",
                   fontSize: "11px",
                   height: "22px"
                 }}
@@ -96,29 +96,29 @@ export default function InstallmentCard(props: any) {
             )}
           </Box>
           
-          <Typography sx={{ color: "#999", fontSize: "13px", marginBottom: "4px" }}>
+          <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "13px", marginBottom: "4px" }}>
             مبلغ: {formatNumber(data?.amount)} تومان
           </Typography>
           
           {data?.due_date_jalali && (
-            <Typography sx={{ color: "#999", fontSize: "13px", marginBottom: "4px" }}>
+            <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "13px", marginBottom: "4px" }}>
               تاریخ سررسید: {data.due_date_jalali}
             </Typography>
           )}
           
           {data?.is_paid && data?.paid_at_jalali && (
-            <Typography sx={{ color: "#78b568", fontSize: "13px", marginBottom: "4px" }}>
+            <Typography sx={{ color: "var(--admin-accent)", fontSize: "13px", marginBottom: "4px" }}>
               تاریخ پرداخت: {data.paid_at_jalali}
             </Typography>
           )}
           
           {data?.purchase && (
             <>
-              <Typography sx={{ color: "#999", fontSize: "12px", marginTop: "8px" }}>
+              <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "12px", marginTop: "8px" }}>
                 خرید #{data.purchase.id}
               </Typography>
               {data.purchase.phone && (
-                <Typography sx={{ color: "#999", fontSize: "12px" }}>
+                <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "12px" }}>
                   تلفن: {data.purchase.phone}
                 </Typography>
               )}
@@ -132,8 +132,8 @@ export default function InstallmentCard(props: any) {
             startIcon={<PaymentIcon />}
             onClick={handleOpenPayInstallmentDialog}
             sx={{
-              backgroundColor: "#78b568",
-              color: "#fff",
+              backgroundColor: "var(--admin-accent)",
+              color: "var(--admin-text)",
               fontSize: "12px",
               padding: "6px 12px",
               borderRadius: "8px",
@@ -153,41 +153,41 @@ export default function InstallmentCard(props: any) {
         onClose={handleClosePayInstallmentDialog}
         PaperProps={{
           sx: {
-            backgroundColor: "#2b3143",
+            backgroundColor: "var(--admin-surface)",
             borderRadius: "16px",
             direction: "rtl",
             minWidth: "400px",
           }
         }}
       >
-        <DialogTitle sx={{ color: "#fff", textAlign: "center", fontSize: "18px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <DialogTitle sx={{ color: "var(--admin-text)", textAlign: "center", fontSize: "18px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <Typography sx={{ fontSize: "18px", fontWeight: "600" }}>تایید پرداخت قسط</Typography>
           <IconButton
             onClick={handleClosePayInstallmentDialog}
-            sx={{ color: "#fff" }}
+            sx={{ color: "var(--admin-text)" }}
           >
             <CloseIcon />
           </IconButton>
         </DialogTitle>
         <DialogContent>
-          <DialogContentText sx={{ color: "#ccc", textAlign: "center", marginBottom: "16px" }}>
+          <DialogContentText sx={{ color: "var(--admin-text-secondary)", textAlign: "center", marginBottom: "16px" }}>
             آیا از پرداخت این قسط مطمئن هستید؟
           </DialogContentText>
           {data && (
             <Box sx={{ 
               marginBottom: "16px", 
               padding: "12px", 
-              backgroundColor: "#1a1d2e", 
+              backgroundColor: "var(--admin-surface-alt)", 
               borderRadius: "8px",
             }}>
-              <Typography sx={{ color: "#fff", fontSize: "14px", marginBottom: "8px" }}>
+              <Typography sx={{ color: "var(--admin-text)", fontSize: "14px", marginBottom: "8px" }}>
                 قسط شماره: {data.installment_number}
               </Typography>
-              <Typography sx={{ color: "#fff", fontSize: "14px", marginBottom: "8px" }}>
+              <Typography sx={{ color: "var(--admin-text)", fontSize: "14px", marginBottom: "8px" }}>
                 مبلغ: {formatNumber(data.amount)} تومان
               </Typography>
               {data.due_date_jalali && (
-                <Typography sx={{ color: "#999", fontSize: "13px" }}>
+                <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "13px" }}>
                   تاریخ سررسید: {data.due_date_jalali}
                 </Typography>
               )}
@@ -202,24 +202,24 @@ export default function InstallmentCard(props: any) {
             placeholder="یادداشت پرداخت (اختیاری)"
             sx={{
               "& .MuiOutlinedInput-root": {
-                backgroundColor: "#1a1d2e",
-                color: "#fff",
+                backgroundColor: "var(--admin-surface-alt)",
+                color: "var(--admin-text)",
                 "& fieldset": {
                   borderColor: "#505669",
                 },
                 "&:hover fieldset": {
-                  borderColor: "#78b568",
+                  borderColor: "var(--admin-accent)",
                 },
                 "&.Mui-focused fieldset": {
-                  borderColor: "#78b568",
+                  borderColor: "var(--admin-accent)",
                 },
               },
               "& .MuiInputBase-input": {
-                color: "#fff",
+                color: "var(--admin-text)",
                 fontSize: "14px",
               },
               "& .MuiInputBase-input::placeholder": {
-                color: "rgba(255,255,255,0.4)",
+                color: "var(--admin-text-secondary)",
                 opacity: 1
               },
             }}
@@ -230,11 +230,11 @@ export default function InstallmentCard(props: any) {
             onClick={handleClosePayInstallmentDialog}
             variant="outlined"
             sx={{ 
-              color: "#fff", 
+              color: "var(--admin-text)", 
               borderColor: "#666",
               "&:hover": {
                 borderColor: "#888",
-                backgroundColor: "rgba(255,255,255,0.05)"
+                backgroundColor: "var(--admin-surface-alt)"
               }
             }}
             disabled={payingInstallment}
@@ -245,7 +245,7 @@ export default function InstallmentCard(props: any) {
             onClick={handlePayInstallment}
             variant="contained"
             sx={{ 
-              backgroundColor: "#78b568",
+              backgroundColor: "var(--admin-accent)",
               "&:hover": {
                 backgroundColor: "#66a055"
               }

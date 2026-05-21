@@ -67,13 +67,13 @@ const DATE_PICKER_Z_INDEX = 2000;
 
 const inputSx = {
   "& .MuiOutlinedInput-root": {
-    color: "#fff",
-    backgroundColor: "#1a1d2e",
+    color: "var(--admin-text)",
+    backgroundColor: "var(--admin-surface-alt)",
     "& fieldset": { borderColor: "#505669" },
-    "&:hover fieldset": { borderColor: "#78b568" },
-    "&.Mui-focused fieldset": { borderColor: "#78b568" },
+    "&:hover fieldset": { borderColor: "var(--admin-accent)" },
+    "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
   },
-  "& .MuiInputLabel-root": { color: "rgba(255,255,255,0.7)" },
+  "& .MuiInputLabel-root": { color: "var(--admin-text-muted)" },
 } as const;
 
 interface Props {
@@ -236,7 +236,7 @@ export default function ShopSmsQuotaActions({ item, onSuccess, variant = "row" }
           variant="outlined"
           startIcon={isCard ? <EditIcon /> : undefined}
           onClick={openEdit}
-          sx={{ ...btnSx, borderColor: "#78b568", color: "#78b568" }}
+          sx={{ ...btnSx, borderColor: "var(--admin-accent)", color: "var(--admin-accent)" }}
         >
           {isCard ? "تنظیم موجودی" : "موجودی"}
         </Button>
@@ -257,7 +257,7 @@ export default function ShopSmsQuotaActions({ item, onSuccess, variant = "row" }
         disableEnforceFocus
         PaperProps={{
           sx: {
-            backgroundColor: "#2b3143",
+            backgroundColor: "var(--admin-surface)",
             borderRadius: "16px",
             overflow: "visible",
           },
@@ -266,14 +266,14 @@ export default function ShopSmsQuotaActions({ item, onSuccess, variant = "row" }
           root: { sx: { zIndex: 1300 } },
         }}
       >
-        <DialogTitle sx={{ color: "#fff" }}>تاریخ اعتبار کاربری — {shopLabel}</DialogTitle>
+        <DialogTitle sx={{ color: "var(--admin-text)" }}>تاریخ اعتبار کاربری — {shopLabel}</DialogTitle>
         <DialogContent sx={{ overflow: "visible" }}>
-          <Typography sx={{ color: "rgba(255,255,255,0.65)", fontSize: "13px", mb: 2 }}>
+          <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "13px", mb: 2 }}>
             پایان فعلی: {formatAccessEndDate(item.shop_access_ends_at)}
             {item.shop_access_days_remaining != null &&
               ` (${item.shop_access_days_remaining.toLocaleString("fa-IR")} روز مانده)`}
           </Typography>
-          <Typography sx={{ color: "rgba(255,255,255,0.75)", fontSize: "13px", mb: 1 }}>
+          <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "13px", mb: 1 }}>
             تاریخ پایان اعتبار (شمسی)
           </Typography>
           <Box
@@ -288,15 +288,15 @@ export default function ShopSmsQuotaActions({ item, onSuccess, variant = "row" }
                 width: "100%",
                 height: "48px",
                 borderRadius: "12px",
-                backgroundColor: "#1a1d2e",
-                border: "1px solid #505669",
-                color: "#fff",
+                backgroundColor: "var(--admin-surface-alt)",
+                border: "1px solid var(--admin-border)",
+                color: "var(--admin-text)",
                 fontSize: "15px",
                 padding: "8px 12px",
                 boxSizing: "border-box",
               },
               "& .rmdp-input:focus": {
-                borderColor: "#78b568",
+                borderColor: "var(--admin-accent)",
                 outline: "none",
               },
             }}
@@ -321,15 +321,15 @@ export default function ShopSmsQuotaActions({ item, onSuccess, variant = "row" }
                 width: "100%",
                 height: "48px",
                 borderRadius: "12px",
-                backgroundColor: "#1a1d2e",
-                color: "#fff",
+                backgroundColor: "var(--admin-surface-alt)",
+                color: "var(--admin-text)",
               }}
               className="rmdp-mobile"
             />
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setAccessOpen(false)} disabled={saving} sx={{ color: "rgba(255,255,255,0.7)" }}>
+          <Button onClick={() => setAccessOpen(false)} disabled={saving} sx={{ color: "var(--admin-text-muted)" }}>
             انصراف
           </Button>
           <Button
@@ -346,11 +346,11 @@ export default function ShopSmsQuotaActions({ item, onSuccess, variant = "row" }
       <Dialog
         open={editOpen}
         onClose={() => !saving && setEditOpen(false)}
-        PaperProps={{ sx: { backgroundColor: "#2b3143", borderRadius: "16px" } }}
+        PaperProps={{ sx: { backgroundColor: "var(--admin-surface)", borderRadius: "16px" } }}
       >
-        <DialogTitle sx={{ color: "#fff" }}>تنظیم موجودی پیامک — {shopLabel}</DialogTitle>
+        <DialogTitle sx={{ color: "var(--admin-text)" }}>تنظیم موجودی پیامک — {shopLabel}</DialogTitle>
         <DialogContent>
-          <Typography sx={{ color: "rgba(255,255,255,0.65)", fontSize: "13px", mb: 2 }}>
+          <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "13px", mb: 2 }}>
             مقدار نهایی واحد پیامک (جایگزین موجودی فعلی می‌شود)
           </Typography>
           <TextField
@@ -362,14 +362,14 @@ export default function ShopSmsQuotaActions({ item, onSuccess, variant = "row" }
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setEditOpen(false)} disabled={saving} sx={{ color: "rgba(255,255,255,0.7)" }}>
+          <Button onClick={() => setEditOpen(false)} disabled={saving} sx={{ color: "var(--admin-text-muted)" }}>
             انصراف
           </Button>
           <Button
             onClick={handleSetBalance}
             disabled={saving}
             variant="contained"
-            sx={{ backgroundColor: "#78b568" }}
+            sx={{ backgroundColor: "var(--admin-accent)" }}
           >
             {saving ? "..." : "ذخیره"}
           </Button>
@@ -379,11 +379,11 @@ export default function ShopSmsQuotaActions({ item, onSuccess, variant = "row" }
       <Dialog
         open={chargeOpen}
         onClose={() => !saving && setChargeOpen(false)}
-        PaperProps={{ sx: { backgroundColor: "#2b3143", borderRadius: "16px" } }}
+        PaperProps={{ sx: { backgroundColor: "var(--admin-surface)", borderRadius: "16px" } }}
       >
-        <DialogTitle sx={{ color: "#fff" }}>شارژ پیامک — {shopLabel}</DialogTitle>
+        <DialogTitle sx={{ color: "var(--admin-text)" }}>شارژ پیامک — {shopLabel}</DialogTitle>
         <DialogContent>
-          <Typography sx={{ color: "rgba(255,255,255,0.65)", fontSize: "13px", mb: 2 }}>
+          <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "13px", mb: 2 }}>
             موجودی فعلی: {getBalance(item).toLocaleString("fa-IR")} واحد — مقدار واردشده به موجودی اضافه می‌شود.
           </Typography>
           <TextField
@@ -395,7 +395,7 @@ export default function ShopSmsQuotaActions({ item, onSuccess, variant = "row" }
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setChargeOpen(false)} disabled={saving} sx={{ color: "rgba(255,255,255,0.7)" }}>
+          <Button onClick={() => setChargeOpen(false)} disabled={saving} sx={{ color: "var(--admin-text-muted)" }}>
             انصراف
           </Button>
           <Button
@@ -423,7 +423,7 @@ function AccessStatusChip({ item }: { item: ShopSmsQuotaRow }) {
     <Chip
       size="small"
       label="فعال"
-      sx={{ bgcolor: "rgba(120,181,104,0.2)", color: "#78b568" }}
+      sx={{ bgcolor: "rgba(120,181,104,0.2)", color: "var(--admin-accent)" }}
     />
   );
 }
@@ -443,25 +443,25 @@ export function ShopSmsQuotaMobileCard({
         p: 2,
         mb: 2,
         borderRadius: "16px",
-        backgroundColor: "#2b3143",
-        border: "1px solid #505669",
+        backgroundColor: "var(--admin-surface)",
+        border: "1px solid var(--admin-border)",
       }}
     >
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 0.5 }}>
-        <Typography sx={{ color: "#fff", fontWeight: 700 }}>
+        <Typography sx={{ color: "var(--admin-text)", fontWeight: 700 }}>
           {getShopName(data) || "—"}
         </Typography>
         <AccessStatusChip item={data} />
       </Box>
-      <Typography sx={{ color: "rgba(255,255,255,0.6)", fontSize: "13px", mb: 0.5 }}>
+      <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "13px", mb: 0.5 }}>
         شناسه: {data.atelier_id ?? data.id ?? "—"} | تلفن: {data.phone || "—"}
       </Typography>
-      <Typography sx={{ color: "rgba(255,255,255,0.55)", fontSize: "13px", mb: 0.5 }}>
+      <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "13px", mb: 0.5 }}>
         اعتبار تا {formatAccessEndDate(data.shop_access_ends_at)}
         {data.shop_access_days_remaining != null &&
           ` · ${data.shop_access_days_remaining.toLocaleString("fa-IR")} روز`}
       </Typography>
-      <Typography sx={{ color: "#78b568", fontWeight: 700, fontSize: "18px", mb: 1.5 }}>
+      <Typography sx={{ color: "var(--admin-accent)", fontWeight: 700, fontSize: "18px", mb: 1.5 }}>
         {formatNumber(getBalance(data))} واحد پیامک
       </Typography>
       <ShopSmsQuotaActions item={data} onSuccess={onSuccess} variant="card" />
