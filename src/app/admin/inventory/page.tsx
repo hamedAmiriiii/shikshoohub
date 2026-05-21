@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Box, Typography, Paper, Grid, CircularProgress, Card, CardContent } from '@mui/material';
 import { useRouter } from 'next/navigation';
-import { apiRequestError } from '@/app/lib/apiRequestError';
+import { apiRequestError } from '@/app/lib/apiRequestError/client';
 import tokenCode from '@/app/coponent/tokenCode';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -29,7 +29,7 @@ export default function InventoryPage() {
     const fetchInventory = async () => {
       const token = tokenCode();
       try {
-        const res = await apiRequestError("Get", {}, {}, "/api/reports", true, true, "");
+        const res = await apiRequestError("Get", {}, {}, "/api/reports", true, true, token);
         if (res.hasError) {
           const parsedResponse = JSON.parse(res.errorText);
           const readableMessage = parsedResponse.message;

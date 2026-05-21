@@ -22,7 +22,7 @@ import {
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { tableCellClasses } from '@mui/material/TableCell';
-import { apiRequestError } from '@/app/lib/apiRequestError';
+import { apiRequestError } from '@/app/lib/apiRequestError/client';
 import tokenCode from '@/app/coponent/tokenCode';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';

@@ -10,7 +10,7 @@ import {
   InputAdornment,
 } from "@mui/material";
 import React, { useState, useEffect, useRef } from "react";
-import { apiRequestError } from "@/app/lib/apiRequestError";
+import { apiRequestError } from "@/app/lib/apiRequestError/client";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useRouter } from "next/navigation";
@@ -19,6 +19,7 @@ import LockIcon from "@mui/icons-material/Lock";
 import PersonIcon from "@mui/icons-material/Person";
 import PermIdentityIcon from "@mui/icons-material/PermIdentity";
 import StorefrontIcon from "@mui/icons-material/Storefront";
+import { formatAccessEndDate, getShopAccessFromUser } from "@/app/lib/shopAccess";
 
 type Step = "phone" | "register";
 
@@ -133,6 +134,8 @@ export default function RegisterShopPage() {
         false,
         "",
       );
+      console.log("xxxxxxxxxxxxxxx" , res);
+      
       setIsLoading(false);
 
 
@@ -207,8 +210,12 @@ export default function RegisterShopPage() {
         return;
       }
 
-      toast.success("فروشگاه با موفقیت ثبت شد. اکنون می‌توانید وارد شوید.");
-      setTimeout(() => router.push("/admin/login"), 1500);
+      const access = getShopAccessFromUser(res as Record<string, unknown>);
+      const accessMsg = access?.shop_access_ends_at
+        ? ` اعتبار کاربری تا ${formatAccessEndDate(access.shop_access_ends_at)}.`
+        : "";
+      toast.success(`فروشگاه با موفقیت ثبت شد.${accessMsg} اکنون می‌توانید وارد شوید.`);
+      setTimeout(() => router.push("/admin/login"), 2000);
     } catch {
       setIsLoading(false);
       toast.error("خطا در ارتباط با سرور");

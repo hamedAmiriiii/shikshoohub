@@ -3,9 +3,10 @@ import { useState, useEffect } from 'react';
 import { Box, Container, Grid, Card, CardContent, CardMedia, Typography, CircularProgress, Chip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Avatar } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { tableCellClasses } from '@mui/material/TableCell';
-import { apiRequestError } from '@/app/lib/apiRequestError';
+import { apiRequestError } from '@/app/lib/apiRequestError/client';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import tokenCode from '@/app/coponent/tokenCode';
 
 interface BestSellingProduct {
   id: number;
@@ -54,10 +55,11 @@ export default function BestSellingPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const token = tokenCode();
     const fetchBestSelling = async () => {
       try {
         setLoading(true);
-        const res = await apiRequestError("Get", {}, {}, `/api/product/best-selling?limit=50`, true, true, "");
+        const res = await apiRequestError("Get", {}, {}, `/api/product/best-selling?limit=50`, true, true, token);
         console.log("ddddddddddddd" , res);
         
         if (res.hasError) {

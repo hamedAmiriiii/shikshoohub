@@ -35,8 +35,8 @@ const formatDate = (dateString: string) => {
   }
 };
 
-export default function CustomerCard(props: any) {
-  const customer = props.props.data;
+export default function CustomerCard({ props: gridProps }: { props: { data?: Record<string, unknown> } }) {
+  const customer = gridProps?.data;
   
   return (
     <Card

@@ -1,13 +1,14 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Box, Typography, Card, CardContent, Switch, FormControlLabel, TextField, Button } from "@mui/material";
+import { Box, Typography, Card, CardContent, Switch, FormControlLabel, TextField, Button, Alert } from "@mui/material";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
 import { useRouter } from "next/navigation";
 import { ToastContainer, toast } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
-import { apiRequestError } from "@/app/lib/apiRequestError";
+import { apiRequestError } from "@/app/lib/apiRequestError/client";
 import tokenCode from "@/app/coponent/tokenCode";
+import ShopSmsQuotaCard from "@/app/coponent/ShopSmsQuotaCard";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -218,6 +219,12 @@ export default function SettingsPage() {
           </Typography>
         </Box>
       </Box>
+
+      <ShopSmsQuotaCard compact />
+      <Alert severity="warning" sx={{ mb: 2, borderRadius: "12px" }}>
+        اعتبار پیامک (shop_sms_quota) از این صفحه قابل ویرایش نیست. فقط ادمین سیستم می‌تواند از منوی
+        «ادمین → مدیریت فروشگاه‌ها» حساب را شارژ کند.
+      </Alert>
 
       {/* Settings Cards */}
       {loading ? (

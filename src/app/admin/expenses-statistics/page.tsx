@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Box, Typography, Paper, Grid, CircularProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, RadioGroup, FormControlLabel, Radio, Button } from '@mui/material';
 import { useRouter } from 'next/navigation';
-import { apiRequestError } from '@/app/lib/apiRequestError';
+import { apiRequestError } from '@/app/lib/apiRequestError/client';
 import tokenCode from '@/app/coponent/tokenCode';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';

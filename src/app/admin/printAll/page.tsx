@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import JsBarcode from "jsbarcode";
-import { apiRequestError } from "@/app/lib/apiRequestError";
+import { apiRequestError } from "@/app/lib/apiRequestError/client";
 
 const formatNumber = (num: number | string) => {
   const numValue = typeof num === 'string' ? parseFloat(num.replace(/,/g, '')) : num;

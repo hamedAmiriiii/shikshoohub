@@ -23,7 +23,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudQueueIcon from '@mui/icons-material/CloudQueue';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { apiRequestError } from '@/app/lib/apiRequestError';
+import { apiRequestError } from '@/app/lib/apiRequestError/client';
 
 const formatNumber = (num: number) => {
   return new Intl.NumberFormat('fa-IR').format(num);

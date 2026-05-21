@@ -41,7 +41,7 @@ export default function PWAHead() {
     if (!appleTitle) {
       appleTitle = document.createElement('meta');
       appleTitle.name = 'apple-mobile-web-app-title';
-      appleTitle.content = 'kerman-Photo';
+      appleTitle.content = 'Webino';
       document.head.appendChild(appleTitle);
     }
 

@@ -101,11 +101,19 @@ export async function requestAPi(
       const { status } = response;
       const errorText = await response.text();
 
-      let errorMessage = `API request error: ${status}`;
+      let parsed: Record<string, unknown> = {};
+      try {
+        parsed = JSON.parse(errorText) as Record<string, unknown>;
+      } catch {
+        parsed = {};
+      }
+
       const data = {
         errorText: errorText,
         hasError: true,
         statusCode: status,
+        message: parsed.message,
+        ...parsed,
       };
       return data
     }

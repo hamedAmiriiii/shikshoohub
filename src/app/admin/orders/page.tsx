@@ -39,7 +39,7 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import EditIcon from "@mui/icons-material/Edit";
 import { useRouter } from "next/navigation";
-import { apiRequestError } from "@/app/lib/apiRequestError";
+import { apiRequestError } from "@/app/lib/apiRequestError/client";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 

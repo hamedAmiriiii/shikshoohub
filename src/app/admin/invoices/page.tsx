@@ -28,8 +28,8 @@ import {
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { tableCellClasses } from '@mui/material/TableCell';
-import { apiRequestError } from '@/app/lib/apiRequestError';
 import tokenCode from '@/app/coponent/tokenCode';
+import { FetchWithJwtClient } from '@/app/coponent/fetchWithJwtClient';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import AddIcon from '@mui/icons-material/Add';
@@ -83,6 +83,22 @@ interface Invoice {
 const formatNumber = (num: number) => {
   return new Intl.NumberFormat('fa-IR').format(num);
 };
+
+function getApiErrorMessage(res: any, fallback: string): string {
+  if (!res) return fallback;
+  if (typeof res.message === 'string') return res.message;
+  if (typeof res.error === 'string') return res.error;
+  if (typeof res.errorText === 'string') {
+    try {
+      const parsed = JSON.parse(res.errorText);
+      if (typeof parsed.message === 'string') return parsed.message;
+      if (typeof parsed.error === 'string') return parsed.error;
+    } catch {
+      if (res.errorText && res.errorText !== 'fetch failed') return res.errorText;
+    }
+  }
+  return fallback;
+}
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -160,11 +176,18 @@ export default function InvoicesPage() {
       setLoading(true);
       const url = buildUrl();
       const token = tokenCode();
-      const res = await apiRequestError("Get", {}, {}, url, true, true, token);
+      if (!token) {
+        toast.error('لطفاً وارد شوید');
+        setInvoices([]);
+        setTotalAmount(0);
+        return;
+      }
+
+      const res = await FetchWithJwtClient('GET', url, token);
       
-      if (res.hasError) {
-        console.error("Error fetching invoices:", res.errorText);
-        toast.error("خطا در دریافت فاکتورها");
+      if (!res || res.hasError) {
+        console.error("Error fetching invoices:", res);
+        toast.error(getApiErrorMessage(res, 'خطا در دریافت فاکتورها'));
         setInvoices([]);
         setTotalAmount(0);
       } else {
@@ -211,10 +234,15 @@ export default function InvoicesPage() {
       };
 
       const token = tokenCode();
-      const res = await apiRequestError("Post", {}, data, "/api/invoices", true, true, token);
+      if (!token) {
+        toast.error('لطفاً وارد شوید');
+        return;
+      }
+
+      const res = await FetchWithJwtClient('POST', '/api/invoices', data);
       
-      if (res.hasError) {
-        toast.error(res.errorText || "خطا در ثبت فاکتور");
+      if (!res || res.hasError) {
+        toast.error(getApiErrorMessage(res, 'خطا در ثبت فاکتور'));
       } else {
         toast.success("فاکتور با موفقیت ثبت شد");
         setOpenCreateDialog(false);
@@ -247,10 +275,15 @@ export default function InvoicesPage() {
       };
 
       const token = tokenCode();
-      const res = await apiRequestError("Put", {}, data, `/api/invoices/${editingInvoice.id}`, true, true, token);
+      if (!token) {
+        toast.error('لطفاً وارد شوید');
+        return;
+      }
+
+      const res = await FetchWithJwtClient('PUT', `/api/invoices/${editingInvoice.id}`, data);
       
-      if (res.hasError) {
-        toast.error(res.errorText || "خطا در ویرایش فاکتور");
+      if (!res || res.hasError) {
+        toast.error(getApiErrorMessage(res, 'خطا در ویرایش فاکتور'));
       } else {
         toast.success("فاکتور با موفقیت ویرایش شد");
         setOpenEditDialog(false);
@@ -269,10 +302,15 @@ export default function InvoicesPage() {
 
     try {
       const token = tokenCode();
-      const res = await apiRequestError("Delete", {}, {}, `/api/invoices/${deletingInvoiceId}`, true, true, token);
+      if (!token) {
+        toast.error('لطفاً وارد شوید');
+        return;
+      }
+
+      const res = await FetchWithJwtClient('DELETE', `/api/invoices/${deletingInvoiceId}`, token);
       
-      if (res.hasError) {
-        toast.error(res.errorText || "خطا در حذف فاکتور");
+      if (!res || res.hasError) {
+        toast.error(getApiErrorMessage(res, 'خطا در حذف فاکتور'));
       } else {
         toast.success("فاکتور با موفقیت حذف شد");
         setOpenDeleteDialog(false);

@@ -50,6 +50,7 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { useRouter } from 'next/navigation';
 import { useShopContext } from './context/ShopContext';
+import tokenCode from './coponent/tokenCode';
 
 interface ProductImage {
   id: number;
@@ -264,16 +265,13 @@ export default function ShopHomePage() {
   // Fetch best selling products
   useEffect(() => {
     const fetchBestSelling = async () => {
+      const token = tokenCode();
       try {
         setBestSellingLoading(true);
-        const res = await apiRequestError("Get", {}, {}, "/api/product/best-selling?limit=10", true, true, "");
+        const res = await apiRequestError("Get", {}, {}, "/api/product/best-selling?limit=10", true, true, token);
         
         console.log('Best Selling API Response:', res);
-        console.log('Best Selling API URL:', '/api/product/best-selling?limit=10');
-        console.log('Response hasError:', res.hasError);
-        console.log('Response data:', res.data);
-        console.log('Response is array:', Array.isArray(res));
-        console.log('Response.data is array:', Array.isArray(res.data));
+       
         
         if (!res.hasError && res.data && Array.isArray(res.data)) {
           console.log('Setting best selling products from res.data:', res.data);

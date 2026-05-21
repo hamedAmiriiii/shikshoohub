@@ -1,10 +1,9 @@
 "use client";
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { Button, Modal, Box, Typography, Table, TableBody, TableContainer, TableHead, TableRow, Paper, IconButton, Input, Card, CardContent, Grid, Container, CircularProgress, TextField, FormControl, FormLabel, RadioGroup, FormControlLabel, Radio } from '@mui/material';
 import BarcodeScannerComponent from "react-qr-barcode-scanner";
 import DeleteIcon from '@mui/icons-material/Delete';
 import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
-import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import FlashlightOnIcon from '@mui/icons-material/FlashlightOn';
 import FlashlightOffIcon from '@mui/icons-material/FlashlightOff';
@@ -12,14 +11,41 @@ import CloudOffIcon from '@mui/icons-material/CloudOff';
 import CloudQueueIcon from '@mui/icons-material/CloudQueue';
 import SyncIcon from '@mui/icons-material/Sync';
 import WarningIcon from '@mui/icons-material/Warning';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import TodayIcon from '@mui/icons-material/Today';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
+import Inventory2Icon from '@mui/icons-material/Inventory2';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import PhoneIcon from '@mui/icons-material/Phone';
+import SupportAgentIcon from '@mui/icons-material/SupportAgent';
+
+const SUPPORT_PHONE = "09399166196";
+const BALE_PROFILE_URL = "https://ble.ir/AmiriWebino";
+const RUBIKA_PROFILE_URL = "https://rubika.ir/WebinoPlus";
 import { styled } from '@mui/material/styles';
 import TableCell, { tableCellClasses } from '@mui/material/TableCell';
-import { apiRequestError } from '@/app/lib/apiRequestError';
+import { apiRequestError } from '@/app/lib/apiRequestError/client';
 import { toast, ToastContainer } from 'react-toastify';
 import { useSearchParams, useRouter } from "next/navigation";
 import 'react-toastify/dist/ReactToastify.css';
 import PhoneNumberInput from '@/app/coponent/PhoneNumberInput/PhoneNumberInput';
 import tokenCode from '@/app/coponent/tokenCode';
+import { FetchWithJwtClient } from '@/app/coponent/fetchWithJwtClient';
+import {
+  readTodayDashboardCache,
+  fetchAndCacheTodayDashboard,
+  getLocalDateKey,
+  type TodayDashboardSnapshot,
+} from '@/app/lib/shopTodayDashboard';
+import {
+  readSalesByDayCache,
+  fetchAndCacheSalesByDay,
+  type SalesByDaySnapshot,
+} from '@/app/lib/shopSalesByDay';
+import SalesByDayChart from '@/app/coponent/SalesByDayChart';
+import { readProductsCountFromCache, PRODUCTS_CACHE_KEY } from '@/app/lib/productsCache';
+import CategoryIcon from '@mui/icons-material/Category';
 
 
 
@@ -89,11 +115,164 @@ export default function ShoppingPage() {
   const [calculatingInstallments, setCalculatingInstallments] = useState(false); // وضعیت در حال محاسبه
   const [installmentCreditError, setInstallmentCreditError] = useState<string>(''); // خطای اعتبار ناکافی
   const [registerPhone, setRegisterPhone] = useState('');
+  const [todayDashboard, setTodayDashboard] = useState<TodayDashboardSnapshot | null>(null);
+  const [salesByDay, setSalesByDay] = useState<SalesByDaySnapshot | null>(null);
+  const [productsCount, setProductsCount] = useState(0);
   const [isRegisteringUser, setIsRegisteringUser] = useState(false);
   const lastSyncTimeRef = useRef<number>(0);
+  const installmentCalcRequestIdRef = useRef(0);
+  const installmentCalculationRef = useRef<any>(null);
   const manualCodeInputRef = useRef<HTMLInputElement>(null);
   const phoneInputRef = useRef<HTMLInputElement>(null);
   const searchParams = useSearchParams();
+
+  type SettlementMode = "split" | "card_all" | "cash_all";
+  const [settlementMode, setSettlementMode] = useState<SettlementMode>("card_all");
+  const [cardAmountInput, setCardAmountInput] = useState("");
+  const [cashAmountInput, setCashAmountInput] = useState("");
+  const [paymentSplitError, setPaymentSplitError] = useState("");
+
+  const parseAmountInput = useCallback((value: string): number => {
+    const persianDigits = "۰۱۲۳۴۵۶۷۸۹";
+    const arabicDigits = "٠١٢٣٤٥٦٧٨٩";
+    const normalized = value
+      .replace(/[۰-۹]/g, (c) => String(persianDigits.indexOf(c)))
+      .replace(/[٠-٩]/g, (c) => String(arabicDigits.indexOf(c)))
+      .replace(/,/g, "")
+      .replace(/\D/g, "");
+    if (normalized === "") return 0;
+    const n = parseInt(normalized, 10);
+    return Number.isNaN(n) ? 0 : n;
+  }, []);
+
+  const payableNow = useMemo(() => {
+    if (paymentType === "installment") {
+      const calc = installmentCalculation;
+      const first = calc?.installment_details?.[0];
+      if (first?.payment_type === "cash" && first?.base_payment != null) {
+        return Math.floor(Number(first.base_payment));
+      }
+      return 0;
+    }
+    return Math.max(0, total - useCreditAmount - discounttype);
+  }, [paymentType, total, useCreditAmount, discounttype, installmentCalculation]);
+
+  const sanitizeAmountInput = useCallback(
+    (value: string) => value.replace(/[^\d۰-۹٠-٩,]/g, ""),
+    [],
+  );
+
+  const handleCardAmountChange = useCallback(
+    (value: string) => {
+      const sanitized = sanitizeAmountInput(value);
+      setPaymentSplitError("");
+      if (sanitized === "") {
+        setCardAmountInput("");
+        setCashAmountInput(String(payableNow));
+        return;
+      }
+      const card = Math.min(parseAmountInput(sanitized), payableNow);
+      setCardAmountInput(String(card));
+      setCashAmountInput(String(Math.max(0, payableNow - card)));
+    },
+    [sanitizeAmountInput, parseAmountInput, payableNow],
+  );
+
+  const handleCashAmountChange = useCallback(
+    (value: string) => {
+      const sanitized = sanitizeAmountInput(value);
+      setPaymentSplitError("");
+      if (sanitized === "") {
+        setCashAmountInput("");
+        setCardAmountInput(String(payableNow));
+        return;
+      }
+      const cash = Math.min(parseAmountInput(sanitized), payableNow);
+      setCashAmountInput(String(cash));
+      setCardAmountInput(String(Math.max(0, payableNow - cash)));
+    },
+    [sanitizeAmountInput, parseAmountInput, payableNow],
+  );
+
+  const resetPaymentSettlement = useCallback(() => {
+    setSettlementMode("card_all");
+    setCardAmountInput("");
+    setCashAmountInput("");
+    setPaymentSplitError("");
+  }, []);
+
+  const paymentFieldsValid = useMemo(() => {
+    if (payableNow <= 0) return true;
+    if (settlementMode === "card_all" || settlementMode === "cash_all") return true;
+    const card = parseAmountInput(cardAmountInput);
+    const cash = parseAmountInput(cashAmountInput);
+    return card + cash === payableNow;
+  }, [payableNow, settlementMode, cardAmountInput, cashAmountInput, parseAmountInput]);
+
+  useEffect(() => {
+    if (payableNow <= 0) {
+      setCardAmountInput("");
+      setCashAmountInput("");
+      setPaymentSplitError("");
+      return;
+    }
+    if (settlementMode === "card_all") {
+      setCardAmountInput(String(payableNow));
+      setCashAmountInput("0");
+      setPaymentSplitError("");
+    } else if (settlementMode === "cash_all") {
+      setCardAmountInput("0");
+      setCashAmountInput(String(payableNow));
+      setPaymentSplitError("");
+    } else if (settlementMode === "split") {
+      const card = Math.min(parseAmountInput(cardAmountInput), payableNow);
+      setCashAmountInput(String(Math.max(0, payableNow - card)));
+    }
+  }, [payableNow, settlementMode, cardAmountInput, parseAmountInput]);
+
+  const appendPaymentSettlement = useCallback(
+    (loadData: Record<string, unknown>): string | null => {
+      if (payableNow <= 0) return null;
+
+      if (settlementMode === "card_all") {
+        loadData.payment_settlement = "card";
+        return null;
+      }
+      if (settlementMode === "cash_all") {
+        loadData.payment_settlement = "cash";
+        return null;
+      }
+
+      const card = parseAmountInput(cardAmountInput);
+      const cash = parseAmountInput(cashAmountInput);
+      if (card + cash !== payableNow) {
+        const fmt = (n: number) => new Intl.NumberFormat("fa-IR").format(n);
+        return `جمع کارت (${fmt(card)}) و نقد (${fmt(cash)}) باید برابر ${fmt(payableNow)} تومان باشد`;
+      }
+      loadData.card_amount = card;
+      loadData.cash_amount = cash;
+      return null;
+    },
+    [payableNow, settlementMode, cardAmountInput, cashAmountInput, parseAmountInput],
+  );
+
+  const darkFieldSx = {
+    "& .MuiOutlinedInput-root": {
+      backgroundColor: "#1a1d2e",
+      color: "#fff",
+      "& fieldset": { borderColor: "#505669" },
+      "&:hover fieldset": { borderColor: "#78b568" },
+      "&.Mui-focused fieldset": { borderColor: "#78b568" },
+    },
+    "& .MuiInputBase-input": {
+      color: "#fff",
+      fontSize: { xs: "13px", md: "14px" },
+      padding: { xs: "10px 12px", md: "12px 14px" },
+      textAlign: "right",
+      direction: "ltr",
+    },
+    "& .MuiFormHelperText-root": { color: "#ff4444", fontSize: { xs: "11px", md: "12px" } },
+  } as const;
   
   // Online/Offline detection
   useEffect(() => {
@@ -122,6 +301,27 @@ export default function ShoppingPage() {
     (parseInt(price) > 0) && setBackPrice(parseInt(price) )
     
   }, [searchParams]);
+
+  const refreshShopDashboard = useCallback(async () => {
+    const [todaySnap, salesSnap] = await Promise.all([
+      fetchAndCacheTodayDashboard(),
+      fetchAndCacheSalesByDay(10),
+    ]);
+    if (todaySnap) setTodayDashboard(todaySnap);
+    if (salesSnap) setSalesByDay(salesSnap);
+  }, []);
+
+  useEffect(() => {
+    setTodayDashboard(readTodayDashboardCache());
+    setSalesByDay(readSalesByDayCache());
+    setProductsCount(readProductsCountFromCache());
+  }, []);
+
+  useEffect(() => {
+    if (items.length > 0) {
+      setProductsCount(items.length);
+    }
+  }, [items.length]);
 
   // بارگذاری خریدهای pending از localStorage
   useEffect(() => {
@@ -196,6 +396,10 @@ export default function ShoppingPage() {
     localStorage.setItem('pending_purchases', JSON.stringify(remaining));
 
     // نمایش پیام‌های مناسب - فقط یک بار
+    if (successful.length > 0) {
+      void refreshShopDashboard();
+    }
+
     if (successful.length > 0 && failed.length === 0) {
       // همه موفق بودند
       toast.success(`${successful.length} خرید با موفقیت ثبت شد`);
@@ -211,7 +415,7 @@ export default function ShoppingPage() {
     }
 
     setIsSyncing(false);
-  }, [pendingPurchases, isSyncing]);
+  }, [pendingPurchases, isSyncing, refreshShopDashboard]);
 
   // Auto-sync خریدهای pending وقتی online می‌شود - فقط یک بار
   useEffect(() => {
@@ -231,12 +435,13 @@ export default function ShoppingPage() {
     // خواندن از cache (localStorage) در ابتدا - همیشه از cache استفاده کن
     const loadCachedProducts = () => {
       try {
-        const cachedData = localStorage.getItem('products_cache');
+        const cachedData = localStorage.getItem(PRODUCTS_CACHE_KEY);
         
         if (cachedData) {
           const parsedData = JSON.parse(cachedData);
           if (Array.isArray(parsedData) && parsedData.length > 0) {
             setItems(parsedData);
+            setProductsCount(parsedData.length);
             hasCachedData = true;
             console.log('محصولات از cache بارگذاری شد:', parsedData.length, 'محصول');
           }
@@ -268,7 +473,7 @@ export default function ShoppingPage() {
         // فقط در صورت موفقیت، cache را بروزرسانی کن (هرگز پاک نکن)
         if (Array.isArray(res) && res.length > 0) {
           try {
-            localStorage.setItem('products_cache', JSON.stringify(res));
+            localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(res));
             localStorage.setItem('products_cache_timestamp', Date.now().toString());
             console.log('Cache بروزرسانی شد:', res.length, 'محصول');
           } catch (error) {
@@ -277,6 +482,7 @@ export default function ShoppingPage() {
           
           // بروزرسانی state
           setItems(res);
+          setProductsCount(res.length);
           console.log('محصولات از API بروزرسانی شد');
         } else {
           console.warn('داده‌های دریافتی معتبر نیستند، cache حفظ می‌شود');
@@ -296,10 +502,16 @@ export default function ShoppingPage() {
     fetchProducts();
   }, []);
 
-  // محاسبه مبلغ اقساط با سود
+  const normalizeInstallmentResult = (res: any): any => ({
+    ...res,
+    user_credit: res.user_installment_credit ?? res.user_credit,
+  });
+
+  // محاسبه مبلغ اقساط با سود (درخواست مستقیم از مرورگر با توکن)
   useEffect(() => {
     const calculateInstallments = async () => {
       if (paymentType !== 'installment' || installmentCount < 2 || total <= 0) {
+        installmentCalculationRef.current = null;
         setInstallmentCalculation(null);
         setInstallmentCreditError('');
         return;
@@ -307,86 +519,81 @@ export default function ShoppingPage() {
 
       const totalAmount = Math.max(0, total - useCreditAmount - discounttype);
       if (totalAmount <= 0) {
+        installmentCalculationRef.current = null;
         setInstallmentCalculation(null);
         setInstallmentCreditError('');
         return;
       }
 
-      // اگر phone وارد نشده، محاسبه نکن (برای خرید اقساطی phone اجباری است)
       if (!phone || phone.trim() === '') {
+        installmentCalculationRef.current = null;
         setInstallmentCalculation(null);
         setInstallmentCreditError('');
         return;
       }
 
+      const requestId = ++installmentCalcRequestIdRef.current;
       setCalculatingInstallments(true);
       setInstallmentCreditError('');
+
       try {
-        const token = tokenCode();
-        const requestBody: any = {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const requestBody: Record<string, unknown> = {
           total_amount: totalAmount,
-          installment_count: installmentCount
+          installment_count: installmentCount,
+          atelier_code: user.atelier_id,
+          phone: phone.trim(),
         };
 
-        // اگر phone وارد شده، آن را به request اضافه کن
-        if (phone && phone.trim() !== '') {
-          requestBody.phone = phone.trim();
-        }
-
-        const res = await apiRequestError(
-          "Post",
-          {},
+        const res = await FetchWithJwtClient(
+          'POST',
+          '/api/purchased-products/calculate-installments',
           requestBody,
-          `/api/purchased-products/calculate-installments`,
-          false, // نیاز به احراز هویت ندارد (Public)
-          true,
-          token
         );
 
-        if (res.hasError) {
-          console.error("خطا در محاسبه اقساط:", res.errorText);
-          
-          // بررسی خطای اعتبار ناکافی
-          try {
-            const errorData = JSON.parse(res.errorText);
-            if (errorData.error && errorData.error.includes('اعتبار')) {
-              setInstallmentCreditError(errorData.error || 'اعتبار کاربر کافی نیست');
-              setInstallmentCalculation({
-                ...errorData,
-                hasError: true
-              });
-            } else {
-              setInstallmentCreditError('');
-              setInstallmentCalculation(null);
-            }
-          } catch (parseError) {
-            // اگر نتوانستیم parse کنیم، فقط خطا را نمایش بده
-            if (res.statusCode === 400) {
-              setInstallmentCreditError('اعتبار کاربر کافی نیست');
-            } else {
-              setInstallmentCreditError('');
-            }
-            setInstallmentCalculation(null);
-          }
-        } else {
-          // بررسی اینکه آیا اعتبار کافی است یا نه
-          if (res.has_enough_credit === false) {
-            setInstallmentCreditError(res.error || 'اعتبار کاربر کافی نیست');
-            setInstallmentCalculation({
-              ...res,
-              hasError: true
-            });
+        if (requestId !== installmentCalcRequestIdRef.current) return;
+
+        if (!res || res.hasError) {
+          installmentCalculationRef.current = null;
+          setInstallmentCalculation(null);
+          const errMsg =
+            typeof res?.error === 'string'
+              ? res.error
+              : typeof res?.message === 'string'
+                ? res.message
+                : 'خطا در محاسبه اقساط';
+          if (errMsg.includes('اعتبار')) {
+            setInstallmentCreditError(errMsg);
           } else {
             setInstallmentCreditError('');
-            setInstallmentCalculation(res);
+            toast.error(errMsg);
           }
+          return;
+        }
+
+        const normalized = normalizeInstallmentResult(res);
+
+        if (normalized.has_enough_credit === false) {
+          setInstallmentCreditError(
+            (typeof normalized.error === 'string' && normalized.error) || 'اعتبار کاربر کافی نیست',
+          );
+          installmentCalculationRef.current = { ...normalized, hasError: true };
+          setInstallmentCalculation(installmentCalculationRef.current);
+        } else {
+          setInstallmentCreditError('');
+          installmentCalculationRef.current = normalized;
+          setInstallmentCalculation(normalized);
         }
       } catch (error) {
-        console.error("خطا در محاسبه اقساط:", error);
+        if (requestId !== installmentCalcRequestIdRef.current) return;
+        console.error('خطا در محاسبه اقساط:', error);
+        installmentCalculationRef.current = null;
         setInstallmentCalculation(null);
         setInstallmentCreditError('');
       } finally {
-        setCalculatingInstallments(false);
+        if (requestId === installmentCalcRequestIdRef.current) {
+          setCalculatingInstallments(false);
+        }
       }
     };
 
@@ -502,6 +709,27 @@ console.log("discounttype" , discounttype);
       // installment_amount در response برمی‌گردد و نیازی به ارسال نیست
     }
 
+    if (payableNow > 0) {
+      if (!paymentFieldsValid) {
+        const msg =
+          settlementMode === "split"
+            ? `جمع کارت و نقد باید برابر ${formatNumber(payableNow)} تومان باشد`
+            : "مبلغ پرداخت را بررسی کنید";
+        setPaymentSplitError(msg);
+        toast.error(msg);
+        setIsSubmitting(false);
+        return;
+      }
+      const paymentErr = appendPaymentSettlement(loadData);
+      if (paymentErr) {
+        setPaymentSplitError(paymentErr);
+        toast.error(paymentErr);
+        setIsSubmitting(false);
+        return;
+      }
+      setPaymentSplitError("");
+    }
+
     // اگر offline است، در queue ذخیره کن
     if (!isOnline) {
       // ساخت ID یکتا با استفاده از timestamp + random + counter
@@ -539,6 +767,7 @@ console.log("discounttype" , discounttype);
       setDiscountError('');
       setPaymentType('cash');
       setInstallmentCount(2);
+      resetPaymentSettlement();
       setIsSubmitting(false);
       return;
     }
@@ -550,22 +779,31 @@ console.log("discounttype" , discounttype);
         setIsSubmitting(false);
         return;
       }
-      
-      if (installmentCreditError || (installmentCalculation && installmentCalculation.has_enough_credit === false)) {
+
+      if (calculatingInstallments) {
+        toast.error("در حال محاسبه اقساط، لطفاً چند لحظه صبر کنید");
+        setIsSubmitting(false);
+        return;
+      }
+
+      const calc = installmentCalculationRef.current ?? installmentCalculation;
+
+      if (installmentCreditError || (calc && calc.has_enough_credit === false)) {
         toast.error(installmentCreditError || 'اعتبار کاربر کافی نیست. لطفاً اعتبار کاربر را بررسی کنید.');
         setIsSubmitting(false);
         return;
       }
-      
-      if (!installmentCalculation) {
+
+      if (!calc || !calc.installment_amount) {
         toast.error("لطفاً منتظر بمانید تا محاسبه اقساط انجام شود");
         setIsSubmitting(false);
         return;
       }
     }
 
+    const purchaseToken = tokenCode() || '';
     // اگر online است، مستقیماً ارسال کن
-    apiRequestError("Post", {}, loadData, `/api/purchased-products`, true, true, "").then((res) => {
+    apiRequestError("Post", {}, loadData, `/api/purchased-products`, true, true, purchaseToken).then((res) => {
      console.log("res : ",res);
      
       if (res.hasError) {
@@ -623,6 +861,7 @@ console.log("discounttype" , discounttype);
         setDiscountError('');
         setPaymentType('cash');
         setInstallmentCount(2);
+        resetPaymentSettlement();
         setIsSubmitting(false);
         return;
       }
@@ -636,6 +875,7 @@ console.log("discounttype" , discounttype);
         toast.success("خرید ثبت شد");
         router.push(`/admin`);
       }
+      void refreshShopDashboard();
       setCart([])
       setTotal(0)
       setScannedCode("")
@@ -647,6 +887,7 @@ console.log("discounttype" , discounttype);
       setDiscountError('');
       setPaymentType('cash');
       setInstallmentCount(2);
+      resetPaymentSettlement();
       setIsSubmitting(false);
     }).catch((error) => {
       console.error("Error submitting purchase:", error);
@@ -686,9 +927,10 @@ console.log("discounttype" , discounttype);
       setDiscountError('');
       setPaymentType('cash');
       setInstallmentCount(2);
+      resetPaymentSettlement();
       setIsSubmitting(false);
     });
-  }, [cart, phone, useCreditAmount, isOnline, pendingPurchases, discounttype, total, formatNumber, paymentType, installmentCount]);
+  }, [cart, phone, useCreditAmount, isOnline, pendingPurchases, discounttype, total, formatNumber, paymentType, installmentCount, payableNow, paymentFieldsValid, settlementMode, appendPaymentSettlement, resetPaymentSettlement, router, installmentCalculation, calculatingInstallments, installmentCreditError, refreshShopDashboard]);
 
   // بررسی اعتبارسنجی تخفیف هنگام تغییر total
   useEffect(() => {
@@ -1093,96 +1335,6 @@ console.log("discounttype" , discounttype);
           </Box>
         )}
 
-        {cart.length == 0 && <Card id="register-user" sx={{
-          backgroundColor: "#1e2330",
-          borderRadius: { xs: "16px", md: "20px" },
-          border: "1px solid rgba(120, 181, 104, 0.2)",
-          marginBottom: { xs: "2px", md: "4px" },
-          transition: "all 0.3s ease",
-          "&:hover": {
-            border: "1px solid rgba(120, 181, 104, 0.3)",
-          }
-        }}>
-          <CardContent sx={{ padding: { xs: "8px", md: "8px" } }}>
-            <Typography sx={{
-              color: "#fff",
-              fontWeight: "700",
-              fontSize: { xs: "14px", md: "16px" },
-              marginBottom: { xs: "8px", md: "12px" }
-            }}>
-              
-            </Typography>
-            <Box sx={{
-              display: "flex",
-              gap: { xs: "2px", md: "6px" },
-              alignItems: "stretch",
-              flexDirection: { xs: "column", md: "row" }
-            }}>
-              <TextField
-                value={registerPhone}
-                onChange={(e) => {
-                  const numericValue = e.target.value.replace(/[^\d]/g, '').slice(0, 11);
-                  setRegisterPhone(numericValue);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !isRegisteringUser) {
-                    e.preventDefault();
-                    handleRegisterUser();
-                  }
-                }}
-                placeholder="شماره تلفن مشتری (مثال: 09123456789)"
-                type="tel"
-                fullWidth
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    backgroundColor: "#1a1d2e",
-                    color: "#fff",
-                    "& fieldset": {
-                      borderColor: "#505669",
-                    },
-                    "&:hover fieldset": {
-                      borderColor: "#78b568",
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: "#78b568",
-                    },
-                  },
-                  "& .MuiInputBase-input": {
-                    color: "#fff",
-                    fontSize: { xs: "13px", md: "14px" },
-                    padding: { xs: "10px 12px", md: "12px 14px" },
-                    textAlign: "left",
-                    direction: "ltr"
-                  },
-                  "& .MuiInputBase-input::placeholder": {
-                    color: "rgba(255,255,255,0.4)",
-                    opacity: 1
-                  }
-                }}
-              />
-              <Button
-                type="button"
-                onClick={handleRegisterUser}
-                disabled={isRegisteringUser || registerPhone.length !== 11}
-                variant="contained"
-                sx={{
-                  minWidth: { xs: "100%", md: "140px" },
-                  borderRadius: "10px",
-                  background: "linear-gradient(135deg, #78b568 0%, #5a9a4a 100%)",
-                  fontWeight: "700",
-                  "&:disabled": {
-                    color: "rgba(255,255,255,0.4)",
-                    background: "rgba(120, 181, 104, 0.2)",
-                  }
-                }}
-              >
-                {isRegisteringUser ? "در حال ثبت..." : "ثبت "}
-              </Button>
-            </Box>
-          </CardContent>
-        </Card>}
-
-
         {/* Desktop Layout */}
         <Grid container spacing={3} sx={{ maxWidth: { md: "1400px" }, margin: { md: "0 auto" } }}>
           {/* Cart Items */}
@@ -1365,46 +1517,361 @@ console.log("discounttype" , discounttype);
               </Table>
             </TableContainer>
           </Box>
-            ) : (
-              <Card sx={{ 
-                backgroundColor: "#1e2330", 
-                borderRadius: { xs: "16px", md: "20px" },
-                border: "1px solid rgba(120, 181, 104, 0.2)",
-                marginBottom: { xs: "12px", md: "0" },
-                transition: "all 0.3s ease",
-                "&:hover": {
-                  border: "1px solid rgba(120, 181, 104, 0.3)",
-                }
-              }}>
-                <CardContent sx={{ 
-                  textAlign: "center", 
-                  padding: { xs: "24px", md: "48px" } 
-                }}>
-                  <ShoppingCartIcon sx={{ 
-                    fontSize: { xs: "48px", md: "80px" }, 
-                    color: backPrice ? "rgba(26, 180, 77, 0.6)" : `rgba(255,255,255,0.6)`, 
-                    marginBottom: { xs: "12px", md: "20px" } 
-                  }} />
-                  <Typography sx={{ 
-                    color: backPrice ? "rgba(26, 180, 77, 0.6)" : `rgba(255,255,255,0.6)`, 
-                    fontSize: { xs: "14px", md: "20px" } 
-                  }}>{
-                  backPrice ? `  کالا با موفقیت برگشت خورد   `  : "سبد خرید خالی است" 
-                  }
-                    
+            ) : backPrice ? (
+              <Card
+                sx={{
+                  backgroundColor: "#1e2330",
+                  borderRadius: { xs: "16px", md: "20px" },
+                  border: "1px solid rgba(26, 180, 77, 0.35)",
+                  marginBottom: { xs: "12px", md: "0" },
+                }}
+              >
+                <CardContent sx={{ textAlign: "center", padding: { xs: "24px", md: "40px" } }}>
+                  <CheckCircleIcon sx={{ fontSize: { xs: 48, md: 64 }, color: "rgba(26, 180, 77, 0.85)", mb: 1.5 }} />
+                  <Typography sx={{ color: "rgba(26, 180, 77, 0.9)", fontSize: { xs: "15px", md: "18px" }, fontWeight: 600 }}>
+                    کالا با موفقیت برگشت خورد
                   </Typography>
-                  <Typography sx={{ 
-                     color: backPrice ? "rgba(26, 180, 77, 0.6)" : `rgba(255,255,255,0.6)`, 
-                    fontSize: { xs: "12px", md: "16px" }, 
-                    marginTop: { xs: "6px", md: "12px" } 
-                  }}>
-                    {
-                  backPrice ? `  منتظر کالای جدید   `  : "برای افزودن کالا، روی دکمه + کلیک کنید" 
-                  }
-                    
+                  <Typography sx={{ color: "rgba(255,255,255,0.55)", fontSize: { xs: "12px", md: "14px" }, mt: 1 }}>
+                    منتظر کالای جدید هستید
                   </Typography>
                 </CardContent>
               </Card>
+            ) : (
+              <Box sx={{ marginBottom: { xs: "12px", md: 0 } }}>
+                <Grid container spacing={{ xs: 1.5, md: 2 }} alignItems="stretch">
+                  <Grid item xs={12} md={6}>
+                    <Card
+                      sx={{
+                        height: "100%",
+                        background: "linear-gradient(145deg, #1e2330 0%, #252b3d 100%)",
+                        borderRadius: { xs: "16px", md: "20px" },
+                        border: "1px solid rgba(120, 181, 104, 0.22)",
+                        overflow: "hidden",
+                      }}
+                    >
+                      <CardContent sx={{ padding: { xs: "16px", md: "20px" }, height: "100%" }}>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: { xs: 1.5, md: 2 } }}>
+                          <TodayIcon sx={{ color: "#78b568", fontSize: { xs: 22, md: 26 } }} />
+                          <Box>
+                            <Typography sx={{ color: "#fff", fontWeight: 700, fontSize: { xs: "15px", md: "17px" } }}>
+                              {todayDashboard?.dateKey === getLocalDateKey()
+                                ? "عملکرد امروز"
+                                : "آخرین آمار فروش"}
+                            </Typography>
+                            <Typography sx={{ color: "rgba(255,255,255,0.5)", fontSize: { xs: "11px", md: "12px" } }}>
+                              {todayDashboard
+                                ? "بعد از هر خرید به‌روز می‌شود"
+                                : "پس از اولین فروش امروز اینجا نمایش داده می‌شود"}
+                            </Typography>
+                          </Box>
+                        </Box>
+
+                        <Grid container spacing={{ xs: 1.25, md: 1.5 }}>
+                          {[
+                            
+                            {
+                              icon: <AttachMoneyIcon sx={{ fontSize: 20 }} />,
+                              label: "مبلغ فروش",
+                              value: todayDashboard ? formatNumber(todayDashboard.totalSales) : "—",
+                              suffix: "تومان",
+                              gradient: "linear-gradient(135deg,rgb(52, 185, 97) 0%,rgb(45, 128, 84) 100%)",
+                            },
+                            {
+                              icon: <TrendingUpIcon sx={{ fontSize: 20 }} />,
+                              label: "سود امروز",
+                              value: todayDashboard ? formatNumber(todayDashboard.totalProfit) : "—",
+                              suffix: "تومان",
+                              gradient: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+                            },
+                            {
+                              icon: <CategoryIcon sx={{ fontSize: 20 }} />,
+                              label: "تعداد کالا",
+                              value: productsCount > 0 ? formatNumber(productsCount) : "—",
+                              suffix: productsCount > 0 ? "عدد" : "",
+                              gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                            },
+                            {
+                              icon: <Inventory2Icon sx={{ fontSize: 20 }} />,
+                              label: "ارزش کل انبار",
+                              value: todayDashboard ? formatNumber(todayDashboard.inventorySaleValue) : "—",
+                              suffix: "تومان",
+                              gradient: "linear-gradient(135deg, #4facfe 0%,rgb(13, 76, 80) 100%)",
+                            },
+                          ].map((stat) => (
+                            <Grid item xs={6} key={stat.label}>
+                              <Box
+                                sx={{
+                                  p: { xs: 1.25, md: 1.5 },
+                                  borderRadius: "12px",
+                                  background: stat.gradient,
+                                  minHeight: { xs: 88, md: 96 },
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  justifyContent: "space-between",
+                                }}
+                              >
+                                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, color: "rgba(255,255,255,0.9)" }}>
+                                  {stat.icon}
+                                  <Typography sx={{ fontSize: { xs: "10px", md: "11px" }, fontWeight: 500 }}>
+                                    {stat.label}
+                                  </Typography>
+                                </Box>
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    alignItems: "baseline",
+                                    justifyContent: "space-between",
+                                    gap: 0.75,
+                                    width: "100%",
+                                    flexWrap: "wrap",
+                                  }}
+                                >
+                                  <Typography
+                                    sx={{
+                                      color: "#fff",
+                                      fontWeight: 700,
+                                      fontSize: {
+                                        xs: stat.value === "—" ? "18px" : "15px",
+                                        md: stat.value === "—" ? "22px" : "17px",
+                                      },
+                                      lineHeight: 1.3,
+                                      wordBreak: "break-word",
+                                    }}
+                                  >
+                                    {stat.value}
+                                  </Typography>
+                                  {stat.suffix && stat.value !== "—" && (
+                                    <Typography
+                                      sx={{
+                                        color: "rgba(255,255,255,0.8)",
+                                        fontSize: { xs: "10px", md: "11px" },
+                                        fontWeight: 500,
+                                        flexShrink: 0,
+                                      }}
+                                    >
+                                      {stat.suffix}
+                                    </Typography>
+                                  )}
+                                </Box>
+                              </Box>
+                            </Grid>
+                          ))}
+                        </Grid>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <Card
+                      sx={{
+                        height: "100%",
+                        background: "linear-gradient(145deg, #1a1f2e 0%, #232a3f 100%)",
+                        borderRadius: { xs: "16px", md: "20px" },
+                        border: "1px solid rgba(102, 126, 234, 0.25)",
+                        overflow: "hidden",
+                      }}
+                    >
+                      <CardContent sx={{ padding: { xs: "16px", md: "20px" }, height: "100%" }}>
+                        <SalesByDayChart data={salesByDay} formatNumber={formatNumber} />
+                      </CardContent>
+                    </Card>
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <Box
+                      sx={{
+                        p: { xs: 1.25, md: 1.5 },
+                        borderRadius: "12px",
+                        backgroundColor: "rgba(120, 181, 104, 0.08)",
+                        border: "1px dashed rgba(120, 181, 104, 0.35)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                      }}
+                    >
+                      <AddCircleOutlineIcon sx={{ color: "#78b568", fontSize: { xs: 22, md: 24 } }} />
+                      <Typography sx={{ color: "rgba(255,255,255,0.75)", fontSize: { xs: "12px", md: "13px" } }}>
+                        برای شروع فروش، بارکد را اسکن کنید یا دکمه{" "}
+                        <Box component="span" sx={{ color: "#78b568", fontWeight: 700 }}>
+                          +
+                        </Box>{" "}
+                        را بزنید
+                      </Typography>
+                    </Box>
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <Box
+                      sx={{
+                        mt: { xs: 1.5, md: 2 },
+                        mb: "15px",
+                        display: "flex",
+                        flexDirection: { xs: "column", sm: "row" },
+                        alignItems: "stretch",
+                        gap: { xs: 1, sm: 1.5 },
+                      }}
+                    >
+                      <Card
+                        id="register-user"
+                        sx={{
+                          width: { xs: "100%", sm: "33.333%" },
+                          flexShrink: 0,
+                          backgroundColor: "#1e2330",
+                          borderRadius: "12px",
+                          border: "1px solid rgba(120, 181, 104, 0.22)",
+                          boxShadow: "none",
+                        }}
+                      >
+                        <CardContent sx={{ py: 1.25, px: 1.5, "&:last-child": { pb: 1.25 } }}>
+                          <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 0.75 }}>
+                            <PersonAddIcon sx={{ color: "#78b568", fontSize: 18 }} />
+                            <Typography sx={{ color: "#fff", fontWeight: 600, fontSize: "13px" }}>
+                              ثبت مشتری جدید
+                            </Typography>
+                          </Box>
+                          <Box sx={{ display: "flex", gap: 0.75, alignItems: "center" }}>
+                            <TextField
+                              value={registerPhone}
+                              onChange={(e) => {
+                                const numericValue = e.target.value.replace(/[^\d]/g, "").slice(0, 11);
+                                setRegisterPhone(numericValue);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && !isRegisteringUser) {
+                                  e.preventDefault();
+                                  handleRegisterUser();
+                                }
+                              }}
+                              placeholder="09xxxxxxxxx"
+                              type="tel"
+                              size="small"
+                              fullWidth
+                              sx={{
+                                "& .MuiOutlinedInput-root": {
+                                  backgroundColor: "#1a1d2e",
+                                  color: "#fff",
+                                  borderRadius: "10px",
+                                  height: 36,
+                                  "& fieldset": { borderColor: "#505669" },
+                                  "&:hover fieldset": { borderColor: "#78b568" },
+                                  "&.Mui-focused fieldset": { borderColor: "#78b568" },
+                                },
+                                "& .MuiInputBase-input": {
+                                  color: "#fff",
+                                  fontSize: "12px",
+                                  textAlign: "left",
+                                  direction: "ltr",
+                                },
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              onClick={handleRegisterUser}
+                              disabled={isRegisteringUser || registerPhone.length !== 11}
+                              variant="contained"
+                              size="small"
+                              sx={{
+                                flexShrink: 0,
+                                minWidth: 56,
+                                height: 36,
+                                fontSize: "12px",
+                                fontWeight: 700,
+                                background: "linear-gradient(135deg, #78b568 0%, #5a9a4a 100%)",
+                              }}
+                            >
+                              {isRegisteringUser ? "..." : "ثبت"}
+                            </Button>
+                          </Box>
+                        </CardContent>
+                      </Card>
+
+                      <Card
+                        sx={{
+                          flex: 1,
+                          backgroundColor: "#1e2330",
+                          borderRadius: "12px",
+                          border: "1px solid rgba(120, 181, 104, 0.18)",
+                          boxShadow: "none",
+                        }}
+                      >
+                        <CardContent sx={{ py: 1.25, px: 1.5, "&:last-child": { pb: 1.25 } }}>
+                          <Typography
+                            sx={{
+                              color: "#fff",
+                              fontWeight: 600,
+                              fontSize: "13px",
+                              mb: 1,
+                            }}
+                          >
+                            تماس با پشتیبانی
+                          </Typography>
+                          <Box sx={{ display: "flex", gap: 0.75 }}>
+                            <Button
+                              component="a"
+                              href={`tel:${SUPPORT_PHONE}`}
+                              variant="contained"
+                              size="small"
+                              startIcon={<PhoneIcon sx={{ fontSize: 16 }} />}
+                              sx={{
+                                flex: 1,
+                                height: 36,
+                                fontSize: "11px",
+                                fontWeight: 600,
+                                borderRadius: "10px",
+                                textDecoration: "none",
+                                background: "linear-gradient(135deg, #43a047 0%, #2e7d32 100%)",
+                                "& .MuiButton-startIcon": { mr: 0.5, ml: 0 },
+                              }}
+                            >
+                              تماس
+                            </Button>
+                            <Button
+                              component="a"
+                              href={BALE_PROFILE_URL}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              variant="contained"
+                              size="small"
+                              startIcon={<SupportAgentIcon sx={{ fontSize: 16 }} />}
+                              sx={{
+                                flex: 1,
+                                height: 36,
+                                fontSize: "11px",
+                                fontWeight: 600,
+                                borderRadius: "10px",
+                                textDecoration: "none",
+                                background: "linear-gradient(135deg, #00b894 0%, #008f72 100%)",
+                                "& .MuiButton-startIcon": { mr: 0.5, ml: 0 },
+                              }}
+                            >
+                              بله
+                            </Button>
+                            <Button
+                              component="a"
+                              href={RUBIKA_PROFILE_URL}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              variant="contained"
+                              size="small"
+                              sx={{
+                                flex: 1,
+                                height: 36,
+                                fontSize: "11px",
+                                fontWeight: 600,
+                                borderRadius: "10px",
+                                textDecoration: "none",
+                                background: "linear-gradient(135deg, #e91e63 0%, #c2185b 100%)",
+                              }}
+                            >
+                              روبیکا
+                            </Button>
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Box>
             )}
           </Grid>
 
@@ -1699,13 +2166,14 @@ console.log("discounttype" , discounttype);
                                     }}>
                                       مبلغ مورد نیاز: {formatNumber(Math.floor(installmentCalculation.final_total_amount || 0))} تومان
                                     </Typography>
-                                    {installmentCalculation.user_credit !== undefined && (
+                                    {(installmentCalculation.user_credit !== undefined ||
+                                      installmentCalculation.user_installment_credit !== undefined) && (
                                       <Typography sx={{ 
                                         color: "rgba(255,255,255,0.6)", 
                                         fontSize: { xs: "9px", md: "11px" },
                                         marginBottom: { xs: "2px", md: "4px" }
                                       }}>
-                                        اعتبار موجود: {formatNumber(Math.floor(installmentCalculation.user_credit || 0))} تومان
+                                        اعتبار موجود: {formatNumber(Math.floor(installmentCalculation.user_credit ?? installmentCalculation.user_installment_credit ?? 0))} تومان
                                       </Typography>
                                     )}
                                     {installmentCalculation.credit_shortage !== undefined && (
@@ -1744,6 +2212,127 @@ console.log("discounttype" , discounttype);
                               </>
                             )}
                           </Box>
+                        )}
+                      </Box>
+                    )}
+                    {payableNow > 0 && (
+                      <Box
+                        sx={{
+                          marginTop: { xs: "12px", md: "16px" },
+                          padding: { xs: "10px", md: "14px" },
+                          backgroundColor: "#1a1d2e",
+                          borderRadius: { xs: "8px", md: "10px" },
+                          border: "1px solid rgba(120, 181, 104, 0.25)",
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            color: "#fff",
+                            fontSize: { xs: "13px", md: "14px" },
+                            fontWeight: "600",
+                            marginBottom: { xs: "4px", md: "6px" },
+                          }}
+                        >
+                         نوع پرداخت 
+                        </Typography>
+                       
+                        <FormControl component="fieldset" fullWidth>
+                          <RadioGroup
+                            value={settlementMode}
+                            onChange={(e) => {
+                              const mode = e.target.value as SettlementMode;
+                              setSettlementMode(mode);
+                              setPaymentSplitError("");
+                              if (mode === "split") {
+                                setCardAmountInput(String(payableNow));
+                                setCashAmountInput("0");
+                              }
+                            }}
+                            sx={{ gap: { xs: "2px", md: "4px" } }}
+                          >
+                            <FormControlLabel
+                              value="card_all"
+                              control={
+                                <Radio
+                                  sx={{
+                                    color: "#505669",
+                                    "&.Mui-checked": { color: "#78b568" },
+                                  }}
+                                />
+                              }
+                              label={
+                                <Typography sx={{ color: "#fff", fontSize: { xs: "12px", md: "13px" } }}>
+                                  کارتخوان
+                                </Typography>
+                              }
+                            />
+                            <FormControlLabel
+                              value="cash_all"
+                              control={
+                                <Radio
+                                  sx={{
+                                    color: "#505669",
+                                    "&.Mui-checked": { color: "#78b568" },
+                                  }}
+                                />
+                              }
+                              label={
+                                <Typography sx={{ color: "#fff", fontSize: { xs: "12px", md: "13px" } }}>
+                                نقد
+                                </Typography>
+                              }
+                            />
+                            <FormControlLabel
+                              value="split"
+                              control={
+                                <Radio
+                                  sx={{
+                                    color: "#505669",
+                                    "&.Mui-checked": { color: "#78b568" },
+                                  }}
+                                />
+                              }
+                              label={
+                                <Typography sx={{ color: "#fff", fontSize: { xs: "12px", md: "13px" } }}>
+                                  کارت + نقد
+                                </Typography>
+                              }
+                            />
+                          </RadioGroup>
+                        </FormControl>
+                        {settlementMode === "split" && (
+                          <Box sx={{ marginTop: { xs: "8px", md: "10px" }, display: "flex", flexDirection: "column", gap: { xs: "8px", md: "10px" } }}>
+                            <TextField
+                              label="مبلغ کارتخوان (تومان)"
+                              value={cardAmountInput}
+                              onChange={(e) => handleCardAmountChange(e.target.value)}
+                              size="small"
+                              fullWidth
+                              InputLabelProps={{ sx: { color: "rgba(255,255,255,0.7)" } }}
+                              sx={darkFieldSx}
+                            />
+                            <TextField
+                              label="مبلغ نقد / دستی (تومان)"
+                              value={cashAmountInput}
+                              onChange={(e) => handleCashAmountChange(e.target.value)}
+                              size="small"
+                              fullWidth
+                              InputLabelProps={{ sx: { color: "rgba(255,255,255,0.7)" } }}
+                              sx={darkFieldSx}
+                            />
+                            {!paymentFieldsValid && (
+                              <Typography sx={{ color: "#ff4444", fontSize: { xs: "11px", md: "12px" } }}>
+                                جمع کارت ({formatNumber(parseAmountInput(cardAmountInput))}) و نقد (
+                                {formatNumber(parseAmountInput(cashAmountInput))}) باید برابر{" "}
+                                {formatNumber(payableNow)} تومان باشد
+                              </Typography>
+                            )}
+                          </Box>
+                        )}
+                        {paymentSplitError && (
+                          <Typography sx={{ color: "#ff4444", fontSize: { xs: "11px", md: "12px" }, marginTop: "8px" }}>
+                            {paymentSplitError}
+                          </Typography>
                         )}
                       </Box>
                     )}
@@ -1903,12 +2492,13 @@ console.log("discounttype" , discounttype);
                             سود کل: {formatNumber(Math.floor(installmentCalculation.total_interest || 0))} تومان ({installmentCalculation.monthly_interest_rate || 0}% ماهانه)
                           </Typography>
                         )}
-                        {installmentCalculation && installmentCalculation.user_credit !== undefined && (
+                        {(installmentCalculation?.user_credit !== undefined ||
+                          installmentCalculation?.user_installment_credit !== undefined) && (
                           <Typography sx={{ 
                             color: installmentCalculation.has_enough_credit ? "#78b568" : "#ff4444", 
                             fontSize: { xs: "10px", md: "12px" }
                           }}>
-                            اعتبار کاربر: {formatNumber(Math.floor(installmentCalculation.user_credit || 0))} تومان
+                            اعتبار کاربر: {formatNumber(Math.floor(installmentCalculation.user_credit ?? installmentCalculation.user_installment_credit ?? 0))} تومان
                             {installmentCalculation.has_enough_credit ? ' ✓' : ' ✗'}
                           </Typography>
                         )}
@@ -1922,12 +2512,13 @@ console.log("discounttype" , discounttype);
                   disabled={
                     !total || 
                     isSubmitting || 
+                    (payableNow > 0 && !paymentFieldsValid) ||
                     (paymentType === 'installment' && (
                       !phone || 
                       phone.trim() === '' || 
                       !!installmentCreditError || 
                       (installmentCalculation && installmentCalculation.has_enough_credit === false) ||
-                      !installmentCalculation ||
+                      !installmentCalculation?.installment_amount ||
                       calculatingInstallments
                     ))
                   }

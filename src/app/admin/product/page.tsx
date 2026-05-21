@@ -1,8 +1,8 @@
 "use client";
 import List from "@/app/coponent/grid/Grid";
-import React, { useState, Suspense, useEffect, useMemo } from "react";
+import React, { useState, Suspense, useEffect, useMemo, useRef, useCallback } from "react";
 
-import { Box, Grid, Button, TextField, Typography, IconButton, Card, CardMedia, Select, MenuItem, FormControl, InputLabel, Chip, OutlinedInput, Checkbox, Collapse, Paper, Dialog, DialogTitle, DialogContent, DialogActions, Autocomplete } from "@mui/material";
+import { Box, Grid, Button, TextField, Typography, IconButton, Card, CardMedia, Select, MenuItem, FormControl, InputLabel, Chip, OutlinedInput, Checkbox, Collapse, Paper, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Autocomplete, CircularProgress, Modal, Input } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import AddIcon from '@mui/icons-material/Add';
@@ -11,6 +11,10 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
+import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
+import FlashlightOnIcon from '@mui/icons-material/FlashlightOn';
+import FlashlightOffIcon from '@mui/icons-material/FlashlightOff';
+import BarcodeScannerComponent from "react-qr-barcode-scanner";
 import { useRouter } from "next/navigation";
 import CardUser from "./cardUser";
 import { ToastContainer, toast } from "react-toastify";
@@ -18,9 +22,10 @@ import 'react-toastify/dist/ReactToastify.css';
 import BottomSheet from "@/app/coponent/BottomSheet";
 import TextInput from "@/app/coponent/TextInput/TextInput";
 import tokenCode from "@/app/coponent/tokenCode";
-import { apiRequestError } from "@/app/lib/apiRequestError";
+import { apiRequestError } from "@/app/lib/apiRequestError/client";
 import { useQueryClient } from '@tanstack/react-query';
 import { mainColors, searchColors } from "../../liberari/colors";
+import { PRODUCTS_CACHE_KEY } from "@/app/lib/productsCache";
 
 const PRODUCT_SORT_OPTIONS = [
     { value: "", label: "پیش‌فرض" },
@@ -49,6 +54,11 @@ export default function ListData() {
     
     // Form states for editing
     const [name, setName] = useState("");
+    const [barcode, setBarcode] = useState("");
+    const [editBarcodeScannerOpen, setEditBarcodeScannerOpen] = useState(false);
+    const [editTorchOn, setEditTorchOn] = useState(false);
+    const [editScanManualCode, setEditScanManualCode] = useState("");
+    const editBarcodeScanInputRef = useRef<HTMLInputElement>(null);
     const [purchase_price, setPurchase_price] = useState("");
     const [sale_price, setSale_price] = useState("");
     const [quantity, setQuantity] = useState("");
@@ -62,15 +72,36 @@ export default function ListData() {
     const [manufacturerProduct, setManufacturerProduct] = useState<any>(null);
     const [selectedManufacturerId, setSelectedManufacturerId] = useState<number | "">("");
     const [productSort, setProductSort] = useState("");
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [productToDelete, setProductToDelete] = useState<any>(null);
+    const [deletingProduct, setDeletingProduct] = useState(false);
+
+    const applyEditScannedBarcode = useCallback((code: string) => {
+        const trimmed = code.trim().slice(0, 255);
+        if (!trimmed) return;
+        setBarcode(trimmed);
+        setEditBarcodeScannerOpen(false);
+        setEditScanManualCode("");
+        setEditTorchOn(false);
+        toast.success("بارکد ثبت شد");
+    }, []);
+
+    const handleEditBarcodeScanResult = useCallback(
+        (result: { text?: string } | null, manual?: string) => {
+            const code = result?.text ?? manual ?? "";
+            if (code.trim()) {
+                applyEditScannedBarcode(code);
+            }
+        },
+        [applyEditScannedBarcode],
+    );
 
     const productListUrl = useMemo(() => {
         if (!productSort) return "/api/product";
         return `/api/product?sort=${productSort}`;
     }, [productSort]);
 
-    const handleProductSortChange = (value: string) => {
-        setProductSort(value);
-        router.push("/admin/product");
+    const invalidateProductListQueries = () => {
         queryClient.invalidateQueries({
             predicate: (query) => {
                 const queryKey = query.queryKey;
@@ -83,6 +114,81 @@ export default function ListData() {
                 return false;
             },
         });
+    };
+
+    const handleProductSortChange = (value: string) => {
+        setProductSort(value);
+        router.push("/admin/product");
+        invalidateProductListQueries();
+    };
+
+    const handleDeleteProduct = (product: any) => {
+        if (!product?.id) return;
+        setProductToDelete(product);
+        setDeleteDialogOpen(true);
+    };
+
+    const handleCloseDeleteDialog = () => {
+        if (deletingProduct) return;
+        setDeleteDialogOpen(false);
+        setProductToDelete(null);
+    };
+
+    const confirmDeleteProduct = async () => {
+        const id = productToDelete?.id;
+        if (!id) return;
+
+        setDeletingProduct(true);
+        try {
+            const token = tokenCode();
+            const res = await apiRequestError(
+                "Delete",
+                {},
+                {},
+                `/api/product/${id}`,
+                true,
+                true,
+                token,
+            );
+
+            if (res.hasError) {
+                let msg = "خطا در حذف محصول";
+                try {
+                    const parsed = JSON.parse(res.errorText);
+                    if (parsed.message) msg = parsed.message;
+                } catch {
+                    /* ignore */
+                }
+                toast.error(msg);
+                return;
+            }
+
+            toast.success("محصول حذف شد");
+            invalidateProductListQueries();
+
+            try {
+                const cached = localStorage.getItem(PRODUCTS_CACHE_KEY);
+                if (cached) {
+                    const arr = JSON.parse(cached);
+                    if (Array.isArray(arr)) {
+                        localStorage.setItem(
+                            PRODUCTS_CACHE_KEY,
+                            JSON.stringify(arr.filter((p: { id?: number }) => p.id !== id)),
+                        );
+                    }
+                }
+            } catch {
+                /* ignore cache update */
+            }
+
+            setDeleteDialogOpen(false);
+            setProductToDelete(null);
+        } catch (error) {
+            console.error("Error deleting product:", error);
+            toast.error("خطا در حذف محصول");
+        } finally {
+            setDeletingProduct(false);
+        }
     };
 
     // Scroll to last printed product when page loads
@@ -534,6 +640,7 @@ export default function ListData() {
         setImages([]);
       }
       setName(product.name || "");
+      setBarcode(product.barcode || "");
       setPurchase_price(product.purchase_price?.toString() || "");
       setSale_price(product.sale_price?.toString() || "");
       setQuantity(product.quantity?.toString() || "");
@@ -555,19 +662,28 @@ export default function ListData() {
       setEditingProduct(null);
       setImages([]); // پاک کردن عکس‌ها هنگام بستن
       setName("");
+      setBarcode("");
       setPurchase_price("");
       setSale_price("");
       setQuantity("");
       setProfitPercentage(45);
       setDiscountPercent("");
+      setEditBarcodeScannerOpen(false);
+      setEditScanManualCode("");
+      setEditTorchOn(false);
       setCategoryIds([]); // پاک کردن دسته‌بندی‌ها
     };
 
     const handleUpdateProduct = async () => {
       if (!editingProduct) return;
 
+      const trimmedBarcode = barcode.trim();
       if (!name.trim() || !purchase_price || !sale_price || !quantity) {
         toast.error("لطفاً تمام فیلدها را پر کنید");
+        return;
+      }
+      if (!trimmedBarcode || trimmedBarcode.length > 255) {
+        toast.error("بارکد الزامی است (۱ تا ۲۵۵ کاراکتر)");
         return;
       }
 
@@ -602,7 +718,7 @@ export default function ListData() {
 
       const data: any = {
         name: name.trim(),
-        barcode: editingProduct.barcode || "",
+        barcode: trimmedBarcode,
         purchase_price: purchasePriceNum.toString(),
         sale_price: salePriceNum.toString(),
         quantity: quantityNum.toString(),
@@ -771,7 +887,9 @@ export default function ListData() {
             disableFilter={true}
             searchBoxList={searchBoxList}
             filterBoxList={dataFilter}
-            CartComponent={(props: any) => <CardUser props={props} manufacturers={manufacturers} />}
+            CartComponent={(props: any) => (
+              <CardUser props={props} manufacturers={manufacturers} onDelete={handleDeleteProduct} />
+            )}
             url={productListUrl}
             filterComponent={<></>}
             showTotal={false}
@@ -779,6 +897,7 @@ export default function ListData() {
             onEditItem={handleEditProduct}
             onSizeColorItem={handleSizeColorProduct}
             onManufacturerItem={handleManufacturerProduct}
+            onDeleteItem={handleDeleteProduct}
             customActions={
               <FormControl size="small" sx={{ minWidth: { xs: 140, sm: 180 } }}>
                 <Select
@@ -847,32 +966,67 @@ export default function ListData() {
               />
             </Box> */}
 
-            {/* Barcode - Read Only */}
-            {/* <Box>
-              <Typography sx={{ color: "#fff", marginBottom: "8px", fontSize: "14px" }}>
-                بارکد:
+            <Box>
+              <Typography sx={{ color: "#fff", marginBottom: "8px", fontSize: "14px", fontWeight: 600 }}>
+                بارکد *
               </Typography>
-              <TextField
-                value={editingProduct?.barcode || ""}
-                disabled
-                fullWidth
+              <Box
                 sx={{
-                  direction: "rtl",
-                  "& .MuiOutlinedInput-root": {
-                    backgroundColor: "#1a1d2e",
-                    color: "#999",
-                    direction: "rtl",
-                    "& fieldset": {
-                      borderColor: "#505669",
-                    },
-                  },
-                  "& .MuiInputBase-input": {
-                    textAlign: "right",
-                    direction: "rtl",
-                  },
+                  display: "flex",
+                  gap: 1,
+                  alignItems: "stretch",
+                  p: 1,
+                  borderRadius: "12px",
+                  border: "1px solid rgba(120, 181, 104, 0.25)",
+                  backgroundColor: "#1a1d2e",
                 }}
-              />
-            </Box> */}
+              >
+                <TextField
+                  value={barcode}
+                  onChange={(e) => setBarcode(e.target.value.slice(0, 255))}
+                  placeholder="بارکد کالا"
+                  size="small"
+                  fullWidth
+                  inputProps={{ maxLength: 255 }}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      backgroundColor: "#1a1d2e",
+                      color: "#fff",
+                      borderRadius: "10px",
+                      "& fieldset": { borderColor: "#505669" },
+                      "&:hover fieldset": { borderColor: "#78b568" },
+                      "&.Mui-focused fieldset": { borderColor: "#78b568" },
+                    },
+                    "& .MuiInputBase-input": {
+                      direction: "ltr",
+                      textAlign: "left",
+                      color: "#fff",
+                    },
+                  }}
+                />
+                <IconButton
+                  type="button"
+                  onClick={() => {
+                    setEditScanManualCode(barcode);
+                    setEditBarcodeScannerOpen(true);
+                    setTimeout(() => editBarcodeScanInputRef.current?.focus(), 150);
+                  }}
+                  title="اسکن بارکد"
+                  sx={{
+                    flexShrink: 0,
+                    alignSelf: "center",
+                    borderRadius: "10px",
+                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    color: "#fff",
+                    "&:hover": {
+                      background: "linear-gradient(135deg, #764ba2 0%, #667eea 100%)",
+                    },
+                  }}
+                >
+                  <QrCodeScannerIcon />
+                </IconButton>
+              </Box>
+            </Box>
 
             {/* Name */}
             <TextInput
@@ -1079,6 +1233,106 @@ export default function ListData() {
             </Button>
           </Box>
         </BottomSheet>
+
+        <Modal
+          open={editBarcodeScannerOpen}
+          onClose={() => {
+            setEditBarcodeScannerOpen(false);
+            setEditScanManualCode("");
+            setEditTorchOn(false);
+          }}
+        >
+          <Box
+            sx={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              bgcolor: "#2b3143",
+              p: 3,
+              width: "90%",
+              maxWidth: "450px",
+              borderRadius: "16px",
+              border: "1px solid rgba(55, 84, 165, 0.3)",
+            }}
+          >
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
+              <Typography sx={{ color: "#fff", fontSize: "16px", fontWeight: 700, flex: 1, textAlign: "center" }}>
+                اسکن بارکد کالا
+              </Typography>
+              <IconButton
+                onClick={() => setEditTorchOn(!editTorchOn)}
+                sx={{
+                  color: "#fff",
+                  backgroundColor: editTorchOn ? "#78b568" : "#1a1d2e",
+                  p: 0.75,
+                  "&:hover": { backgroundColor: editTorchOn ? "#5a9a4a" : "#2b3143" },
+                }}
+              >
+                {editTorchOn ? <FlashlightOnIcon /> : <FlashlightOffIcon />}
+              </IconButton>
+            </Box>
+            <Box
+              sx={{
+                backgroundColor: "#1a1d2e",
+                borderRadius: "10px",
+                p: 1.5,
+                mb: 1.5,
+                display: "flex",
+                justifyContent: "center",
+                overflow: "hidden",
+              }}
+            >
+              <BarcodeScannerComponent
+                width={250}
+                height={250}
+                torch={editTorchOn}
+                onUpdate={(err, result) => {
+                  if (err) return;
+                  if (result?.text) {
+                    handleEditBarcodeScanResult(result);
+                  }
+                }}
+              />
+            </Box>
+            <Input
+              inputRef={editBarcodeScanInputRef}
+              value={editScanManualCode}
+              onChange={(e) => setEditScanManualCode(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleEditBarcodeScanResult(null, editScanManualCode);
+                }
+              }}
+              placeholder="یا بارکد را اینجا وارد کنید"
+              fullWidth
+              sx={{
+                backgroundColor: "#1a1d2e",
+                borderRadius: "10px",
+                color: "#fff",
+                fontSize: "13px",
+                p: 1.25,
+                mb: 1,
+                direction: "ltr",
+                textAlign: "left",
+                "&::placeholder": { color: "rgba(255,255,255,0.45)", opacity: 1 },
+              }}
+            />
+            <Button
+              onClick={() => handleEditBarcodeScanResult(null, editScanManualCode)}
+              variant="contained"
+              fullWidth
+              sx={{
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                fontWeight: 600,
+                borderRadius: "10px",
+              }}
+            >
+              تایید بارکد
+            </Button>
+          </Box>
+        </Modal>
 
           <ToastContainer autoClose={3000} style={{ marginBottom: '76px', borderRadius: "15px" }} position={"bottom-right"} />
 
@@ -1465,6 +1719,80 @@ export default function ListData() {
               }}
             >
               ذخیره
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog
+          open={deleteDialogOpen}
+          onClose={handleCloseDeleteDialog}
+          PaperProps={{
+            sx: {
+              backgroundColor: "#2b3143",
+              borderRadius: "16px",
+              direction: "rtl",
+              minWidth: { xs: "280px", sm: "360px" },
+              border: "1px solid #505669",
+            },
+          }}
+        >
+          <DialogTitle sx={{ color: "#fff", textAlign: "center", fontSize: "18px", fontWeight: 700 }}>
+            تایید حذف محصول
+          </DialogTitle>
+          <DialogContent>
+            <DialogContentText sx={{ color: "rgba(255,255,255,0.75)", textAlign: "center" }}>
+              آیا از حذف این محصول مطمئن هستید؟
+              {productToDelete && (
+                <Box
+                  sx={{
+                    mt: 1.5,
+                    p: 1.25,
+                    backgroundColor: "#1a1d2e",
+                    borderRadius: "8px",
+                    color: "#fff",
+                  }}
+                >
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {productToDelete.name || productToDelete.barcode || `شناسه ${productToDelete.id}`}
+                  </Typography>
+                  {productToDelete.barcode && productToDelete.name && (
+                    <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.55)" }}>
+                      بارکد: {productToDelete.barcode}
+                    </Typography>
+                  )}
+                </Box>
+              )}
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions sx={{ justifyContent: "center", px: 2, pb: 2, gap: 1.5 }}>
+            <Button
+              onClick={handleCloseDeleteDialog}
+              variant="outlined"
+              disabled={deletingProduct}
+              sx={{
+                color: "#fff",
+                borderColor: "#666",
+                minWidth: 100,
+                "&:hover": {
+                  borderColor: "#888",
+                  backgroundColor: "rgba(255,255,255,0.05)",
+                },
+              }}
+            >
+              انصراف
+            </Button>
+            <Button
+              onClick={confirmDeleteProduct}
+              variant="contained"
+              disabled={deletingProduct}
+              startIcon={deletingProduct ? <CircularProgress size={18} color="inherit" /> : undefined}
+              sx={{
+                backgroundColor: "#ff4444",
+                minWidth: 100,
+                "&:hover": { backgroundColor: "#cc0000" },
+              }}
+            >
+              {deletingProduct ? "در حال حذف..." : "حذف"}
             </Button>
           </DialogActions>
         </Dialog>

@@ -1,6 +1,7 @@
 "use client";
 import SimpleBottomNavigationAtelier from './SimpleBottomNavigationAtelier';
 import Header from '../componentsShop/Header';
+import ShopAccessWatcher from '../componentsShop/ShopAccessWatcher';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -22,12 +23,13 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/product/create': 'ثبت کالای جدید',
     '/admin/pending-purchases': 'خریدهای در انتظار',
     '/admin/broadcast-sms': 'ارسال پیامک',
-    '/admin/orders': 'سفارشات',
+    '/admin/orders': 'سفارشات اینترنتی',
     '/admin/best-selling': 'محصولات پرفروش',
     '/admin/invoices': 'فاکتورها',
     '/admin/manufacturers': 'تولیدکنندگان',
     '/admin/manufacturers/report': 'گزارش فروش تولیدکنندگان',
     '/admin/shop-sms-logs': 'پیامک‌های فروشگاه',
+    '/admin/shop-sms-quota': 'مدیریت فروشگاه‌ها',
     '/admin/installments': 'اقساط',
     '/admin/installment-credits': 'اعتبار اقساطی',
     '/admin/profit-loss': 'سود و ضرر',
@@ -94,6 +96,7 @@ export default function ShikshooLayout({
 
   return (
     <>
+      {!isPublicAdminPage && <ShopAccessWatcher />}
       {!isPrintPage && !isPublicAdminPage && (
         <Header 
           title={pageTitle} 

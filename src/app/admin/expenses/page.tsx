@@ -13,7 +13,7 @@ import persian_fa from "react-date-object/locales/persian_fa";
 import "react-multi-date-picker/styles/layouts/mobile.css";
 import BottomSheet from "@/app/coponent/BottomSheet";
 import BottomSheetModal from "@/app/coponent/BottomSheetModal";
-import { apiRequestError } from "@/app/lib/apiRequestError";
+import { apiRequestError } from "@/app/lib/apiRequestError/client";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useQueryClient } from '@tanstack/react-query';

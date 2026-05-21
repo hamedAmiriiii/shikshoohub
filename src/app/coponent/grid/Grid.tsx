@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { Box, Grid, LinearProgress, Typography, CircularProgress, Pagination, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton } from "@mui/material";
+import { Box, Grid, LinearProgress, Typography, CircularProgress, Pagination, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Tooltip } from "@mui/material";
 import PrintIcon from '@mui/icons-material/Print';
 import EditIcon from '@mui/icons-material/Edit';
 import PaletteIcon from '@mui/icons-material/Palette';
@@ -53,77 +53,87 @@ const DesktopActionsCell: React.FC<{
   return (
     <Box sx={{ display: "flex", justifyContent: "center", gap: 1, flexWrap: "wrap" }}>
       {onEdit && (
-        <IconButton 
-          onClick={() => onEdit(item)}
-          sx={{ 
-            backgroundColor: "#ff9100", 
-            color: "#fff",
-            "&:hover": { backgroundColor: "#e68100" }
-          }}
-        >
-          <EditIcon />
-        </IconButton>
+        <Tooltip title="ویرایش" arrow placement="top">
+          <IconButton
+            onClick={() => onEdit(item)}
+            sx={{
+              backgroundColor: "#ff9100",
+              color: "#fff",
+              "&:hover": { backgroundColor: "#e68100" },
+            }}
+          >
+            <EditIcon />
+          </IconButton>
+        </Tooltip>
       )}
       {onSizeColor && (
-        <IconButton 
-          onClick={() => onSizeColor(item)}
-          sx={{ 
-            backgroundColor: "#9c27b0", 
-            color: "#fff",
-            "&:hover": { backgroundColor: "#7b1fa2" }
-          }}
-        >
-          <PaletteIcon />
-        </IconButton>
+        <Tooltip title="سایز و رنگ" arrow placement="top">
+          <IconButton
+            onClick={() => onSizeColor(item)}
+            sx={{
+              backgroundColor: "#9c27b0",
+              color: "#fff",
+              "&:hover": { backgroundColor: "#7b1fa2" },
+            }}
+          >
+            <PaletteIcon />
+          </IconButton>
+        </Tooltip>
       )}
       {onManufacturer && (
-        <IconButton 
-          onClick={() => onManufacturer(item)}
-          sx={{ 
-            backgroundColor: "#2196f3", 
-            color: "#fff",
-            "&:hover": { backgroundColor: "#1976d2" }
-          }}
-        >
-          <FactoryIcon />
-        </IconButton>
+        <Tooltip title="تولیدکننده" arrow placement="top">
+          <IconButton
+            onClick={() => onManufacturer(item)}
+            sx={{
+              backgroundColor: "#2196f3",
+              color: "#fff",
+              "&:hover": { backgroundColor: "#1976d2" },
+            }}
+          >
+            <FactoryIcon />
+          </IconButton>
+        </Tooltip>
       )}
       {onPayInstallment && !item.is_paid && (
-        <IconButton 
-          onClick={() => onPayInstallment(item)}
-          sx={{ 
-            backgroundColor: "#78b568", 
-            color: "#fff",
-            "&:hover": { backgroundColor: "#66a055" }
-          }}
-          title="پرداخت قسط"
-        >
-          <PaymentIcon />
-        </IconButton>
+        <Tooltip title="پرداخت قسط" arrow placement="top">
+          <IconButton
+            onClick={() => onPayInstallment(item)}
+            sx={{
+              backgroundColor: "#78b568",
+              color: "#fff",
+              "&:hover": { backgroundColor: "#66a055" },
+            }}
+          >
+            <PaymentIcon />
+          </IconButton>
+        </Tooltip>
       )}
       {onDelete && (
-        <IconButton 
-          onClick={() => onDelete(item)}
-          sx={{ 
-            backgroundColor: "#ff4444", 
-            color: "#fff",
-            "&:hover": { backgroundColor: "#cc0000" }
-          }}
-          title="حذف"
-        >
-          <DeleteIcon />
-        </IconButton>
+        <Tooltip title="حذف" arrow placement="top">
+          <IconButton
+            onClick={() => onDelete(item)}
+            sx={{
+              backgroundColor: "#ff4444",
+              color: "#fff",
+              "&:hover": { backgroundColor: "#cc0000" },
+            }}
+          >
+            <DeleteIcon />
+          </IconButton>
+        </Tooltip>
       )}
-      <IconButton 
-        onClick={handlePrint}
-        sx={{ 
-          backgroundColor: "#78b568", 
-          color: "#fff",
-          "&:hover": { backgroundColor: "#5a9a4a" }
-        }}
-      >
-        <PrintIcon />
-      </IconButton>
+      <Tooltip title="چاپ برچسب" arrow placement="top">
+        <IconButton
+          onClick={handlePrint}
+          sx={{
+            backgroundColor: "#78b568",
+            color: "#fff",
+            "&:hover": { backgroundColor: "#5a9a4a" },
+          }}
+        >
+          <PrintIcon />
+        </IconButton>
+      </Tooltip>
     </Box>
   );
 };
@@ -162,6 +172,9 @@ interface Props {
   onSizeColorItem?: (item: any) => void; // برای افزودن سایز و رنگ در حالت دسکتاپ
   onManufacturerItem?: (item: any) => void; // برای تنظیم تولیدکننده در حالت دسکتاپ
   onPayInstallmentItem?: (item: any) => void; // برای پرداخت قسط در حالت دسکتاپ
+  onDeleteItem?: (item: any) => void;
+  /** ستون عملیات سفارشی دسکتاپ (مثلاً مدیریت فروشگاه‌ها) */
+  renderRowActions?: (item: any) => ReactNode;
 }
 
 let totalData = null;
@@ -273,6 +286,7 @@ const List: React.FC<Props> = ({
   onManufacturerItem,
   onPayInstallmentItem,
   onDeleteItem,
+  renderRowActions,
 }) => {
   const { ref, inView } = useInView();
   const searchParams = useSearchParams();
@@ -632,7 +646,7 @@ const List: React.FC<Props> = ({
                                 {column.label}
                               </TableCell>
                             ))}
-                            {CartComponent && (
+                            {(CartComponent || renderRowActions) && (
                               <TableCell 
                                 align="center" 
                                 sx={{ 
@@ -679,7 +693,7 @@ const List: React.FC<Props> = ({
                                   {getFieldValue(item, column.field)}
                                 </TableCell>
                               ))}
-                              {CartComponent && (
+                              {(CartComponent || renderRowActions) && (
                                 <TableCell 
                                   align="center"
                                   sx={{
@@ -690,17 +704,21 @@ const List: React.FC<Props> = ({
                                     width: '250px'
                                   }}
                                 >
-                                  <DesktopActionsCell 
-                                    item={item} 
-                                    CartComponent={CartComponent}
-                                    onCheck={onCheck} 
-                                    refetch={refetch}
-                                    onEdit={onEditItem}
-                                    onSizeColor={onSizeColorItem}
-                                    onManufacturer={onManufacturerItem}
-                                    onPayInstallment={onPayInstallmentItem}
-                                    onDelete={onDeleteItem}
-                                  />
+                                  {renderRowActions ? (
+                                    renderRowActions(item)
+                                  ) : (
+                                    <DesktopActionsCell 
+                                      item={item} 
+                                      CartComponent={CartComponent}
+                                      onCheck={onCheck} 
+                                      refetch={refetch}
+                                      onEdit={onEditItem}
+                                      onSizeColor={onSizeColorItem}
+                                      onManufacturer={onManufacturerItem}
+                                      onPayInstallment={onPayInstallmentItem}
+                                      onDelete={onDeleteItem}
+                                    />
+                                  )}
                                 </TableCell>
                               )}
                             </TableRow>

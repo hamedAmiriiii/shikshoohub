@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { Box, Typography, IconButton, Menu, MenuItem, Container } from '@mui/material';
+import { Box, Typography, IconButton, Menu, MenuItem, Container, Button } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -21,8 +21,24 @@ import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import FactoryIcon from '@mui/icons-material/Factory';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import Divider from '@mui/material/Divider';
 import { useRouter, usePathname } from 'next/navigation';
+import { isSuperAdminUser } from '@/app/lib/superAdmin';
+import {
+  getShopAccessFromUser,
+  getAccessMenuSummary,
+  readStoredShopAccessExpired,
+  isShopAccessExpiredInfo,
+  SHOP_ACCESS_EXPIRED_EVENT,
+  SHOP_ACCESS_CLEARED_EVENT,
+  SHOP_SUBSCRIPTION_URL,
+  formatAccessEndDate,
+} from '@/app/lib/shopAccess';
+import EventAvailableIcon from '@mui/icons-material/EventAvailable';
+import StorefrontIcon from '@mui/icons-material/Storefront';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import CardMembershipIcon from '@mui/icons-material/CardMembership';
 
 interface HeaderProps {
   title?: string;
@@ -37,26 +53,72 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [financialMenuAnchor, setFinancialMenuAnchor] = useState<null | HTMLElement>(null);
   const [productManagementMenuAnchor, setProductManagementMenuAnchor] = useState<null | HTMLElement>(null);
+  const [adminMenuAnchor, setAdminMenuAnchor] = useState<null | HTMLElement>(null);
+  const [smsMenuAnchor, setSmsMenuAnchor] = useState<null | HTMLElement>(null);
   const [user, setUser] = useState<any>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [shopAccessExpired, setShopAccessExpired] = useState(false);
+  const [expiredAccessInfo, setExpiredAccessInfo] = useState<ReturnType<typeof getShopAccessFromUser>>(null);
 
-  useEffect(() => {
+  const syncAccessState = () => {
     const userData = localStorage.getItem('user');
+    let parsedUser: Record<string, unknown> | null = null;
     if (userData) {
       try {
-        setUser(JSON.parse(userData));
+        parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
       } catch (error) {
         console.error('خطا در خواندن اطلاعات کاربر:', error);
+        setUser(null);
       }
+    } else {
+      setUser(null);
     }
+    setIsSuperAdmin(isSuperAdminUser());
+
+    const storedExpired = readStoredShopAccessExpired();
+    const access = storedExpired ?? getShopAccessFromUser(parsedUser);
+    const expired = !isSuperAdminUser() && (!!storedExpired || isShopAccessExpiredInfo(access));
+    setShopAccessExpired(expired);
+    setExpiredAccessInfo(expired ? access : null);
+  };
+
+  useEffect(() => {
+    syncAccessState();
+
+    const onExpired = () => syncAccessState();
+    const onCleared = () => syncAccessState();
+
+    window.addEventListener(SHOP_ACCESS_EXPIRED_EVENT, onExpired);
+    window.addEventListener(SHOP_ACCESS_CLEARED_EVENT, onCleared);
+    return () => {
+      window.removeEventListener(SHOP_ACCESS_EXPIRED_EVENT, onExpired);
+      window.removeEventListener(SHOP_ACCESS_CLEARED_EVENT, onCleared);
+    };
   }, []);
+
+  const loadUser = () => {
+    syncAccessState();
+  };
+
+  const shopAccess = user ? getShopAccessFromUser(user) : null;
+  const shopAccessSummary =
+    !shopAccessExpired && user ? getAccessMenuSummary(shopAccess) : null;
+
+  const handleBuySubscription = () => {
+    handleMenuClose();
+    window.open(SHOP_SUBSCRIPTION_URL, "_self");
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('shop_access_expired');
     router.push('/admin/login');
   };
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    loadUser();
     setMenuAnchor(event.currentTarget);
   };
 
@@ -64,6 +126,8 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
     setMenuAnchor(null);
     setFinancialMenuAnchor(null);
     setProductManagementMenuAnchor(null);
+    setAdminMenuAnchor(null);
+    setSmsMenuAnchor(null);
   };
 
   const handleMenuClick = (path: string) => {
@@ -87,6 +151,22 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
     setProductManagementMenuAnchor(null);
   };
 
+  const handleAdminMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAdminMenuAnchor(event.currentTarget);
+  };
+
+  const handleAdminMenuClose = () => {
+    setAdminMenuAnchor(null);
+  };
+
+  const handleSmsMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setSmsMenuAnchor(event.currentTarget);
+  };
+
+  const handleSmsMenuClose = () => {
+    setSmsMenuAnchor(null);
+  };
+
   // اگر در صفحه لاگین یا print هستیم، هدر را نمایش نده
   if (pathname?.includes('/login') || pathname?.includes('/print')) {
     return null;
@@ -103,6 +183,80 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
       marginBottom: { xs: '12px', md: '16px' }
     }}>
       <Container maxWidth="xl">
+        {shopAccessExpired && !isSuperAdmin && (
+          <Box
+            sx={{
+              mb: 1.5,
+              p: { xs: 1.5, md: 2 },
+              borderRadius: "12px",
+              backgroundColor: "rgba(244, 67, 54, 0.15)",
+              border: "1px solid rgba(244, 67, 54, 0.45)",
+              display: "flex",
+              flexDirection: { xs: "column", sm: "row" },
+              alignItems: { xs: "stretch", sm: "center" },
+              gap: { xs: 1.25, sm: 2 },
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 1,
+                flex: 1,
+                minWidth: 0,
+              }}
+            >
+              <WarningAmberIcon
+                sx={{ color: "#ff5252", fontSize: 22, mt: 0.25, flexShrink: 0 }}
+              />
+              <Box sx={{ minWidth: 0, flex: 1 }}>
+                <Typography
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: { xs: "13px", md: "15px" },
+                    color: "#fff",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  اعتبار فروشگاه تمام شده است
+                </Typography>
+                {expiredAccessInfo?.shop_access_ends_at && (
+                  <Typography
+                    sx={{
+                      fontSize: "12px",
+                      color: "rgba(255,255,255,0.85)",
+                      mt: 0.5,
+                      lineHeight: 1.5,
+                      wordBreak: "break-word",
+                    }}
+                  >
+                    پایان اعتبار: {formatAccessEndDate(expiredAccessInfo.shop_access_ends_at)}
+                    {expiredAccessInfo.shop_access_days_remaining != null &&
+                      ` — ${expiredAccessInfo.shop_access_days_remaining.toLocaleString("fa-IR")} روز`}
+                  </Typography>
+                )}
+              </Box>
+            </Box>
+            <Button
+              variant="contained"
+              startIcon={<CardMembershipIcon />}
+              onClick={handleBuySubscription}
+              sx={{
+                flexShrink: 0,
+                width: { xs: "100%", sm: "auto" },
+                backgroundColor: "#ff9800",
+                fontWeight: 700,
+                fontSize: { xs: "13px", md: "14px" },
+                py: { xs: 1, sm: 0.75 },
+                px: 2,
+                whiteSpace: "nowrap",
+                "&:hover": { backgroundColor: "#f57c00" },
+              }}
+            >
+              خرید اشتراک
+            </Button>
+          </Box>
+        )}
         <Box sx={{
           backgroundColor: "#2b3143",
           color: "#fff",
@@ -261,6 +415,79 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
             }
           }}
         >
+          {shopAccessExpired && !isSuperAdmin ? (
+            <>
+              <Box
+                sx={{
+                  px: 2,
+                  py: 1.5,
+                  mx: 1,
+                  mb: 0.5,
+                  borderRadius: "10px",
+                  backgroundColor: "rgba(244, 67, 54, 0.12)",
+                  border: "1px solid rgba(244, 67, 54, 0.35)",
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
+                  <WarningAmberIcon sx={{ color: "#ff5252", fontSize: 20 }} />
+                  <Typography sx={{ color: "#fff", fontSize: "13px", fontWeight: 700 }}>
+                    اعتبار فروشگاه تمام شده
+                  </Typography>
+                </Box>
+                <Typography sx={{ color: "rgba(255,255,255,0.85)", fontSize: "12px", lineHeight: 1.6 }}>
+                  {expiredAccessInfo?.shop_access_ends_at
+                    ? `پایان اعتبار: ${formatAccessEndDate(expiredAccessInfo.shop_access_ends_at)}`
+                    : "برای ادامه استفاده، اشتراک تهیه کنید."}
+                </Typography>
+              </Box>
+              <MenuItem
+                onClick={handleBuySubscription}
+                sx={{
+                  color: "#fff",
+                  fontSize: "15px",
+                  padding: "12px 20px",
+                  borderRadius: "8px",
+                  margin: "4px 8px",
+                  backgroundColor: "rgba(255, 152, 0, 0.15)",
+                  "&:hover": {
+                    backgroundColor: "rgba(255, 152, 0, 0.28)",
+                    transform: "translateX(-4px)",
+                  },
+                }}
+              >
+                <CardMembershipIcon sx={{ color: "#ff9800", fontSize: 22, ml: 1 }} />
+                خرید اشتراک
+              </MenuItem>
+              <Divider sx={{ backgroundColor: "rgba(255, 255, 255, 0.1)", margin: "8px 0" }} />
+            </>
+          ) : (
+            shopAccessSummary && (
+              <>
+                <Box
+                  sx={{
+                    px: 2,
+                    py: 1.5,
+                    mx: 1,
+                    mb: 0.5,
+                    borderRadius: "10px",
+                    backgroundColor: "rgba(33, 150, 243, 0.12)",
+                    border: "1px solid rgba(33, 150, 243, 0.25)",
+                  }}
+                >
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
+                    <EventAvailableIcon sx={{ color: "#2196f3", fontSize: 20 }} />
+                    <Typography sx={{ color: "#fff", fontSize: "13px", fontWeight: 700 }}>
+                      اعتبار کاربری
+                    </Typography>
+                  </Box>
+                  <Typography sx={{ color: "rgba(255,255,255,0.85)", fontSize: "12px", lineHeight: 1.6 }}>
+                    {shopAccessSummary}
+                  </Typography>
+                </Box>
+                <Divider sx={{ backgroundColor: "rgba(255, 255, 255, 0.1)", margin: "8px 0" }} />
+              </>
+            )
+          )}
           {/* Financial Submenu */}
           <MenuItem
             onClick={handleFinancialMenuOpen}
@@ -357,7 +584,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
             <ChevronLeftIcon sx={{ fontSize: "20px" }} />
           </MenuItem>
           <MenuItem
-            onClick={() => handleMenuClick("/admin/shop-sms-logs")}
+            onClick={handleSmsMenuOpen}
             sx={{
               color: "#fff",
               fontSize: "15px",
@@ -367,6 +594,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
               transition: "all 0.2s ease",
               display: "flex",
               alignItems: "center",
+              justifyContent: "space-between",
               gap: "12px",
               "&:hover": {
                 backgroundColor: "rgba(120, 181, 104, 0.15)",
@@ -374,31 +602,40 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
               }
             }}
           >
-            <SmsIcon sx={{ color: "#78b568", fontSize: "22px" }} />
-            پیامک‌های فروشگاه
+            <Box sx={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <SmsIcon sx={{ color: "#78b568", fontSize: "22px" }} />
+              پیامک
+            </Box>
+            <ChevronLeftIcon sx={{ fontSize: "20px" }} />
           </MenuItem>
+          {isSuperAdmin && (
+            <MenuItem
+              onClick={handleAdminMenuOpen}
+              sx={{
+                color: "#fff",
+                fontSize: "15px",
+                padding: "12px 20px",
+                borderRadius: "8px",
+                margin: "4px 8px",
+                transition: "all 0.2s ease",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "12px",
+                "&:hover": {
+                  backgroundColor: "rgba(255, 152, 0, 0.12)",
+                  transform: "translateX(-4px)",
+                },
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <AdminPanelSettingsIcon sx={{ color: "#ff9800", fontSize: "22px" }} />
+                ادمین
+              </Box>
+              <ChevronLeftIcon sx={{ fontSize: "20px" }} />
+            </MenuItem>
+          )}
           <Divider sx={{ backgroundColor: "rgba(255, 255, 255, 0.1)", margin: "8px 0" }} />
-          <MenuItem
-            onClick={() => handleMenuClick("/admin/broadcast-sms")}
-            sx={{
-              color: "#fff",
-              fontSize: "15px",
-              padding: "12px 20px",
-              borderRadius: "8px",
-              margin: "4px 8px",
-              transition: "all 0.2s ease",
-              display: "flex",
-              alignItems: "center",
-              gap: "12px",
-              "&:hover": {
-                backgroundColor: "rgba(120, 181, 104, 0.15)",
-                transform: "translateX(-4px)",
-              }
-            }}
-          >
-            <SmsIcon sx={{ color: "#2196f3", fontSize: "22px" }} />
-            ارسال پیامک
-          </MenuItem>
           <MenuItem
             onClick={() => handleMenuClick("/admin/settings")}
             sx={{
@@ -742,6 +979,112 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
           >
             <LocalOfferIcon sx={{ color: "#ff9100", fontSize: "22px" }} />
             تخفیف دسته جمعی
+          </MenuItem>
+        </Menu>
+
+        {/* SMS Submenu */}
+        <Menu
+          anchorEl={smsMenuAnchor}
+          open={Boolean(smsMenuAnchor)}
+          onClose={handleSmsMenuClose}
+          anchorOrigin={{
+            vertical: 'top',
+            horizontal: 'left',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}
+          sx={{
+            "& .MuiPaper-root": {
+              backgroundColor: "#2b3143",
+              borderRadius: "16px",
+              border: "1px solid rgba(120, 181, 104, 0.2)",
+              minWidth: "220px",
+              padding: "8px 0",
+            }
+          }}
+        >
+          <MenuItem
+            onClick={() => handleMenuClick("/admin/shop-sms-logs")}
+            sx={{
+              color: "#fff",
+              fontSize: "15px",
+              padding: "12px 20px",
+              borderRadius: "8px",
+              margin: "4px 8px",
+              transition: "all 0.2s ease",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              "&:hover": {
+                backgroundColor: "rgba(120, 181, 104, 0.15)",
+                transform: "translateX(-4px)",
+              }
+            }}
+          >
+            <SmsIcon sx={{ color: "#78b568", fontSize: "22px" }} />
+            پیامک‌های فروشگاه
+          </MenuItem>
+          <MenuItem
+            onClick={() => handleMenuClick("/admin/broadcast-sms")}
+            sx={{
+              color: "#fff",
+              fontSize: "15px",
+              padding: "12px 20px",
+              borderRadius: "8px",
+              margin: "4px 8px",
+              transition: "all 0.2s ease",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              "&:hover": {
+                backgroundColor: "rgba(120, 181, 104, 0.15)",
+                transform: "translateX(-4px)",
+              }
+            }}
+          >
+            <SmsIcon sx={{ color: "#2196f3", fontSize: "22px" }} />
+            ارسال پیامک
+          </MenuItem>
+        </Menu>
+
+        {/* Admin submenu — فقط شماره 09399166196 */}
+        <Menu
+          anchorEl={adminMenuAnchor}
+          open={Boolean(adminMenuAnchor)}
+          onClose={handleAdminMenuClose}
+          anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          sx={{
+            "& .MuiPaper-root": {
+              backgroundColor: "#2b3143",
+              borderRadius: "16px",
+              border: "1px solid rgba(255, 152, 0, 0.35)",
+              minWidth: "240px",
+              padding: "8px 0",
+            },
+          }}
+        >
+          <MenuItem
+            onClick={() => handleMenuClick("/admin/shop-sms-quota")}
+            sx={{
+              color: "#fff",
+              fontSize: "15px",
+              padding: "12px 20px",
+              borderRadius: "8px",
+              margin: "4px 8px",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              "&:hover": {
+                backgroundColor: "rgba(255, 152, 0, 0.12)",
+                transform: "translateX(-4px)",
+              },
+            }}
+          >
+            <StorefrontIcon sx={{ color: "#ff9800", fontSize: "22px" }} />
+            مدیریت فروشگاه‌ها
           </MenuItem>
         </Menu>
       </Container>

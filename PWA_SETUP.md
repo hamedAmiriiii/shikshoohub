@@ -49,7 +49,7 @@
 
 1. در مرورگر Chrome/Edge:
    - آیکون نصب در address bar را کلیک کنید
-   - یا از منو: "Install kerman-Photo"
+   - یا از منو: "Install Webino"
 
 2. در موبایل:
    - در Chrome/Safari: منو → "Add to Home Screen"

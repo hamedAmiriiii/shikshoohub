@@ -21,14 +21,14 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "kerman-Photo",
+  title: "Webino",
   description: "سیستم مدیریت عکاسی",
   manifest: "/manifest.json",
   themeColor: "#1f9ad1",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "kerman-Photo",
+    title: "Webino",
   },
   viewport: {
     width: "device-width",

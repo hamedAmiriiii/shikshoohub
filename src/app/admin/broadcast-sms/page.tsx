@@ -6,8 +6,10 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { useRouter } from "next/navigation";
 import { ToastContainer, toast } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
-import { apiRequestError } from "@/app/lib/apiRequestError";
 import tokenCode from "@/app/coponent/tokenCode";
+import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
+import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
+import ShopSmsQuotaCard from "@/app/coponent/ShopSmsQuotaCard";
 
 const formatNumber = (num: number | string) => {
   const numValue = typeof num === 'string' ? parseFloat(num.replace(/,/g, '')) : num;
@@ -37,9 +39,9 @@ export default function BroadcastSMSPage() {
       try {
         setLoading(true);
         const token = tokenCode();
-        const res = await apiRequestError("Get", {}, {}, `/api/customer-broadcast/list`, true, true, token);
-        if (res.hasError) {
-          toast.error("خطا در دریافت لیست مشتریان");
+        const res = await FetchWithJwtClient("GET", "/api/customer-broadcast/list", token);
+        if (!res || res.hasError) {
+          toast.error(getApiErrorMessage(res, "خطا در دریافت لیست مشتریان"));
           return;
         }
         
@@ -151,12 +153,10 @@ export default function BroadcastSMSPage() {
         phones: selectedPhones
       };
 
-      const res = await apiRequestError("Post", {}, data, `/api/customer-broadcast/message`, true, true, token);
+      const res = await FetchWithJwtClient("POST", "/api/customer-broadcast/message", data);
       
-      if (res.hasError) {
-        const parsedResponse = JSON.parse(res.errorText);
-        const readableMessage = parsedResponse.message || "خطا در ارسال پیام";
-        toast.error(readableMessage);
+      if (!res || res.hasError) {
+        toast.error(getApiErrorMessage(res, "خطا در ارسال پیام"));
         return;
       }
 
@@ -174,8 +174,14 @@ export default function BroadcastSMSPage() {
     }
   };
 
+  const recipientCount = selectedPhones.length;
+
   return (
     <Box sx={{ minHeight: "100vh", padding: "16px", paddingBottom: "100px", direction: "rtl", background: "linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%)" }}>
+      <ShopSmsQuotaCard
+        estimateMessage={message}
+        estimateRecipientCount={recipientCount}
+      />
       {/* Manual Phone Input and Message Input - Side by side on desktop */}
       <Grid container spacing={2} sx={{ marginBottom: "20px" }}>
         {/* Manual Phone Input */}
@@ -183,7 +189,7 @@ export default function BroadcastSMSPage() {
           <Card sx={{ backgroundColor: "#1a1d2e", height: "100%", border: "1px solid #505669" }}>
             <CardContent>
               <Typography sx={{ color: "#fff", fontSize: "16px", fontWeight: "600", marginBottom: "12px" }}>
-                افزودن شماره دستی:
+                ارسال به شماره :
               </Typography>
               <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, gap: "8px", marginBottom: "12px" }}>
                 <TextField
@@ -441,7 +447,7 @@ export default function BroadcastSMSPage() {
                   }}
                 >
                   <CardContent>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: "6px" }}>
                       <Checkbox
                         checked={selectedPhones.includes(customer.phone)}
                         onChange={() => handleCustomerSelect(customer.phone)}
@@ -453,16 +459,12 @@ export default function BroadcastSMSPage() {
                         }}
                       />
                       <Box sx={{ flex: 1 }}>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                          <Typography sx={{ color: "#fff", fontSize: "16px", fontWeight: "600" }}>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: "2px" }}>
+                          <Typography sx={{ color: "#fff", fontSize: "14px", fontWeight: "600" }}>
                             {customer.phone || "بدون شماره"}
                           </Typography>
                         </Box>
-                        <Box sx={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center" }}>
-                          <Typography sx={{ color: "#999", fontSize: "14px" }}>
-                            تعداد خرید: {formatNumber(customer.total_purchases || 0)}
-                          </Typography>
-                        </Box>
+                        
                       </Box>
                     </Box>
                   </CardContent>

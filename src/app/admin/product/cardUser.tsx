@@ -1,6 +1,6 @@
 
 "use client";
-import { Box, Grid, IconButton, TextField, Typography, Button, Card, CardMedia, Dialog, DialogTitle, DialogContent, DialogActions, Chip, Paper, Autocomplete, Select, MenuItem, FormControl, InputLabel } from "@mui/material";
+import { Box, Grid, IconButton, TextField, Typography, Button, Card, CardMedia, Dialog, DialogTitle, DialogContent, DialogActions, Chip, Paper, Autocomplete, Select, MenuItem, FormControl, InputLabel, Tooltip } from "@mui/material";
 import PrintIcon from '@mui/icons-material/Print';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -10,7 +10,7 @@ import FactoryIcon from '@mui/icons-material/Factory';
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import tokenCode from "@/app/coponent/tokenCode";
-import { apiRequestError } from "@/app/lib/apiRequestError";
+import { apiRequestError } from "@/app/lib/apiRequestError/client";
 import { toast } from "react-toastify";
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
@@ -28,6 +28,7 @@ export default function CardUser(props: any) {
   const [load] = useState(true);
   const productId = props.props.data?.id;
   const onEdit = props.props.onEdit; // تابع ویرایش از parent component
+  const onDelete = props.onDelete as ((product: { id?: number; name?: string; barcode?: string }) => void) | undefined;
   const manufacturersFromParent = props.manufacturers || []; // لیست تولیدکنندگان از parent
   
   // State for editable values
@@ -732,70 +733,90 @@ export default function CardUser(props: any) {
         {/* دکمه‌های عملیات */}
         <Grid xs={12} sx={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", marginTop: "16px" }}>
           {onEdit && (
-            <IconButton 
-              onClick={() => onEdit(props.props.data)}
-              sx={{ 
-                backgroundColor: "#ff9100", 
+            <Tooltip title="ویرایش" arrow placement="top">
+              <IconButton
+                onClick={() => onEdit(props.props.data)}
+                sx={{
+                  backgroundColor: "#ff9100",
+                  color: "#fff",
+                  "&:hover": { backgroundColor: "#e68000" },
+                }}
+              >
+                <EditIcon />
+              </IconButton>
+            </Tooltip>
+          )}
+          <Tooltip title="سایز و رنگ" arrow placement="top">
+            <IconButton
+              onClick={() => {
+                const data = props.props.data;
+                if (data?.sizes && Array.isArray(data.sizes)) {
+                  setSelectedSizes(data.sizes);
+                } else {
+                  setSelectedSizes([]);
+                }
+                if (data?.colors && Array.isArray(data.colors)) {
+                  setColors(data.colors);
+                } else {
+                  setColors([]);
+                }
+                setSizeColorModalOpen(true);
+              }}
+              sx={{
+                backgroundColor: "#9c27b0",
                 color: "#fff",
-                "&:hover": { backgroundColor: "#e68000" }
+                "&:hover": { backgroundColor: "#7b1fa2" },
               }}
             >
-              <EditIcon />
+              <PaletteIcon />
             </IconButton>
+          </Tooltip>
+          <Tooltip title="چاپ برچسب" arrow placement="top">
+            <IconButton
+              onClick={handlePrint}
+              sx={{
+                backgroundColor: "#78b568",
+                color: "#fff",
+                "&:hover": { backgroundColor: "#5a9a4a" },
+              }}
+            >
+              <PrintIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="تولیدکننده" arrow placement="top">
+            <IconButton
+              onClick={() => {
+                const data = props.props.data;
+                if (data?.manufacturer_id) {
+                  setSelectedManufacturerId(data.manufacturer_id);
+                } else {
+                  setSelectedManufacturerId("");
+                }
+                setManufacturerModalOpen(true);
+              }}
+              sx={{
+                backgroundColor: "#2196f3",
+                color: "#fff",
+                "&:hover": { backgroundColor: "#1976d2" },
+              }}
+            >
+              <FactoryIcon />
+            </IconButton>
+          </Tooltip>
+          {onDelete && (
+            <Tooltip title="حذف محصول" arrow placement="top">
+              <IconButton
+                onClick={() => onDelete(props.props.data)}
+                sx={{
+                  backgroundColor: "#ff4444",
+                  color: "#fff",
+                  "&:hover": { backgroundColor: "#cc0000" },
+                }}
+              >
+                <DeleteIcon />
+              </IconButton>
+            </Tooltip>
           )}
-          <IconButton 
-            onClick={() => {
-              // Load current sizes and colors when opening modal
-              const data = props.props.data;
-              if (data?.sizes && Array.isArray(data.sizes)) {
-                setSelectedSizes(data.sizes);
-              } else {
-                setSelectedSizes([]);
-              }
-              if (data?.colors && Array.isArray(data.colors)) {
-                setColors(data.colors);
-              } else {
-                setColors([]);
-              }
-              setSizeColorModalOpen(true);
-            }}
-            sx={{ 
-              backgroundColor: "#9c27b0", 
-              color: "#fff",
-              "&:hover": { backgroundColor: "#7b1fa2" }
-            }}
-          >
-            <PaletteIcon />
-          </IconButton>
-          <IconButton 
-            onClick={handlePrint}
-            sx={{ 
-              backgroundColor: "#78b568", 
-              color: "#fff",
-              "&:hover": { backgroundColor: "#5a9a4a" }
-            }}
-          >
-            <PrintIcon />
-          </IconButton>
-          <IconButton 
-            onClick={() => {
-              // بارگذاری تولیدکننده فعلی هنگام باز کردن مودال
-              const data = props.props.data;
-              if (data?.manufacturer_id) {
-                setSelectedManufacturerId(data.manufacturer_id);
-              } else {
-                setSelectedManufacturerId("");
-              }
-              setManufacturerModalOpen(true);
-            }}
-            sx={{ 
-              backgroundColor: "#2196f3", 
-              color: "#fff",
-              "&:hover": { backgroundColor: "#1976d2" }
-            }}
-          >
-            <FactoryIcon />
-          </IconButton>
         </Grid>
       </Grid>
 

@@ -5,7 +5,7 @@ import { Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActi
 import AddIcon from '@mui/icons-material/Add';
 import { useRouter } from "next/navigation";
 import InstallmentCreditCard from "./installmentCreditCard";
-import { apiRequestError } from "@/app/lib/apiRequestError";
+import { apiRequestError } from "@/app/lib/apiRequestError/client";
 import tokenCode from "@/app/coponent/tokenCode";
 import { toast, ToastContainer } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';

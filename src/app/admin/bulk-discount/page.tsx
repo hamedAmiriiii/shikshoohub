@@ -7,7 +7,7 @@ import { ToastContainer, toast } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 import TextInput from "@/app/coponent/TextInput/TextInput";
 import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
-import { apiRequestError } from "@/app/lib/apiRequestError";
+import { apiRequestError } from "@/app/lib/apiRequestError/client";
 import tokenCode from "@/app/coponent/tokenCode";
 import { useQueryClient } from '@tanstack/react-query';
 
