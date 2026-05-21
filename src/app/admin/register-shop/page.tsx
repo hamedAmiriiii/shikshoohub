@@ -64,6 +64,20 @@ export default function RegisterShopPage() {
     return () => clearInterval(id);
   }, [codeTimer]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const savedPhone = sessionStorage.getItem("landing_register_phone");
+    const savedShop = sessionStorage.getItem("landing_register_shop");
+    if (savedPhone) {
+      setPhone(savedPhone.startsWith("0") ? savedPhone : `0${savedPhone}`);
+      sessionStorage.removeItem("landing_register_phone");
+    }
+    if (savedShop) {
+      setAtelierName(savedShop);
+      sessionStorage.removeItem("landing_register_shop");
+    }
+  }, []);
+
   const formatCountdown = (seconds: number) =>
     `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, "0")}`;
 

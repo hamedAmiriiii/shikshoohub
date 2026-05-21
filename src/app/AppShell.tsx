@@ -10,8 +10,9 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   const isAdminPage = pathname?.startsWith("/admin");
+  const isLandingPage = pathname?.startsWith("/landing");
 
-  if (isAdminPage) {
+  if (isAdminPage || isLandingPage) {
     return <>{children}</>;
   }
 
