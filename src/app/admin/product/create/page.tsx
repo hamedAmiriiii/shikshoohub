@@ -44,6 +44,7 @@ import BarcodeScannerComponent from "react-qr-barcode-scanner";
 import TextInput from "@/app/coponent/TextInput/TextInput";
 import { useRouter } from "next/navigation";
 import 'react-toastify/dist/ReactToastify.css';
+import { appendProductLabelPrintParams } from "@/app/lib/productLabelPrint";
 
 /** استخراج آرایه از پاسخ‌های مختلف API */
 function extractApiList(res: unknown, listKeys: string[] = []): any[] {
@@ -431,6 +432,7 @@ export default function Page() {
       quantity: String(createdProduct.quantity || 1),
       from: "create",
     });
+    appendProductLabelPrintParams(params, createdProduct);
     setSuccessDialogOpen(false);
     router.push(`/admin/printCustom?${params.toString()}`);
   };

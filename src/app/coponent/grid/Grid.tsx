@@ -15,6 +15,7 @@ import { FetchWithJwtClient } from "../fetchWithJwtClient";
 import CustomizedInputBase from "../CustomizedInputBase";
 import BottomSheetModal from "../BottomSheetModal";
 import { useResponsive } from "../useResponsive";
+import { appendProductLabelPrintParams } from "@/app/lib/productLabelPrint";
 
 // Component to render actions in desktop table
 const DesktopActionsCell: React.FC<{
@@ -49,6 +50,7 @@ const DesktopActionsCell: React.FC<{
       quantity: item?.quantity?.toString() || "1",
       from: "list",
     });
+    appendProductLabelPrintParams(params, item);
     router.push(`/admin/printCustom?${params.toString()}`);
   };
 

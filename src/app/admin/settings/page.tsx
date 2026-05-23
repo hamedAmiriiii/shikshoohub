@@ -11,6 +11,8 @@ import tokenCode from "@/app/coponent/tokenCode";
 import ShopSmsQuotaCard from "@/app/coponent/ShopSmsQuotaCard";
 import AdminThemeToggle from "@/app/admin/theme/AdminThemeToggle";
 import { adminPageSx } from "@/app/admin/theme/adminTheme";
+import { startAdminOnboarding } from "@/app/admin/onboarding/AdminOnboardingProvider";
+import MenuBookIcon from "@mui/icons-material/MenuBook";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -228,12 +230,32 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      <ShopSmsQuotaCard compact />
-      <Alert severity="warning" sx={{ mb: 2, borderRadius: "12px" }}>
-        اعتبار پیامک (shop_sms_quota) از این صفحه قابل ویرایش نیست. فقط ادمین سیستم می‌تواند از منوی
-        «ادمین → مدیریت فروشگاه‌ها» حساب را شارژ کند.
-      </Alert>
+      <Card sx={{ backgroundColor: "var(--admin-surface-alt)", border: "1px solid var(--admin-border)", marginBottom: "16px" }}>
+        <CardContent sx={{ py: 2, px: 2 }}>
+          <Typography sx={{ color: "var(--admin-text)", fontSize: "18px", fontWeight: 600, mb: 0.5 }}>
+            راهنمای شروع
+          </Typography>
+          <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "14px", mb: 2, lineHeight: 1.7 }}>
+            آموزش گام‌به‌گام پنل فروشگاه (منو، فروش، ثبت کالا و …)
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<MenuBookIcon />}
+            onClick={() => startAdminOnboarding()}
+            sx={{
+              bgcolor: "var(--admin-accent)",
+              color: "#fff",
+              fontWeight: 600,
+              "&:hover": { bgcolor: "var(--admin-accent-hover)", color: "#fff" },
+            }}
+          >
+            مشاهده راهنما
+          </Button>
+        </CardContent>
+      </Card>
 
+      <ShopSmsQuotaCard compact />
+     
       {/* Settings Cards */}
       {loading ? (
         <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "200px" }}>

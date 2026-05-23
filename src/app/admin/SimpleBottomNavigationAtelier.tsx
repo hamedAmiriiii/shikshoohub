@@ -57,17 +57,33 @@ export default function SimpleBottomNavigationAtelier() {
 
   return (
     <Box sx={{ width: 500, height:"65" }}>
-      <Paper sx={{width:"94%", position: 'fixed', bottom: 12, left: '3%', right: 0 ,borderRadius:'30px', height:"65", backgroundColor: 'var(--admin-bottom-nav-bg)', border: '1px solid var(--admin-border)'}} elevation={2}>
+      <Paper data-admin-tour="bottom-nav" sx={{width:"94%", position: 'fixed', bottom: 12, left: '3%', right: 0 ,borderRadius:'30px', height:"65", backgroundColor: 'var(--admin-bottom-nav-bg)', border: '1px solid var(--admin-border)'}} elevation={2}>
         <BottomNavigation
           sx={{borderRadius:'25px'}}
           showLabels
           value={value}
           onChange={handleNavChange}
         >
-          <BottomNavigationAction label={"ثبت کالا"} icon={<AssignmentIcon />} />
-          <BottomNavigationAction label={"فروش"} icon={<AssignmentIcon />} />
-          <BottomNavigationAction label={"کالاها"} icon={<AssignmentIcon />} />
-          <BottomNavigationAction label={"خانه"} icon={<HomeIcon />} />
+          <BottomNavigationAction
+            data-admin-tour="nav-register-product"
+            label={"ثبت کالا"}
+            icon={<AssignmentIcon />}
+          />
+          <BottomNavigationAction
+            data-admin-tour="nav-sales"
+            label={"فروش"}
+            icon={<AssignmentIcon />}
+          />
+          <BottomNavigationAction
+            data-admin-tour="nav-products"
+            label={"کالاها"}
+            icon={<AssignmentIcon />}
+          />
+          <BottomNavigationAction
+            data-admin-tour="nav-home"
+            label={"خانه"}
+            icon={<HomeIcon />}
+          />
         </BottomNavigation>
       </Paper>
 

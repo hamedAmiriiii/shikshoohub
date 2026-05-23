@@ -3,6 +3,7 @@ import SimpleBottomNavigationAtelier from './SimpleBottomNavigationAtelier';
 import Header from '../componentsShop/Header';
 import ShopAccessWatcher from '../componentsShop/ShopAccessWatcher';
 import AdminThemeProvider from './theme/AdminThemeProvider';
+import AdminOnboardingProvider from './onboarding/AdminOnboardingProvider';
 import './theme/admin-theme.css';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -103,22 +104,24 @@ export default function ShikshooLayout({
 
   return (
     <AdminThemeProvider>
-      <Box className="admin-app" sx={{ minHeight: "100vh", color: "var(--admin-text)" }}>
-      {showShell && (
-        <>
-          {!isPublicAdminPage && <ShopAccessWatcher />}
-          {!isPrintPage && !isPublicAdminPage && (
-            <Header
-              title={pageTitle}
-              showBack={showBack}
-              backUrl="/admin"
-            />
-          )}
-          {children}
-          {!isPrintPage && !isPublicAdminPage && <SimpleBottomNavigationAtelier />}
-        </>
-      )}
-      </Box>
+      <AdminOnboardingProvider>
+        <Box className="admin-app" sx={{ minHeight: "100vh", color: "var(--admin-text)" }}>
+        {showShell && (
+          <>
+            {!isPublicAdminPage && <ShopAccessWatcher />}
+            {!isPrintPage && !isPublicAdminPage && (
+              <Header
+                title={pageTitle}
+                showBack={showBack}
+                backUrl="/admin"
+              />
+            )}
+            {children}
+            {!isPrintPage && !isPublicAdminPage && <SimpleBottomNavigationAtelier />}
+          </>
+        )}
+        </Box>
+      </AdminOnboardingProvider>
     </AdminThemeProvider>
   );
 }

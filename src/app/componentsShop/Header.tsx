@@ -299,6 +299,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
           <Box sx={{ display: "flex", alignItems: "center", gap: { xs: "8px", md: "12px" } }}>
             {/* Hamburger Menu - Always visible */}
             <IconButton
+              data-admin-tour="menu"
               onClick={handleMenuOpen}
               sx={{
                 color: "var(--admin-text)",

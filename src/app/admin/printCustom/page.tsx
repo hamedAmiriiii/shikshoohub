@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import JsBarcode from "jsbarcode";
+import LabelPriceBlock from "@/app/coponent/LabelPriceBlock";
+import { parseProductLabelDiscountFromSearchParams } from "@/app/lib/productLabelPrint";
 
 const formatNumber = (num: number | string) => {
   const numValue = typeof num === 'string' ? parseFloat(num.replace(/,/g, '')) : num;
@@ -32,7 +34,10 @@ function PrintLabelContent() {
   const [productData, setProductData] = useState({
     name: "محصول نمونه",
     barcode: "123456789012",
-    sale_price: "250,000"
+    sale_price: "250,000",
+    original_sale_price: "",
+    discount_percent: "",
+    has_discount: false,
   });
   const [loading, setLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
@@ -108,10 +113,14 @@ function PrintLabelContent() {
     const quantityParam = searchParams.get("quantity");
 
     if (name && barcode && price) {
+      const discountMeta = parseProductLabelDiscountFromSearchParams(searchParams);
       setProductData({
         name: decodeURIComponent(name),
         barcode: decodeURIComponent(barcode),
-        sale_price: decodeURIComponent(price)
+        sale_price: decodeURIComponent(price),
+        original_sale_price: discountMeta.originalPrice,
+        discount_percent: "",
+        has_discount: discountMeta.hasDiscount,
       });
       // Set quantity from params if available
       if (quantityParam) {
@@ -134,7 +143,10 @@ function PrintLabelContent() {
         setProductData({
           name: data.name || "نام محصول",
           barcode: data.barcode || "000000000000",
-          sale_price: data.sale_price || "0"
+          sale_price: data.sale_price || "0",
+          original_sale_price: data.original_sale_price ?? "",
+          discount_percent: "",
+          has_discount: Boolean(data.has_discount),
         });
       }
     } catch (error) {
@@ -368,7 +380,14 @@ function PrintLabelContent() {
                 <div key={colIndex} className={`label label-col-${colIndex}`}>
                   <svg ref={barcodeRef} className="barcode"></svg>
                   <div className="product-name">{productData.name}</div>
-                  <div className="price">  {formatNumberEnglish(productData.sale_price)}  </div>
+                  <LabelPriceBlock
+                    salePrice={productData.sale_price}
+                    originalSalePrice={productData.original_sale_price}
+                    // discountPercent={productData.discount_percent}
+                    hasDiscount={productData.has_discount}
+                    fontSize={printSettings.fontSize}
+                    className="price"
+                  />
                 </div>
               );
             })}

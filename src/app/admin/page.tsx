@@ -3,7 +3,7 @@ import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { Button, Modal, Box, Typography, Table, TableBody, TableContainer, TableHead, TableRow, Paper, IconButton, Input, Card, CardContent, Grid, Container, CircularProgress, TextField, FormControl, FormLabel, RadioGroup, FormControlLabel, Radio } from '@mui/material';
 import BarcodeScannerComponent from "react-qr-barcode-scanner";
 import DeleteIcon from '@mui/icons-material/Delete';
-import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
+import AddIcon from '@mui/icons-material/Add';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import FlashlightOnIcon from '@mui/icons-material/FlashlightOn';
 import FlashlightOffIcon from '@mui/icons-material/FlashlightOff';
@@ -45,6 +45,7 @@ import {
 } from '@/app/lib/shopSalesByDay';
 import SalesByDayChart from '@/app/coponent/SalesByDayChart';
 import { readProductsCountFromCache, PRODUCTS_CACHE_KEY } from '@/app/lib/productsCache';
+import { publishAdminSaleCartSnapshot } from '@/app/admin/onboarding/adminSaleCartCheck';
 import CategoryIcon from '@mui/icons-material/Category';
 
 
@@ -92,6 +93,10 @@ export default function ShoppingPage() {
   const [openModal, setOpenModal] = useState(false);
   const [cart, setCart] = useState([]);
   const [total, setTotal] = useState(0);
+
+  useEffect(() => {
+    publishAdminSaleCartSnapshot(cart);
+  }, [cart]);
   const [scannedCode, setScannedCode] = useState('');
   const [torchOn, setTorchOn] = useState(false);
   const [manualCode, setManualCode] = useState('');
@@ -2579,6 +2584,7 @@ console.log("discounttype" , discounttype);
 
       {/* Floating Action Button */}
       <Button
+        data-admin-tour="scan-product"
         onClick={handleOpenModal}
         sx={{
           position: 'fixed',
@@ -2596,7 +2602,7 @@ console.log("discounttype" , discounttype);
           }
         }}
       >
-        <QrCodeScannerIcon sx={{ fontSize: { xs: "28px", md: "36px" } }} />
+        <AddIcon sx={{ fontSize: { xs: "32px", md: "40px" } }} />
       </Button>
 
 

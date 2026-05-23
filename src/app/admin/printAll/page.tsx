@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import JsBarcode from "jsbarcode";
 import { apiRequestError } from "@/app/lib/apiRequestError/client";
+import LabelPriceBlock from "@/app/coponent/LabelPriceBlock";
 
 const formatNumber = (num: number | string) => {
   const numValue = typeof num === 'string' ? parseFloat(num.replace(/,/g, '')) : num;
@@ -177,7 +178,14 @@ export default function PrintAllLabels() {
                     className="barcode"
                   ></svg>
                   <div className="product-name">{leftLabel.name}</div>
-                  <div className="price"> T {formatNumber(leftLabel.sale_price || 0)}  </div>
+                  <LabelPriceBlock
+                    salePrice={leftLabel.sale_price || 0}
+                    originalSalePrice={leftLabel.original_sale_price}
+                    discountPercent={leftLabel.discount_percent}
+                    hasDiscount={leftLabel.has_discount}
+                    fontSize={16}
+                    className="price"
+                  />
                 </div>
               )}
               
@@ -190,7 +198,14 @@ export default function PrintAllLabels() {
                     className="barcode"
                   ></svg>
                   <div className="product-name">{rightLabel.name}</div>
-                  <div className="price">  T {formatNumber(rightLabel.sale_price || 0)}  </div>
+                  <LabelPriceBlock
+                    salePrice={rightLabel.sale_price || 0}
+                    originalSalePrice={rightLabel.original_sale_price}
+                    discountPercent={rightLabel.discount_percent}
+                    hasDiscount={rightLabel.has_discount}
+                    fontSize={16}
+                    className="price"
+                  />
                 </div>
               )}
             </div>

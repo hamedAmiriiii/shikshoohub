@@ -15,6 +15,7 @@ import { toast } from "react-toastify";
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import { mainColors, searchColors } from "../../liberari/colors";
+import { appendProductLabelPrintParams } from "@/app/lib/productLabelPrint";
 
 const formatNumber = (num: number | string) => {
   const numValue = typeof num === 'string' ? parseFloat(num.replace(/,/g, '')) : num;
@@ -290,6 +291,7 @@ export default function CardUser(props: any) {
       quantity: quantity || "1",
       from: "list",
     });
+    appendProductLabelPrintParams(params, props.props.data || {});
     router.push(`/admin/printCustom?${params.toString()}`);
   };
 
@@ -739,8 +741,9 @@ export default function CardUser(props: any) {
                 onClick={() => onEdit(props.props.data)}
                 sx={{
                   backgroundColor: "#ff9100",
-                  color: "var(--admin-text)",
-                  "&:hover": { backgroundColor: "#e68000" },
+                  color: "#fff",
+                  "& .MuiSvgIcon-root": { color: "#fff" },
+                  "&:hover": { backgroundColor: "#e68000", color: "#fff" },
                 }}
               >
                 <EditIcon />
@@ -765,8 +768,9 @@ export default function CardUser(props: any) {
               }}
               sx={{
                 backgroundColor: "#9c27b0",
-                color: "var(--admin-text)",
-                "&:hover": { backgroundColor: "#7b1fa2" },
+                color: "#fff",
+                "& .MuiSvgIcon-root": { color: "#fff" },
+                "&:hover": { backgroundColor: "#7b1fa2", color: "#fff" },
               }}
             >
               <PaletteIcon />
@@ -777,8 +781,9 @@ export default function CardUser(props: any) {
               onClick={handlePrint}
               sx={{
                 backgroundColor: "var(--admin-accent)",
-                color: "var(--admin-text)",
-                "&:hover": { backgroundColor: "var(--admin-accent-hover)" },
+                color: "#fff",
+                "& .MuiSvgIcon-root": { color: "#fff" },
+                "&:hover": { backgroundColor: "var(--admin-accent-hover)", color: "#fff" },
               }}
             >
               <PrintIcon />
@@ -797,8 +802,9 @@ export default function CardUser(props: any) {
               }}
               sx={{
                 backgroundColor: "#2196f3",
-                color: "var(--admin-text)",
-                "&:hover": { backgroundColor: "#1976d2" },
+                color: "#fff",
+                "& .MuiSvgIcon-root": { color: "#fff" },
+                "&:hover": { backgroundColor: "#1976d2", color: "#fff" },
               }}
             >
               <FactoryIcon />
@@ -810,8 +816,9 @@ export default function CardUser(props: any) {
                 onClick={() => onDelete(props.props.data)}
                 sx={{
                   backgroundColor: "#ff4444",
-                  color: "var(--admin-text)",
-                  "&:hover": { backgroundColor: "#cc0000" },
+                  color: "#fff",
+                  "& .MuiSvgIcon-root": { color: "#fff" },
+                  "&:hover": { backgroundColor: "#cc0000", color: "#fff" },
                 }}
               >
                 <DeleteIcon />
