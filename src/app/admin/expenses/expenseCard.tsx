@@ -6,6 +6,7 @@ import {
   IconButton,
 } from "@mui/material";
 import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 import React, { useEffect, useState } from "react";
 import LabelCustom from "@/app/coponent/labelCustom";
 
@@ -42,8 +43,8 @@ export default function ExpenseCard(props: any) {
     setLoad(true);
   }, [props?.props?.data?.user_name]);
 
-  // Get onEdit from props.props or props directly
   const onEdit = props?.props?.onEdit || props?.onEdit;
+  const onDelete = props?.props?.onDelete || props?.onDelete;
 
   return load ? (
     <Box style={{ backgroundColor: "var(--admin-surface)", borderRadius: "15px", border: "1px solid rgb(55, 84, 165)" }} m={1} p={2}>
@@ -101,6 +102,29 @@ export default function ExpenseCard(props: any) {
               size="small"
             >
               <EditIcon sx={{ fontSize: "20px" }} />
+            </IconButton>
+          )}
+          {onDelete && canEdit && (
+            <IconButton
+              onClick={() => {
+                if (onDelete && props?.props?.data) {
+                  onDelete(props.props.data);
+                }
+              }}
+              sx={{
+                color: "#ff4444",
+                padding: "6px",
+                minWidth: "36px",
+                minHeight: "36px",
+                backgroundColor: "rgba(255, 68, 68, 0.15)",
+                "&:hover": {
+                  backgroundColor: "rgba(255, 68, 68, 0.3)"
+                }
+              }}
+              size="small"
+              title="حذف هزینه"
+            >
+              <DeleteIcon sx={{ fontSize: "20px" }} />
             </IconButton>
           )}
         </Box>

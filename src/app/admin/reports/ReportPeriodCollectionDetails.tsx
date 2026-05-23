@@ -6,6 +6,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import {
   COLLECTION_DETAIL_FIELDS,
   getPeriodNumber,
+  getSettlementAmount,
   periodHasCollectionDetails,
   type ReportPeriod,
 } from "./reportPeriodTypes";
@@ -30,9 +31,10 @@ export default function ReportPeriodCollectionDetails({
 
   if (!periodHasCollectionDetails(period)) return null;
 
-  const totalCollected = getPeriodNumber(period, "total_collected");
+  const settlement = getSettlementAmount(period);
   const salesGap =
-    totalCollected != null && sales > 0 ? sales - totalCollected : null;
+    settlement != null && sales > 0 ? sales - settlement : null;
+  const hasSettlement = getPeriodNumber(period, "settlement_total") !== null;
 
   return (
     <Box sx={{ mt: 1, position: "relative", zIndex: 1 }}>
@@ -131,8 +133,11 @@ export default function ReportPeriodCollectionDetails({
                 lineHeight: 1.5,
               }}
             >
-              اختلاف فروش ثبت‌شده با وصول: {formatNumber(Math.abs(salesGap))}
-              {salesGap > 0 ? " (هنوز وصول نشده)" : " (وصول بیش از فروش دوره)"}
+              اختلاف فروش با {hasSettlement ? "تسویه" : "وصول"}:{" "}
+              {formatNumber(Math.abs(salesGap))}
+              {salesGap > 0
+                ? " (بیشتر از تسویه/وصول دوره)"
+                : " (تسویه بیشتر از فروش ثبت‌شده)"}
             </Typography>
           )}
         </Box>

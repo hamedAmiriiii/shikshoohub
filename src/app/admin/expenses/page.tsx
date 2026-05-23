@@ -1,7 +1,22 @@
 "use client";
 import List from "@/app/coponent/grid/Grid";
 import React, { useState, Suspense, useEffect, useMemo, useCallback } from "react";
-import { Box, Typography, IconButton, Paper, RadioGroup, FormControlLabel, Radio, Button, TextField } from "@mui/material";
+import {
+  Box,
+  Typography,
+  IconButton,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
+  Button,
+  TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  CircularProgress,
+} from "@mui/material";
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import FilterListIcon from '@mui/icons-material/FilterList';
@@ -30,6 +45,9 @@ export default function ListExpenses() {
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [editBottomSheet, setEditBottomSheet] = useState(false);
   const [editingExpense, setEditingExpense] = useState<any>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [expenseToDelete, setExpenseToDelete] = useState<any>(null);
+  const [deletingExpense, setDeletingExpense] = useState(false);
   
   // Form states
   const [type, setType] = useState<"سرمایه" | "جاری">("جاری");
@@ -307,7 +325,96 @@ export default function ListExpenses() {
     setEditBottomSheet(true);
   }, []);
 
-  const CartComponent = useMemo(() => (props: any) => <ExpenseCard props={{ ...props, onEdit: handleEditExpense }} />, [handleEditExpense]);
+  const removeExpenseFromCache = useCallback((expenseId: number) => {
+    queryClient.setQueriesData(
+      {
+        predicate: (query) => query.queryKey[0] === "datas-infinite",
+      },
+      (oldData: any) => {
+        if (!oldData?.pages) return oldData;
+        return {
+          ...oldData,
+          pages: oldData.pages.map((page: any) => ({
+            ...page,
+            data: page.data.filter((item: any) => item.id !== expenseId),
+          })),
+        };
+      }
+    );
+
+    queryClient.setQueriesData(
+      {
+        predicate: (query) => query.queryKey[0] === "datas-desktop",
+      },
+      (oldData: any) => {
+        if (!oldData?.data) return oldData;
+        return {
+          ...oldData,
+          data: oldData.data.filter((item: any) => item.id !== expenseId),
+        };
+      }
+    );
+  }, [queryClient]);
+
+  const handleDeleteExpense = useCallback((expense: any) => {
+    if (!expense?.id) return;
+    setExpenseToDelete(expense);
+    setDeleteDialogOpen(true);
+  }, []);
+
+  const handleCloseDeleteDialog = useCallback(() => {
+    if (deletingExpense) return;
+    setDeleteDialogOpen(false);
+    setExpenseToDelete(null);
+  }, [deletingExpense]);
+
+  const confirmDeleteExpense = useCallback(async () => {
+    if (!expenseToDelete?.id) return;
+
+    setDeletingExpense(true);
+    try {
+      const token = localStorage.getItem("token") || "";
+      const res = await apiRequestError(
+        "Delete",
+        {},
+        {},
+        `/api/expenses/${expenseToDelete.id}`,
+        true,
+        true,
+        token
+      );
+
+      if (res.hasError) {
+        let message = "خطا در حذف هزینه";
+        try {
+          const errorData = JSON.parse(res.errorText);
+          message = errorData.message?.[0]?.title || errorData.message || message;
+        } catch {
+          // keep default message
+        }
+        toast.error(message);
+        return;
+      }
+
+      removeExpenseFromCache(expenseToDelete.id);
+      toast.success("هزینه با موفقیت حذف شد");
+      setDeleteDialogOpen(false);
+      setExpenseToDelete(null);
+    } catch {
+      toast.error("خطا در حذف هزینه");
+    } finally {
+      setDeletingExpense(false);
+    }
+  }, [expenseToDelete, removeExpenseFromCache]);
+
+  const CartComponent = useMemo(
+    () => (props: any) => (
+      <ExpenseCard
+        props={{ ...props, onEdit: handleEditExpense, onDelete: handleDeleteExpense }}
+      />
+    ),
+    [handleEditExpense, handleDeleteExpense]
+  );
 
   const handleOpenBottomSheet = () => {
     setOpenBottomSheet(true);
@@ -525,6 +632,8 @@ export default function ListExpenses() {
             filterComponent={filterComponent}
             showTotal={true}
             customActions={customActions}
+            onDeleteItem={handleDeleteExpense}
+            hidePrintAction
           />
         </div>
 
@@ -560,12 +669,12 @@ export default function ListExpenses() {
                   }
                 }}
               >
-                <FormControlLabel
+                {/* <FormControlLabel
                   value="سرمایه"
                   control={<Radio sx={{ color: 'var(--admin-accent)', '&.Mui-checked': { color: 'var(--admin-accent)' } }} />}
                   label="سرمایه"
                   sx={{ color: "var(--admin-text)" }}
-                />
+                /> */}
                 <FormControlLabel
                   value="جاری"
                   control={<Radio sx={{ color: 'var(--admin-accent)', '&.Mui-checked': { color: 'var(--admin-accent)' } }} />}
@@ -774,12 +883,12 @@ export default function ListExpenses() {
                   }
                 }}
               >
-                <FormControlLabel
+                {/* <FormControlLabel
                   value="سرمایه"
                   control={<Radio sx={{ color: 'var(--admin-accent)', '&.Mui-checked': { color: 'var(--admin-accent)' } }} />}
                   label="سرمایه"
                   sx={{ color: "var(--admin-text)" }}
-                />
+                /> */}
                 <FormControlLabel
                   value="جاری"
                   control={<Radio sx={{ color: 'var(--admin-accent)', '&.Mui-checked': { color: 'var(--admin-accent)' } }} />}
@@ -963,6 +1072,80 @@ export default function ListExpenses() {
             </Button>
           </Box>
         </BottomSheet>
+
+        <Dialog
+          open={deleteDialogOpen}
+          onClose={handleCloseDeleteDialog}
+          PaperProps={{
+            sx: {
+              backgroundColor: "var(--admin-surface)",
+              borderRadius: "16px",
+              direction: "rtl",
+              minWidth: { xs: "280px", sm: "360px" },
+              border: "1px solid var(--admin-border)",
+            },
+          }}
+        >
+          <DialogTitle sx={{ color: "var(--admin-text)", textAlign: "center", fontSize: "18px", fontWeight: 700 }}>
+            تایید حذف هزینه
+          </DialogTitle>
+          <DialogContent>
+            <DialogContentText sx={{ color: "var(--admin-text-muted)", textAlign: "center" }}>
+              آیا از حذف این هزینه مطمئن هستید؟
+              {expenseToDelete && (
+                <Box
+                  sx={{
+                    mt: 1.5,
+                    p: 1.25,
+                    backgroundColor: "var(--admin-surface-alt)",
+                    borderRadius: "8px",
+                    color: "var(--admin-text)",
+                  }}
+                >
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {expenseToDelete.title || "—"}
+                  </Typography>
+                  {expenseToDelete.amount != null && (
+                    <Typography variant="caption" sx={{ color: "var(--admin-text-secondary)", display: "block", mt: 0.5 }}>
+                      مبلغ: {formatNumber(expenseToDelete.amount)} تومان
+                    </Typography>
+                  )}
+                </Box>
+              )}
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions sx={{ justifyContent: "center", px: 2, pb: 2, gap: 1.5 }}>
+            <Button
+              onClick={handleCloseDeleteDialog}
+              variant="outlined"
+              disabled={deletingExpense}
+              sx={{
+                color: "var(--admin-text)",
+                borderColor: "#666",
+                minWidth: 100,
+                "&:hover": {
+                  borderColor: "#888",
+                  backgroundColor: "var(--admin-surface-alt)",
+                },
+              }}
+            >
+              انصراف
+            </Button>
+            <Button
+              onClick={confirmDeleteExpense}
+              variant="contained"
+              disabled={deletingExpense}
+              startIcon={deletingExpense ? <CircularProgress size={18} color="inherit" /> : undefined}
+              sx={{
+                backgroundColor: "#ff4444",
+                minWidth: 100,
+                "&:hover": { backgroundColor: "#cc0000" },
+              }}
+            >
+              {deletingExpense ? "در حال حذف..." : "حذف"}
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         <ToastContainer
           position="top-center"

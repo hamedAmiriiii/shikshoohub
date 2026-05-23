@@ -416,7 +416,7 @@ export default function RegisterShopPage() {
         <TextField
           value={atelierName}
           onChange={(e) => setAtelierName(e.target.value)}
-          placeholder="نام فروشگاه / آتلیه"
+          placeholder="نام فروشگاه "
           fullWidth
           InputProps={{
             startAdornment: (

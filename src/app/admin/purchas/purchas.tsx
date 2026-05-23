@@ -79,6 +79,8 @@ export default function purchas(props: any) {
   const [time, setTime] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [returnQuantity, setReturnQuantity] = useState(1);
+  const [adjustedQuantities, setAdjustedQuantities] = useState<Record<number, number>>({});
   const [deleting, setDeleting] = useState(false);
   const [totalDeleting, setTotalDeleting] = useState(0);
   const [deletedItems, setDeletedItems] = useState<number[]>([]);
@@ -90,18 +92,25 @@ export default function purchas(props: any) {
   const [installmentsData, setInstallmentsData] = useState<any[]>([]);
   const router = useRouter();
   const data = props?.props?.data;
-  const onRefresh = props?.props?.onRefresh;
+  const onRefresh = props?.props?.onRefresh || props?.props?.refreshGrid;
   const isInstallment = data?.payment_type === 'installment';
 
   const handleOpenDeleteDialog = (item: any) => {
     setSelectedItem(item);
+    setReturnQuantity(1);
     setDeleteDialogOpen(true);
   };
 
   const handleCloseDeleteDialog = () => {
     setDeleteDialogOpen(false);
     setSelectedItem(null);
+    setReturnQuantity(1);
     setDeleting(false);
+  };
+
+  const getItemQuantity = (item: any) => {
+    const qty = adjustedQuantities[item.id] ?? item.quantity;
+    return Math.max(1, Number(qty) || 1);
   };
 
   const handleOpenPayInstallmentDialog = (installment: any) => {
@@ -167,35 +176,57 @@ export default function purchas(props: any) {
   
   const handleDeleteItem = async () => {
     if (!selectedItem || !data?.id) return;
-    console.log("ddddddddddd" , selectedItem);
-   
+
+    const maxQty = getItemQuantity(selectedItem);
+    const qtyToReturn = Math.min(Math.max(1, returnQuantity), maxQty);
+
     setDeleting(true);
     try {
       const response = await FetchWithJwtClient(
         "DELETE",
         `/api/purchased-products/${data.id}/items/${selectedItem.id}`,
-        null
+        null,
+        { quantity: qtyToReturn },
+        {
+          body: JSON.stringify({ quantity: qtyToReturn }),
+          headers: { "Content-Type": "application/json" },
+        }
       );
-      
-      if (response !== null) {
-        setTotalDeleting(totalDeleting + parseInt(selectedItem.sale_price) )
-        console.log("totalDeleting" , totalDeleting);
-        // Mark item as deleted locally
-        setDeletedItems(prev => [...prev, selectedItem.id]);
-        // handleCloseDeleteDialog();
-        // Refresh the list if callback provided
+
+      if (response !== null && !response.hasError) {
+        const returnedQty = Number(response?.returned_item?.quantity ?? qtyToReturn);
+        const unitPrice = parseFloat(
+          response?.returned_item?.sale_price ?? selectedItem.sale_price ?? selectedItem.product?.sale_price ?? "0"
+        );
+        const returnAmount = Number(response?.returned_item?.return_amount ?? unitPrice * returnedQty);
+        setTotalDeleting((prev) => prev + returnAmount);
+
+        const remainingQty = maxQty - returnedQty;
+        if (remainingQty <= 0) {
+          setDeletedItems((prev) => [...prev, selectedItem.id]);
+          setAdjustedQuantities((prev) => {
+            const next = { ...prev };
+            delete next[selectedItem.id];
+            return next;
+          });
+        } else if (!onRefresh) {
+          setAdjustedQuantities((prev) => ({
+            ...prev,
+            [selectedItem.id]: remainingQty,
+          }));
+        }
+
         if (onRefresh) {
           onRefresh();
         }
       } else {
-        alert("خطا در حذف آیتم");
+        alert(response?.message || "خطا در حذف آیتم");
+        setDeleting(false);
       }
     } catch (error) {
       console.error("Error deleting item:", error);
       alert("خطا در حذف آیتم");
       setDeleting(false);
-    } finally {
-      
     }
   };
 
@@ -267,7 +298,12 @@ export default function purchas(props: any) {
             <LabelCustom title={"مجموع مبلغ"} name="" text={formatNumber(data.total_amount) + " تومان"} />
           )}
           
-          {/* نمایش اعتبار استفاده شده */}
+          {data?.cash_amount != null && Number(data.cash_amount) > 0 && (
+            <LabelCustom title={"پرداخت نقد"} name="" text={formatNumber(data.cash_amount) + " تومان"} />
+          )}
+          {data?.card_amount != null && Number(data.card_amount) > 0 && (
+            <LabelCustom title={"پرداخت کارت"} name="" text={formatNumber(data.card_amount) + " تومان"} />
+          )}
           {data?.credit_used !== undefined && data.credit_used > 0 && (
             <LabelCustom title={"اعتبار استفاده شده"} name="" text={formatNumber(data.credit_used) + " تومان"} />
           )}
@@ -311,7 +347,7 @@ export default function purchas(props: any) {
                       <LabelCustom 
                         title={"کالا"} 
                         name="" 
-                        text={item.product?.name + " " + item.product_id + " " + "-----" + " " +"عدد" + " " + item.quantity} 
+                        text={item.product?.name + " " + item.product_id + " " + "-----" + " " +"عدد" + " " + getItemQuantity(item)} 
                       />
                       {/* <LabelCustom 
                         title={"تعداد"} 
@@ -422,8 +458,43 @@ export default function purchas(props: any) {
                 borderRadius: "8px",
                 color: "var(--admin-text)"
               }}>
-                <Typography variant="body2">
-                  {selectedItem.product?.name} - {selectedItem.quantity} عدد
+                <Typography variant="body2" sx={{ marginBottom: "12px" }}>
+                  {selectedItem.product?.name} - {getItemQuantity(selectedItem)} عدد در خرید
+                </Typography>
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="تعداد برگشت"
+                  value={returnQuantity}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    if (!isNaN(val)) {
+                      setReturnQuantity(Math.min(Math.max(1, val), getItemQuantity(selectedItem)));
+                    } else if (e.target.value === "") {
+                      setReturnQuantity(1);
+                    }
+                  }}
+                  inputProps={{
+                    min: 1,
+                    max: getItemQuantity(selectedItem),
+                    step: 1,
+                  }}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      backgroundColor: "var(--admin-surface)",
+                      color: "var(--admin-text)",
+                      "& fieldset": { borderColor: "#505669" },
+                      "&:hover fieldset": { borderColor: "var(--admin-accent)" },
+                      "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
+                    },
+                    "& .MuiInputLabel-root": { color: "var(--admin-text-secondary)" },
+                    "& .MuiInputBase-input": { color: "var(--admin-text)" },
+                  }}
+                />
+                <Typography variant="caption" sx={{ display: "block", marginTop: "8px", color: "var(--admin-text-secondary)" }}>
+                  مبلغ برگشتی تقریبی: {formatNumber(
+                    returnQuantity * parseFloat(selectedItem.sale_price ?? selectedItem.product?.sale_price ?? "0")
+                  )} تومان
                 </Typography>
               </Box>
             )}
