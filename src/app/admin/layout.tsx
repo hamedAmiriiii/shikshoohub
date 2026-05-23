@@ -105,7 +105,14 @@ export default function ShikshooLayout({
   return (
     <AdminThemeProvider>
       <AdminOnboardingProvider>
-        <Box className="admin-app" sx={{ minHeight: "100vh", color: "var(--admin-text)" }}>
+        <Box
+          className="admin-app"
+          sx={{
+            minHeight: "100vh",
+            color: "var(--admin-text)",
+            fontFamily: "var(--app-font-family)",
+          }}
+        >
         {showShell && (
           <>
             {!isPublicAdminPage && <ShopAccessWatcher />}

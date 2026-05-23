@@ -1,12 +1,10 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { Box, Typography, Paper, Grid, CircularProgress } from '@mui/material';
-import { useRouter } from 'next/navigation';
 import { apiRequestError } from '@/app/lib/apiRequestError/client';
 import tokenCode from '@/app/coponent/tokenCode';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import TodayIcon from '@mui/icons-material/Today';
 import YesterdayIcon from '@mui/icons-material/Event';
 import WeekIcon from '@mui/icons-material/DateRange';
@@ -14,52 +12,14 @@ import MonthIcon from '@mui/icons-material/CalendarMonth';
 import YearIcon from '@mui/icons-material/CalendarToday';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
-import InventoryIcon from '@mui/icons-material/Inventory';
-import UndoIcon from '@mui/icons-material/Undo';
-
-interface ReportData {
-  today: {
-    total_sales: number;
-    total_profit: number;
-    total_returns: number;
-  };
-  yesterday: {
-    total_sales: number;
-    total_profit: number;
-    total_returns: number;
-  };
-  week: {
-    total_sales: number;
-    total_profit: number;
-    total_returns: number;
-  };
-  month: {
-    total_sales: number;
-    total_profit: number;
-    total_returns: number;
-  };
-  last_month: {
-    total_sales: number;
-    total_profit: number;
-    total_returns: number;
-  };
-  year: {
-    total_sales: number;
-    total_profit: number;
-    total_returns: number;
-  };
-  products_inventory?: {
-    total_purchase_value: number;
-    total_sale_value: number;
-  };
-}
+import ReportPeriodCollectionDetails from "./ReportPeriodCollectionDetails";
+import type { ReportData, ReportPeriod } from "./reportPeriodTypes";
 
 const formatNumber = (num: number) => {
   return new Intl.NumberFormat('fa-IR').format(num);
 };
 
 export default function ReportsPage() {
-  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [reports, setReports] = useState<ReportData | null>(null);
 
@@ -127,7 +87,17 @@ export default function ReportsPage() {
   const gradientCardText = "#ffffff";
   const gradientCardMuted = "rgba(255, 255, 255, 0.85)";
 
-  const ReportCard = ({ title, sales, profit, returns, icon }: { title: string; sales: number; profit: number; returns: number; icon: React.ReactNode }) => {
+  const ReportCard = ({
+    title,
+    period,
+    icon,
+  }: {
+    title: string;
+    period: ReportPeriod;
+    icon: React.ReactNode;
+  }) => {
+    const sales = period.total_sales;
+    const profit = period.total_profit;
     const profitPercentage = sales > 0 ? ((profit / sales) * 100).toFixed(1) : 0;
 
     return (
@@ -145,7 +115,6 @@ export default function ReportsPage() {
           position: "relative",
           overflow: "hidden",
           transition: "all 0.3s ease",
-          cursor: "pointer",
           boxShadow: "0 4px 14px rgba(15, 23, 42, 0.12)",
           border: "1px solid rgba(255, 255, 255, 0.12)",
           "&:hover": {
@@ -243,20 +212,12 @@ export default function ReportsPage() {
             </Box>
           </Box>
 
-          {/* <Box>
-            <Box sx={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "3px" }}>
-              <UndoIcon sx={{ color: "var(--admin-text)", fontSize: "13px", opacity: 0.9 }} />
-              <Typography sx={{ color: "var(--admin-text)", fontSize: "9px", fontWeight: "500" }}>
-                برگشت خرید
-              </Typography>
-            </Box>
-            <Typography sx={{ color: "var(--admin-text)", fontSize: "18px", fontWeight: "700", textShadow: "0 2px 4px rgba(0,0,0,0.2)" }}>
-              {formatNumber(returns)}
-            </Typography>
-            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "8px", marginTop: "1px" }}>
-              تومان
-            </Typography>
-          </Box> */}
+          <ReportPeriodCollectionDetails
+            period={period}
+            sales={sales}
+            mutedColor={gradientCardMuted}
+            textColor={gradientCardText}
+          />
         </Box>
       </Paper>
     );
@@ -327,6 +288,31 @@ export default function ReportsPage() {
             </Grid>
           </Grid>
 
+          {reports.meta?.total_uncollected_installments != null && (
+            <Paper
+              elevation={0}
+              sx={{
+                p: 1.5,
+                mb: 2,
+                borderRadius: "12px",
+                bgcolor: "var(--admin-surface)",
+                border: "1px solid var(--admin-border)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 1,
+              }}
+            >
+              <Typography sx={{ fontSize: "13px", color: "var(--admin-text-muted)" }}>
+                کل طلب اقساطی فروشگاه (همه دوره‌ها)
+              </Typography>
+              <Typography
+                sx={{ fontSize: "15px", fontWeight: 700, color: "var(--admin-text)" }}
+              >
+                {formatNumber(reports.meta.total_uncollected_installments)} تومان
+              </Typography>
+            </Paper>
+          )}
         </>
       )}
 
@@ -337,58 +323,26 @@ export default function ReportsPage() {
       ) : reports ? (
         <Grid container spacing={3}>
           <Grid item xs={12} sm={6} md={4}>
-            <ReportCard
-              title="امروز"
-              sales={reports.today.total_sales}
-              profit={reports.today.total_profit}
-              returns={reports.today.total_returns}
-              icon={getIcon("امروز")}
-            />
+            <ReportCard title="امروز" period={reports.today} icon={getIcon("امروز")} />
           </Grid>
           <Grid item xs={12} sm={6} md={4}>
-            <ReportCard
-              title="دیروز"
-              sales={reports.yesterday.total_sales}
-              profit={reports.yesterday.total_profit}
-              returns={reports.yesterday.total_returns}
-              icon={getIcon("دیروز")}
-            />
+            <ReportCard title="دیروز" period={reports.yesterday} icon={getIcon("دیروز")} />
           </Grid>
           <Grid item xs={12} sm={6} md={4}>
-            <ReportCard
-              title="هفته جاری"
-              sales={reports.week.total_sales}
-              profit={reports.week.total_profit}
-              returns={reports.week.total_returns}
-              icon={getIcon("هفته جاری")}
-            />
+            <ReportCard title="هفته جاری" period={reports.week} icon={getIcon("هفته جاری")} />
           </Grid>
           <Grid item xs={12} sm={6} md={4}>
-            <ReportCard
-              title="ماه جاری"
-              sales={reports.month.total_sales}
-              profit={reports.month.total_profit}
-              returns={reports.month.total_returns}
-              icon={getIcon("ماه جاری")}
-            />
+            <ReportCard title="ماه جاری" period={reports.month} icon={getIcon("ماه جاری")} />
           </Grid>
           <Grid item xs={12} sm={6} md={4}>
             <ReportCard
               title="ماه گذشته"
-              sales={reports.last_month.total_sales}
-              profit={reports.last_month.total_profit}
-              returns={reports.last_month.total_returns}
+              period={reports.last_month}
               icon={getIcon("ماه گذشته")}
             />
           </Grid>
           <Grid item xs={12} sm={6} md={4}>
-            <ReportCard
-              title="سال جاری"
-              sales={reports.year.total_sales}
-              profit={reports.year.total_profit}
-              returns={reports.year.total_returns}
-              icon={getIcon("سال جاری")}
-            />
+            <ReportCard title="سال جاری" period={reports.year} icon={getIcon("سال جاری")} />
           </Grid>
         </Grid>
       ) : (

@@ -1,5 +1,6 @@
 /* پیش‌فرض متغیرها (برای Grid و کامپوننت‌های مشترک) */
 :root {
+  --app-font-family: "IRANSans", "Iranian Sans", Tahoma, Arial, sans-serif;
   --admin-bg-gradient: linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%);
   --admin-surface: #2b3143;
   --admin-surface-alt: #1a1d2e;
@@ -154,4 +155,26 @@ html[data-admin-theme="light"] .MuiBottomNavigationAction-label {
 
 html[data-admin-theme="light"] .MuiBottomNavigationAction-root.Mui-selected .MuiBottomNavigationAction-label {
   color: var(--admin-accent);
+}
+
+/* فونت فارسی در کل پنل ادمین (مودال‌ها، پورتال MUI، آموزش) */
+.admin-app,
+.admin-app .MuiTypography-root,
+.admin-app .MuiButton-root,
+.admin-app .MuiInputBase-root,
+.admin-app .MuiInputBase-input,
+.admin-app .MuiInputLabel-root,
+.admin-app .MuiFormLabel-root,
+.admin-app .MuiTableCell-root,
+.admin-app .MuiDialog-root .MuiTypography-root,
+.admin-app .MuiMenuItem-root,
+.admin-app .MuiTab-root,
+.admin-app .MuiChip-label,
+.admin-app .MuiAlert-message,
+.admin-app .MuiBottomNavigationAction-label,
+.MuiModal-root .MuiTypography-root,
+.MuiModal-root .MuiButton-root,
+.MuiPopover-root .MuiTypography-root,
+.MuiPopover-root .MuiMenuItem-root {
+  font-family: var(--app-font-family) !important;
 }

@@ -40,7 +40,7 @@ import AddIcon from '@mui/icons-material/Add';
 import FlashlightOnIcon from '@mui/icons-material/FlashlightOn';
 import FlashlightOffIcon from '@mui/icons-material/FlashlightOff';
 import SearchIcon from '@mui/icons-material/Search';
-import BarcodeScannerComponent from "react-qr-barcode-scanner";
+import SafeBarcodeScanner from "@/app/coponent/SafeBarcodeScanner";
 import TextInput from "@/app/coponent/TextInput/TextInput";
 import { useRouter } from "next/navigation";
 import 'react-toastify/dist/ReactToastify.css';
@@ -1222,7 +1222,7 @@ export default function Page() {
               overflow: "hidden",
             }}
           >
-            <BarcodeScannerComponent
+            <SafeBarcodeScanner
               width={250}
               height={250}
               torch={torchOn}

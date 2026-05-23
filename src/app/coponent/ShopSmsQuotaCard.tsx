@@ -9,7 +9,6 @@ import {
   calcSmsUnitsForBroadcast,
   calcSmsUnitsForMessage,
   getSmsFullText,
-  SMS_CANCEL_SUFFIX,
   SMS_CHARS_PER_UNIT,
 } from "@/app/lib/shopSms";
 
@@ -126,66 +125,97 @@ export default function ShopSmsQuotaCard({
   return (
     <Card
       sx={{
-        backgroundColor: "#2b3143",
+        backgroundColor: "var(--admin-surface)",
         borderRadius: "16px",
-        border: `1px solid ${enough ? "rgba(120, 181, 104, 0.4)" : "rgba(255, 68, 68, 0.5)"}`,
+        border: `1px solid ${
+          enough ? "var(--admin-accent-border)" : "rgba(244, 67, 54, 0.45)"
+        }`,
+        boxShadow: "0 2px 12px rgba(0, 0, 0, 0.06)",
         mb: compact ? 1 : 2,
       }}
     >
       <CardContent sx={{ py: compact ? 1.5 : 2, "&:last-child": { pb: compact ? 1.5 : 2 } }}>
-        <Box sx={{ display: "flex",justifyContent:"space-between" , alignItems: "center", gap: 1, mb: 1 }}>
-          
-          <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: compact ? "14px" : "16px" }}>
-          <SmsIcon sx={{ color: "#78b568" }} />
-            اعتبار پیامک فروشگاه
-          </Typography>
-          <> 
-         { loading ?  <CircularProgress size={22} sx={{ color: "#78b568" }} /> :
-         <Typography sx={{ color: "#78b568", fontWeight: 700, fontSize: "18px" }}>
-        
-              {formatNumber(quota)}  پیامک 
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 1,
+            mb: 1,
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <SmsIcon sx={{ color: "var(--admin-accent)", fontSize: compact ? 22 : 24 }} />
+            <Typography
+              sx={{
+                color: "var(--admin-text)",
+                fontWeight: 700,
+                fontSize: compact ? "14px" : "16px",
+              }}
+            >
+              اعتبار پیامک فروشگاه
             </Typography>
-        }
-          
-          </>
-         
+          </Box>
+          {loading ? (
+            <CircularProgress size={22} sx={{ color: "var(--admin-accent)" }} />
+          ) : (
+            <Typography
+              sx={{
+                color: "var(--admin-accent)",
+                fontWeight: 700,
+                fontSize: "18px",
+              }}
+            >
+              {formatNumber(quota)} پیامک
+            </Typography>
+          )}
         </Box>
 
-        {loading ? (<></>
-          // <CircularProgress size={22} sx={{ color: "#78b568" }} />
-        ) : (
-          <>
-            
-            
-
-            {estimateMessage.trim() && estimateRecipientCount > 0 && (
-              <Box
+        {!loading &&
+          estimateMessage.trim() &&
+          estimateRecipientCount > 0 && (
+            <Box
+              sx={{
+                mt: 1.5,
+                pt: 1.5,
+                borderTop: "1px solid var(--admin-divider)",
+              }}
+            >
+              <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "13px" }}>
+                برآورد این ارسال:{" "}
+                <Box
+                  component="span"
+                  sx={{ color: "var(--admin-text)", fontWeight: 600 }}
+                >
+                  {formatNumber(neededUnits)} واحد
+                </Box>{" "}
+                ({formatNumber(estimateRecipientCount)} گیرنده ×{" "}
+                {formatNumber(localUnitsPerSms)} واحد/نفر)
+              </Typography>
+              <Typography
                 sx={{
-                  mt: 1.5,
-                  pt: 1.5,
-                  borderTop: "1px solid rgba(255,255,255,0.1)",
+                  color: "var(--admin-text-secondary)",
+                  fontSize: "11px",
+                  mt: 0.5,
                 }}
               >
-                <Typography sx={{ color: "rgba(255,255,255,0.75)", fontSize: "13px" }}>
-                  برآورد این ارسال:{" "}
-                  <Box component="span" sx={{ color: "var(--admin-text)", fontWeight: 600 }}>
-                    {formatNumber(neededUnits)} واحد
-                  </Box>{" "}
-                  ({formatNumber(estimateRecipientCount)} گیرنده × {formatNumber(localUnitsPerSms)}{" "}
-                  واحد/نفر)
+                طول متن با پسوند: {getSmsFullText(estimateMessage.trim()).length}{" "}
+                کاراکتر (هر {SMS_CHARS_PER_UNIT} کاراکتر = ۱ واحد)
+              </Typography>
+              {!enough && (
+                <Typography
+                  sx={{
+                    color: "#e65100",
+                    fontSize: "12px",
+                    mt: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  اعتبار کافی نیست. با ادمین برای شارژ تماس بگیرید.
                 </Typography>
-                <Typography sx={{ color: "rgba(255,255,255,0.5)", fontSize: "11px", mt: 0.5 }}>
-                  طول متن با پسوند: {getSmsFullText(estimateMessage.trim()).length} کاراکتر
-                </Typography>
-                {!enough && (
-                  <Typography sx={{ color: "#ff9800", fontSize: "12px", mt: 1, fontWeight: 600 }}>
-                    اعتبار کافی نیست. با ادمین برای شارژ تماس بگیرید.
-                  </Typography>
-                )}
-              </Box>
-            )}
-          </>
-        )}
+              )}
+            </Box>
+          )}
       </CardContent>
     </Card>
   );

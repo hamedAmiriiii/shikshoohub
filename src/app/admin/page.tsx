@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { Button, Modal, Box, Typography, Table, TableBody, TableContainer, TableHead, TableRow, Paper, IconButton, Input, Card, CardContent, Grid, Container, CircularProgress, TextField, FormControl, FormLabel, RadioGroup, FormControlLabel, Radio } from '@mui/material';
-import BarcodeScannerComponent from "react-qr-barcode-scanner";
+import SafeBarcodeScanner from "@/app/coponent/SafeBarcodeScanner";
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -2650,21 +2650,23 @@ console.log("discounttype" , discounttype);
             alignItems: "center",
             position: "relative"
           }}>
-            <BarcodeScannerComponent
-              width={250}
-              height={250}
-              torch={torchOn}
-              onUpdate={(err, result) => {
-                if (err) {
-                  console.error("Scanner error:", err);
-                  return;
-                }
-                if (result) {
-                  handleBarcodeScan(result);
-                  setOpenModal(false);
-                }
-              }}
-            />
+            {openModal && (
+              <SafeBarcodeScanner
+                width={250}
+                height={250}
+                torch={torchOn}
+                onUpdate={(err, result) => {
+                  if (err) {
+                    console.error("Scanner error:", err);
+                    return;
+                  }
+                  if (result) {
+                    handleBarcodeScan(result);
+                    setOpenModal(false);
+                  }
+                }}
+              />
+            )}
           </Box>
 
           <Typography sx={{ color: 'var(--admin-text)', marginTop: 1, textAlign: "center", fontSize: "12px" }}>

@@ -15,6 +15,7 @@ import {
   getAdminColors,
   type AdminColors,
 } from "./adminTheme";
+import { APP_FONT_FAMILY } from "@/app/lib/appFont";
 import "./admin-theme.css";
 
 type AdminThemeContextValue = {
@@ -40,6 +41,12 @@ function buildMuiTheme(mode: AdminThemeMode) {
 
   return createTheme({
     direction: "rtl",
+    typography: {
+      fontFamily: APP_FONT_FAMILY,
+      allVariants: {
+        fontFamily: APP_FONT_FAMILY,
+      },
+    },
     palette: {
       mode: isLight ? "light" : "dark",
       primary: { main: c.accent, dark: c.accentHover },
@@ -58,7 +65,12 @@ function buildMuiTheme(mode: AdminThemeMode) {
         styleOverrides: {
           body: {
             backgroundColor: isLight ? "#d8e2ea" : undefined,
+            fontFamily: APP_FONT_FAMILY,
           },
+          ".MuiTypography-root, .MuiButton-root, .MuiInputBase-root, .MuiInputLabel-root, .MuiTableCell-root, .MuiMenuItem-root, .MuiTab-root, .MuiChip-label, .MuiDialogTitle-root, .MuiAlert-message":
+            {
+              fontFamily: APP_FONT_FAMILY,
+            },
         },
       },
       MuiPaper: {

@@ -92,22 +92,30 @@ const formatNumber = (num: number) => {
   return new Intl.NumberFormat('fa-IR').format(num);
 };
 
+const SMS_TYPE_LABELS: Record<string, string> = {
+  purchase: "خرید",
+  credit: "اعتبار",
+  warning: "هشدار",
+  customer_register: "ثبت مشتری",
+  broadcast: "پیامک گروهی",
+};
+
+const SMS_TYPE_COLORS: Record<string, string> = {
+  purchase: "var(--admin-accent)",
+  credit: "#2196f3",
+  warning: "#ff9100",
+  customer_register: "#7c4dff",
+  broadcast: "#5c6bc0",
+};
+
 const getSmsTypeLabel = (type: string) => {
-  const types: { [key: string]: string } = {
-    purchase: 'خرید',
-    credit: 'اعتبار',
-    warning: 'هشدار',
-  };
-  return types[type] || type;
+  const key = (type || "").toLowerCase();
+  return SMS_TYPE_LABELS[key] || type;
 };
 
 const getSmsTypeColor = (type: string) => {
-  const colors: { [key: string]: string } = {
-    purchase: 'var(--admin-accent)',
-    credit: '#2196f3',
-    warning: '#ff9100',
-  };
-  return colors[type] || '#999';
+  const key = (type || "").toLowerCase();
+  return SMS_TYPE_COLORS[key] || "#999";
 };
 
 export default function ShopSmsLogsPage() {
@@ -652,6 +660,8 @@ export default function ShopSmsLogsPage() {
                   <MenuItem value="purchase">خرید</MenuItem>
                   <MenuItem value="credit">اعتبار</MenuItem>
                   <MenuItem value="warning">هشدار</MenuItem>
+                  <MenuItem value="customer_register">ثبت مشتری</MenuItem>
+                  <MenuItem value="broadcast">پیامک گروهی</MenuItem>
                 </Select>
               </FormControl>
             </Box> */}

@@ -4,7 +4,8 @@
 
 :root {
   --background: #090d19;
-    --foreground: #ededed;
+  --foreground: #ededed;
+  --app-font-family: "IRANSans", "Iranian Sans", Tahoma, Arial, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -33,10 +34,11 @@ body {
   max-width: 100% !important; /* رفع محدودیت */
 }
 @font-face {
-    font-family: 'IRANSans';
-    src: url('/fonts/Iranian Sans.ttf') format('truetype');
-    font-weight: normal;
-    font-style: normal;
+  font-family: "IRANSans";
+  src: url("/fonts/Iranian%20Sans.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
 }
 @media (min-width: 550px) {
   html {
@@ -50,13 +52,45 @@ html, body {
   width: 100%;
 }
 
-body  {
-
+body {
   background-color: #090d19;
-    font-family: 'IRANSans', IRANSans;
+  font-family: var(--app-font-family);
 }
-h6 , h1 ,h2,h3,h4 ,h5 , span ,p  {
-    font-family: 'IRANSans', IRANSans !important
+
+button,
+input,
+textarea,
+select,
+label,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+span,
+p,
+a,
+li,
+td,
+th,
+.MuiTypography-root,
+.MuiButton-root,
+.MuiInputBase-root,
+.MuiInputBase-input,
+.MuiInputLabel-root,
+.MuiFormLabel-root,
+.MuiTableCell-root,
+.MuiDialogTitle-root,
+.MuiDialogContentText-root,
+.MuiMenuItem-root,
+.MuiTab-root,
+.MuiChip-label,
+.MuiAlert-message,
+.MuiBottomNavigationAction-label,
+.Toastify__toast,
+.Toastify__toast-body {
+  font-family: var(--app-font-family) !important;
 }
 
 

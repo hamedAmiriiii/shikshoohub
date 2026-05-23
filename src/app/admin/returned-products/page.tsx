@@ -15,7 +15,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import TextInput from "@/app/coponent/TextInput/TextInput";
 import ReturnedProductCard from "./returnedProductCard";
 import BottomSheet from "@/app/coponent/BottomSheet";
-import BarcodeScannerComponent from "react-qr-barcode-scanner";
+import SafeBarcodeScanner from "@/app/coponent/SafeBarcodeScanner";
 
 export default function ReturnedProductsPage() {
   const router = useRouter();
@@ -211,7 +211,7 @@ export default function ReturnedProductsPage() {
             {/* Barcode Scanner */}
             {showScanner && (
               <Box sx={{ position: "relative", width: "100%", height: "300px", marginBottom: "16px" }}>
-                <BarcodeScannerComponent
+                <SafeBarcodeScanner
                   width="100%"
                   height={300}
                   onUpdate={(err, result) => {

@@ -50,3 +50,16 @@ export const adminPageSx = {
   background: "var(--admin-bg-gradient)",
   color: "var(--admin-text)",
 };
+
+/** فاصله آیکون و متن در دکمه‌های MUI (RTL) */
+export const adminButtonStartIconSx = {
+  gap: "8px",
+  "& .MuiButton-startIcon": {
+    margin: 0,
+    marginInlineEnd: "8px",
+  },
+  "& .MuiButton-endIcon": {
+    margin: 0,
+    marginInlineStart: "8px",
+  },
+} as const;

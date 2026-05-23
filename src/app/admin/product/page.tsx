@@ -14,7 +14,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
 import FlashlightOnIcon from '@mui/icons-material/FlashlightOn';
 import FlashlightOffIcon from '@mui/icons-material/FlashlightOff';
-import BarcodeScannerComponent from "react-qr-barcode-scanner";
+import SafeBarcodeScanner from "@/app/coponent/SafeBarcodeScanner";
 import { useRouter } from "next/navigation";
 import CardUser from "./cardUser";
 import { ToastContainer, toast } from "react-toastify";
@@ -1283,7 +1283,7 @@ export default function ListData() {
                 overflow: "hidden",
               }}
             >
-              <BarcodeScannerComponent
+              <SafeBarcodeScanner
                 width={250}
                 height={250}
                 torch={editTorchOn}
