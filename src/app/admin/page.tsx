@@ -2588,7 +2588,7 @@ console.log("discounttype" , discounttype);
         onClick={handleOpenModal}
         sx={{
           position: 'fixed',
-          bottom: { xs: '225px', md: '80px' },
+          bottom: { xs: '295px', md: '80px' },
           right: { xs: '16px', md: '40px' },
           borderRadius: '50%',
           width: { xs: '56px', md: '72px' },
