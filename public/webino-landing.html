@@ -7,7 +7,7 @@
   <meta name="description" content="مدیریت فروش، انبار، اقساط و مشتریان. نصب روی موبایل و ویندوز. ۳۰ روز تست رایگان." />
   <meta name="theme-color" content="#059669" />
   <!-- مسیر CSS: در Laravel از {{ asset('css/webino-landing.css') }} استفاده کنید -->
-  <link rel="stylesheet" href="css/webino-landing.css" />
+  <link rel="stylesheet" href="https://webinoplus.ir/webino-landing.css" />
 </head>
 <body>
 
@@ -28,8 +28,8 @@
       <a href="#features">ویژگی‌ها</a>
       <a href="#screenshots">دمو</a>
       <a href="#faq">سوالات</a>
-      <a data-login href="/admin/login">ورود</a>
-      <a data-register href="/admin/register-shop" style="color:#059669;font-weight:600">شروع رایگان</a>
+      <a data-login href="http://webino.runflare.run/admin/login">ورود</a>
+      <a data-register href="http://webino.runflare.run/admin/register-shop" style="color:#059669;font-weight:600">شروع رایگان</a>
     </div>
   </header>
 
@@ -50,19 +50,25 @@
           <li>مناسب فروشگاه متوسط</li>
         </ul>
       </div>
-      <div class="wl-mockup">
-        <div class="wl-mockup-head"><span>داشبورد فروشگاه</span><span class="wl-online">آنلاین</span></div>
-        <div class="wl-stats">
-          <div class="wl-stat-green"><div class="wl-stat-label">فروش امروز</div><div class="wl-stat-val">۸,۲۴۰,۰۰۰</div></div>
-          <div class="wl-stat-gray"><div class="wl-stat-label">سود امروز</div><div class="wl-stat-val">۱,۹۵۰,۰۰۰</div></div>
+      <section id="screenshots" class="wl-section wl-section-gray">
+        <div class="wl-container">
+          <h2 class="wl-title">نمای نرم‌افزار</h2>
+          <div class="wl-carousel-wrap">
+            <div class="wl-carousel-frame" id="carousel-frame">
+              <div class="wl-carousel-inner">
+                <div class="wl-carousel-head">
+                  <span id="slide-title">صفحه فروش</span>
+                  <span id="slide-desc">ثبت سریع فاکتور</span>
+                </div>
+                <div class="wl-carousel-body" id="slide-content"></div>
+              </div>
+            </div>
+            <button type="button" class="wl-carousel-btn wl-carousel-btn-prev" id="slide-prev" aria-label="قبلی">›</button>
+            <button type="button" class="wl-carousel-btn wl-carousel-btn-next" id="slide-next" aria-label="بعدی">‹</button>
+            <div class="wl-carousel-dots" id="slide-dots"></div>
+          </div>
         </div>
-        <div class="wl-rows">
-          <div style="font-size:10px;color:#94a3b8;padding:0 4px">لیست کالا — ثبت فروش سریع</div>
-          <div class="wl-row"><span>کتانی نایک</span><span>۱,۲۰۰,۰۰۰</span></div>
-          <div class="wl-row"><span>شلوار جین</span><span>۸۵۰,۰۰۰</span></div>
-        </div>
-        <div class="wl-chart-placeholder">گزارش فروش ۱۰ روز اخیر</div>
-      </div>
+      </section>
     </div>
   </section>
 
@@ -98,25 +104,7 @@
     </div>
   </section>
 
-  <section id="screenshots" class="wl-section wl-section-gray">
-    <div class="wl-container">
-      <h2 class="wl-title">نمای نرم‌افزار</h2>
-      <div class="wl-carousel-wrap">
-        <div class="wl-carousel-frame" id="carousel-frame">
-          <div class="wl-carousel-inner">
-            <div class="wl-carousel-head">
-              <span id="slide-title">صفحه فروش</span>
-              <span id="slide-desc">ثبت سریع فاکتور</span>
-            </div>
-            <div class="wl-carousel-body" id="slide-content"></div>
-          </div>
-        </div>
-        <button type="button" class="wl-carousel-btn wl-carousel-btn-prev" id="slide-prev" aria-label="قبلی">›</button>
-        <button type="button" class="wl-carousel-btn wl-carousel-btn-next" id="slide-next" aria-label="بعدی">‹</button>
-        <div class="wl-carousel-dots" id="slide-dots"></div>
-      </div>
-    </div>
-  </section>
+  
 
   <section class="wl-section wl-section-white">
     <div class="wl-container">
@@ -170,14 +158,11 @@
       <div>
         <h3>دسترسی سریع</h3>
         <ul>
-          <li><a data-register href="/admin/register-shop">ثبت‌نام رایگان</a></li>
-          <li><a data-login href="/admin/login">ورود</a></li>
+          <li><a data-register href="http://webino.runflare.run/admin/register-shop">ثبت‌نام رایگان</a></li>
+          <li><a data-login href="http://webino.runflare.run/admin/login">ورود</a></li>
         </ul>
       </div>
-      <div>
-        <h3>تماس</h3>
-        <a href="tel:09399166196" dir="ltr">09399166196</a>
-      </div>
+      
     </div>
     <div class="wl-container wl-copy">© <span id="year"></span> وبینو — تمامی حقوق محفوظ است</div>
   </footer>
@@ -188,10 +173,10 @@
 
   <script>
     window.WEBINO_LANDING_CONFIG = {
-      registerUrl: "/admin/register-shop",
-      loginUrl: "/admin/login",
+      registerUrl: "http://webino.runflare.run/admin/register-shop",
+      loginUrl: "http://webino.runflare.run/admin/login",
     };
   </script>
-  <script src="js/webino-landing.js"></script>
+  <script src="https://webinoplus.ir/webino-landing.js"></script>
 </body>
 </html>

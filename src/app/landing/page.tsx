@@ -1,23 +1,6 @@
-import React from "react";
-import HeroSection from "./components/HeroSection";
-import FeaturesSection from "./components/FeaturesSection";
-import GallerySection from "./components/GallerySection";
-import PricingSection from "./components/PricingSection";
-import Footer from "./components/Footer";
-import Navbar from "./components/Navbar";
+import LandingShopClient from "./shop/LandingShopClient";
 
-/** لندینگ فعلی (عکاسی) — بدون تغییر */
+/** لندینگ اصلی وبینو — مدیریت فروشگاه */
 export default function LandingPage() {
-  return (
-    <div style={{ maxWidth: "none !important" }} className="min-h-screen bg-gray-50">
-      <Navbar />
-      <main>
-        <HeroSection />
-        <FeaturesSection />
-        <GallerySection />
-        <PricingSection />
-      </main>
-      <Footer />
-    </div>
-  );
+  return <LandingShopClient />;
 }

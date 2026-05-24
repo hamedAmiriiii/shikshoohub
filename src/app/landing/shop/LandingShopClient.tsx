@@ -67,12 +67,12 @@ const SCREENSHOTS = [
   {
     title: "صفحه فروش",
     desc: "ثبت سریع فاکتور و سبد خرید",
-    gradient: "from-emerald-500/20 to-teal-500/10",
+    gradient: "from-blue-500/20 to-indigo-500/10",
     content: (
       <div className="space-y-2 p-3">
         <div className="flex justify-between text-xs text-slate-600">
           <span>فروش امروز</span>
-          <span className="font-bold text-emerald-600">۱۲,۴۵۰,۰۰۰</span>
+          <span className="font-bold text-blue-600">۱۲,۴۵۰,۰۰۰</span>
         </div>
         <div className="h-20 rounded-lg bg-white border border-slate-100 flex items-center justify-center text-slate-400 text-xs">
           سبد فروش + بارکدخوان
@@ -89,7 +89,7 @@ const SCREENSHOTS = [
         {["پیراهن مردانه", "کفش ورزشی", "کیف چرم"].map((n, i) => (
           <div key={i} className="flex justify-between text-xs bg-white rounded-md px-2 py-1.5 border border-slate-100">
             <span className="text-slate-700">{n}</span>
-            <span className="text-emerald-600 font-medium">{[12, 5, 8][i]}</span>
+            <span className="text-blue-600 font-medium">{[12, 5, 8][i]}</span>
           </div>
         ))}
       </div>
@@ -104,7 +104,7 @@ const SCREENSHOTS = [
         {[40, 65, 45, 80, 55, 90, 70].map((h, i) => (
           <div
             key={i}
-            className="flex-1 rounded-t bg-emerald-400/80"
+            className="flex-1 rounded-t bg-gradient-to-t from-blue-500/90 to-emerald-400/80"
             style={{ height: `${h}%` }}
           />
         ))}
@@ -119,7 +119,7 @@ const SCREENSHOTS = [
       <div className="p-3 space-y-2">
         <div className="text-xs text-slate-500">اعتبار اقساطی</div>
         <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-          <div className="h-full w-2/3 bg-emerald-500 rounded-full" />
+          <div className="h-full w-2/3 bg-gradient-to-l from-blue-500 to-emerald-500 rounded-full" />
         </div>
         <div className="text-xs text-slate-600">۳ مشتری — ۲ قسط معوق</div>
       </div>
@@ -202,20 +202,20 @@ export default function LandingShopClient() {
       {/* Navbar */}
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200/80">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/landing/shop" className="font-bold text-xl text-emerald-600">
+          <Link href="/landing" className="font-bold text-xl text-blue-600">
             وبینو
           </Link>
           <nav className="hidden md:flex items-center gap-8 text-sm text-slate-600">
-            <a href="#features" className="hover:text-emerald-600 transition">ویژگی‌ها</a>
-            <a href="#steps" className="hover:text-emerald-600 transition">شروع سریع</a>
-            <a href="#screenshots" className="hover:text-emerald-600 transition">دمو</a>
-            <a href="#faq" className="hover:text-emerald-600 transition">سوالات</a>
-            <Link href={LOGIN_URL} className="hover:text-emerald-600 transition">
+            <a href="#features" className="hover:text-blue-600 transition">ویژگی‌ها</a>
+            <a href="#steps" className="hover:text-blue-600 transition">شروع سریع</a>
+            <a href="#screenshots" className="hover:text-blue-600 transition">دمو</a>
+            <a href="#faq" className="hover:text-blue-600 transition">سوالات</a>
+            <Link href={LOGIN_URL} className="hover:text-blue-600 transition">
               ورود
             </Link>
             <Link
               href={REGISTER_URL}
-              className="bg-emerald-600 text-white px-5 py-2 rounded-xl hover:bg-emerald-700 transition font-medium shadow-sm shadow-emerald-600/20"
+              className="bg-blue-600 text-white px-5 py-2 rounded-xl hover:bg-blue-700 transition font-medium shadow-sm shadow-blue-600/20"
             >
               شروع رایگان
             </Link>
@@ -235,7 +235,7 @@ export default function LandingShopClient() {
             <a href="#screenshots" onClick={() => setNavOpen(false)}>دمو</a>
             <a href="#faq" onClick={() => setNavOpen(false)}>سوالات</a>
             <Link href={LOGIN_URL}>ورود</Link>
-            <Link href={REGISTER_URL} className="text-emerald-600 font-semibold">
+            <Link href={REGISTER_URL} className="text-blue-600 font-semibold">
               شروع رایگان
             </Link>
           </div>
@@ -243,11 +243,12 @@ export default function LandingShopClient() {
       </header>
 
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-white via-emerald-50/40 to-slate-50 pt-12 pb-20 md:pt-16 md:pb-28">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-emerald-400/10 blur-3xl rounded-full pointer-events-none" />
+      <section className="relative overflow-hidden bg-gradient-to-b from-white via-blue-50/50 to-slate-50 pt-12 pb-20 md:pt-16 md:pb-28">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-blue-400/15 blur-3xl rounded-full pointer-events-none" />
+        <div className="absolute bottom-0 right-0 w-[400px] h-[200px] bg-emerald-400/8 blur-3xl rounded-full pointer-events-none" />
         <div className="max-w-6xl mx-auto px-4 grid lg:grid-cols-2 gap-12 items-center relative">
           <motion.div {...fadeUp(0)} className="text-center lg:text-right">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-medium mb-4">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-medium mb-4 border border-blue-200/60">
               <CheckCircle2 size={14} /> ۳۰ روز تست رایگان — بدون نصب پیچیده
             </span>
             <h1 className="text-3xl sm:text-4xl lg:text-[2.35rem] font-bold leading-tight text-slate-900">
@@ -261,13 +262,13 @@ export default function LandingShopClient() {
               <button
                 type="button"
                 onClick={startFree}
-                className="px-8 py-3.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition shadow-lg shadow-emerald-600/25"
+                className="px-8 py-3.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition shadow-lg shadow-blue-600/25"
               >
                 شروع رایگان ۳۰ روزه
               </button>
               <a
                 href="#screenshots"
-                className="px-8 py-3.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-medium hover:border-emerald-300 hover:bg-emerald-50/50 transition text-center"
+                className="px-8 py-3.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-medium hover:border-blue-300 hover:bg-blue-50/50 transition text-center"
               >
                 مشاهده دمو
               </a>
@@ -276,7 +277,7 @@ export default function LandingShopClient() {
               {["۲۰ پیامک رایگان", "پشتیبانی آنلاین", "نصب موبایل و ویندوز", "مناسب فروشگاه متوسط"].map(
                 (t) => (
                   <li key={t} className="flex items-center gap-1.5">
-                    <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
+                    <CheckCircle2 size={14} className="text-blue-500 shrink-0" />
                     {t}
                   </li>
                 ),
@@ -288,16 +289,16 @@ export default function LandingShopClient() {
             <div className="rounded-2xl bg-white border border-slate-200 shadow-2xl shadow-slate-200/60 p-4 md:p-5">
               <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
                 <span className="text-sm font-semibold text-slate-800">داشبورد فروشگاه</span>
-                <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">آنلاین</span>
+                <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">آنلاین</span>
               </div>
               <div className="grid grid-cols-2 gap-3 mb-3">
-                <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3">
-                  <div className="text-[10px] text-emerald-700">فروش امروز</div>
-                  <div className="text-lg font-bold text-emerald-800 mt-1">۸,۲۴۰,۰۰۰</div>
+                <div className="rounded-xl bg-blue-50 border border-blue-100 p-3">
+                  <div className="text-[10px] text-blue-700">فروش امروز</div>
+                  <div className="text-lg font-bold text-blue-800 mt-1">۸,۲۴۰,۰۰۰</div>
                 </div>
-                <div className="rounded-xl bg-slate-50 border border-slate-100 p-3">
-                  <div className="text-[10px] text-slate-500">سود امروز</div>
-                  <div className="text-lg font-bold text-slate-800 mt-1">۱,۹۵۰,۰۰۰</div>
+                <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3">
+                  <div className="text-[10px] text-emerald-700">سود امروز</div>
+                  <div className="text-lg font-bold text-emerald-800 mt-1">۱,۹۵۰,۰۰۰</div>
                 </div>
               </div>
               <div className="rounded-xl bg-slate-50 border border-slate-100 p-2 mb-3 space-y-1.5">
@@ -311,11 +312,11 @@ export default function LandingShopClient() {
                     className="flex justify-between text-xs bg-white rounded-lg px-2 py-1.5 border border-slate-100"
                   >
                     <span>{row.n}</span>
-                    <span className="text-emerald-600 font-medium">{row.p}</span>
+                    <span className="text-blue-600 font-medium">{row.p}</span>
                   </div>
                 ))}
               </div>
-              <div className="h-16 rounded-xl bg-gradient-to-l from-emerald-500/15 to-transparent border border-emerald-100 flex items-center justify-center text-xs text-slate-500">
+              <div className="h-16 rounded-xl bg-gradient-to-l from-blue-500/15 via-emerald-500/10 to-transparent border border-blue-100 flex items-center justify-center text-xs text-slate-500">
                 گزارش فروش ۱۰ روز اخیر
               </div>
             </div>
@@ -334,9 +335,9 @@ export default function LandingShopClient() {
               <motion.div
                 key={b.title}
                 {...fadeUp(i * 0.05)}
-                className="p-6 rounded-2xl border border-slate-100 bg-slate-50/50 hover:border-emerald-200 hover:shadow-md transition"
+                className="p-6 rounded-2xl border border-slate-100 bg-slate-50/50 hover:border-blue-200 hover:shadow-md transition"
               >
-                <div className="w-11 h-11 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4">
+                <div className="w-11 h-11 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center mb-4">
                   <b.icon size={22} />
                 </div>
                 <h3 className="font-bold text-slate-900">{b.title}</h3>
@@ -361,7 +362,7 @@ export default function LandingShopClient() {
                 {...fadeUp(i * 0.03)}
                 className="flex items-center gap-3 p-4 rounded-xl bg-white border border-slate-100 shadow-sm"
               >
-                <f.icon size={20} className="text-emerald-600 shrink-0" />
+                <f.icon size={20} className="text-blue-600 shrink-0" />
                 <span className="text-sm font-medium text-slate-800">{f.label}</span>
               </motion.div>
             ))}
@@ -378,7 +379,7 @@ export default function LandingShopClient() {
           <div className="grid md:grid-cols-3 gap-8 relative">
             {STEPS.map((s, i) => (
               <motion.div key={s.n} {...fadeUp(i * 0.08)} className="relative">
-                <div className="w-12 h-12 rounded-full bg-emerald-600 text-white flex items-center justify-center text-lg font-bold mx-auto mb-4">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-600 to-emerald-600 text-white flex items-center justify-center text-lg font-bold mx-auto mb-4">
                   {s.n}
                 </div>
                 <h3 className="font-bold text-lg">{s.title}</h3>
@@ -386,7 +387,7 @@ export default function LandingShopClient() {
               </motion.div>
             ))}
           </div>
-          <p className="mt-10 text-emerald-700 font-semibold text-lg">
+          <p className="mt-10 text-blue-700 font-semibold text-lg">
             در کمتر از ۵ دقیقه فروشگاهت را دیجیتال کن
           </p>
         </div>
@@ -411,7 +412,7 @@ export default function LandingShopClient() {
             <button
               type="button"
               onClick={prevSlide}
-              className="absolute right-full top-1/2 -translate-y-1/2 mr-2 md:mr-4 w-10 h-10 rounded-full bg-white border border-slate-200 shadow flex items-center justify-center hover:bg-emerald-50"
+              className="absolute right-full top-1/2 -translate-y-1/2 mr-2 md:mr-4 w-10 h-10 rounded-full bg-white border border-slate-200 shadow flex items-center justify-center hover:bg-blue-50"
               aria-label="قبلی"
             >
               <ChevronRight size={20} />
@@ -419,7 +420,7 @@ export default function LandingShopClient() {
             <button
               type="button"
               onClick={nextSlide}
-              className="absolute left-full top-1/2 -translate-y-1/2 ml-2 md:ml-4 w-10 h-10 rounded-full bg-white border border-slate-200 shadow flex items-center justify-center hover:bg-emerald-50"
+              className="absolute left-full top-1/2 -translate-y-1/2 ml-2 md:ml-4 w-10 h-10 rounded-full bg-white border border-slate-200 shadow flex items-center justify-center hover:bg-blue-50"
               aria-label="بعدی"
             >
               <ChevronLeft size={20} />
@@ -430,7 +431,7 @@ export default function LandingShopClient() {
                   key={i}
                   type="button"
                   onClick={() => setSlide(i)}
-                  className={`w-2 h-2 rounded-full transition ${i === slide ? "bg-emerald-600 w-6" : "bg-slate-300"}`}
+                  className={`w-2 h-2 rounded-full transition ${i === slide ? "bg-blue-600 w-6" : "bg-slate-300"}`}
                   aria-label={`اسلاید ${i + 1}`}
                 />
               ))}
@@ -444,10 +445,10 @@ export default function LandingShopClient() {
         <div className="max-w-4xl mx-auto px-4">
           <motion.div
             {...fadeUp()}
-            className="rounded-3xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white p-8 md:p-12 text-center shadow-xl shadow-emerald-900/20"
+            className="rounded-3xl bg-gradient-to-br from-blue-600 via-blue-700 to-emerald-600 text-white p-8 md:p-12 text-center shadow-xl shadow-blue-900/20"
           >
             <h2 className="text-2xl md:text-3xl font-bold">پیشنهاد ویژه شروع</h2>
-            <ul className="mt-6 space-y-2 text-emerald-50 text-base md:text-lg">
+            <ul className="mt-6 space-y-2 text-blue-50 text-base md:text-lg">
               <li>۳۰ روز استفاده رایگان</li>
               <li>۲۰ پیامک هدیه</li>
               <li>پشتیبانی رایگان راه‌اندازی</li>
@@ -455,7 +456,7 @@ export default function LandingShopClient() {
             <button
               type="button"
               onClick={startFree}
-              className="mt-8 px-10 py-4 rounded-xl bg-white text-emerald-700 font-bold hover:bg-emerald-50 transition shadow-lg"
+              className="mt-8 px-10 py-4 rounded-xl bg-white text-blue-700 font-bold hover:bg-blue-50 transition shadow-lg"
             >
               همین حالا رایگان شروع کن
             </button>
@@ -473,7 +474,7 @@ export default function LandingShopClient() {
               placeholder="نام فروشگاه"
               value={shopName}
               onChange={(e) => setShopName(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none"
             />
             <input
               type="tel"
@@ -481,12 +482,12 @@ export default function LandingShopClient() {
               value={phone}
               onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 11))}
               dir="ltr"
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none text-left"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none text-left"
             />
             <button
               type="button"
               onClick={startFree}
-              className="w-full py-3.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition"
+              className="w-full py-3.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition"
             >
               شروع رایگان ۳۰ روزه
             </button>
@@ -526,22 +527,22 @@ export default function LandingShopClient() {
       {/* Support */}
       <section className="py-16 bg-white">
         <div className="max-w-6xl mx-auto px-4 text-center">
-          <Headphones className="mx-auto text-emerald-600 mb-4" size={40} />
+          <Headphones className="mx-auto text-blue-600 mb-4" size={40} />
           <h2 className="text-2xl font-bold">در تمام مراحل راه‌اندازی کنار شما هستیم</h2>
           <p className="text-slate-600 mt-2 mb-8">پشتیبانی آنلاین — پاسخگویی سریع</p>
           <div className="flex flex-wrap justify-center gap-4">
             <a
               href={SUPPORT_TEL}
-              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-slate-200 hover:border-emerald-300 bg-slate-50 transition"
+              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-slate-200 hover:border-blue-300 bg-slate-50 transition"
             >
-              <Phone size={18} className="text-emerald-600" />
+              <Phone size={18} className="text-blue-600" />
               <span dir="ltr">{SUPPORT_PHONE}</span>
             </a>
             <a
               href={LINK_BALE}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-5 py-3 rounded-xl border border-slate-200 hover:bg-emerald-50 transition text-sm"
+              className="px-5 py-3 rounded-xl border border-slate-200 hover:bg-blue-50 transition text-sm"
             >
               بله
             </a>
@@ -549,7 +550,7 @@ export default function LandingShopClient() {
               href={LINK_RUBIKA}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-5 py-3 rounded-xl border border-slate-200 hover:bg-emerald-50 transition text-sm"
+              className="px-5 py-3 rounded-xl border border-slate-200 hover:bg-blue-50 transition text-sm"
             >
               روبیکا
             </a>
@@ -568,25 +569,20 @@ export default function LandingShopClient() {
             <div className="text-white font-medium mb-3">دسترسی سریع</div>
             <ul className="space-y-2">
               <li>
-                <Link href={REGISTER_URL} className="hover:text-emerald-400">
+                <Link href={REGISTER_URL} className="hover:text-blue-400">
                   ثبت‌نام رایگان
                 </Link>
               </li>
               <li>
-                <Link href={LOGIN_URL} className="hover:text-emerald-400">
+                <Link href={LOGIN_URL} className="hover:text-blue-400">
                   ورود
-                </Link>
-              </li>
-              <li>
-                <Link href="/landing" className="hover:text-emerald-400">
-                  لندینگ قبلی
                 </Link>
               </li>
             </ul>
           </div>
           <div>
             <div className="text-white font-medium mb-3">تماس</div>
-            <a href={SUPPORT_TEL} className="hover:text-emerald-400" dir="ltr">
+            <a href={SUPPORT_TEL} className="hover:text-blue-400" dir="ltr">
               {SUPPORT_PHONE}
             </a>
           </div>
@@ -601,7 +597,7 @@ export default function LandingShopClient() {
         <button
           type="button"
           onClick={startFree}
-          className="w-full py-3.5 rounded-xl bg-emerald-600 text-white font-semibold shadow-lg"
+          className="w-full py-3.5 rounded-xl bg-blue-600 text-white font-semibold shadow-lg"
         >
           شروع رایگان ۳۰ روزه
         </button>
