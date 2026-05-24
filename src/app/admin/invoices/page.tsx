@@ -19,6 +19,7 @@ import {
   DialogActions, 
   TextField, 
   CircularProgress,
+  Pagination,
   Chip,
   RadioGroup,
   FormControlLabel,
@@ -121,13 +122,21 @@ export default function InvoicesPage() {
   const [dateRange, setDateRange] = useState<any>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [perPage] = useState(20);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+
   useEffect(() => {
     fetchInvoices();
-  }, [filterMode, dateRange, searchQuery]);
+  }, [filterMode, dateRange, searchQuery, currentPage, perPage]);
 
   const buildUrl = () => {
     let url = "/api/invoices";
     const params: string[] = [];
+
+    params.push(`per_page=${perPage}`);
+    params.push(`page=${currentPage}`);
 
     // Add time filter
     if (filterMode === 'range' && dateRange.length === 2) {
@@ -190,17 +199,30 @@ export default function InvoicesPage() {
         toast.error(getApiErrorMessage(res, 'خطا در دریافت فاکتورها'));
         setInvoices([]);
         setTotalAmount(0);
+      } else if (res.data && Array.isArray(res.data)) {
+        setInvoices(res.data);
+        setTotalPages(res.last_page || 1);
+        setTotalCount(res.total || res.data.length);
+        if (res.current_page) {
+          setCurrentPage(res.current_page);
+        }
+        if (res.total_amount !== undefined) {
+          setTotalAmount(res.total_amount);
+        } else {
+          const pageTotal = res.data.reduce(
+            (sum: number, invoice: Invoice) => sum + (invoice.amount || 0),
+            0
+          );
+          setTotalAmount(pageTotal);
+        }
       } else {
-        // Handle response structure
-        const data = Array.isArray(res) ? res : (Array.isArray(res.data) ? res.data : []);
+        const data = Array.isArray(res) ? res : [];
         setInvoices(data);
-        
-        // Calculate total amount
+        setTotalPages(1);
+        setTotalCount(data.length);
         const total = data.reduce((sum: number, invoice: Invoice) => sum + (invoice.amount || 0), 0);
         setTotalAmount(total);
-        
-        // If API returns total_amount separately
-        if (res.total_amount !== undefined) {
+        if (!Array.isArray(res) && res.total_amount !== undefined) {
           setTotalAmount(res.total_amount);
         }
       }
@@ -344,6 +366,7 @@ export default function InvoicesPage() {
 
   const handleFilterChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value as 'today' | 'week' | 'month' | 'year' | 'range' | 'all';
+    setCurrentPage(1);
     if (value === 'all') {
       setFilterMode(null);
       setDateRange([]);
@@ -359,6 +382,7 @@ export default function InvoicesPage() {
     setDateRange(dates);
     if (dates.length === 2) {
       setFilterMode('range');
+      setCurrentPage(1);
     }
   };
 
@@ -366,7 +390,13 @@ export default function InvoicesPage() {
     setFilterMode(null);
     setDateRange([]);
     setSearchQuery("");
+    setCurrentPage(1);
     setOpenFilterSheet(false);
+  };
+
+  const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
+    setCurrentPage(value);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const hasActiveFilters = () => {
@@ -451,7 +481,7 @@ export default function InvoicesPage() {
             padding: { xs: '16px', md: '24px' }
           }}>
             <CardContent sx={{ padding: '0 !important' }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
                 <Typography sx={{ color: 'var(--admin-text-muted)', fontSize: { xs: '14px', md: '16px' } }}>
                   جمع کل مبالغ:
                 </Typography>
@@ -463,6 +493,11 @@ export default function InvoicesPage() {
                   {formatNumber(totalAmount)} تومان
                 </Typography>
               </Box>
+              {totalCount > 0 && (
+                <Typography sx={{ color: 'var(--admin-text-muted)', fontSize: '14px', marginTop: 1 }}>
+                  تعداد کل: {formatNumber(totalCount)} فاکتور
+                </Typography>
+              )}
             </CardContent>
           </Card>
         )}
@@ -572,6 +607,27 @@ export default function InvoicesPage() {
               </TableBody>
             </Table>
           </TableContainer>
+        )}
+
+        {!loading && invoices.length > 0 && totalPages > 1 && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: '24px' }}>
+            <Pagination
+              count={totalPages}
+              page={currentPage}
+              onChange={handlePageChange}
+              color="primary"
+              size="large"
+              sx={{
+                '& .MuiPaginationItem-root': {
+                  color: 'var(--admin-text)',
+                },
+                '& .Mui-selected': {
+                  backgroundColor: 'var(--admin-accent)',
+                  color: 'var(--admin-text)',
+                },
+              }}
+            />
+          </Box>
         )}
 
         {/* Create Invoice Dialog */}
@@ -885,7 +941,10 @@ export default function InvoicesPage() {
             <TextField
               label="جستجو (عنوان، توضیح، کاربر)"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
               fullWidth
               sx={{
                 marginBottom: "16px",
