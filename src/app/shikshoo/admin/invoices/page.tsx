@@ -29,8 +29,8 @@ import {
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { tableCellClasses } from '@mui/material/TableCell';
+import { apiRequestError } from '@/app/lib/apiRequestError';
 import tokenCode from '@/app/coponent/tokenCode';
-import { FetchWithJwtClient } from '@/app/coponent/fetchWithJwtClient';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import AddIcon from '@mui/icons-material/Add';
@@ -46,26 +46,26 @@ import BottomSheet from "@/app/coponent/BottomSheet";
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
-    backgroundColor: "var(--admin-surface-alt)",
-    color: "var(--admin-text)",
+    backgroundColor: "#1a1d2e",
+    color: "#fff",
     fontWeight: "600",
     fontSize: "16px",
     padding: "16px 24px",
   },
   [`&.${tableCellClasses.body}`]: {
-    color: "var(--admin-text)",
+    color: "#fff",
     fontSize: 16,
     padding: "16px 24px",
   },
 }));
 
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
-  backgroundColor: "var(--admin-surface)",
+  backgroundColor: "#2b3143",
   '&:nth-of-type(even)': {
-    backgroundColor: "var(--admin-surface-alt)",
+    backgroundColor: "#1a1d2e",
   },
   '&:hover': {
-    backgroundColor: "var(--admin-menu-hover)",
+    backgroundColor: "rgba(120, 181, 104, 0.1)",
   },
   '&:last-child td, &:last-child th': {
     border: 0,
@@ -84,22 +84,6 @@ interface Invoice {
 const formatNumber = (num: number) => {
   return new Intl.NumberFormat('fa-IR').format(num);
 };
-
-function getApiErrorMessage(res: any, fallback: string): string {
-  if (!res) return fallback;
-  if (typeof res.message === 'string') return res.message;
-  if (typeof res.error === 'string') return res.error;
-  if (typeof res.errorText === 'string') {
-    try {
-      const parsed = JSON.parse(res.errorText);
-      if (typeof parsed.message === 'string') return parsed.message;
-      if (typeof parsed.error === 'string') return parsed.error;
-    } catch {
-      if (res.errorText && res.errorText !== 'fetch failed') return res.errorText;
-    }
-  }
-  return fallback;
-}
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -185,18 +169,11 @@ export default function InvoicesPage() {
       setLoading(true);
       const url = buildUrl();
       const token = tokenCode();
-      if (!token) {
-        toast.error('لطفاً وارد شوید');
-        setInvoices([]);
-        setTotalAmount(0);
-        return;
-      }
-
-      const res = await FetchWithJwtClient('GET', url, token);
+      const res = await apiRequestError("Get", {}, {}, url, true, true, token);
       
-      if (!res || res.hasError) {
-        console.error("Error fetching invoices:", res);
-        toast.error(getApiErrorMessage(res, 'خطا در دریافت فاکتورها'));
+      if (res.hasError) {
+        console.error("Error fetching invoices:", res.errorText);
+        toast.error("خطا در دریافت فاکتورها");
         setInvoices([]);
         setTotalAmount(0);
       } else if (res.data && Array.isArray(res.data)) {
@@ -256,15 +233,10 @@ export default function InvoicesPage() {
       };
 
       const token = tokenCode();
-      if (!token) {
-        toast.error('لطفاً وارد شوید');
-        return;
-      }
-
-      const res = await FetchWithJwtClient('POST', '/api/invoices', data);
+      const res = await apiRequestError("Post", {}, data, "/api/invoices", true, true, token);
       
-      if (!res || res.hasError) {
-        toast.error(getApiErrorMessage(res, 'خطا در ثبت فاکتور'));
+      if (res.hasError) {
+        toast.error(res.errorText || "خطا در ثبت فاکتور");
       } else {
         toast.success("فاکتور با موفقیت ثبت شد");
         setOpenCreateDialog(false);
@@ -297,15 +269,10 @@ export default function InvoicesPage() {
       };
 
       const token = tokenCode();
-      if (!token) {
-        toast.error('لطفاً وارد شوید');
-        return;
-      }
-
-      const res = await FetchWithJwtClient('PUT', `/api/invoices/${editingInvoice.id}`, data);
+      const res = await apiRequestError("Put", {}, data, `/api/invoices/${editingInvoice.id}`, true, true, token);
       
-      if (!res || res.hasError) {
-        toast.error(getApiErrorMessage(res, 'خطا در ویرایش فاکتور'));
+      if (res.hasError) {
+        toast.error(res.errorText || "خطا در ویرایش فاکتور");
       } else {
         toast.success("فاکتور با موفقیت ویرایش شد");
         setOpenEditDialog(false);
@@ -324,15 +291,10 @@ export default function InvoicesPage() {
 
     try {
       const token = tokenCode();
-      if (!token) {
-        toast.error('لطفاً وارد شوید');
-        return;
-      }
-
-      const res = await FetchWithJwtClient('DELETE', `/api/invoices/${deletingInvoiceId}`, token);
+      const res = await apiRequestError("Delete", {}, {}, `/api/invoices/${deletingInvoiceId}`, true, true, token);
       
-      if (!res || res.hasError) {
-        toast.error(getApiErrorMessage(res, 'خطا در حذف فاکتور'));
+      if (res.hasError) {
+        toast.error(res.errorText || "خطا در حذف فاکتور");
       } else {
         toast.success("فاکتور با موفقیت حذف شد");
         setOpenDeleteDialog(false);
@@ -406,7 +368,7 @@ export default function InvoicesPage() {
   return (
     <Box sx={{ 
       minHeight: '100vh', 
-      background: "var(--admin-bg-gradient)",
+      background: "linear-gradient(180deg, #1a1d2e 0%, #2b3143 100%)",
       paddingTop: { xs: '12px', md: '24px' },
       paddingBottom: { xs: '100px', md: '40px' },
       direction: 'rtl'
@@ -424,12 +386,12 @@ export default function InvoicesPage() {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <ReceiptIcon sx={{ 
               fontSize: { xs: '28px', md: '36px' }, 
-              color: 'var(--admin-accent)' 
+              color: '#78b568' 
             }} />
             <Typography sx={{ 
               fontSize: { xs: '20px', md: '28px' }, 
               fontWeight: '700', 
-              color: 'var(--admin-text)' 
+              color: '#fff' 
             }}>
               فاکتورها
             </Typography>
@@ -444,10 +406,10 @@ export default function InvoicesPage() {
                 setOpenCreateDialog(true);
               }}
               sx={{
-                backgroundColor: 'var(--admin-accent)',
-                color: 'var(--admin-text)',
+                backgroundColor: '#78b568',
+                color: '#fff',
                 '&:hover': {
-                  backgroundColor: 'var(--admin-accent-hover)',
+                  backgroundColor: '#5a9a4a',
                 },
                 borderRadius: '12px',
                 padding: { xs: '8px 16px', md: '10px 24px' }
@@ -459,10 +421,10 @@ export default function InvoicesPage() {
             <IconButton
               onClick={() => setOpenFilterSheet(true)}
               sx={{
-                backgroundColor: hasActiveFilters() ? 'var(--admin-accent)' : 'var(--admin-surface)',
-                color: 'var(--admin-text)',
+                backgroundColor: hasActiveFilters() ? '#78b568' : '#2b3143',
+                color: '#fff',
                 '&:hover': {
-                  backgroundColor: hasActiveFilters() ? 'var(--admin-accent-hover)' : 'var(--admin-surface-alt)',
+                  backgroundColor: hasActiveFilters() ? '#5a9a4a' : '#1a1d2e',
                 }
               }}
             >
@@ -474,7 +436,7 @@ export default function InvoicesPage() {
         {/* Total Amount Card */}
         {!loading && (
           <Card sx={{ 
-            backgroundColor: 'var(--admin-surface)',
+            backgroundColor: '#2b3143',
             borderRadius: '16px',
             border: '1px solid rgba(55, 84, 165, 0.3)',
             marginBottom: '24px',
@@ -482,11 +444,11 @@ export default function InvoicesPage() {
           }}>
             <CardContent sx={{ padding: '0 !important' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
-                <Typography sx={{ color: 'var(--admin-text-muted)', fontSize: { xs: '14px', md: '16px' } }}>
+                <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: { xs: '14px', md: '16px' } }}>
                   جمع کل مبالغ:
                 </Typography>
                 <Typography sx={{ 
-                  color: 'var(--admin-accent)', 
+                  color: '#78b568', 
                   fontSize: { xs: '20px', md: '24px' },
                   fontWeight: '700'
                 }}>
@@ -494,7 +456,7 @@ export default function InvoicesPage() {
                 </Typography>
               </Box>
               {totalCount > 0 && (
-                <Typography sx={{ color: 'var(--admin-text-muted)', fontSize: '14px', marginTop: 1 }}>
+                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px', marginTop: 1 }}>
                   تعداد کل: {formatNumber(totalCount)} فاکتور
                 </Typography>
               )}
@@ -505,23 +467,23 @@ export default function InvoicesPage() {
         {/* Invoices Table */}
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
-            <CircularProgress sx={{ color: 'var(--admin-accent)' }} />
+            <CircularProgress sx={{ color: '#78b568' }} />
           </Box>
         ) : invoices.length === 0 ? (
           <Box sx={{ 
             textAlign: 'center', 
             padding: { xs: '40px 20px', md: '60px 40px' },
-            backgroundColor: 'var(--admin-surface)',
+            backgroundColor: '#2b3143',
             borderRadius: '16px',
             border: '1px solid rgba(55, 84, 165, 0.3)'
           }}>
             <ReceiptIcon sx={{ 
               fontSize: { xs: '48px', md: '64px' }, 
-              color: 'var(--admin-text-secondary)', 
+              color: 'rgba(255,255,255,0.3)', 
               marginBottom: '16px' 
             }} />
             <Typography sx={{ 
-              color: 'var(--admin-text-muted)', 
+              color: 'rgba(255,255,255,0.6)', 
               fontSize: { xs: '16px', md: '20px' } 
             }}>
               فاکتوری یافت نشد
@@ -531,7 +493,7 @@ export default function InvoicesPage() {
           <TableContainer 
             component={Paper} 
             sx={{ 
-              backgroundColor: 'var(--admin-surface)',
+              backgroundColor: '#2b3143',
               borderRadius: '16px',
               border: '1px solid rgba(55, 84, 165, 0.3)',
               overflowX: 'auto'
@@ -552,27 +514,27 @@ export default function InvoicesPage() {
                 {invoices.map((invoice) => (
                   <StyledTableRow key={invoice.id}>
                     <StyledTableCell align="right">
-                      <Typography sx={{ color: 'var(--admin-text)', fontWeight: '600' }}>
+                      <Typography sx={{ color: '#fff', fontWeight: '600' }}>
                         {invoice.title}
                       </Typography>
                     </StyledTableCell>
                     <StyledTableCell align="right">
-                      <Typography sx={{ color: 'var(--admin-accent)', fontWeight: '700' }}>
+                      <Typography sx={{ color: '#78b568', fontWeight: '700' }}>
                         {formatNumber(invoice.amount)} تومان
                       </Typography>
                     </StyledTableCell>
                     <StyledTableCell align="right">
-                      <Typography sx={{ color: 'var(--admin-text-muted)' }}>
+                      <Typography sx={{ color: 'rgba(255,255,255,0.7)' }}>
                         {invoice.description || '-'}
                       </Typography>
                     </StyledTableCell>
                     <StyledTableCell align="right">
-                      <Typography sx={{ color: 'var(--admin-text-muted)' }}>
+                      <Typography sx={{ color: 'rgba(255,255,255,0.7)' }}>
                         {invoice.date}
                       </Typography>
                     </StyledTableCell>
                     <StyledTableCell align="right">
-                      <Typography sx={{ color: 'var(--admin-text-muted)' }}>
+                      <Typography sx={{ color: 'rgba(255,255,255,0.7)' }}>
                         {invoice.user_name}
                       </Typography>
                     </StyledTableCell>
@@ -581,9 +543,9 @@ export default function InvoicesPage() {
                         <IconButton
                           onClick={() => openEditDialogHandler(invoice)}
                           sx={{
-                            color: 'var(--admin-accent)',
+                            color: '#78b568',
                             '&:hover': {
-                              backgroundColor: 'var(--admin-menu-hover)',
+                              backgroundColor: 'rgba(120, 181, 104, 0.1)',
                             }
                           }}
                         >
@@ -619,11 +581,11 @@ export default function InvoicesPage() {
               size="large"
               sx={{
                 '& .MuiPaginationItem-root': {
-                  color: 'var(--admin-text)',
+                  color: '#fff',
                 },
                 '& .Mui-selected': {
-                  backgroundColor: 'var(--admin-accent)',
-                  color: 'var(--admin-text)',
+                  backgroundColor: '#78b568',
+                  color: '#fff',
                 },
               }}
             />
@@ -641,13 +603,13 @@ export default function InvoicesPage() {
           fullWidth
           PaperProps={{
             sx: {
-              backgroundColor: 'var(--admin-surface)',
+              backgroundColor: '#2b3143',
               borderRadius: '16px',
               border: '1px solid rgba(55, 84, 165, 0.3)'
             }
           }}
         >
-          <DialogTitle sx={{ color: 'var(--admin-text)', fontWeight: '700' }}>
+          <DialogTitle sx={{ color: '#fff', fontWeight: '700' }}>
             ثبت فاکتور جدید
           </DialogTitle>
           <DialogContent>
@@ -660,19 +622,19 @@ export default function InvoicesPage() {
                 fullWidth
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    color: 'var(--admin-text)',
+                    color: '#fff',
                     '& fieldset': {
                       borderColor: '#505669',
                     },
                     '&:hover fieldset': {
-                      borderColor: 'var(--admin-accent)',
+                      borderColor: '#78b568',
                     },
                     '&.Mui-focused fieldset': {
-                      borderColor: 'var(--admin-accent)',
+                      borderColor: '#78b568',
                     },
                   },
                   '& .MuiInputLabel-root': {
-                    color: 'var(--admin-text-muted)',
+                    color: 'rgba(255,255,255,0.7)',
                   },
                 }}
               />
@@ -685,19 +647,19 @@ export default function InvoicesPage() {
                 fullWidth
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    color: 'var(--admin-text)',
+                    color: '#fff',
                     '& fieldset': {
                       borderColor: '#505669',
                     },
                     '&:hover fieldset': {
-                      borderColor: 'var(--admin-accent)',
+                      borderColor: '#78b568',
                     },
                     '&.Mui-focused fieldset': {
-                      borderColor: 'var(--admin-accent)',
+                      borderColor: '#78b568',
                     },
                   },
                   '& .MuiInputLabel-root': {
-                    color: 'var(--admin-text-muted)',
+                    color: 'rgba(255,255,255,0.7)',
                   },
                 }}
               />
@@ -710,19 +672,19 @@ export default function InvoicesPage() {
                 fullWidth
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    color: 'var(--admin-text)',
+                    color: '#fff',
                     '& fieldset': {
                       borderColor: '#505669',
                     },
                     '&:hover fieldset': {
-                      borderColor: 'var(--admin-accent)',
+                      borderColor: '#78b568',
                     },
                     '&.Mui-focused fieldset': {
-                      borderColor: 'var(--admin-accent)',
+                      borderColor: '#78b568',
                     },
                   },
                   '& .MuiInputLabel-root': {
-                    color: 'var(--admin-text-muted)',
+                    color: 'rgba(255,255,255,0.7)',
                   },
                 }}
               />
@@ -734,7 +696,7 @@ export default function InvoicesPage() {
                 setOpenCreateDialog(false);
                 resetForm();
               }}
-              sx={{ color: 'var(--admin-text-muted)' }}
+              sx={{ color: 'rgba(255,255,255,0.7)' }}
             >
               انصراف
             </Button>
@@ -742,9 +704,9 @@ export default function InvoicesPage() {
               onClick={handleCreateInvoice}
               variant="contained"
               sx={{
-                backgroundColor: 'var(--admin-accent)',
+                backgroundColor: '#78b568',
                 '&:hover': {
-                  backgroundColor: 'var(--admin-accent-hover)',
+                  backgroundColor: '#5a9a4a',
                 },
               }}
             >
@@ -765,13 +727,13 @@ export default function InvoicesPage() {
           fullWidth
           PaperProps={{
             sx: {
-              backgroundColor: 'var(--admin-surface)',
+              backgroundColor: '#2b3143',
               borderRadius: '16px',
               border: '1px solid rgba(55, 84, 165, 0.3)'
             }
           }}
         >
-          <DialogTitle sx={{ color: 'var(--admin-text)', fontWeight: '700' }}>
+          <DialogTitle sx={{ color: '#fff', fontWeight: '700' }}>
             ویرایش فاکتور
           </DialogTitle>
           <DialogContent>
@@ -784,19 +746,19 @@ export default function InvoicesPage() {
                 fullWidth
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    color: 'var(--admin-text)',
+                    color: '#fff',
                     '& fieldset': {
                       borderColor: '#505669',
                     },
                     '&:hover fieldset': {
-                      borderColor: 'var(--admin-accent)',
+                      borderColor: '#78b568',
                     },
                     '&.Mui-focused fieldset': {
-                      borderColor: 'var(--admin-accent)',
+                      borderColor: '#78b568',
                     },
                   },
                   '& .MuiInputLabel-root': {
-                    color: 'var(--admin-text-muted)',
+                    color: 'rgba(255,255,255,0.7)',
                   },
                 }}
               />
@@ -809,19 +771,19 @@ export default function InvoicesPage() {
                 fullWidth
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    color: 'var(--admin-text)',
+                    color: '#fff',
                     '& fieldset': {
                       borderColor: '#505669',
                     },
                     '&:hover fieldset': {
-                      borderColor: 'var(--admin-accent)',
+                      borderColor: '#78b568',
                     },
                     '&.Mui-focused fieldset': {
-                      borderColor: 'var(--admin-accent)',
+                      borderColor: '#78b568',
                     },
                   },
                   '& .MuiInputLabel-root': {
-                    color: 'var(--admin-text-muted)',
+                    color: 'rgba(255,255,255,0.7)',
                   },
                 }}
               />
@@ -834,19 +796,19 @@ export default function InvoicesPage() {
                 fullWidth
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    color: 'var(--admin-text)',
+                    color: '#fff',
                     '& fieldset': {
                       borderColor: '#505669',
                     },
                     '&:hover fieldset': {
-                      borderColor: 'var(--admin-accent)',
+                      borderColor: '#78b568',
                     },
                     '&.Mui-focused fieldset': {
-                      borderColor: 'var(--admin-accent)',
+                      borderColor: '#78b568',
                     },
                   },
                   '& .MuiInputLabel-root': {
-                    color: 'var(--admin-text-muted)',
+                    color: 'rgba(255,255,255,0.7)',
                   },
                 }}
               />
@@ -859,7 +821,7 @@ export default function InvoicesPage() {
                 setEditingInvoice(null);
                 resetForm();
               }}
-              sx={{ color: 'var(--admin-text-muted)' }}
+              sx={{ color: 'rgba(255,255,255,0.7)' }}
             >
               انصراف
             </Button>
@@ -867,9 +829,9 @@ export default function InvoicesPage() {
               onClick={handleEditInvoice}
               variant="contained"
               sx={{
-                backgroundColor: 'var(--admin-accent)',
+                backgroundColor: '#78b568',
                 '&:hover': {
-                  backgroundColor: 'var(--admin-accent-hover)',
+                  backgroundColor: '#5a9a4a',
                 },
               }}
             >
@@ -887,17 +849,17 @@ export default function InvoicesPage() {
           }}
           PaperProps={{
             sx: {
-              backgroundColor: 'var(--admin-surface)',
+              backgroundColor: '#2b3143',
               borderRadius: '16px',
               border: '1px solid rgba(55, 84, 165, 0.3)'
             }
           }}
         >
-          <DialogTitle sx={{ color: 'var(--admin-text)', fontWeight: '700' }}>
+          <DialogTitle sx={{ color: '#fff', fontWeight: '700' }}>
             حذف فاکتور
           </DialogTitle>
           <DialogContent>
-            <Typography sx={{ color: 'var(--admin-text-muted)' }}>
+            <Typography sx={{ color: 'rgba(255,255,255,0.7)' }}>
               آیا از حذف این فاکتور اطمینان دارید؟
             </Typography>
           </DialogContent>
@@ -907,7 +869,7 @@ export default function InvoicesPage() {
                 setOpenDeleteDialog(false);
                 setDeletingInvoiceId(null);
               }}
-              sx={{ color: 'var(--admin-text-muted)' }}
+              sx={{ color: 'rgba(255,255,255,0.7)' }}
             >
               انصراف
             </Button>
@@ -930,7 +892,7 @@ export default function InvoicesPage() {
         <BottomSheet
           open={openFilterSheet}
           title={
-            <Typography sx={{ color: "var(--admin-text)", fontSize: "18px", fontWeight: "700" }}>
+            <Typography sx={{ color: "#fff", fontSize: "18px", fontWeight: "700" }}>
               فیلتر فاکتورها
             </Typography>
           }
@@ -949,25 +911,25 @@ export default function InvoicesPage() {
               sx={{
                 marginBottom: "16px",
                 '& .MuiOutlinedInput-root': {
-                  color: 'var(--admin-text)',
+                  color: '#fff',
                   '& fieldset': {
                     borderColor: '#505669',
                   },
                   '&:hover fieldset': {
-                    borderColor: 'var(--admin-accent)',
+                    borderColor: '#78b568',
                   },
                   '&.Mui-focused fieldset': {
-                    borderColor: 'var(--admin-accent)',
+                    borderColor: '#78b568',
                   },
                 },
                 '& .MuiInputLabel-root': {
-                  color: 'var(--admin-text-muted)',
+                  color: 'rgba(255,255,255,0.7)',
                 },
               }}
             />
 
             {/* Date Filter */}
-            <Typography sx={{ color: "var(--admin-text)", marginBottom: "8px", fontSize: "14px" }}>
+            <Typography sx={{ color: "#fff", marginBottom: "8px", fontSize: "14px" }}>
               فیلتر تاریخ:
             </Typography>
             <RadioGroup
@@ -977,46 +939,46 @@ export default function InvoicesPage() {
             >
               <FormControlLabel
                 value="all"
-                control={<Radio sx={{ color: 'var(--admin-accent)', '&.Mui-checked': { color: 'var(--admin-accent)' } }} />}
+                control={<Radio sx={{ color: '#78b568', '&.Mui-checked': { color: '#78b568' } }} />}
                 label="همه"
-                sx={{ color: "var(--admin-text)" }}
+                sx={{ color: "#fff" }}
               />
               <FormControlLabel
                 value="today"
-                control={<Radio sx={{ color: 'var(--admin-accent)', '&.Mui-checked': { color: 'var(--admin-accent)' } }} />}
+                control={<Radio sx={{ color: '#78b568', '&.Mui-checked': { color: '#78b568' } }} />}
                 label="امروز"
-                sx={{ color: "var(--admin-text)" }}
+                sx={{ color: "#fff" }}
               />
               <FormControlLabel
                 value="week"
-                control={<Radio sx={{ color: 'var(--admin-accent)', '&.Mui-checked': { color: 'var(--admin-accent)' } }} />}
+                control={<Radio sx={{ color: '#78b568', '&.Mui-checked': { color: '#78b568' } }} />}
                 label="هفته جاری"
-                sx={{ color: "var(--admin-text)" }}
+                sx={{ color: "#fff" }}
               />
               <FormControlLabel
                 value="month"
-                control={<Radio sx={{ color: 'var(--admin-accent)', '&.Mui-checked': { color: 'var(--admin-accent)' } }} />}
+                control={<Radio sx={{ color: '#78b568', '&.Mui-checked': { color: '#78b568' } }} />}
                 label="ماه جاری"
-                sx={{ color: "var(--admin-text)" }}
+                sx={{ color: "#fff" }}
               />
               <FormControlLabel
                 value="year"
-                control={<Radio sx={{ color: 'var(--admin-accent)', '&.Mui-checked': { color: 'var(--admin-accent)' } }} />}
+                control={<Radio sx={{ color: '#78b568', '&.Mui-checked': { color: '#78b568' } }} />}
                 label="سال جاری"
-                sx={{ color: "var(--admin-text)" }}
+                sx={{ color: "#fff" }}
               />
               <FormControlLabel
                 value="range"
-                control={<Radio sx={{ color: 'var(--admin-accent)', '&.Mui-checked': { color: 'var(--admin-accent)' } }} />}
+                control={<Radio sx={{ color: '#78b568', '&.Mui-checked': { color: '#78b568' } }} />}
                 label="بازه تاریخ"
-                sx={{ color: "var(--admin-text)" }}
+                sx={{ color: "#fff" }}
               />
             </RadioGroup>
 
             {/* Date Range Picker */}
             {filterMode === 'range' && (
               <Box sx={{ marginBottom: "16px" }}>
-                <Typography sx={{ color: "var(--admin-text)", marginBottom: "8px", fontSize: "14px" }}>
+                <Typography sx={{ color: "#fff", marginBottom: "8px", fontSize: "14px" }}>
                   انتخاب بازه تاریخ:
                 </Typography>
                 <DatePicker
@@ -1029,10 +991,10 @@ export default function InvoicesPage() {
                   style={{
                     width: "100%",
                     padding: "12px",
-                    backgroundColor: "var(--admin-surface-alt)",
+                    backgroundColor: "#1a1d2e",
                     borderRadius: "8px",
-                    border: "1px solid var(--admin-border)",
-                    color: "var(--admin-text)"
+                    border: "1px solid #505669",
+                    color: "#fff"
                   }}
                 />
               </Box>
@@ -1045,10 +1007,10 @@ export default function InvoicesPage() {
                 variant="outlined"
                 fullWidth
                 sx={{
-                  color: 'var(--admin-text)',
+                  color: '#fff',
                   borderColor: '#505669',
                   '&:hover': {
-                    borderColor: 'var(--admin-accent)',
+                    borderColor: '#78b568',
                   },
                 }}
               >
@@ -1059,9 +1021,9 @@ export default function InvoicesPage() {
                 variant="contained"
                 fullWidth
                 sx={{
-                  backgroundColor: 'var(--admin-accent)',
+                  backgroundColor: '#78b568',
                   '&:hover': {
-                    backgroundColor: 'var(--admin-accent-hover)',
+                    backgroundColor: '#5a9a4a',
                   },
                 }}
               >
