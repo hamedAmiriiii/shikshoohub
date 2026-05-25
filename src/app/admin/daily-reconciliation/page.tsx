@@ -742,7 +742,7 @@ export default function DailyReconciliationPage() {
         minHeight: "100vh",
         background: "var(--admin-bg-gradient)",
         paddingTop: { xs: "12px", md: "24px" },
-        paddingBottom: { xs: "100px", md: "40px" },
+        paddingBottom: { xs: "150px", md: "60px" },
         direction: "rtl",
       }}
     >
@@ -949,30 +949,30 @@ export default function DailyReconciliationPage() {
             <Table size="small" stickyHeader>
               <TableHead>
                 <TableRow>
-                  <StyledTableCell align="right">تاریخ</StyledTableCell>
-                  <StyledTableCell align="right">فروش</StyledTableCell>
-                  <StyledTableCell align="right">نقد </StyledTableCell>
-                  <StyledTableCell align="right">کارت</StyledTableCell>
-                  <StyledTableCell align="right">اقساط</StyledTableCell>
-                  <StyledTableCell align="right">جمع وصول</StyledTableCell>
-                  <StyledTableCell align="right">اعتبار مشتری مصرف‌شده آن روز</StyledTableCell>
+                  <StyledTableCell align="center">تاریخ</StyledTableCell>
+                  <StyledTableCell align="center">فروش</StyledTableCell>
+                  <StyledTableCell align="center">نقد </StyledTableCell>
+                  <StyledTableCell align="center">کارت</StyledTableCell>
+                  <StyledTableCell align="center">اقساط</StyledTableCell>
+                  <StyledTableCell align="center">جمع وصول</StyledTableCell>
+                  <StyledTableCell align="center">اعتبارمصرف‌شده</StyledTableCell>
                   <StyledTableCell align="center">بروزرسانی </StyledTableCell>
                   <StyledTableCell
-                    align="right"
-                    sx={{ borderRight: "2px solid var(--admin-accent)", bgcolor: "rgba(120,181,104,0.08)" }}
+                    align="center"
+                    sx={{ bordercenter: "2px solid var(--admin-accent)", bgcolor: "rgba(120,181,104,0.08)" }}
                   >
                     حساب ۱
                   </StyledTableCell>
-                  <StyledTableCell align="right" sx={{ bgcolor: "rgba(120,181,104,0.08)" }}>
+                  <StyledTableCell align="center" sx={{ bgcolor: "rgba(120,181,104,0.08)" }}>
                     حساب ۲
                   </StyledTableCell>
-                  <StyledTableCell align="right" sx={{ bgcolor: "rgba(120,181,104,0.08)" }}>
+                  <StyledTableCell align="center" sx={{ bgcolor: "rgba(120,181,104,0.08)" }}>
                     نقدی
                   </StyledTableCell>
-                  <StyledTableCell align="right">اختلاف روز</StyledTableCell>
-                  <StyledTableCell align="right">تجمعی</StyledTableCell>
-                  <StyledTableCell align="right">یادداشت</StyledTableCell>
-                  <StyledTableCell align="center">وضعیت</StyledTableCell>
+                  <StyledTableCell align="center">اختلاف روز</StyledTableCell>
+                  <StyledTableCell align="center">تجمعی</StyledTableCell>
+                  <StyledTableCell align="center">یادداشت</StyledTableCell>
+                  {/* <StyledTableCell align="center">وضعیت</StyledTableCell> */}
                   <StyledTableCell align="center">ثبت</StyledTableCell>
                 </TableRow>
               </TableHead>
@@ -983,29 +983,29 @@ export default function DailyReconciliationPage() {
 
                   return (
                     <StyledTableRow key={row.date}>
-                      <StyledTableCell align="right">
-                        <Typography sx={{ fontWeight: 600, fontSize: 13 }}>
+                      <StyledTableCell align="center">
+                        <Typography sx={{ fontWeight: 600, fontSize: 12 }}>
                           {rowDateLabel(row, monthFilter)}
                         </Typography>
                       </StyledTableCell>
-                      <StyledTableCell align="right">
+                      <StyledTableCell align="center">
                         {formatNumber(row.sales?.total_sales ?? 0)}
                       </StyledTableCell>
-                      <StyledTableCell align="right">
+                      <StyledTableCell align="center">
                         {formatNumber(row.sales?.cash_amount ?? 0)}
                       </StyledTableCell>
-                      <StyledTableCell align="right">
+                      <StyledTableCell align="center">
                         {formatNumber(row.sales?.card_amount ?? 0)}
                       </StyledTableCell>
-                      <StyledTableCell align="right">
+                      <StyledTableCell align="center">
                         {formatNumber(row.sales?.installments_collected ?? 0)}
                       </StyledTableCell>
-                      <StyledTableCell align="right">
+                      <StyledTableCell align="center">
                         <Typography sx={{ fontWeight: 700, color: "var(--admin-accent)" }}>
                           {formatNumber(row.sales?.total_collected ?? 0)}
                         </Typography>
                       </StyledTableCell>
-                      <StyledTableCell align="right">
+                      <StyledTableCell align="center">
                         {formatNumber(row.sales?.credit_used_total ?? 0)}
                       </StyledTableCell>
                       <StyledTableCell align="center">
@@ -1023,28 +1023,28 @@ export default function DailyReconciliationPage() {
                           onClick={() => handleRefreshSales(row)}
                           sx={{
                             fontSize: 11,
-                            minWidth: 88,
+                            minWidth: 68,
                             color: "var(--admin-text)",
                             borderColor: "var(--admin-border)",
                             "&:hover": { borderColor: "var(--admin-accent)" },
                           }}
                         >
-                          بروزرسانی
+                          
                         </Button>
                       </StyledTableCell>
                       <StyledTableCell
-                        align="right"
+                        align="center"
                         sx={{ borderRight: "2px solid var(--admin-accent-border)" }}
                       >
                         {renderAmountCell(row, "deposit_account_1")}
                       </StyledTableCell>
-                      <StyledTableCell align="right">
+                      <StyledTableCell align="center">
                         {renderAmountCell(row, "deposit_account_2")}
                       </StyledTableCell>
-                      <StyledTableCell align="right">
+                      <StyledTableCell align="center">
                         {renderAmountCell(row, "deposit_cash")}
                       </StyledTableCell>
-                      <StyledTableCell align="right">
+                      <StyledTableCell align="center">
                         <DiscrepancyCell value={displayDisc ?? null} />
                         {row.editable && !row.is_closed && draft && (
                           <Typography sx={{ fontSize: 10, color: "var(--admin-text-muted)", mt: 0.25 }}>
@@ -1052,10 +1052,10 @@ export default function DailyReconciliationPage() {
                           </Typography>
                         )}
                       </StyledTableCell>
-                      <StyledTableCell align="right">
+                      <StyledTableCell align="center">
                         <DiscrepancyCell value={row.cumulative_discrepancy} />
                       </StyledTableCell>
-                      <StyledTableCell align="right">
+                      <StyledTableCell align="center">
                         {row.editable && draft ? (
                           <TextField
                             size="small"
@@ -1090,7 +1090,7 @@ export default function DailyReconciliationPage() {
                           </Typography>
                         )}
                       </StyledTableCell>
-                      <StyledTableCell align="center">
+                      {/* <StyledTableCell align="center">
                         {row.is_closed ? (
                           <Chip label="ثبت شده" size="small" color="success" variant="outlined" />
                         ) : row.editable ? (
@@ -1098,7 +1098,7 @@ export default function DailyReconciliationPage() {
                         ) : (
                           <Chip label="فقط نمایش" size="small" variant="outlined" sx={{ color: "var(--admin-text-muted)" }} />
                         )}
-                      </StyledTableCell>
+                      </StyledTableCell> */}
                       <StyledTableCell align="center">
                         {row.editable ? (
                           <Button
@@ -1195,7 +1195,7 @@ export default function DailyReconciliationPage() {
                       <MobileStat label="اقساط" value={sales?.installments_collected ?? 0} />
                       <MobileStat label="جمع وصول" value={sales?.total_collected ?? 0} accent />
                       <MobileStat
-                        label="اعتبار مشتری مصرف‌شده آن روز"
+                        label="اعتبار مصرف‌شده"
                         value={sales?.credit_used_total ?? 0}
                       />
                     </Box>
