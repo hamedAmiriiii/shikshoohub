@@ -698,8 +698,6 @@ export default function ShoppingPage() {
         purchase_price: Number(item.purchase_price)
       }))
     };
-console.log("discounttype" , discounttype);
-
     if (discounttype> 0) {
       loadData.discount_amount = discounttype;
     }
@@ -775,6 +773,9 @@ console.log("discounttype" , discounttype);
       setDiscounttype(0);
       setDiscountDisplay('');
       setDiscountError('');
+      setBackPrice(0);
+      setInstallmentCalculation(null);
+      installmentCalculationRef.current = null;
       setPaymentType('cash');
       setInstallmentCount(2);
       resetPaymentSettlement();
@@ -869,6 +870,9 @@ console.log("discounttype" , discounttype);
         setDiscounttype(0);
         setDiscountDisplay('');
         setDiscountError('');
+        setBackPrice(0);
+        setInstallmentCalculation(null);
+        installmentCalculationRef.current = null;
         setPaymentType('cash');
         setInstallmentCount(2);
         resetPaymentSettlement();
@@ -895,6 +899,9 @@ console.log("discounttype" , discounttype);
       setDiscounttype(0)
       setDiscountDisplay('');
       setDiscountError('');
+      setBackPrice(0);
+      setInstallmentCalculation(null);
+      installmentCalculationRef.current = null;
       setPaymentType('cash');
       setInstallmentCount(2);
       resetPaymentSettlement();
@@ -935,6 +942,9 @@ console.log("discounttype" , discounttype);
       setDiscounttype(0);
       setDiscountDisplay('');
       setDiscountError('');
+      setBackPrice(0);
+      setInstallmentCalculation(null);
+      installmentCalculationRef.current = null;
       setPaymentType('cash');
       setInstallmentCount(2);
       resetPaymentSettlement();
@@ -1526,7 +1536,7 @@ console.log("discounttype" , discounttype);
               </Table>
             </TableContainer>
           </Box>
-            ) : backPrice ? (
+            ) : backPrice > 0 ? (
               <Card
                 sx={{
                   backgroundColor: "#1e2330",
@@ -1906,6 +1916,28 @@ console.log("discounttype" , discounttype);
                       name="phone"
                       defaultValue={phone}
                       onChange={onChangePhone}
+                      size="small"
+                      sx={{
+                        width: '100%',
+                        "& .MuiOutlinedInput-root": {
+                          backgroundColor: "var(--admin-surface-alt)",
+                          color: "var(--admin-text)",
+                          "& fieldset": {
+                            borderColor: "var(--admin-border)",
+                          },
+                          "&:hover fieldset": {
+                            borderColor: "var(--admin-accent)",
+                          },
+                          "&.Mui-focused fieldset": {
+                            borderColor: "var(--admin-accent)",
+                          },
+                        },
+                        "& .MuiInputBase-input": {
+                          color: "var(--admin-text)",
+                          fontSize: { xs: "13px", md: "14px" },
+                          padding: { xs: "10px 12px", md: "12px 14px" },
+                        },
+                      }}
                     />
                     {checkingCredit && (
                       <Typography sx={{ 
@@ -1934,16 +1966,29 @@ console.log("discounttype" , discounttype);
                   </CardContent>
                   {paymentType !== 'installment' && (
                     <CardContent sx={{ padding: { xs: "12px", md: "20px" }, paddingTop: 0 }}>
+                      <Box sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: { xs: 1, md: 2 },
+                        flexWrap: { xs: "wrap", sm: "nowrap" },
+                      }}>
                       <Typography sx={{ 
                         color: "var(--admin-text)", 
                         fontSize: { xs: "13px", md: "14px" },
-                        marginBottom: { xs: "8px", md: "10px" },
-                        fontWeight: "500"
+                        fontWeight: "500",
+                        flexShrink: 0,
                       }}>
                         تخفیف (تومان):
                       </Typography>
                       <TextField
-                      value={isDiscountFocused ? discountDisplay.replace(/,/g, '') : (discountDisplay || '')}
+                      value={
+                        isDiscountFocused
+                          ? discountDisplay.replace(/,/g, '')
+                          : discounttype > 0
+                            ? discountDisplay
+                            : ''
+                      }
                       onChange={(e) => {
                         const value = e.target.value.replace(/,/g, ''); // حذف جداکننده‌ها
                         if (value === '' || /^\d+$/.test(value)) {
@@ -1969,7 +2014,7 @@ console.log("discounttype" , discounttype);
                         setIsDiscountFocused(false);
                         const value = e.target.value.replace(/,/g, '');
                         // اگر مقدار خالی است، مطمئن شو که 0 ست شده
-                        if (value === '' || value === '0') {
+                        if (value === '' || value === '0' || Number(value) === 0) {
                           setDiscountDisplay('');
                           setDiscounttype(0);
                           setDiscountError('');
@@ -1982,10 +2027,12 @@ console.log("discounttype" , discounttype);
                       placeholder="مقدار تخفیف را وارد کنید"
                       type="text"
                       size="small"
-                      fullWidth
                       error={!!discountError}
-                      helperText={discountError}
+                      helperText={discountError || undefined}
                       sx={{
+                        flex: 1,
+                        minWidth: { xs: "100%", sm: 160 },
+                        maxWidth: { sm: 220 },
                         "& .MuiOutlinedInput-root": {
                           backgroundColor: "var(--admin-surface-alt)",
                           color: "var(--admin-text)",
@@ -2017,18 +2064,26 @@ console.log("discounttype" , discounttype);
                         }
                       }}
                     />
+                      </Box>
                     </CardContent>
                   )}
                   <CardContent sx={{ padding: { xs: "12px", md: "20px" }, paddingTop: 0 }}>
+                    <Box sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: { xs: 1, md: 2 },
+                      flexWrap: { xs: "wrap", sm: "nowrap" },
+                    }}>
                     <Typography sx={{ 
                       color: "var(--admin-text)", 
                       fontSize: { xs: "13px", md: "14px" },
-                      marginBottom: { xs: "8px", md: "10px" },
-                      fontWeight: "500"
+                      fontWeight: "500",
+                      flexShrink: 0,
                     }}>
                       نوع پرداخت:
                     </Typography>
-                    <FormControl component="fieldset" fullWidth>
+                    <FormControl component="fieldset" sx={{ flex: 1, minWidth: 0 }}>
                       <RadioGroup
                         row
                         value={paymentType}
@@ -2036,6 +2091,9 @@ console.log("discounttype" , discounttype);
                           setPaymentType(e.target.value as 'cash' | 'installment');
                           if (e.target.value === 'cash') {
                             setInstallmentCount(2);
+                            setInstallmentCalculation(null);
+                            installmentCalculationRef.current = null;
+                            setInstallmentCreditError('');
                           } else if (e.target.value === 'installment') {
                             // صفر کردن تخفیف در حالت اقساطی
                             setDiscounttype(0);
@@ -2045,14 +2103,16 @@ console.log("discounttype" , discounttype);
                         }}
                         sx={{
                           display: "flex",
-                          gap: { xs: "8px", md: "16px" },
-                          justifyContent: "flex-end"
+                          gap: { xs: "4px", md: "12px" },
+                          justifyContent: { xs: "flex-start", sm: "flex-end" },
+                          flexWrap: "nowrap",
                         }}
                       >
                         <FormControlLabel
                           value="cash"
                           control={
                             <Radio
+                              size="small"
                               sx={{
                                 color: "var(--admin-text-secondary)",
                                 "&.Mui-checked": {
@@ -2066,11 +2126,13 @@ console.log("discounttype" , discounttype);
                               نقدی
                             </Typography>
                           }
+                          sx={{ mr: 0, ml: 0 }}
                         />
                         <FormControlLabel
                           value="installment"
                           control={
                             <Radio
+                              size="small"
                               sx={{
                                 color: "var(--admin-text-secondary)",
                                 "&.Mui-checked": {
@@ -2084,9 +2146,11 @@ console.log("discounttype" , discounttype);
                               اقساطی
                             </Typography>
                           }
+                          sx={{ mr: 0, ml: 0 }}
                         />
                       </RadioGroup>
                     </FormControl>
+                    </Box>
                     {paymentType === 'installment' && (
                       <Box sx={{ marginTop: { xs: "12px", md: "16px" } }}>
                         <Typography sx={{ 
@@ -2188,12 +2252,13 @@ console.log("discounttype" , discounttype);
                                         اعتبار موجود: {formatNumber(Math.floor(installmentCalculation.user_credit ?? installmentCalculation.user_installment_credit ?? 0))} تومان
                                       </Typography>
                                     )}
-                                    {installmentCalculation.credit_shortage !== undefined && (
+                                    {installmentCalculation.credit_shortage != null &&
+                                      Math.floor(installmentCalculation.credit_shortage) > 0 && (
                                       <Typography sx={{ 
                                         color: "#ff9800", 
                                         fontSize: { xs: "9px", md: "11px" }
                                       }}>
-                                        کمبود اعتبار: {formatNumber(Math.floor(installmentCalculation.credit_shortage || 0))} تومان
+                                        کمبود اعتبار: {formatNumber(Math.floor(installmentCalculation.credit_shortage))} تومان
                                       </Typography>
                                     )}
                                   </>
@@ -2237,81 +2302,99 @@ console.log("discounttype" , discounttype);
                           border: "1px solid rgba(120, 181, 104, 0.25)",
                         }}
                       >
-                        <Typography
-                          sx={{
-                            color: "var(--admin-text)",
-                            fontSize: { xs: "13px", md: "14px" },
-                            fontWeight: "600",
-                            marginBottom: { xs: "4px", md: "6px" },
-                          }}
-                        >
-                         نوع پرداخت 
-                        </Typography>
-                       
-                        <FormControl component="fieldset" fullWidth>
-                          <RadioGroup
-                            value={settlementMode}
-                            onChange={(e) => {
-                              const mode = e.target.value as SettlementMode;
-                              setSettlementMode(mode);
-                              setPaymentSplitError("");
-                              if (mode === "split") {
-                                setCardAmountInput(String(payableNow));
-                                setCashAmountInput("0");
-                              }
+                        <Box sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: { xs: 0.5, md: 1 },
+                          flexWrap: { xs: "wrap", md: "nowrap" },
+                        }}>
+                          <Typography
+                            sx={{
+                              color: "var(--admin-text)",
+                              fontSize: { xs: "12px", md: "14px" },
+                              fontWeight: "600",
+                              flexShrink: 0,
                             }}
-                            sx={{ gap: { xs: "2px", md: "4px" } }}
                           >
-                            <FormControlLabel
-                              value="card_all"
-                              control={
-                                <Radio
-                                  sx={{
-                                    color: "var(--admin-text-secondary)",
-                                    "&.Mui-checked": { color: "var(--admin-accent)" },
-                                  }}
-                                />
-                              }
-                              label={
-                                <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "13px" } }}>
-                                  کارتخوان
-                                </Typography>
-                              }
-                            />
-                            <FormControlLabel
-                              value="cash_all"
-                              control={
-                                <Radio
-                                  sx={{
-                                    color: "var(--admin-text-secondary)",
-                                    "&.Mui-checked": { color: "var(--admin-accent)" },
-                                  }}
-                                />
-                              }
-                              label={
-                                <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "13px" } }}>
-                                نقد
-                                </Typography>
-                              }
-                            />
-                            <FormControlLabel
-                              value="split"
-                              control={
-                                <Radio
-                                  sx={{
-                                    color: "var(--admin-text-secondary)",
-                                    "&.Mui-checked": { color: "var(--admin-accent)" },
-                                  }}
-                                />
-                              }
-                              label={
-                                <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "13px" } }}>
-                                  کارت + نقد
-                                </Typography>
-                              }
-                            />
-                          </RadioGroup>
-                        </FormControl>
+                            نوع پرداخت:
+                          </Typography>
+                          <FormControl component="fieldset" sx={{ flex: 1, minWidth: 0 }}>
+                            <RadioGroup
+                              row
+                              value={settlementMode}
+                              onChange={(e) => {
+                                const mode = e.target.value as SettlementMode;
+                                setSettlementMode(mode);
+                                setPaymentSplitError("");
+                                if (mode === "split") {
+                                  setCardAmountInput(String(payableNow));
+                                  setCashAmountInput("0");
+                                }
+                              }}
+                              sx={{
+                                display: "flex",
+                                flexDirection: "row",
+                                justifyContent: { xs: "flex-start", md: "flex-end" },
+                                flexWrap: "nowrap",
+                                gap: { xs: 0, md: 0.5 },
+                                "& .MuiFormControlLabel-root": { mr: 0, ml: 0 },
+                              }}
+                            >
+                              <FormControlLabel
+                                value="card_all"
+                                control={
+                                  <Radio
+                                    size="small"
+                                    sx={{
+                                      color: "var(--admin-text-secondary)",
+                                      "&.Mui-checked": { color: "var(--admin-accent)" },
+                                    }}
+                                  />
+                                }
+                                label={
+                                  <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "11px", md: "13px" }, whiteSpace: "nowrap" }}>
+                                    کارتخوان
+                                  </Typography>
+                                }
+                              />
+                              <FormControlLabel
+                                value="cash_all"
+                                control={
+                                  <Radio
+                                    size="small"
+                                    sx={{
+                                      color: "var(--admin-text-secondary)",
+                                      "&.Mui-checked": { color: "var(--admin-accent)" },
+                                    }}
+                                  />
+                                }
+                                label={
+                                  <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "11px", md: "13px" }, whiteSpace: "nowrap" }}>
+                                    نقد
+                                  </Typography>
+                                }
+                              />
+                              <FormControlLabel
+                                value="split"
+                                control={
+                                  <Radio
+                                    size="small"
+                                    sx={{
+                                      color: "var(--admin-text-secondary)",
+                                      "&.Mui-checked": { color: "var(--admin-accent)" },
+                                    }}
+                                  />
+                                }
+                                label={
+                                  <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "11px", md: "13px" }, whiteSpace: "nowrap" }}>
+                                    کارت + نقد
+                                  </Typography>
+                                }
+                              />
+                            </RadioGroup>
+                          </FormControl>
+                        </Box>
                         {settlementMode === "split" && (
                           <Box sx={{ marginTop: { xs: "8px", md: "10px" }, display: "flex", flexDirection: "column", gap: { xs: "8px", md: "10px" } }}>
                             <TextField
@@ -2383,7 +2466,7 @@ console.log("discounttype" , discounttype);
                         {formatNumber(total)} تومان
                       </Typography>
                     </Box>
-                    { backPrice && <Box sx={{ 
+                    {backPrice > 0 && <Box sx={{ 
                       display: "flex", 
                       justifyContent: "space-between", 
                       alignItems: "center",
@@ -2401,10 +2484,10 @@ console.log("discounttype" , discounttype);
                         fontSize: { xs: "18px", md: "21px" }, 
                         fontWeight: "700" 
                       }}>
-                        {formatNumber( backPrice)} تومان
+                        {formatNumber(backPrice)} تومان
                       </Typography>
                     </Box>}
-                    { backPrice && <Box sx={{ 
+                    {backPrice > 0 && <Box sx={{ 
                       display: "flex", 
                       justifyContent: "space-between", 
                       alignItems: "center",
@@ -2457,7 +2540,8 @@ console.log("discounttype" , discounttype);
                          installmentCalculation.installment_details && 
                          Array.isArray(installmentCalculation.installment_details) && 
                          installmentCalculation.installment_details.length > 0 &&
-                         installmentCalculation.installment_details[0]?.payment_type === "cash" && (
+                         installmentCalculation.installment_details[0]?.payment_type === "cash" &&
+                         Math.floor(installmentCalculation.installment_details[0]?.base_payment || 0) > 0 && (
                           <Typography sx={{ 
                             color: "#fde68a", 
                             fontSize: { xs: "12px", md: "14px" },
@@ -2495,13 +2579,18 @@ console.log("discounttype" , discounttype);
                             مبلغ اصلی: {formatNumber(Math.floor(installmentCalculation.total_amount))} تومان
                           </Typography>
                         )}
-                        {installmentCalculation && installmentCalculation.total_interest !== undefined && (
+                        {installmentCalculation &&
+                          installmentCalculation.total_interest != null &&
+                          Math.floor(installmentCalculation.total_interest) > 0 && (
                           <Typography sx={{ 
                             color: "#fde68a", 
                             fontSize: { xs: "10px", md: "12px" },
                             marginBottom: { xs: "2px", md: "4px" }
                           }}>
-                            سود کل: {formatNumber(Math.floor(installmentCalculation.total_interest || 0))} تومان ({installmentCalculation.monthly_interest_rate || 0}% ماهانه)
+                            سود کل: {formatNumber(Math.floor(installmentCalculation.total_interest))} تومان
+                            {installmentCalculation.monthly_interest_rate > 0
+                              ? ` (${installmentCalculation.monthly_interest_rate}% ماهانه)`
+                              : ""}
                           </Typography>
                         )}
                         {(installmentCalculation?.user_credit !== undefined ||

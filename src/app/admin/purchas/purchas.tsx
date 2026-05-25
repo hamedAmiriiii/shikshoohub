@@ -34,6 +34,37 @@ const formatNumber = (num: number | string) => {
   return new Intl.NumberFormat('fa-IR').format(numValue);
 };
 
+function PurchaseInfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: 1,
+        width: "100%",
+        pb: 1.5,
+        minWidth: 0,
+      }}
+    >
+      <Typography sx={{ fontSize: 13, color: "var(--admin-text-muted)", flexShrink: 0 }}>
+        {label}:
+      </Typography>
+      <Typography
+        sx={{
+          fontSize: 13,
+          fontWeight: 700,
+          color: "var(--admin-text)",
+          textAlign: "left",
+          direction: "ltr",
+        }}
+      >
+        {value}
+      </Typography>
+    </Box>
+  );
+}
+
 const formatDate = (dateString: string | null | undefined) => {
   if (!dateString) return 'نامشخص';
   try {
@@ -288,45 +319,49 @@ export default function purchas(props: any) {
       
       <Grid container className="mt-2">
         <Grid xs={12}>
-          {/* نمایش شماره تلفن */}
-          {data?.phone && (
-            <LabelCustom title={"شماره تلفن"} name="" text={data.phone} />
-          )}
-          
-          {/* نمایش مجموع مبلغ */}
-          {data?.total_amount !== undefined && (
-            <LabelCustom title={"مجموع مبلغ"} name="" text={formatNumber(data.total_amount) + " تومان"} />
-          )}
-          
-          {data?.cash_amount != null && Number(data.cash_amount) > 0 && (
-            <LabelCustom title={"پرداخت نقد"} name="" text={formatNumber(data.cash_amount) + " تومان"} />
-          )}
-          {data?.card_amount != null && Number(data.card_amount) > 0 && (
-            <LabelCustom title={"پرداخت کارت"} name="" text={formatNumber(data.card_amount) + " تومان"} />
-          )}
-          {data?.credit_used !== undefined && data.credit_used > 0 && (
-            <LabelCustom title={"اعتبار استفاده شده"} name="" text={formatNumber(data.credit_used) + " تومان"} />
-          )}
-          
-          {/* نمایش اعتبار کسب شده */}
-          {data?.credit_earned !== undefined && data.credit_earned > 0 && (
-            <LabelCustom title={"اعتبار کسب شده"} name="" text={formatNumber(data.credit_earned) + " تومان"} />
-          )}
-          
-          {/* نمایش اطلاعات خرید اقساطی */}
-          {isInstallment && (
-            <>
-              {data?.installment_count && (
-                <LabelCustom title={"تعداد اقساط"} name="" text={`${data.installment_count} قسط`} />
-              )}
-              {data?.installment_amount && (
-                <LabelCustom title={"مبلغ هر قسط"} name="" text={formatNumber(data.installment_amount) + " تومان"} />
-              )}
-              {data?.installment_amount && (
-                <LabelCustom title={"مبلغ پرداخت شده"} name="" text={formatNumber(data.paid_amount) + " تومان"} />
-              )}
-            </>
-          )}
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+              gap: { xs: 0.5, md: 1 },
+              columnGap: { md: 3 },
+              alignItems: "start",
+            }}
+          >
+            {data?.phone && <PurchaseInfoRow label="شماره تلفن" value={data.phone} />}
+
+            {data?.total_amount !== undefined && (
+              <PurchaseInfoRow label="مجموع مبلغ" value={`${formatNumber(data.total_amount)} تومان`} />
+            )}
+
+            {data?.cash_amount != null && Number(data.cash_amount) > 0 && (
+              <PurchaseInfoRow label="پرداخت نقد" value={`${formatNumber(data.cash_amount)} تومان`} />
+            )}
+
+            {data?.card_amount != null && Number(data.card_amount) > 0 && (
+              <PurchaseInfoRow label="پرداخت کارت" value={`${formatNumber(data.card_amount)} تومان`} />
+            )}
+
+            {data?.credit_used !== undefined && data.credit_used > 0 && (
+              <PurchaseInfoRow label="اعتبار استفاده شده" value={`${formatNumber(data.credit_used)} تومان`} />
+            )}
+
+            {data?.credit_earned !== undefined && data.credit_earned > 0 && (
+              <PurchaseInfoRow label="اعتبار کسب شده" value={`${formatNumber(data.credit_earned)} تومان`} />
+            )}
+
+            {isInstallment && data?.installment_count && (
+              <PurchaseInfoRow label="تعداد اقساط" value={`${data.installment_count} قسط`} />
+            )}
+
+            {isInstallment && data?.installment_amount && (
+              <PurchaseInfoRow label="مبلغ هر قسط" value={`${formatNumber(data.installment_amount)} تومان`} />
+            )}
+
+            {isInstallment && data?.installment_amount && (
+              <PurchaseInfoRow label="مبلغ پرداخت شده" value={`${formatNumber(data.paid_amount)} تومان`} />
+            )}
+          </Box>
           
           {/* نمایش لیست محصولات */}
           {data?.purchased_products && Array.isArray(data.purchased_products) && data.purchased_products.length > 0 && (

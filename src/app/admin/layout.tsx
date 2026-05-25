@@ -37,6 +37,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/installments': 'اقساط',
     '/admin/installment-credits': 'اعتبار اقساطی',
     '/admin/profit-loss': 'سود و ضرر',
+    '/admin/daily-reconciliation': 'تطبیق روزانه',
   };
   
   return titleMap[pathname];

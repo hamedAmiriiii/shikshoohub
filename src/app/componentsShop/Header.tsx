@@ -838,6 +838,27 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
             برگشت خرید
           </MenuItem>
           <MenuItem
+            onClick={() => handleMenuClick("/admin/daily-reconciliation")}
+            sx={{
+              color: "var(--admin-text)",
+              fontSize: "15px",
+              padding: "12px 20px",
+              borderRadius: "8px",
+              margin: "4px 8px",
+              transition: "all 0.2s ease",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              "&:hover": {
+                backgroundColor: "var(--admin-menu-hover)",
+                transform: "translateX(-4px)",
+              }
+            }}
+          >
+            <AccountBalanceIcon sx={{ color: "#78b568", fontSize: "22px" }} />
+            تطبیق روزانه
+          </MenuItem>
+          <MenuItem
             onClick={() => handleMenuClick("/admin/profit-loss")}
             sx={{
               color: "var(--admin-text)",
