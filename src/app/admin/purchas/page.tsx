@@ -1,24 +1,32 @@
 "use client";
 import List from "@/app/coponent/grid/Grid";
-import React, { useState, Suspense, useEffect } from "react";
+import React, { useState, Suspense } from "react";
 
-import { Box, Typography, IconButton, Paper, RadioGroup, FormControlLabel, Radio, Button } from "@mui/material";
+import {
+  Box,
+  Typography,
+  IconButton,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+} from "@mui/material";
 import DeleteIcon from '@mui/icons-material/Delete';
 import FilterListIcon from '@mui/icons-material/FilterList';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { useRouter } from "next/navigation";
+import CloseIcon from '@mui/icons-material/Close';
 import Purchas from "./purchas";
 import DatePicker from "react-multi-date-picker";
 import persian from "react-date-object/calendars/persian";
 import persian_fa from "react-date-object/locales/persian_fa";
 import "react-multi-date-picker/styles/layouts/mobile.css";
-import BottomSheetModal from "@/app/coponent/BottomSheetModal";
 
 
 
 
 export default function ListPurches() {
-    const router = useRouter();
     const [dataFilter, setDataFilter] = useState([]);
     const [dateRange, setDateRange] = useState<any>([]);
     const [filterMode, setFilterMode] = useState<'today' | 'week' | 'month' | 'range' | null>(null);
@@ -82,7 +90,7 @@ export default function ListPurches() {
     };
 
     const FilterComponent = () => (
-        <Box sx={{ padding: "16px" }}>
+        <Box>
             {/* Date Range Picker */}
             <Box sx={{ marginBottom: "16px" }}>
                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
@@ -233,14 +241,45 @@ export default function ListPurches() {
             />
           </div>
 
-          {/* Filter Bottom Sheet */}
-          <BottomSheetModal 
-            open={filterSheetOpen} 
+          <Dialog
+            open={filterSheetOpen}
             onClose={() => setFilterSheetOpen(false)}
-            // title="فیلتر خریدها"
+            fullWidth
+            maxWidth="sm"
+            PaperProps={{
+              sx: {
+                backgroundColor: "var(--admin-surface)",
+                borderRadius: "16px",
+                direction: "rtl",
+                border: "1px solid var(--admin-border)",
+              },
+            }}
           >
-            <FilterComponent />
-          </BottomSheetModal>
+            <DialogTitle
+              sx={{
+                color: "var(--admin-text)",
+                fontSize: "18px",
+                fontWeight: 600,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                pb: 1,
+              }}
+            >
+              فیلتر خریدها
+              <IconButton
+                onClick={() => setFilterSheetOpen(false)}
+                size="small"
+                sx={{ color: "var(--admin-text-muted)" }}
+                aria-label="بستن"
+              >
+                <CloseIcon />
+              </IconButton>
+            </DialogTitle>
+            <DialogContent>
+              <FilterComponent />
+            </DialogContent>
+          </Dialog>
         </Box>
       </Suspense>
     );

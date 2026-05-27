@@ -338,7 +338,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
           {/* Title or Shikshoo */}
           {title ? (
             <Box sx={{
-              background: "var(--admin-title-gradient)",
+              // background: "var(--admin-title-gradient)",
               padding: { xs: "6px 12px", md: "8px 20px" },
               borderRadius: { xs: "10px", md: "14px" },
               flexShrink: 0

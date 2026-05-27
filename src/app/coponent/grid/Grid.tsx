@@ -565,14 +565,15 @@ const List: React.FC<Props> = ({
         sx={{
           display: "flex",
           flexDirection: "column",
-          alignItems: isDesktop ? "stretch" : "flex-end",
+          alignItems: "stretch",
           maxWidth: isDesktop ? "100%" : "600px",
-          width: isDesktop ? "100%" : "auto",
+          width: "100%",
+          mx: isDesktop ? 0 : "auto",
         }}
       >
         <Grid container sx={{ width: "100%", justifyContent: "center", mx: "auto" }}>
-          <Grid display="flex" item sx={{ width: "100%", maxWidth: isDesktop ? "100%" : "550px", justifyContent: "center", mt: 2, gap: 2 }}>
-            <Grid item xs={12} sm={12} md={8} lg={10} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Grid display="flex" item sx={{ width: "100%", maxWidth: "100%", justifyContent: "center", mt: 2, gap: 2, mx: 1, boxSizing: "border-box" }}>
+            <Grid item xs={12} sm={12} md={8} lg={10} sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}>
               <Box sx={{ flex: 1 }}>
                 <CustomizedInputBase />
               </Box>
@@ -603,7 +604,7 @@ const List: React.FC<Props> = ({
           </Grid>
 
           {total && total != 0 && (
-            <Grid display="flex" item sx={{ width: "100%", maxWidth: isDesktop ? "100%" : "480px", justifyContent: "space-between", mt: 2 }}>
+            <Grid display="flex" item sx={{ width: "100%", maxWidth: "100%", justifyContent: "space-between", mt: 2, mx: 1, boxSizing: "border-box" }}>
               {showTotal && (
                 <Box display="flex" flexDirection="column">
                   <Typography sx={{ color: "var(--admin-text)" }}>تعداد کل {textTotal[0]}: {total}{textTotal[1]}</Typography>

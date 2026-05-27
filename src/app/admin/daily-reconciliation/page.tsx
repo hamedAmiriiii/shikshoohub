@@ -70,6 +70,7 @@ interface SalesSnapshot {
   card_amount: number;
   cash_amount: number;
   installments_collected: number;
+  discount_given: number;
   total_collected: number;
   credit_used_total: number;
 }
@@ -81,6 +82,7 @@ interface DailySalesApiResponse {
   cash_amount: number;
   card_amount: number;
   installments_collected: number;
+  discount_given: number;
   total_collected: number;
   credit_used_total: number;
 }
@@ -239,6 +241,7 @@ function parseDailySalesResponse(res: unknown): DailySalesApiResponse | null {
       cash_amount: Math.floor(Number(obj.cash_amount) || 0),
       card_amount: Math.floor(Number(obj.card_amount) || 0),
       installments_collected: Math.floor(Number(obj.installments_collected) || 0),
+      discount_given: Math.floor(Number(obj.discount_given) || 0),
       total_collected: Math.floor(Number(obj.total_collected) || 0),
       credit_used_total: Math.floor(Number(obj.credit_used_total) || 0),
     };
@@ -273,6 +276,7 @@ function salesSnapshotFromRecord(source: Record<string, unknown>): SalesSnapshot
     cash_amount: salesField(source, nested, "cash_amount"),
     card_amount: salesField(source, nested, "card_amount"),
     installments_collected: salesField(source, nested, "installments_collected"),
+    discount_given: salesField(source, nested, "discount_given"),
     total_collected: salesField(source, nested, "total_collected"),
     credit_used_total: salesField(source, nested, "credit_used_total"),
   };
@@ -391,6 +395,23 @@ function depositTotal(draft: DepositDraft): number {
   );
 }
 
+function hasDepositDraftInput(draft: DepositDraft): boolean {
+  return (
+    draft.deposit_account_1.trim() !== "" ||
+    draft.deposit_account_2.trim() !== "" ||
+    draft.deposit_cash.trim() !== ""
+  );
+}
+
+/** واریز کل − جمع وصول (تخفیف قبلاً در جمع وصول لحاظ شده) */
+function previewDailyDiscrepancy(
+  draft: DepositDraft,
+  sales: SalesSnapshot | undefined
+): number {
+  if (!hasDepositDraftInput(draft)) return 0;
+  return depositTotal(draft) - (sales?.total_collected ?? 0);
+}
+
 const amountFieldSx = {
   minWidth: 100,
   maxWidth: 130,
@@ -436,9 +457,53 @@ function rowDisplayDiscrepancy(
 ): number | null | undefined {
   if (row.is_closed || !row.editable) return row.daily_discrepancy;
   if (row.editable && draft) {
-    return depositTotal(draft) - (row.sales?.total_collected ?? 0);
+    return previewDailyDiscrepancy(draft, row.sales);
   }
   return row.daily_discrepancy;
+}
+
+function buildCumulativePreviewByDate(
+  rows: DailyReconciliationRow[],
+  drafts: Record<string, DepositDraft>
+): Record<string, number> {
+  const map: Record<string, number> = {};
+  let running = 0;
+  let hasRunning = false;
+
+  for (const row of rows) {
+    const draft = drafts[row.date];
+    let daily: number | null | undefined;
+
+    if (row.is_closed || !row.editable) {
+      daily = row.daily_discrepancy;
+    } else if (row.editable && draft) {
+      if (!hasDepositDraftInput(draft)) {
+        if (hasRunning) {
+          map[row.date] = running;
+        } else if (row.cumulative_discrepancy != null) {
+          running = row.cumulative_discrepancy;
+          hasRunning = true;
+          map[row.date] = running;
+        }
+        continue;
+      }
+      daily = previewDailyDiscrepancy(draft, row.sales);
+    } else {
+      daily = row.daily_discrepancy;
+    }
+
+    if (daily != null) {
+      running = hasRunning ? running + daily : daily;
+      hasRunning = true;
+      map[row.date] = running;
+    } else if (row.cumulative_discrepancy != null) {
+      running = row.cumulative_discrepancy;
+      hasRunning = true;
+      map[row.date] = running;
+    }
+  }
+
+  return map;
 }
 
 function RowStatusChip({ row }: { row: DailyReconciliationRow }) {
@@ -594,13 +659,29 @@ export default function DailyReconciliationPage() {
     [rows, monthFilter?.is_current_month]
   );
 
+  const cumulativePreviewByDate = useMemo(
+    () => buildCumulativePreviewByDate(visibleRows, drafts),
+    [visibleRows, drafts]
+  );
+
   const latestCumulative = useMemo(() => {
     if (!visibleRows.length) return null;
-    const withCumulative = visibleRows.filter((r) => r.cumulative_discrepancy != null);
-    if (!withCumulative.length) return null;
-    const last = withCumulative[withCumulative.length - 1];
+    const last = visibleRows[visibleRows.length - 1];
+    if (cumulativePreviewByDate[last.date] != null) {
+      return cumulativePreviewByDate[last.date];
+    }
     return last.cumulative_discrepancy ?? null;
-  }, [visibleRows]);
+  }, [visibleRows, cumulativePreviewByDate]);
+
+  const rowCumulativeDiscrepancy = (
+    row: DailyReconciliationRow,
+    draft: DepositDraft | undefined
+  ): number | null | undefined => {
+    if (row.editable && !row.is_closed && draft) {
+      return cumulativePreviewByDate[row.date] ?? row.cumulative_discrepancy;
+    }
+    return row.cumulative_discrepancy;
+  };
 
   const yearOptions = useMemo(() => {
     const base = monthFilter?.year ?? 1404;
@@ -668,6 +749,7 @@ export default function DailyReconciliationPage() {
       cash_amount: sales?.cash_amount ?? 0,
       card_amount: sales?.card_amount ?? 0,
       installments_collected: sales?.installments_collected ?? 0,
+      discount_given: sales?.discount_given ?? 0,
       total_collected: sales?.total_collected ?? 0,
       credit_used_total: sales?.credit_used_total ?? 0,
       deposit_account_1: parseAmount(draft.deposit_account_1),
@@ -954,6 +1036,7 @@ export default function DailyReconciliationPage() {
                   <StyledTableCell align="center">نقد </StyledTableCell>
                   <StyledTableCell align="center">کارت</StyledTableCell>
                   <StyledTableCell align="center">اقساط</StyledTableCell>
+                  <StyledTableCell align="center">تخفیف</StyledTableCell>
                   <StyledTableCell align="center">جمع وصول</StyledTableCell>
                   <StyledTableCell align="center">اعتبارمصرف‌شده</StyledTableCell>
                   <StyledTableCell align="center">بروزرسانی </StyledTableCell>
@@ -999,6 +1082,9 @@ export default function DailyReconciliationPage() {
                       </StyledTableCell>
                       <StyledTableCell align="center">
                         {formatNumber(row.sales?.installments_collected ?? 0)}
+                      </StyledTableCell>
+                      <StyledTableCell align="center">
+                        {formatNumber(row.sales?.discount_given ?? 0)}
                       </StyledTableCell>
                       <StyledTableCell align="center">
                         <Typography sx={{ fontWeight: 700, color: "var(--admin-accent)" }}>
