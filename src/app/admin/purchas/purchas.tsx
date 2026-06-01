@@ -39,7 +39,7 @@ function PurchaseInfoRow({ label, value }: { label: string; value: string }) {
     <Box
       sx={{
         display: "flex",
-        justifyContent: "space-between",
+        justifyContent: "",
         alignItems: "center",
         gap: 1,
         width: "100%",
@@ -328,11 +328,12 @@ export default function purchas(props: any) {
               alignItems: "start",
             }}
           >
-            {data?.phone && <PurchaseInfoRow label="شماره تلفن" value={data.phone} />}
-
             {data?.total_amount !== undefined && (
               <PurchaseInfoRow label="مجموع مبلغ" value={`${formatNumber(data.total_amount)} تومان`} />
             )}
+            {data?.phone && <PurchaseInfoRow label="شماره تلفن" value={data.phone} />}
+
+            
 
             {data?.cash_amount != null && Number(data.cash_amount) > 0 && (
               <PurchaseInfoRow label="پرداخت نقد" value={`${formatNumber(data.cash_amount)} تومان`} />

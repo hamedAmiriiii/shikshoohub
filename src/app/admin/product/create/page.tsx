@@ -535,9 +535,15 @@ export default function Page() {
   /** دسکتاپ: حدود ۳۰٪ کوچک‌تر از موبایل */
   const desktopFormCompactSx = {
     md: {
-      "& .MuiOutlinedInput-root": { borderRadius: "8px" },
+      "& .MuiOutlinedInput-root": {
+        borderRadius: "8px",
+        minHeight: 36,
+        height: 36,
+        boxSizing: "border-box",
+        alignItems: "center",
+      },
       "& .MuiInputBase-input": {
-        py: 0.75,
+        py: 0,
         px: 1.25,
         fontSize: "0.8rem",
       },
@@ -556,17 +562,57 @@ export default function Page() {
     },
   } as const;
 
+  const fieldLabelSx = {
+    color: "var(--admin-text)",
+    fontSize: { xs: "14px", md: "10px" },
+    textAlign: "right",
+    lineHeight: 1.35,
+    mb: { xs: 0.5, md: 0.25 },
+    flexShrink: 0,
+  } as const;
+
+  const formInputHeightSx = {
+    "& .MuiOutlinedInput-root": {
+      minHeight: { xs: 44, md: 36 },
+      height: { xs: 44, md: 36 },
+      boxSizing: "border-box",
+      alignItems: "center",
+      borderRadius: { xs: "12px", md: "8px" },
+    },
+    "& .MuiInputBase-input": {
+      py: 0,
+      fontSize: { xs: "0.875rem", md: "0.8rem" },
+    },
+  } as const;
+
   const fieldWrapSx = {
     width: "100%",
-    "& > div": { marginTop: 0, width: "100%" },
-    "& > div > div:last-of-type": { width: "100%" },
+    height: "100%",
+    display: "flex",
+    flexDirection: "column",
+    ...formInputHeightSx,
+    "& > div": {
+      marginTop: 0,
+      width: "100%",
+      flex: 1,
+      display: "flex",
+      flexDirection: "column",
+      minHeight: 0,
+    },
+    "& > div > div:last-of-type": { width: "100%", flex: 1, display: "flex", alignItems: "flex-end" },
     "& > div > div:last-of-type > div": { width: "100% !important", maxWidth: "100%" },
-    "& .MuiTypography-root": { color: "var(--admin-text)", fontSize: { xs: "14px", md: "10px" } },
+    "& .MuiTypography-root": fieldLabelSx,
     md: {
       "& > div": { marginTop: "4px" },
-      "& .MuiOutlinedInput-root": { borderRadius: "8px" },
-      "& .MuiInputBase-input": { py: 0.75, fontSize: "0.8rem" },
     },
+  } as const;
+
+  const barcodeFieldWrapSx = {
+    width: "100%",
+    height: "100%",
+    display: "flex",
+    flexDirection: "column",
+    ...formInputHeightSx,
   } as const;
 
   const sectionTitleSx = {
@@ -599,45 +645,69 @@ export default function Page() {
 
   const panelSearchSx = {
     mb: { xs: 1, md: 0.75 },
-    "& .MuiOutlinedInput-root": {
-      backgroundColor: "var(--admin-surface-alt)",
+    "&& .MuiOutlinedInput-root": {
+      backgroundColor: "var(--admin-surface)",
       color: "var(--admin-text)",
-      borderRadius: { xs: "12px", md: "8px" },
-      fontSize: { xs: "13px", md: "10px" },
-      "& fieldset": { borderColor: "#505669" },
+      borderRadius: { xs: "12px", md: "10px" },
+      minHeight: { xs: 52, md: 46 },
+      height: { xs: 52, md: 46 },
+      boxSizing: "border-box",
+      alignItems: "center",
+      "& fieldset": { borderColor: "var(--admin-border)" },
       "&:hover fieldset": { borderColor: "var(--admin-accent)" },
       "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
     },
-    "& .MuiInputBase-input": {
+    "&& .MuiInputBase-input": {
       color: "var(--admin-text)",
-      py: { md: 0.75 },
+      py: { xs: 1.25, md: 1 },
+      px: 0.5,
+      fontSize: { xs: "0.9375rem", md: "0.875rem" },
     },
-    "& .MuiInputBase-input::placeholder": {
+    "&& .MuiInputBase-input::placeholder": {
       color: "var(--admin-text-secondary)",
       opacity: 1,
     },
-    "& .MuiSvgIcon-root": { color: "var(--admin-text-secondary)" },
+    "&& .MuiInputAdornment-root": {
+      marginLeft: 0,
+      marginRight: 0,
+      height: "auto",
+    },
+    "&& .MuiSvgIcon-root": {
+      color: "var(--admin-text-secondary)",
+      fontSize: { xs: 22, md: 20 },
+    },
   } as const;
 
   const barcodeFieldSx = {
+    flex: 1,
+    minWidth: 0,
     "& .MuiOutlinedInput-root": {
       backgroundColor: "var(--admin-surface-alt)",
       color: "var(--admin-text)",
-      borderRadius: { xs: "12px", md: "8px" },
       "& fieldset": { borderColor: "#505669" },
       "&:hover fieldset": { borderColor: "var(--admin-accent)" },
       "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
     },
     "& .MuiInputBase-input": {
       color: "var(--admin-text)",
-      fontSize: { xs: "13px", md: "10px" },
       direction: "ltr",
       textAlign: "left",
-      py: { md: 0.75 },
     },
     "& .MuiInputBase-input::placeholder": {
       color: "var(--admin-text-secondary)",
       opacity: 1,
+    },
+  } as const;
+
+  const barcodeScanBtnSx = {
+    flexShrink: 0,
+    width: { xs: 44, md: 36 },
+    height: { xs: 44, md: 36 },
+    borderRadius: { xs: "12px", md: "8px" },
+    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    color: "var(--admin-text)",
+    "&:hover": {
+      background: "linear-gradient(135deg, #764ba2 0%, #667eea 100%)",
     },
   } as const;
 
@@ -678,8 +748,8 @@ export default function Page() {
           </Typography>
           
 
-          <Grid container spacing={{ xs: 1.5, md: 1 }}>
-            <Grid item xs={12} md={6}>
+          <Grid container spacing={{ xs: 1.5, md: 1 }} sx={{ alignItems: "stretch" }}>
+            <Grid item xs={12} md={8} sx={{ display: "flex" }}>
               <Box sx={fieldWrapSx}>
                 <TextInput
                   value={full_name}
@@ -691,71 +761,43 @@ export default function Page() {
               </Box>
             </Grid>
 
-            <Grid item xs={12} md={2}>  </Grid>
-            <Grid item xs={12} md={4}>
-              <Typography
-                textAlign="right"
-                sx={{ color: "var(--admin-text)", fontSize: { xs: "14px", md: "10px" }, mt: { xs: 0, md: "4px" }, mb: { xs: 0.5, md: 0.25 } }}
-              >
-                بارکد (اختیاری) :
-              </Typography>
-              <Typography
-                sx={{
-                  color: "var(--admin-text-secondary)",
-                  fontSize: "12px",
-                  mb: 1,
-                  display: { xs: "block", md: "none" },
-                }}
-              >
-               در فروشگاه یکتا باشد              </Typography>
-              <Box
-                sx={{
-                  display: "flex",
-                  gap: 1,
-                  alignItems: "stretch",
-                  p: { xs: 1.25, md: 0 },
-                  mt: { md: 0 },
-                  borderRadius: "12px",
-                  border: { xs: "1px solid rgba(120, 181, 104, 0.25)", md: "none" },
-                  backgroundColor: { xs: "var(--admin-surface-alt)", md: "transparent" },
-                }}
-              >
-                <TextField
-                  value={barcode}
-                  onChange={(e) => setBarcode(e.target.value.slice(0, 255))}
-                  placeholder="ورود دستی بارکد"
-                  size="small"
-                  fullWidth
-                  inputProps={{ maxLength: 255 }}
-                  sx={barcodeFieldSx}
-                />
-                <IconButton
-                  type="button"
-                  onClick={() => {
-                    setScanManualCode(barcode);
-                    setBarcodeScannerOpen(true);
-                    setTimeout(() => barcodeScanInputRef.current?.focus(), 150);
-                  }}
-                  title="اسکن بارکد"
+            <Grid item xs={12} md={4} sx={{ display: "flex" }}>
+              <Box sx={barcodeFieldWrapSx}>
+                <Typography sx={fieldLabelSx}>بارکد (اختیاری) :</Typography>
+                <Box
                   sx={{
-                    flexShrink: 0,
-                    width: { xs: 48, md: 34 },
-                    height: { xs: 40, md: 28 },
-                    alignSelf: "center",
-                    borderRadius: { xs: "10px", md: "7px" },
-                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                    color: "var(--admin-text)",
-                    "&:hover": {
-                      background: "linear-gradient(135deg, #764ba2 0%, #667eea 100%)",
-                    },
+                    display: "flex",
+                    gap: 1,
+                    alignItems: "flex-end",
+                    flex: 1,
+                    width: "100%",
                   }}
                 >
-                  <QrCodeScannerIcon sx={{ fontSize: { xs: 22, md: 16 } }} />
-                </IconButton>
+                  <TextField
+                    value={barcode}
+                    onChange={(e) => setBarcode(e.target.value.slice(0, 255))}
+                    placeholder="ورود دستی — یکتا در فروشگاه"
+                    fullWidth
+                    inputProps={{ maxLength: 255 }}
+                    sx={barcodeFieldSx}
+                  />
+                  <IconButton
+                    type="button"
+                    onClick={() => {
+                      setScanManualCode(barcode);
+                      setBarcodeScannerOpen(true);
+                      setTimeout(() => barcodeScanInputRef.current?.focus(), 150);
+                    }}
+                    title="اسکن بارکد"
+                    sx={barcodeScanBtnSx}
+                  >
+                    <QrCodeScannerIcon sx={{ fontSize: { xs: 22, md: 18 } }} />
+                  </IconButton>
+                </Box>
               </Box>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={4}>
+            <Grid item xs={12} sm={6} md={4} sx={{ display: "flex" }}>
               <Box sx={fieldWrapSx}>
                 <TextInput
                   value={profitPercentage.toString()}
@@ -766,7 +808,7 @@ export default function Page() {
                 />
               </Box>
             </Grid>
-            <Grid item xs={12} sm={6} md={4}>
+            <Grid item xs={12} sm={6} md={4} sx={{ display: "flex" }}>
               <Box sx={fieldWrapSx}>
                 <TextInput
                   value={purchase_price}
@@ -777,7 +819,7 @@ export default function Page() {
                 />
               </Box>
             </Grid>
-            <Grid item xs={12} sm={6} md={4}>
+            <Grid item xs={12} sm={6} md={4} sx={{ display: "flex" }}>
               <Box sx={fieldWrapSx}>
                 <TextInput
                   value={sale_price}
@@ -789,7 +831,7 @@ export default function Page() {
               </Box>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={4}>
+            <Grid item xs={12} sm={6} md={4} sx={{ display: "flex" }}>
               <Box sx={fieldWrapSx}>
                 <TextInput
                   value={discountPercent}
@@ -800,7 +842,7 @@ export default function Page() {
                 />
               </Box>
             </Grid>
-            <Grid item xs={12} sm={6} md={4}>
+            <Grid item xs={12} sm={6} md={4} sx={{ display: "flex" }}>
               <Box sx={fieldWrapSx}>
                 <TextInput
                   value={quantity}
@@ -843,14 +885,17 @@ export default function Page() {
                 </Box>
               )}
               <TextField
-                size="small"
                 fullWidth
                 placeholder="جستجو در دسته‌بندی‌ها..."
                 value={categorySearch}
                 onChange={(e) => setCategorySearch(e.target.value)}
                 sx={panelSearchSx}
-                InputProps={{
-                  startAdornment: <SearchIcon sx={{ fontSize: { xs: 18, md: 14 }, ml: 0.5 }} />,
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <SearchIcon sx={{ mr: 0.75, flexShrink: 0 }} />
+                    ),
+                  },
                 }}
               />
               <Paper sx={optionalPanelSx}>
@@ -894,14 +939,17 @@ export default function Page() {
                 </Box>
               )}
               <TextField
-                size="small"
                 fullWidth
                 placeholder="جستجو در تولیدکنندگان..."
                 value={manufacturerSearch}
                 onChange={(e) => setManufacturerSearch(e.target.value)}
                 sx={panelSearchSx}
-                InputProps={{
-                  startAdornment: <SearchIcon sx={{ fontSize: { xs: 18, md: 14 }, ml: 0.5 }} />,
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <SearchIcon sx={{ mr: 0.75, flexShrink: 0 }} />
+                    ),
+                  },
                 }}
               />
               <Paper sx={optionalPanelSx}>

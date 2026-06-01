@@ -1830,7 +1830,7 @@ export default function ShoppingPage() {
                               href={`tel:${SUPPORT_PHONE}`}
                               variant="contained"
                               size="small"
-                              startIcon={<PhoneIcon sx={{ fontSize: 16 }} />}
+                              
                               sx={{
                                 flex: 1,
                                 height: 36,
@@ -1851,7 +1851,7 @@ export default function ShoppingPage() {
                               rel="noopener noreferrer"
                               variant="contained"
                               size="small"
-                              startIcon={<SupportAgentIcon sx={{ fontSize: 16 }} />}
+                              
                               sx={{
                                 flex: 1,
                                 height: 36,
