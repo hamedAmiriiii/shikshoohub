@@ -35,6 +35,13 @@ import StorefrontIcon from '@mui/icons-material/Storefront';
 import CloseIcon from '@mui/icons-material/Close';
 import CategoryIcon from '@mui/icons-material/Category';
 import { getCartItemCount } from '../liberari/cart';
+import { useShopContext } from '../context/ShopContext';
+import {
+  clearCustomerSession,
+  customerDataStorageKey,
+  getCustomerToken,
+  getShopCodeFromPathname,
+} from '../lib/shopStorefront';
 
 interface Category {
   id: number;
@@ -54,6 +61,8 @@ interface ShopHeaderProps {
 export default function ShopHeader({ searchQuery = '', onSearchChange }: ShopHeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { shopCode: ctxShopCode, shopPath, shopApi } = useShopContext();
+  const shopCode = ctxShopCode ?? getShopCodeFromPathname(pathname);
   const [drawerOpen, setDrawerOpen] = useState(false);
   
   // Hide search on cart and orders pages
@@ -107,8 +116,12 @@ export default function ShopHeader({ searchQuery = '', onSearchChange }: ShopHea
 
   useEffect(() => {
     const loadCustomer = () => {
-      const token = localStorage.getItem('customer_token');
-      const data = localStorage.getItem('customer_data');
+      if (!shopCode) {
+        setCustomer(null);
+        return;
+      }
+      const token = getCustomerToken(shopCode);
+      const data = localStorage.getItem(customerDataStorageKey(shopCode));
       if (token && data) {
         try {
           setCustomer(JSON.parse(data));
@@ -128,14 +141,19 @@ export default function ShopHeader({ searchQuery = '', onSearchChange }: ShopHea
       window.removeEventListener('focus', loadCustomer);
       window.removeEventListener('customerLogin', loadCustomer);
     };
-  }, []);
+  }, [shopCode]);
 
   useEffect(() => {
+    if (!shopCode) {
+      setCategories([]);
+      setCategoriesLoading(false);
+      return;
+    }
     const fetchCategories = async () => {
       try {
         setCategoriesLoading(true);
         const { apiRequestError } = await import('@/app/lib/apiRequestError');
-        const res = await apiRequestError("Get", {}, {}, "/api/category?tree=true", false, false, "");
+        const res = await apiRequestError("Get", {}, {}, shopApi("/api/category?tree=true"), false, false, "");
         
         if (!res.hasError) {
           if (Array.isArray(res)) {
@@ -152,20 +170,29 @@ export default function ShopHeader({ searchQuery = '', onSearchChange }: ShopHea
     };
 
     fetchCategories();
-  }, []);
+  }, [shopCode, shopApi]);
 
   const handleCategoryNavigation = (categoryId: number) => {
-    router.push(`/category/${categoryId}`);
+    if (shopCode) {
+      router.push(shopPath(`/category/${categoryId}`));
+    } else {
+      router.push(`/category/${categoryId}`);
+    }
     setDrawerOpen(false);
   };
 
   const handleLogout = () => {
     setAnchorEl(null);
-    localStorage.removeItem('customer_token');
-    localStorage.removeItem('customer_data');
+    if (shopCode) clearCustomerSession(shopCode);
     setCustomer(null);
-    router.push('');
+    router.push(shopCode ? shopPath() : '/');
   };
+
+  const loginHref = shopCode ? shopPath('/login') : '/login';
+  const registerHref = shopCode ? shopPath('/register') : '/register';
+  const cartHref = shopCode ? shopPath('/cart') : '/cart';
+  const ordersHref = shopCode ? shopPath('/orders') : '/orders';
+  const homeHref = shopCode ? shopPath() : '/';
 
   return (
     <>
@@ -203,7 +230,7 @@ export default function ShopHeader({ searchQuery = '', onSearchChange }: ShopHea
             </IconButton>
             
             <Box
-              onClick={() => router.push('')}
+              onClick={() => router.push(homeHref)}
               sx={{
                 display: 'flex',
                 alignItems: 'center',
@@ -396,7 +423,7 @@ export default function ShopHeader({ searchQuery = '', onSearchChange }: ShopHea
                   <MenuItem
                     onClick={() => {
                       setAnchorEl(null);
-                      router.push('/orders');
+                      router.push(ordersHref);
                     }}
                     sx={{
                       gap: '12px',
@@ -448,7 +475,7 @@ export default function ShopHeader({ searchQuery = '', onSearchChange }: ShopHea
               <>
                 <Button
                   variant="text"
-                  onClick={() => router.push('/login')}
+                  onClick={() => router.push(loginHref)}
                   startIcon={<PersonOutlineIcon sx={{ fontSize: '18px' }} />}
                   sx={{
                     fontSize: { xs: '12px', md: '14px' },
@@ -464,7 +491,7 @@ export default function ShopHeader({ searchQuery = '', onSearchChange }: ShopHea
                 </Button>
                 <Button
                   variant="contained"
-                  onClick={() => router.push('/register')}
+                  onClick={() => router.push(registerHref)}
                   sx={{
                     fontSize: { xs: '12px', md: '14px' },
                     padding: { xs: '8px 14px', md: '10px 20px' },
@@ -486,7 +513,7 @@ export default function ShopHeader({ searchQuery = '', onSearchChange }: ShopHea
             
             {/* Cart Button */}
             <IconButton
-              onClick={() => router.push('/cart')}
+              onClick={() => router.push(cartHref)}
               sx={{ 
                 backgroundColor: 'rgba(255,255,255,0.15)',
                 borderRadius: '12px',
@@ -732,7 +759,7 @@ export default function ShopHeader({ searchQuery = '', onSearchChange }: ShopHea
             variant="contained"
             onClick={() => {
               setDrawerOpen(false);
-              router.push('');
+              router.push(homeHref);
             }}
             startIcon={<StorefrontIcon />}
             sx={{

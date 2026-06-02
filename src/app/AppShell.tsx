@@ -4,6 +4,7 @@ import { Box } from "@mui/material";
 import { usePathname } from "next/navigation";
 import ShopHeader from "./componentsShop/ShopHeader";
 import { ShopProvider, useShopContext } from "./context/ShopContext";
+import { isCustomerAuthPath } from "./lib/shopStorefront";
 
 function AppShellContent({ children }: { children: React.ReactNode }) {
   const { searchQuery, setSearchQuery } = useShopContext();
@@ -11,8 +12,9 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
 
   const isAdminPage = pathname?.startsWith("/admin");
   const isLandingPage = pathname?.startsWith("/landing");
+  const isCustomerAuth = isCustomerAuthPath(pathname);
 
-  if (isAdminPage || isLandingPage) {
+  if (isAdminPage || isLandingPage || isCustomerAuth) {
     return <>{children}</>;
   }
 

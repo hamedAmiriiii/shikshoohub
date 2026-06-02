@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Box,
   Container,
@@ -47,10 +47,17 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import RemoveShoppingCartIcon from '@mui/icons-material/RemoveShoppingCart';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
-import { clearCart } from '../liberari/cart';
-import { getCart, removeFromCart, updateCartItemQuantity, syncCartWithServer, type CartItem } from '../liberari/cart';
+import { clearCart } from '@/app/liberari/cart';
+import { getCart, removeFromCart, updateCartItemQuantity, type CartItem } from '@/app/liberari/cart';
 import { apiRequestError } from '@/app/lib/apiRequestError';
-import { findColorByName, isLightColor } from '../liberari/colors';
+import { findColorByName, isLightColor } from '@/app/liberari/colors';
+import { useShopStorefront } from '@/app/context/ShopContext';
+import {
+  customerDataStorageKey,
+  getCustomerToken as readCustomerToken,
+  getLastShopCode,
+  shopPath as buildShopPath,
+} from '@/app/lib/shopStorefront';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -97,6 +104,7 @@ interface CustomerAddress {
 
 export default function CartPage() {
   const router = useRouter();
+  const { shopCode, shopApi, shopPath, getCustomerToken } = useShopStorefront();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [activeStep, setActiveStep] = useState(0);
   const [serverTotal, setServerTotal] = useState<number | null>(null);
@@ -135,20 +143,114 @@ export default function CartPage() {
   const [customerCredit, setCustomerCredit] = useState<number>(0);
   const [loadingCredit, setLoadingCredit] = useState(false);
   const [clearCartDialogOpen, setClearCartDialogOpen] = useState(false);
+  const cartFetchInFlight = useRef(false);
+  const cartInitialized = useRef(false);
 
   useEffect(() => {
-    // چک کردن لاگین بودن کاربر
-    const token = localStorage.getItem('customer_token');
+    if (!shopCode) {
+      const last = getLastShopCode();
+      if (last) {
+        router.replace(buildShopPath(last, '/cart'));
+      } else {
+        router.replace('/login');
+      }
+    }
+  }, [shopCode, router]);
+
+  const loadCustomerData = useCallback(() => {
+    if (!shopCode) return;
+    const customerData = localStorage.getItem(customerDataStorageKey(shopCode));
+    if (customerData) {
+      try {
+        const customer = JSON.parse(customerData);
+        setShippingInfo((prev) => ({
+          ...prev,
+          name: customer.name || '',
+          phone: customer.phone || '',
+        }));
+      } catch (e) {
+        console.error('Error parsing customer data:', e);
+      }
+    }
+  }, [shopCode]);
+
+  const fetchCartFromServer = useCallback(
+    async (options?: { pushLocal?: boolean }) => {
+      if (!shopCode || cartFetchInFlight.current) return;
+
+      const token = readCustomerToken(shopCode);
+      if (!token) return;
+
+      cartFetchInFlight.current = true;
+      setLoadingTotal(true);
+      try {
+        const cart = getCart(shopCode);
+        const products = cart.map((item) => ({
+          product_id: item.id,
+          quantity: item.quantity,
+          ...(item.size && { size: item.size }),
+          ...(item.color && { color: item.color }),
+        }));
+
+        if (options?.pushLocal && products.length > 0) {
+          const postRes = await apiRequestError(
+            'Post',
+            {},
+            { products },
+            shopApi('/api/cart'),
+            true,
+            true,
+            token,
+          );
+          if (!postRes.hasError && postRes.total !== undefined) {
+            setServerTotal(postRes.total);
+            return;
+          }
+        }
+
+        const getRes = await apiRequestError(
+          'Get',
+          {},
+          {},
+          shopApi('/api/cart'),
+          true,
+          true,
+          token,
+        );
+        if (!getRes.hasError && getRes.total !== undefined) {
+          setServerTotal(getRes.total);
+        }
+      } catch (error) {
+        console.error('Error fetching cart from server:', error);
+      } finally {
+        setLoadingTotal(false);
+        cartFetchInFlight.current = false;
+      }
+    },
+    [shopCode, shopApi],
+  );
+
+  useEffect(() => {
+    if (!shopCode) return;
+    if (cartInitialized.current) return;
+    cartInitialized.current = true;
+
+    const token = readCustomerToken(shopCode);
     if (!token) {
       toast.error('لطفاً ابتدا وارد حساب کاربری شوید');
-      router.push('/login?redirect=/cart');
+      router.push(`${shopPath('/login')}?redirect=${encodeURIComponent(shopPath('/cart'))}`);
       return;
     }
-    
-    setCartItems(getCart());
-    fetchCartFromServer();
+
+    setCartItems(getCart(shopCode));
     loadCustomerData();
-  }, [router]);
+    const localCart = getCart(shopCode);
+    void fetchCartFromServer({ pushLocal: localCart.length > 0 });
+  }, [shopCode, router, shopPath, loadCustomerData, fetchCartFromServer]);
+
+  useEffect(() => {
+    cartInitialized.current = false;
+  }, [shopCode]);
 
   // Fetch addresses when going to step 1
   useEffect(() => {
@@ -175,7 +277,7 @@ export default function CartPage() {
   }, [activeStep, cartItems]);
 
   const fetchCustomerCredit = async () => {
-    const token = localStorage.getItem('customer_token');
+    const token = getCustomerToken();
     if (!token) return;
 
     setLoadingCredit(true);
@@ -184,7 +286,7 @@ export default function CartPage() {
         'Get',
         {},
         {},
-        '/api/customer/credit',
+        shopApi('/api/customer/credit'),
         true,
         true,
         token
@@ -201,7 +303,7 @@ export default function CartPage() {
   };
 
   const fetchAddresses = async () => {
-    const token = localStorage.getItem('customer_token');
+    const token = getCustomerToken();
     if (!token) return;
 
     setLoadingAddresses(true);
@@ -210,7 +312,7 @@ export default function CartPage() {
         'Get',
         {},
         {},
-        '/api/customer-addresses',
+        shopApi('/api/customer-addresses'),
         true,
         true,
         token
@@ -231,59 +333,6 @@ export default function CartPage() {
       console.error('Error fetching addresses:', error);
     } finally {
       setLoadingAddresses(false);
-    }
-  };
-
-  // Load customer data for default values
-  const loadCustomerData = () => {
-    const customerData = localStorage.getItem('customer_data');
-    if (customerData) {
-      try {
-        const customer = JSON.parse(customerData);
-        setShippingInfo(prev => ({
-          ...prev,
-          name: customer.name || '',
-          phone: customer.phone || '',
-        }));
-      } catch (e) {
-        console.error('Error parsing customer data:', e);
-      }
-    }
-  };
-
-  // Fetch cart from server to get total
-  const fetchCartFromServer = async () => {
-    const token = localStorage.getItem('customer_token');
-    if (!token) return;
-
-    setLoadingTotal(true);
-    try {
-      // Sync cart with server and get total
-      const cart = getCart();
-      const products = cart.map(item => ({
-        product_id: item.id,
-        quantity: item.quantity,
-        ...(item.size && { size: item.size }),
-        ...(item.color && { color: item.color }),
-      }));
-
-      const res = await apiRequestError(
-        'Post',
-        {},
-        { products },
-        '/api/cart',
-        true,
-        true,
-        token
-      );
-
-      if (!res.hasError && res.total !== undefined) {
-        setServerTotal(res.total);
-      }
-    } catch (error) {
-      console.error('Error fetching cart from server:', error);
-    } finally {
-      setLoadingTotal(false);
     }
   };
 
@@ -377,17 +426,31 @@ export default function CartPage() {
       handleRemoveItem(productId);
       return;
     }
-    updateCartItemQuantity(productId, newQuantity);
-    setCartItems(getCart());
+    updateCartItemQuantity(productId, newQuantity, shopCode);
+    const next = getCart(shopCode);
+    setCartItems(next);
+    setServerTotal(
+      next.reduce((sum, item) => {
+        const price = typeof item.sale_price === 'string' ? parseFloat(item.sale_price) : item.sale_price;
+        return sum + price * item.quantity;
+      }, 0),
+    );
     window.dispatchEvent(new Event('cartUpdated'));
-    await fetchCartFromServer();
   };
 
-  const handleRemoveItem = async (productId: number) => {
-    removeFromCart(productId);
-    setCartItems(getCart());
+  const handleRemoveItem = (productId: number) => {
+    removeFromCart(productId, shopCode);
+    const next = getCart(shopCode);
+    setCartItems(next);
+    setServerTotal(
+      next.length === 0
+        ? 0
+        : next.reduce((sum, item) => {
+            const price = typeof item.sale_price === 'string' ? parseFloat(item.sale_price) : item.sale_price;
+            return sum + price * item.quantity;
+          }, 0),
+    );
     window.dispatchEvent(new Event('cartUpdated'));
-    await fetchCartFromServer();
   };
 
   const calculateTotal = (): number => {
@@ -398,7 +461,7 @@ export default function CartPage() {
   };
 
   const handleSelectAddress = async (addressId: number) => {
-    const token = localStorage.getItem('customer_token');
+    const token = getCustomerToken();
     if (!token) return;
 
     setSelectedAddressId(addressId);
@@ -407,7 +470,7 @@ export default function CartPage() {
         'Post',
         {},
         { address_id: addressId },
-        '/api/cart/set-address',
+        shopApi('/api/cart/set-address'),
         true,
         true,
         token
@@ -446,7 +509,7 @@ export default function CartPage() {
     shippingInfo.title.trim();
 
   const handleSubmitNewAddress = async () => {
-    const token = localStorage.getItem('customer_token');
+    const token = getCustomerToken();
     if (!token) {
       toast.error('لطفاً ابتدا وارد شوید');
       router.push('/login');
@@ -503,7 +566,7 @@ export default function CartPage() {
           title: shippingInfo.title,
           is_default: addresses.length === 0,
         },
-        '/api/customer-addresses',
+        shopApi('/api/customer-addresses'),
         true,
         true,
         token
@@ -566,7 +629,7 @@ export default function CartPage() {
 
   // Complete order API call
   const completeOrder = async () => {
-    const token = localStorage.getItem('customer_token');
+    const token = getCustomerToken();
     if (!token) {
       setOrderError('لطفاً ابتدا وارد شوید');
       return;
@@ -594,7 +657,7 @@ export default function CartPage() {
         'Post',
         {},
         requestData,
-        '/api/cart/complete-order',
+        shopApi('/api/cart/complete-order'),
         true,
         true,
         token
@@ -607,7 +670,7 @@ export default function CartPage() {
       }
 
       setOrderCompleted(true);
-      clearCart();
+      await clearCart(shopCode);
       setCartItems([]);
       window.dispatchEvent(new Event('cartUpdated'));
       toast.success('سفارش شما با موفقیت ثبت شد');
@@ -667,8 +730,9 @@ export default function CartPage() {
   };
 
   const confirmClearCart = () => {
-    clearCart();
+    void clearCart(shopCode);
     setCartItems([]);
+    setServerTotal(0);
     window.dispatchEvent(new Event('cartUpdated'));
     toast.success('سبد خرید پاک شد');
     setClearCartDialogOpen(false);
@@ -2274,7 +2338,7 @@ export default function CartPage() {
                 </Button>
                 <Button
                   variant="outlined"
-                  onClick={() => router.push('/orders')}
+                  onClick={() => router.push(shopPath('/orders'))}
                   sx={{
                     borderColor: '#667eea',
                     color: '#667eea',

@@ -30,6 +30,7 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { apiRequestError } from "@/app/lib/apiRequestError";
+import { useShopStorefront } from "@/app/context/ShopContext";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -91,6 +92,7 @@ const statusConfig: Record<string, { color: string; label: string; icon: React.R
 
 export default function CustomerOrdersPage() {
   const router = useRouter();
+  const { shopCode, shopApi, shopPath, getCustomerToken } = useShopStorefront();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -98,14 +100,15 @@ export default function CustomerOrdersPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
+    if (!shopCode) return;
     fetchOrders();
-  }, []);
+  }, [shopCode]);
 
   const fetchOrders = async () => {
-    const token = localStorage.getItem("customer_token");
+    const token = getCustomerToken();
     if (!token) {
       toast.error("لطفاً ابتدا وارد شوید");
-      router.push("/login");
+      router.push(`${shopPath("/login")}?redirect=${encodeURIComponent(shopPath("/orders"))}`);
       return;
     }
 
@@ -115,7 +118,7 @@ export default function CustomerOrdersPage() {
         "Get",
         {},
         {},
-        "/api/cart/my-orders",
+        shopApi("/api/cart/my-orders"),
         true,
         true,
         token
@@ -137,7 +140,7 @@ export default function CustomerOrdersPage() {
   };
 
   const fetchOrderDetails = async (orderId: number) => {
-    const token = localStorage.getItem("customer_token");
+    const token = getCustomerToken();
     if (!token) return;
 
     setDetailsLoading(true);
@@ -146,11 +149,12 @@ export default function CustomerOrdersPage() {
         "Get",
         {},
         {},
-        `/api/cart/my-orders/${orderId}`,
+        shopApi(`/api/cart/my-orders/${orderId}`),
         true,
         true,
         token
       );
+console.log("res" , res);
 
       if (!res.hasError) {
         setSelectedOrder(res.data || res);
@@ -291,7 +295,7 @@ export default function CustomerOrdersPage() {
           </Typography>
           <Button
             variant="contained"
-            onClick={() => router.push("")}
+            onClick={() => router.push(shopPath())}
             sx={{
               background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
               color: "#fff",
