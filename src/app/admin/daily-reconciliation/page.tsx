@@ -395,6 +395,15 @@ function depositTotal(draft: DepositDraft): number {
   );
 }
 
+function calculateDailyDiscrepancy(
+  sales: SalesSnapshot | undefined,
+  depositsTotal: number
+): number {
+  const totalCollected = sales?.total_collected ?? 0;
+  console.log("dddddddddddd" , totalCollected - depositsTotal);
+  return totalCollected - depositsTotal;
+}
+ 
 function hasDepositDraftInput(draft: DepositDraft): boolean {
   return (
     draft.deposit_account_1.trim() !== "" ||
@@ -403,13 +412,13 @@ function hasDepositDraftInput(draft: DepositDraft): boolean {
   );
 }
 
-/** واریز کل − جمع وصول (تخفیف قبلاً در جمع وصول لحاظ شده) */
+/** اختلاف روز = جمع وصول − مجموع واریزها */
 function previewDailyDiscrepancy(
   draft: DepositDraft,
   sales: SalesSnapshot | undefined
 ): number {
   if (!hasDepositDraftInput(draft)) return 0;
-  return depositTotal(draft) - (sales?.total_collected ?? 0);
+  return calculateDailyDiscrepancy(sales, depositTotal(draft));
 }
 
 const amountFieldSx = {
@@ -1063,9 +1072,41 @@ export default function DailyReconciliationPage() {
                 {reversedVisibleRows.map((row) => {
                   const draft = drafts[row.date];
                   const displayDisc = rowDisplayDiscrepancy(row, draft);
+                  const discrepancyTone =
+                    displayDisc != null
+                      ? displayDisc < 0
+                        ? "negative"
+                        : displayDisc > 0
+                          ? "positive"
+                          : null
+                      : null;
 
                   return (
-                    <StyledTableRow key={row.date}>
+                    <StyledTableRow
+                      key={row.date}
+                      sx={
+                        discrepancyTone
+                          ? {
+                              backgroundColor:
+                                discrepancyTone === "negative"
+                                  ? "rgba(239, 68, 68, 0.10) !important"
+                                  : "rgba(74, 222, 128, 0.10) !important",
+                              "&:nth-of-type(even)": {
+                                backgroundColor:
+                                  discrepancyTone === "negative"
+                                    ? "rgba(239, 68, 68, 0.16) !important"
+                                    : "rgba(74, 222, 128, 0.16) !important",
+                              },
+                              "&:hover": {
+                                backgroundColor:
+                                  discrepancyTone === "negative"
+                                    ? "rgba(239, 68, 68, 0.20) !important"
+                                    : "rgba(74, 222, 128, 0.20) !important",
+                              },
+                            }
+                          : undefined
+                      }
+                    >
                       <StyledTableCell align="center">
                         <Typography sx={{ fontWeight: 600, fontSize: 12 }}>
                           {rowDateLabel(row, monthFilter)}
@@ -1130,7 +1171,19 @@ export default function DailyReconciliationPage() {
                       <StyledTableCell align="center">
                         {renderAmountCell(row, "deposit_cash")}
                       </StyledTableCell>
-                      <StyledTableCell align="center">
+                      <StyledTableCell
+                        align="center"
+                        sx={
+                          discrepancyTone
+                            ? {
+                                backgroundColor:
+                                  discrepancyTone === "negative"
+                                    ? "rgba(239, 68, 68, 0.16)"
+                                    : "rgba(74, 222, 128, 0.16)",
+                              }
+                            : undefined
+                        }
+                      >
                         <DiscrepancyCell value={displayDisc ?? null} />
                         {row.editable && !row.is_closed && draft && (
                           <Typography sx={{ fontSize: 10, color: "var(--admin-text-muted)", mt: 0.25 }}>
@@ -1224,17 +1277,37 @@ export default function DailyReconciliationPage() {
               const draft = drafts[row.date];
               const displayDisc = rowDisplayDiscrepancy(row, draft);
               const sales = row.sales;
+              const discrepancyTone =
+                displayDisc != null
+                  ? displayDisc < 0
+                    ? "negative"
+                    : displayDisc > 0
+                      ? "positive"
+                      : null
+                  : null;
 
               return (
                 <Card
                   key={row.date}
                   sx={{
-                    backgroundColor: "var(--admin-surface)",
+                    backgroundColor: discrepancyTone
+                      ? discrepancyTone === "negative"
+                        ? "rgba(239, 68, 68, 0.10)"
+                        : "rgba(74, 222, 128, 0.10)"
+                      : "var(--admin-surface)",
                     borderRadius: "16px",
-                    border: "1px solid var(--admin-border)",
+                    border: discrepancyTone
+                      ? discrepancyTone === "negative"
+                        ? "1px solid rgba(239, 68, 68, 0.45)"
+                        : "1px solid rgba(74, 222, 128, 0.45)"
+                      : "1px solid var(--admin-border)",
                     transition: "all 0.2s ease",
                     "&:hover": {
-                      borderColor: "rgba(120, 181, 104, 0.4)",
+                      borderColor: discrepancyTone
+                        ? discrepancyTone === "negative"
+                          ? "rgba(239, 68, 68, 0.65)"
+                          : "rgba(74, 222, 128, 0.65)"
+                        : "rgba(120, 181, 104, 0.4)",
                       boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
                     },
                   }}
@@ -1279,6 +1352,7 @@ export default function DailyReconciliationPage() {
                       <MobileStat label="نقد" value={sales?.cash_amount ?? 0} />
                       <MobileStat label="کارت" value={sales?.card_amount ?? 0} />
                       <MobileStat label="اقساط" value={sales?.installments_collected ?? 0} />
+                      <MobileStat label="تخفیف" value={sales?.discount_given ?? 0} />
                       <MobileStat label="جمع وصول" value={sales?.total_collected ?? 0} accent />
                       <MobileStat
                         label="اعتبار مصرف‌شده"
