@@ -400,8 +400,8 @@ function calculateDailyDiscrepancy(
   depositsTotal: number
 ): number {
   const totalCollected = sales?.total_collected ?? 0;
-  console.log("dddddddddddd" , totalCollected - depositsTotal);
-  return totalCollected - depositsTotal;
+  console.log("dddddddddddd" ,  - depositsTotal);
+  return depositsTotal - totalCollected  ;
 }
  
 function hasDepositDraftInput(draft: DepositDraft): boolean {
@@ -418,6 +418,7 @@ function previewDailyDiscrepancy(
   sales: SalesSnapshot | undefined
 ): number {
   if (!hasDepositDraftInput(draft)) return 0;
+  
   return calculateDailyDiscrepancy(sales, depositTotal(draft));
 }
 
