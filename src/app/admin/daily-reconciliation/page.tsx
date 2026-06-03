@@ -400,8 +400,16 @@ function calculateDailyDiscrepancy(
   depositsTotal: number
 ): number {
   const totalCollected = sales?.total_collected ?? 0;
-  console.log("dddddddddddd" ,  - depositsTotal);
-  return depositsTotal - totalCollected  ;
+  const diff = depositsTotal - totalCollected;
+  console.log("dddddddddddd", {
+    depositsTotal,
+    totalCollected,
+    diff,
+    depositsType: typeof depositsTotal,
+    totalCollectedType: typeof totalCollected,
+    isDiffNaN: Number.isNaN(diff),
+  });
+  return diff;
 }
  
 function hasDepositDraftInput(draft: DepositDraft): boolean {
@@ -470,6 +478,21 @@ function rowDisplayDiscrepancy(
     return previewDailyDiscrepancy(draft, row.sales);
   }
   return row.daily_discrepancy;
+}
+
+function depositsTotalForTone(
+  row: DailyReconciliationRow,
+  draft: DepositDraft | undefined
+): number {
+  if (row.editable && draft && hasDepositDraftInput(draft)) {
+    return depositTotal(draft);
+  }
+  const deposits = row.deposits;
+  return (
+    Math.floor(Number(deposits?.deposit_account_1) || 0) +
+    Math.floor(Number(deposits?.deposit_account_2) || 0) +
+    Math.floor(Number(deposits?.deposit_cash) || 0)
+  );
 }
 
 function buildCumulativePreviewByDate(
@@ -1073,14 +1096,28 @@ export default function DailyReconciliationPage() {
                 {reversedVisibleRows.map((row) => {
                   const draft = drafts[row.date];
                   const displayDisc = rowDisplayDiscrepancy(row, draft);
+                  const depositsTotal = depositsTotalForTone(row, draft);
+                  const totalCollected = row.sales?.total_collected ?? 0;
                   const discrepancyTone =
                     displayDisc != null
-                      ? displayDisc < 0
+                      ? displayDisc <  depositsTotal - totalCollected
                         ? "negative"
-                        : displayDisc > 0
+                        : displayDisc >  depositsTotal - totalCollected
                           ? "positive"
                           : null
                       : null;
+
+                  console.log("[daily-reconciliation:desktop-tone]", {
+                    date: row.date,
+                    isClosed: row.is_closed,
+                    editable: row.editable,
+                    hasDraft: !!draft,
+                    depositsTotal,
+                    totalCollected,
+                    diffByFormula: depositsTotal - totalCollected,
+                    displayDisc,
+                    discrepancyTone,
+                  });
 
                   return (
                     <StyledTableRow
@@ -1278,14 +1315,18 @@ export default function DailyReconciliationPage() {
               const draft = drafts[row.date];
               const displayDisc = rowDisplayDiscrepancy(row, draft);
               const sales = row.sales;
+              const depositsTotal = depositsTotalForTone(row, draft);
+              const totalCollected = sales?.total_collected ?? 0;
               const discrepancyTone =
                 displayDisc != null
-                  ? displayDisc < 0
+                  ? displayDisc <depositsTotal - totalCollected
                     ? "negative"
-                    : displayDisc > 0
+                    : displayDisc > depositsTotal - totalCollected
                       ? "positive"
                       : null
                   : null;
+
+
 
               return (
                 <Card

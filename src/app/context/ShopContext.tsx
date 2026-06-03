@@ -61,7 +61,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   );
 
   const refreshShop = useCallback(async () => {
+    console.log("[ShopContext] refreshShop:start", { shopCode, pathname });
     if (!shopCode) {
+      console.log("[ShopContext] refreshShop:skip-no-shopCode");
       setShop(null);
       setShopError(null);
       return;
@@ -78,24 +80,31 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         true,
         "",
       );
-      console.log("rrrr" , res);
+      console.log("[ShopContext] refreshShop:response", res);
       
       if (res.hasError) {
         const message =
           (typeof res.message === "string" && res.message) ||
           (res.statusCode === 404 ? "فروشگاه یافت نشد" : "خطا در بارگذاری فروشگاه");
+        console.warn("[ShopContext] refreshShop:api-error", {
+          statusCode: res.statusCode,
+          message,
+        });
         setShop(null);
         setShopError(message);
         return;
       }
       setShop(res as ShopInfo);
-    } catch {
+      console.log("[ShopContext] refreshShop:success");
+    } catch (error) {
+      console.error("[ShopContext] refreshShop:catch", error);
       setShopError("خطا در ارتباط با سرور");
       setShop(null);
     } finally {
+      console.log("[ShopContext] refreshShop:finally");
       setShopLoading(false);
     }
-  }, [shopCode]);
+  }, [shopCode, pathname]);
 
   useEffect(() => {
     refreshShop();
