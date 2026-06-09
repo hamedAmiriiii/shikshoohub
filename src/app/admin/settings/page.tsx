@@ -21,6 +21,10 @@ import tokenCode from "@/app/coponent/tokenCode";
 import ShopSmsQuotaCard from "@/app/coponent/ShopSmsQuotaCard";
 import { adminButtonStartIconSx, adminPageSx } from "@/app/admin/theme/adminTheme";
 import { startAdminOnboarding } from "@/app/admin/onboarding/AdminOnboardingProvider";
+import {
+  readAdminPosSettings,
+  writeAdminPosSettings,
+} from "@/app/lib/adminPosSettings";
 
 const switchSx = {
   "& .MuiSwitch-switchBase.Mui-checked": { color: "var(--admin-accent)" },
@@ -101,6 +105,24 @@ export default function SettingsPage() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isSavingExpiry, setIsSavingExpiry] = useState(false);
   const [isSavingInterestRate, setIsSavingInterestRate] = useState(false);
+  const [showProductListOnMainPage, setShowProductListOnMainPage] = useState(false);
+
+  useEffect(() => {
+    setShowProductListOnMainPage(readAdminPosSettings().showProductListOnMainPage);
+  }, []);
+
+  const handleToggleProductListOnMainPage = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const enabled = event.target.checked;
+    setShowProductListOnMainPage(enabled);
+    writeAdminPosSettings({ showProductListOnMainPage: enabled });
+    toast.success(
+      enabled
+        ? "لیست کالا در صفحه فروش نمایش داده می‌شود"
+        : "لیست کالا از صفحه فروش پنهان شد",
+    );
+  };
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -342,6 +364,20 @@ export default function SettingsPage() {
                 checked={loyaltyCreditEnabled}
                 onChange={handleToggleLoyaltyCredit}
                 disabled={isUpdating}
+                sx={switchSx}
+              />
+            </SettingRow>
+
+            <Divider sx={{ borderColor: "var(--admin-divider)" }} />
+
+            <SettingRow
+              label="لیست کالا در صفحه فروش"
+              hint="جستجو و افزودن سریع به سبد از کش محلی"
+            >
+              <Switch
+                size="small"
+                checked={showProductListOnMainPage}
+                onChange={handleToggleProductListOnMainPage}
                 sx={switchSx}
               />
             </SettingRow>

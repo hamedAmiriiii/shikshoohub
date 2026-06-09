@@ -45,6 +45,11 @@ import {
 } from '@/app/lib/shopSalesByDay';
 import SalesByDayChart from '@/app/coponent/SalesByDayChart';
 import { readProductsCountFromCache, PRODUCTS_CACHE_KEY } from '@/app/lib/productsCache';
+import {
+  readAdminPosSettings,
+  ADMIN_POS_SETTINGS_CHANGED_EVENT,
+} from '@/app/lib/adminPosSettings';
+import SaleProductListPanel from '@/app/admin/SaleProductListPanel';
 import { publishAdminSaleCartSnapshot } from '@/app/admin/onboarding/adminSaleCartCheck';
 import CategoryIcon from '@mui/icons-material/Category';
 
@@ -123,6 +128,7 @@ export default function ShoppingPage() {
   const [todayDashboard, setTodayDashboard] = useState<TodayDashboardSnapshot | null>(null);
   const [salesByDay, setSalesByDay] = useState<SalesByDaySnapshot | null>(null);
   const [productsCount, setProductsCount] = useState(0);
+  const [showProductListOnMainPage, setShowProductListOnMainPage] = useState(false);
   const [isRegisteringUser, setIsRegisteringUser] = useState(false);
   const lastSyncTimeRef = useRef<number>(0);
   const installmentCalcRequestIdRef = useRef(0);
@@ -610,46 +616,53 @@ export default function ShoppingPage() {
     calculateInstallments();
   }, [paymentType, installmentCount, total, useCreditAmount, discounttype, phone]);
 
-  // دیباگ: بررسی تغییرات state
   useEffect(() => {
-    console.log("Credit State Updated:", { credit, useCreditAmount, checkingCredit });
-  }, [credit, useCreditAmount, checkingCredit]);
+    setShowProductListOnMainPage(readAdminPosSettings().showProductListOnMainPage);
+    const onSettingsChange = () => {
+      setShowProductListOnMainPage(readAdminPosSettings().showProductListOnMainPage);
+    };
+    window.addEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, onSettingsChange);
+    return () => window.removeEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, onSettingsChange);
+  }, []);
 
-  // تابع برای اضافه کردن محصول به سبد از طریق بارکد
-  const addProductByBarcode = useCallback((barcode: string) => {
-    if (!barcode || barcode.length < 3) return;
-    
-    const item = items?.find((item) => item.barcode === barcode);
-    if (item) {
-      setCart((prevCart) => {
-        const newCart = [...prevCart];
-        const existingItemIndex = newCart.findIndex((i) => i.id === item.id);
+  const addProductToCart = useCallback((item: any) => {
+    setCart((prevCart) => {
+      const newCart = [...prevCart];
+      const existingItemIndex = newCart.findIndex((i) => i.id === item.id);
 
-        if (existingItemIndex === -1) {
-          newCart.push({ ...item, quantity: 1 });
-        } else {
-          newCart[existingItemIndex].quantity += 1;
-        }
+      if (existingItemIndex === -1) {
+        newCart.push({ ...item, quantity: 1 });
+      } else {
+        newCart[existingItemIndex].quantity += 1;
+      }
 
-        let newTotal = 0;
-        newCart.forEach((item) => {
-          newTotal += Number(item.sale_price) * item.quantity; 
-        });
-
-        setTotal(newTotal);
-        return newCart;
+      let newTotal = 0;
+      newCart.forEach((cartItem) => {
+        newTotal += Number(cartItem.sale_price) * cartItem.quantity;
       });
 
-      const beep = new Audio("/sound/008.mp3"); 
-      beep.play().catch(() => {});
+      setTotal(newTotal);
+      return newCart;
+    });
 
-      if (navigator.vibrate) {
-        navigator.vibrate(70);
-      }
+    const beep = new Audio("/sound/008.mp3");
+    beep.play().catch(() => {});
+
+    if (navigator.vibrate) {
+      navigator.vibrate(70);
+    }
+  }, []);
+
+  const addProductByBarcode = useCallback((barcode: string) => {
+    if (!barcode || barcode.length < 3) return;
+
+    const item = items?.find((product) => product.barcode === barcode);
+    if (item) {
+      addProductToCart(item);
     } else {
       toast.error("محصولی با این بارکد یافت نشد");
     }
-  }, [items]);
+  }, [items, addProductToCart]);
 
   const formatNumber = useCallback((num: number) => {
     return new Intl.NumberFormat('fa-IR').format(num);
@@ -1696,6 +1709,17 @@ export default function ShoppingPage() {
                     </Card>
                   </Grid>
 
+                  {showProductListOnMainPage && (
+                    <Grid item xs={12} sx={{ display: { xs: "block", md: "none" } }}>
+                      <SaleProductListPanel
+                        variant="embedded"
+                        products={items}
+                        onAddProduct={addProductToCart}
+                        formatNumber={formatNumber}
+                      />
+                    </Grid>
+                  )}
+
                   {/* <Grid item xs={12}>
                     <Box
                       sx={{
@@ -2670,6 +2694,17 @@ export default function ShoppingPage() {
           )}
         </Grid>
       </Container>
+
+      {showProductListOnMainPage && (
+        <Box sx={{ display: { xs: "none", md: "block" } }}>
+          <SaleProductListPanel
+            variant="floating"
+            products={items}
+            onAddProduct={addProductToCart}
+            formatNumber={formatNumber}
+          />
+        </Box>
+      )}
 
       {/* Floating Action Button */}
       <Button

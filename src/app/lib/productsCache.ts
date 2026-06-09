@@ -1,14 +1,32 @@
 export const PRODUCTS_CACHE_KEY = "products_cache";
 
+export type CachedProduct = {
+  id: number | string;
+  name?: string;
+  barcode?: string;
+  sale_price?: number | string;
+  original_sale_price?: number | string;
+  has_discount?: boolean;
+  quantity?: number;
+};
+
+function parseProductsCache(raw: string | null): CachedProduct[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+/** لیست کالاهای کش‌شده در localStorage (همان لیست بارکد/فروش) */
+export function readProductsFromCache(): CachedProduct[] {
+  if (typeof window === "undefined") return [];
+  return parseProductsCache(localStorage.getItem(PRODUCTS_CACHE_KEY));
+}
+
 /** تعداد کالاهای کش‌شده در localStorage (همان لیست بارکد/فروش) */
 export function readProductsCountFromCache(): number {
-  if (typeof window === "undefined") return 0;
-  try {
-    const raw = localStorage.getItem(PRODUCTS_CACHE_KEY);
-    if (!raw) return 0;
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.length : 0;
-  } catch {
-    return 0;
-  }
+  return readProductsFromCache().length;
 }
