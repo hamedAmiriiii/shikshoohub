@@ -293,6 +293,8 @@ export default function LoyaltyCreditTiersSettings({
         true,
         token,
       );
+      console.log("res", res);
+      
       if (res.hasError) {
         toast.error(
           parseApiErrorMessage(res.errorText, "خطا در ذخیرهٔ پلکان اعتبار"),
