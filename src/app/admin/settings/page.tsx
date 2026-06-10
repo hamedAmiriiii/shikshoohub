@@ -14,6 +14,10 @@ import {
 } from "@mui/material";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
+import LoyaltyIcon from "@mui/icons-material/Loyalty";
+import Inventory2Icon from "@mui/icons-material/Inventory2";
+import EventIcon from "@mui/icons-material/Event";
+import PercentIcon from "@mui/icons-material/Percent";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { apiRequestError } from "@/app/lib/apiRequestError/client";
@@ -25,6 +29,16 @@ import {
   readAdminPosSettings,
   writeAdminPosSettings,
 } from "@/app/lib/adminPosSettings";
+import LoyaltyCreditTiersSettings from "@/app/admin/settings/LoyaltyCreditTiersSettings";
+
+const settingsCardSx = {
+  backgroundColor: "var(--admin-surface)",
+  borderRadius: "16px",
+  border: "1px solid var(--admin-border)",
+  boxShadow: "0 2px 12px rgba(0, 0, 0, 0.06)",
+  mb: 1.5,
+  overflow: "hidden",
+};
 
 const switchSx = {
   "& .MuiSwitch-switchBase.Mui-checked": { color: "var(--admin-accent)" },
@@ -60,40 +74,57 @@ const saveBtnSx = {
   },
 };
 
-function SettingRow({
-  label,
+function SettingsSectionCard({
+  icon,
+  title,
   hint,
   children,
+  loading = false,
+  action,
 }: {
-  label: string;
+  icon: React.ReactNode;
+  title: string;
   hint?: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
+  loading?: boolean;
+  action?: React.ReactNode;
 }) {
   return (
-    <Box
-      sx={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 1.5,
-        py: 1.25,
-        px: 1.5,
-      }}
-    >
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography sx={{ color: "var(--admin-text)", fontSize: "14px", fontWeight: 600 }}>
-          {label}
-        </Typography>
-        {hint && (
-          <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "12px", mt: 0.25 }}>
-            {hint}
-          </Typography>
+    <Card sx={settingsCardSx}>
+      <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: 1,
+            mb: children ? 0 : 0,
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1, minWidth: 0, flex: 1 }}>
+            <Box sx={{ color: "var(--admin-accent)", mt: 0.15, flexShrink: 0 }}>{icon}</Box>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography sx={{ color: "var(--admin-text)", fontSize: "14px", fontWeight: 700 }}>
+                {title}
+              </Typography>
+              {hint && (
+                <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "12px", mt: 0.25 }}>
+                  {hint}
+                </Typography>
+              )}
+            </Box>
+          </Box>
+          {action}
+        </Box>
+        {loading ? (
+          <Box sx={{ py: 3, display: "flex", justifyContent: "center" }}>
+            <CircularProgress size={24} sx={{ color: "var(--admin-accent)" }} />
+          </Box>
+        ) : (
+          children
         )}
-      </Box>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>
-        {children}
-      </Box>
-    </Box>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -314,138 +345,155 @@ export default function SettingsPage() {
 
       <Card
         sx={{
-          mt: 1.5,
-          bgcolor: "var(--admin-surface)",
-          border: "1px solid var(--admin-border)",
-          borderRadius: "12px",
-          overflow: "hidden",
+          ...settingsCardSx,
+          cursor: "pointer",
+          transition: "background-color 0.2s ease",
+          "&:hover": { bgcolor: "var(--admin-menu-hover)" },
         }}
+        onClick={() => startAdminOnboarding()}
+      >
+        <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <MenuBookIcon sx={{ color: "var(--admin-accent)", fontSize: 22 }} />
+            <Box sx={{ flex: 1 }}>
+              <Typography sx={{ color: "var(--admin-text)", fontSize: "14px", fontWeight: 700 }}>
+                راهنمای شروع
+              </Typography>
+              <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "12px" }}>
+                آموزش گام‌به‌گام پنل
+              </Typography>
+            </Box>
+            <ChevronRightIcon sx={{ color: "var(--admin-text-muted)", fontSize: 20 }} />
+          </Box>
+        </CardContent>
+      </Card>
+
+      <SettingsSectionCard
+        icon={<LoyaltyIcon sx={{ fontSize: 22 }} />}
+        title="باشگاه مشتریان"
+        hint="اعتبار و امتیاز مشتری بر اساس مبلغ خرید"
+        loading={loading}
+        action={
+          !loading ? (
+            <Switch
+              size="small"
+              checked={loyaltyCreditEnabled}
+              onChange={handleToggleLoyaltyCredit}
+              disabled={isUpdating}
+              sx={switchSx}
+            />
+          ) : undefined
+        }
+      >
+        <Divider sx={{ borderColor: "var(--admin-divider)", my: 1.5 }} />
+        <LoyaltyCreditTiersSettings disabled={!loyaltyCreditEnabled} />
+      </SettingsSectionCard>
+
+      <SettingsSectionCard
+        icon={<Inventory2Icon sx={{ fontSize: 22 }} />}
+        title="لیست کالا در صفحه فروش"
+        hint="جستجو و افزودن سریع به سبد از کش محلی"
+        action={
+          <Switch
+            size="small"
+            checked={showProductListOnMainPage}
+            onChange={handleToggleProductListOnMainPage}
+            sx={switchSx}
+          />
+        }
+      />
+
+      <SettingsSectionCard
+        icon={<EventIcon sx={{ fontSize: 22 }} />}
+        title="انقضای اعتبار"
+        hint="مدت اعتبار مشتری · ۱ تا ۳۶۵ روز"
+        loading={loading}
       >
         <Box
-          component="button"
-          type="button"
-          onClick={() => startAdminOnboarding()}
           sx={{
+            mt: 1.5,
+            pt: 1.5,
+            borderTop: "1px solid var(--admin-divider)",
             display: "flex",
             alignItems: "center",
-            width: "100%",
-            border: "none",
-            bgcolor: "transparent",
-            cursor: "pointer",
-            py: 1.25,
-            px: 1.5,
-            textAlign: "right",
-            "&:hover": { bgcolor: "var(--admin-menu-hover)" },
+            justifyContent: "flex-end",
+            gap: 1,
           }}
         >
-          <MenuBookIcon sx={{ color: "var(--admin-accent)", fontSize: 22, ml: 1 }} />
-          <Box sx={{ flex: 1 }}>
-            <Typography sx={{ color: "var(--admin-text)", fontSize: "14px", fontWeight: 600 }}>
-              راهنمای شروع
-            </Typography>
-            <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "12px" }}>
-              آموزش گام‌به‌گام پنل
-            </Typography>
-          </Box>
-          <ChevronRightIcon sx={{ color: "var(--admin-text-muted)", fontSize: 20 }} />
+          <TextField
+            size="small"
+            type="number"
+            value={creditExpiryDays}
+            onChange={(e) => {
+              const value = parseInt(e.target.value, 10);
+              if (!isNaN(value) && value >= 1 && value <= 365) {
+                setCreditExpiryDays(value);
+              } else if (e.target.value === "") {
+                setCreditExpiryDays(0);
+              }
+            }}
+            inputProps={{ min: 1, max: 365 }}
+            sx={fieldSx}
+          />
+          <Button
+            size="small"
+            variant="contained"
+            disabled={isSavingExpiry || creditExpiryDays < 1 || creditExpiryDays > 365}
+            onClick={handleSaveExpiryDays}
+            sx={saveBtnSx}
+          >
+            {isSavingExpiry ? "…" : "ذخیره"}
+          </Button>
         </Box>
+      </SettingsSectionCard>
 
-        <Divider sx={{ borderColor: "var(--admin-divider)" }} />
-
-        {loading ? (
-          <Box sx={{ py: 4, display: "flex", justifyContent: "center" }}>
-            <CircularProgress size={28} sx={{ color: "var(--admin-accent)" }} />
-          </Box>
-        ) : (
-          <CardContent sx={{ p: 0, "&:last-child": { pb: 0 } }}>
-            <SettingRow label="باشگاه مشتریان" hint="اعتبار و امتیاز مشتری">
-              <Switch
-                size="small"
-                checked={loyaltyCreditEnabled}
-                onChange={handleToggleLoyaltyCredit}
-                disabled={isUpdating}
-                sx={switchSx}
-              />
-            </SettingRow>
-
-            <Divider sx={{ borderColor: "var(--admin-divider)" }} />
-
-            <SettingRow
-              label="لیست کالا در صفحه فروش"
-              hint="جستجو و افزودن سریع به سبد از کش محلی"
-            >
-              <Switch
-                size="small"
-                checked={showProductListOnMainPage}
-                onChange={handleToggleProductListOnMainPage}
-                sx={switchSx}
-              />
-            </SettingRow>
-
-            <Divider sx={{ borderColor: "var(--admin-divider)" }} />
-
-            <SettingRow label="انقضای اعتبار" hint="۱ تا ۳۶۵ روز">
-              <TextField
-                size="small"
-                type="number"
-                value={creditExpiryDays}
-                onChange={(e) => {
-                  const value = parseInt(e.target.value, 10);
-                  if (!isNaN(value) && value >= 1 && value <= 365) {
-                    setCreditExpiryDays(value);
-                  } else if (e.target.value === "") {
-                    setCreditExpiryDays(0);
-                  }
-                }}
-                inputProps={{ min: 1, max: 365 }}
-                sx={fieldSx}
-              />
-              <Button
-                size="small"
-                variant="contained"
-                disabled={isSavingExpiry || creditExpiryDays < 1 || creditExpiryDays > 365}
-                onClick={handleSaveExpiryDays}
-                sx={saveBtnSx}
-              >
-                {isSavingExpiry ? "…" : "ذخیره"}
-              </Button>
-            </SettingRow>
-
-            <Divider sx={{ borderColor: "var(--admin-divider)" }} />
-
-            <SettingRow label="نرخ سود اقساط" hint="درصد ماهانه · ۰ تا ۱۰۰">
-              <TextField
-                size="small"
-                type="number"
-                value={installmentInterestRate}
-                onChange={(e) => {
-                  const value = parseFloat(e.target.value);
-                  if (!isNaN(value) && value >= 0 && value <= 100) {
-                    setInstallmentInterestRate(value);
-                  } else if (e.target.value === "") {
-                    setInstallmentInterestRate(0);
-                  }
-                }}
-                inputProps={{ min: 0, max: 100, step: 0.1 }}
-                sx={fieldSx}
-              />
-              <Button
-                size="small"
-                variant="contained"
-                disabled={
-                  isSavingInterestRate ||
-                  installmentInterestRate < 0 ||
-                  installmentInterestRate > 100
-                }
-                onClick={handleSaveInterestRate}
-                sx={saveBtnSx}
-              >
-                {isSavingInterestRate ? "…" : "ذخیره"}
-              </Button>
-            </SettingRow>
-          </CardContent>
-        )}
-      </Card>
+      <SettingsSectionCard
+        icon={<PercentIcon sx={{ fontSize: 22 }} />}
+        title="نرخ سود اقساط"
+        hint="درصد ماهانه · ۰ تا ۱۰۰"
+        loading={loading}
+      >
+        <Box
+          sx={{
+            mt: 1.5,
+            pt: 1.5,
+            borderTop: "1px solid var(--admin-divider)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            gap: 1,
+          }}
+        >
+          <TextField
+            size="small"
+            type="number"
+            value={installmentInterestRate}
+            onChange={(e) => {
+              const value = parseFloat(e.target.value);
+              if (!isNaN(value) && value >= 0 && value <= 100) {
+                setInstallmentInterestRate(value);
+              } else if (e.target.value === "") {
+                setInstallmentInterestRate(0);
+              }
+            }}
+            inputProps={{ min: 0, max: 100, step: 0.1 }}
+            sx={fieldSx}
+          />
+          <Button
+            size="small"
+            variant="contained"
+            disabled={
+              isSavingInterestRate ||
+              installmentInterestRate < 0 ||
+              installmentInterestRate > 100
+            }
+            onClick={handleSaveInterestRate}
+            sx={saveBtnSx}
+          >
+            {isSavingInterestRate ? "…" : "ذخیره"}
+          </Button>
+        </Box>
+      </SettingsSectionCard>
 
       <ToastContainer
         autoClose={3000}
