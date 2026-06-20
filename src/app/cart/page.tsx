@@ -43,6 +43,7 @@ import ErrorIcon from '@mui/icons-material/Error';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import PrintIcon from '@mui/icons-material/Print';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import RemoveShoppingCartIcon from '@mui/icons-material/RemoveShoppingCart';
 import Checkbox from '@mui/material/Checkbox';
@@ -60,6 +61,11 @@ import {
 } from '@/app/lib/shopStorefront';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import {
+  type SaleReceiptData,
+  saveSaleReceiptPrintData,
+  openSaleReceiptPrintPage,
+} from '@/app/lib/saleReceiptPrint';
 
 const steps = ['سبد خرید', 'تکمیل اطلاعات', 'پرداخت', 'تایید نهایی'];
 
@@ -104,7 +110,7 @@ interface CustomerAddress {
 
 export default function CartPage() {
   const router = useRouter();
-  const { shopCode, shopApi, shopPath, getCustomerToken } = useShopStorefront();
+  const { shopCode, shopApi, shopPath, getCustomerToken, shop } = useShopStorefront();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [activeStep, setActiveStep] = useState(0);
   const [serverTotal, setServerTotal] = useState<number | null>(null);
@@ -139,6 +145,7 @@ export default function CartPage() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'online' | 'card'>('card');
   const [completingOrder, setCompletingOrder] = useState(false);
   const [orderCompleted, setOrderCompleted] = useState(false);
+  const [lastOrderReceipt, setLastOrderReceipt] = useState<SaleReceiptData | null>(null);
   const [orderError, setOrderError] = useState('');
   const [customerCredit, setCustomerCredit] = useState<number>(0);
   const [loadingCredit, setLoadingCredit] = useState(false);
@@ -637,6 +644,9 @@ export default function CartPage() {
 
     setCompletingOrder(true);
     setOrderError('');
+
+    const itemsSnapshot = [...cartItems];
+    const orderTotal = serverTotal !== null ? serverTotal : calculateTotal();
     
     try {
       // آماده‌سازی محصولات با سایز و رنگ
@@ -668,6 +678,32 @@ export default function CartPage() {
         setOrderError(parsed.message || 'خطا در ثبت سفارش');
         return;
       }
+
+      const receipt: SaleReceiptData = {
+        purchaseId: res?.order_id ?? res?.id ?? res?.data?.id,
+        createdAt: new Date().toISOString(),
+        shopName: shop?.name,
+        phone: shippingInfo.phone || undefined,
+        items: itemsSnapshot.map((item) => {
+          const unitPrice = Number(item.sale_price);
+          return {
+            id: item.id,
+            name: item.name,
+            quantity: item.quantity,
+            unitPrice,
+            lineTotal: unitPrice * item.quantity,
+          };
+        }),
+        subtotal: orderTotal,
+        discount: 0,
+        creditUsed: 0,
+        backPrice: 0,
+        finalTotal: orderTotal,
+        payableNow: orderTotal,
+        paymentType: "online",
+      };
+      saveSaleReceiptPrintData(receipt);
+      setLastOrderReceipt(receipt);
 
       setOrderCompleted(true);
       await clearCart(shopCode);
@@ -2320,6 +2356,28 @@ export default function CartPage() {
               </Typography>
               
               <Box sx={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <Button
+                  variant="contained"
+                  onClick={() => {
+                    if (!lastOrderReceipt) {
+                      toast.error("اطلاعات فاکتور در دسترس نیست");
+                      return;
+                    }
+                    openSaleReceiptPrintPage(shopPath("/print/receipt"), lastOrderReceipt);
+                  }}
+                  startIcon={<PrintIcon />}
+                  sx={{
+                    backgroundColor: '#78b568',
+                    color: '#fff',
+                    padding: '12px 24px',
+                    borderRadius: '15px',
+                    '&:hover': {
+                      backgroundColor: '#5a9a4a',
+                    },
+                  }}
+                >
+                  چاپ فاکتور
+                </Button>
                 <Button
                   variant="contained"
                   onClick={() => router.push('')}

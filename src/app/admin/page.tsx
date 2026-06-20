@@ -19,6 +19,7 @@ import Inventory2Icon from '@mui/icons-material/Inventory2';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import PhoneIcon from '@mui/icons-material/Phone';
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
+import PrintIcon from '@mui/icons-material/Print';
 
 const SUPPORT_PHONE = "09399166196";
 const BALE_PROFILE_URL = "https://ble.ir/AmiriWebino";
@@ -52,6 +53,11 @@ import {
 import SaleProductListPanel from '@/app/admin/SaleProductListPanel';
 import { publishAdminSaleCartSnapshot } from '@/app/admin/onboarding/adminSaleCartCheck';
 import CategoryIcon from '@mui/icons-material/Category';
+import {
+  type SaleReceiptData,
+  saveSaleReceiptPrintData,
+  openSaleReceiptPrintPage,
+} from '@/app/lib/saleReceiptPrint';
 
 
 
@@ -129,6 +135,8 @@ export default function ShoppingPage() {
   const [salesByDay, setSalesByDay] = useState<SalesByDaySnapshot | null>(null);
   const [productsCount, setProductsCount] = useState(0);
   const [showProductListOnMainPage, setShowProductListOnMainPage] = useState(false);
+  const [saleSuccessOpen, setSaleSuccessOpen] = useState(false);
+  const [lastSaleReceipt, setLastSaleReceipt] = useState<SaleReceiptData | null>(null);
   const [isRegisteringUser, setIsRegisteringUser] = useState(false);
   const lastSyncTimeRef = useRef<number>(0);
   const installmentCalcRequestIdRef = useRef(0);
@@ -678,6 +686,108 @@ export default function ShoppingPage() {
     }, 100);
   }, []);
 
+  const getShopNameFromUser = useCallback((): string | undefined => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      return user.atelier_name || user.name || user.shop_name || undefined;
+    } catch {
+      return undefined;
+    }
+  }, []);
+
+  const buildSaleReceiptFromCurrentSale = useCallback(
+    (purchaseId?: number | string): SaleReceiptData => {
+      const calc = installmentCalculationRef.current ?? installmentCalculation;
+      const finalTotal = Math.max(0, total - useCreditAmount - discounttype - backPrice);
+      return {
+        purchaseId,
+        createdAt: new Date().toISOString(),
+        shopName: getShopNameFromUser(),
+        phone: phone || undefined,
+        items: cart.map((item: any) => {
+          const unitPrice = Number(item.sale_price);
+          return {
+            id: item.id,
+            name: item.name,
+            quantity: item.quantity,
+            unitPrice,
+            lineTotal: unitPrice * item.quantity,
+          };
+        }),
+        subtotal: total,
+        discount: discounttype,
+        creditUsed: useCreditAmount,
+        backPrice,
+        finalTotal,
+        payableNow,
+        paymentType,
+        settlementMode,
+        cardAmount: parseAmountInput(cardAmountInput),
+        cashAmount: parseAmountInput(cashAmountInput),
+        installmentCount: paymentType === "installment" ? installmentCount : undefined,
+        installmentAmount: calc?.installment_amount,
+      };
+    },
+    [
+      cart,
+      phone,
+      total,
+      discounttype,
+      useCreditAmount,
+      backPrice,
+      payableNow,
+      paymentType,
+      settlementMode,
+      cardAmountInput,
+      cashAmountInput,
+      installmentCount,
+      installmentCalculation,
+      getShopNameFromUser,
+      parseAmountInput,
+    ],
+  );
+
+  const resetCartAfterSale = useCallback(() => {
+    setCart([]);
+    setTotal(0);
+    setScannedCode("");
+    setPhone("");
+    setCredit(0);
+    setUseCreditAmount(0);
+    setDiscounttype(0);
+    setDiscountDisplay("");
+    setDiscountError("");
+    setBackPrice(0);
+    setInstallmentCalculation(null);
+    installmentCalculationRef.current = null;
+    setPaymentType("cash");
+    setInstallmentCount(2);
+    resetPaymentSettlement();
+  }, [resetPaymentSettlement]);
+
+  const finalizeSuccessfulSale = useCallback(
+    (res: any, successMessage: string) => {
+      const purchaseId = res?.id ?? res?.purchase_id ?? res?.data?.id;
+      const receipt = buildSaleReceiptFromCurrentSale(purchaseId);
+      saveSaleReceiptPrintData(receipt);
+      setLastSaleReceipt(receipt);
+      setSaleSuccessOpen(true);
+      toast.success(successMessage);
+      void refreshShopDashboard();
+      resetCartAfterSale();
+      setIsSubmitting(false);
+    },
+    [buildSaleReceiptFromCurrentSale, refreshShopDashboard, resetCartAfterSale],
+  );
+
+  const handlePrintLastSaleReceipt = useCallback(() => {
+    if (!lastSaleReceipt) {
+      toast.error("اطلاعات فاکتور در دسترس نیست");
+      return;
+    }
+    openSaleReceiptPrintPage("/admin/print/sale", lastSaleReceipt);
+  }, [lastSaleReceipt]);
+
   const confirm = useCallback(() => {
     // اعتبارسنجی تخفیف قبل از ارسال
     if (discounttype > 0) {
@@ -892,33 +1002,13 @@ export default function ShoppingPage() {
         setIsSubmitting(false);
         return;
       }
-      // نمایش پیام موفقیت با جزئیات اقساط (اگر اقساطی باشد)
-      if (paymentType === 'installment' && res.installments && res.installments.length > 0) {
+      let successMessage = "خرید ثبت شد";
+      if (paymentType === "installment" && res.installments && res.installments.length > 0) {
         const paidCount = res.installments.filter((inst: any) => inst.is_paid).length;
         const totalCount = res.installments.length;
-        toast.success(`خرید اقساطی ثبت شد. ${totalCount} قسط ایجاد شد (${paidCount} قسط پرداخت شده)`);
-      } else {
-
-        toast.success("خرید ثبت شد");
-        router.push(`/admin`);
+        successMessage = `خرید اقساطی ثبت شد. ${totalCount} قسط ایجاد شد (${paidCount} قسط پرداخت شده)`;
       }
-      void refreshShopDashboard();
-      setCart([])
-      setTotal(0)
-      setScannedCode("")
-      setPhone("")
-      setCredit(0)
-      setUseCreditAmount(0)
-      setDiscounttype(0)
-      setDiscountDisplay('');
-      setDiscountError('');
-      setBackPrice(0);
-      setInstallmentCalculation(null);
-      installmentCalculationRef.current = null;
-      setPaymentType('cash');
-      setInstallmentCount(2);
-      resetPaymentSettlement();
-      setIsSubmitting(false);
+      finalizeSuccessfulSale(res, successMessage);
     }).catch((error) => {
       console.error("Error submitting purchase:", error);
       
@@ -963,7 +1053,7 @@ export default function ShoppingPage() {
       resetPaymentSettlement();
       setIsSubmitting(false);
     });
-  }, [cart, phone, useCreditAmount, isOnline, pendingPurchases, discounttype, total, formatNumber, paymentType, installmentCount, payableNow, paymentFieldsValid, settlementMode, appendPaymentSettlement, resetPaymentSettlement, router, installmentCalculation, calculatingInstallments, installmentCreditError, refreshShopDashboard]);
+  }, [cart, phone, useCreditAmount, isOnline, pendingPurchases, discounttype, total, formatNumber, paymentType, installmentCount, payableNow, paymentFieldsValid, settlementMode, appendPaymentSettlement, resetPaymentSettlement, installmentCalculation, calculatingInstallments, installmentCreditError, finalizeSuccessfulSale]);
 
   // بررسی اعتبارسنجی تخفیف هنگام تغییر total
   useEffect(() => {
@@ -2845,6 +2935,67 @@ export default function ShoppingPage() {
           </Box>
         </Box>
       </Modal>
+
+      <Modal
+        open={saleSuccessOpen}
+        onClose={() => setSaleSuccessOpen(false)}
+        aria-labelledby="sale-success-modal"
+      >
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: { xs: "92%", sm: 420 },
+            bgcolor: "var(--admin-surface)",
+            borderRadius: "16px",
+            boxShadow: 24,
+            p: 3,
+            textAlign: "center",
+            direction: "rtl",
+            border: "1px solid var(--admin-menu-hover)",
+          }}
+        >
+          <CheckCircleIcon sx={{ fontSize: 56, color: "#1ab44d", mb: 1.5 }} />
+          <Typography id="sale-success-modal" sx={{ fontWeight: 700, fontSize: "18px", color: "var(--admin-text)", mb: 1 }}>
+            خرید با موفقیت ثبت شد
+          </Typography>
+          {lastSaleReceipt?.purchaseId != null && (
+            <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "14px", mb: 2 }}>
+              شماره فاکتور: {lastSaleReceipt.purchaseId}
+            </Typography>
+          )}
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, mt: 2 }}>
+            <Button
+              variant="contained"
+              startIcon={<PrintIcon />}
+              onClick={handlePrintLastSaleReceipt}
+              sx={{
+                bgcolor: "#78b568",
+                "&:hover": { bgcolor: "#5a9a4a" },
+                borderRadius: "12px",
+                py: 1.2,
+              }}
+            >
+              چاپ فاکتور
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => setSaleSuccessOpen(false)}
+              sx={{
+                borderColor: "var(--admin-menu-hover)",
+                color: "var(--admin-text)",
+                borderRadius: "12px",
+                py: 1.2,
+              }}
+            >
+              ادامه فروش
+            </Button>
+          </Box>
+        </Box>
+      </Modal>
+
       <ToastContainer autoClose={3000} style={{ marginBottom: '76px', borderRadius: "15px" }} position={"bottom-right"} />
     </Box>
   );

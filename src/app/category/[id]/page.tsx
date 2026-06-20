@@ -41,7 +41,7 @@ import Badge from '@mui/material/Badge';
 import HomeIcon from '@mui/icons-material/Home';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import { addToCart, getCartItemCount, isProductInCart, getCartItemQuantity, updateCartItemQuantity, removeFromCart } from '../../liberari/cart';
-import { useShopContext } from '../../context/ShopContext';
+import { useShopContext, useShopStorefront } from '../../context/ShopContext';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 
@@ -82,6 +82,7 @@ export default function CategoryProductsPage() {
   const params = useParams();
   const router = useRouter();
   const { searchQuery } = useShopContext();
+  const { shopPath, shopApi } = useShopStorefront();
   const categoryId = params?.id as string;
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,15 +108,31 @@ export default function CategoryProductsPage() {
 
   const fetchCategoryInfo = async () => {
     try {
-      const res = await apiRequestError("Get", {}, {}, `/api/category/${categoryId}`, false, false, "");
+      const res = await apiRequestError(
+        "Get",
+        {},
+        {},
+        shopApi(`/api/category/${categoryId}`),
+        false,
+        false,
+        "",
+      );
+      console.log("res : ",res);
       
       if (!res.hasError && res) {
         setCategoryInfo(res);
         setCategoryName(res.name || '');
         
-        // اگر parent_id وجود داشت، اطلاعات parent را هم بگیر
         if (res.parent_id) {
-          const parentRes = await apiRequestError("Get", {}, {}, `/api/category/${res.parent_id}`, false, false, "");
+          const parentRes = await apiRequestError(
+            "Get",
+            {},
+            {},
+            shopApi(`/api/category/${res.parent_id}`),
+            false,
+            false,
+            "",
+          );
           if (!parentRes.hasError && parentRes) {
             setParentCategory(parentRes);
           }
@@ -131,7 +148,7 @@ export default function CategoryProductsPage() {
   const fetchCategoryProducts = async (page: number = 1) => {
     try {
       setLoading(true);
-      let url = `/api/category/${categoryId}/products?per_page=${perPage}&page=${page}`;
+      let url = shopApi(`/api/category/${categoryId}/products?per_page=${perPage}&page=${page}`);
       
       if (searchQuery.trim()) {
         const searchFilterModel = JSON.stringify({ name: searchQuery.trim() });
@@ -139,6 +156,7 @@ export default function CategoryProductsPage() {
       }
 
       const res = await apiRequestError("Get", {}, {}, url, false, false, "");
+console.log("res2222 : ",res);
 
       if (!res.hasError) {
         if (res.data && Array.isArray(res.data)) {
@@ -261,7 +279,7 @@ export default function CategoryProductsPage() {
             <Link
               component="button"
               variant="body2"
-              onClick={() => router.push('')}
+              onClick={() => router.push(shopPath(''))}
               sx={{
                 display: 'flex',
                 alignItems: 'center',
@@ -280,7 +298,7 @@ export default function CategoryProductsPage() {
               <Link
                 component="button"
                 variant="body2"
-                onClick={() => router.push(`/category/${parentCategory.id}`)}
+                onClick={() => router.push(shopPath(`/category/${parentCategory.id}`))}
                 sx={{
                   color: 'rgba(255,255,255,0.9)',
                   textDecoration: 'none',
@@ -338,7 +356,7 @@ export default function CategoryProductsPage() {
             {products.map((product) => (
               <Grid item xs={6} sm={4} md={3} key={product.id}>
                 <Card
-                  onClick={() => router.push(`/product/${product.id}`)}
+                  onClick={() => router.push(shopPath(`/product/${product.id}`))}
                   sx={{
                     height: '100%',
                     display: 'flex',

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   Box,
   Container,
@@ -51,6 +51,13 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { useRouter } from 'next/navigation';
 import { useShopContext, useShopStorefront } from '@/app/context/ShopContext';
 import tokenCode from '@/app/coponent/tokenCode';
+import {
+  type ShopCategory,
+  parseCategoriesFromApi,
+  getCategoryImageUrl,
+  getCategoryBackgroundColor,
+  getHomepageCategorySections,
+} from '@/app/lib/shopCategories';
 
 interface ProductImage {
   id: number;
@@ -72,16 +79,6 @@ interface Product {
   has_discount?: boolean;
   image?: string;
   images?: ProductImage[];
-}
-
-interface Category {
-  id: number;
-  name: string;
-  parent_id: number | null;
-  description?: string;
-  order?: number;
-  is_active?: boolean;
-  children?: Category[];
 }
 
 const features = [
@@ -134,66 +131,11 @@ const faqs = [
 ];
 
 
-const categoryBanners = [
-  {
-    id: 1,
-    title: 'BOYS',
-    titleFa: 'پسرانه',
-    image: '/pic/boys-1.png',
-    backgroundColor: '#87CEEB',
-    route: '/category/1',
-  },
-  {
-    id: 2,
-    title: 'GIRLS',
-    titleFa: 'دخترانه',
-    image: '/pic/Girls-1.png',
-    backgroundColor: '#FFB6C1',
-    route: '/category/2',
-  },
-];
-
-const categoryCards = [
-  {
-    id: 1,
-    title: '',
-    subtitle: '',
-    image: '/pic/girls-set.png',
-    backgroundColor: '#FFB6C1',
-    route: '/category/2',
-  },
-  {
-    id: 2,
-    title: '',
-    subtitle: '',
-    image: '/pic/boys-set.png',
-    backgroundColor: '#FFA07A',
-    route: '/category/1',
-  },
-  {
-    id: 3,
-    title: '',
-    subtitle: '',
-    image: '/pic/khanegi-g-1.png',
-    backgroundColor: '#DDA0DD',
-    route: '/category/2',
-  },
-  {
-    id: 4,
-    title: '',
-    subtitle: '',
-    image: '/pic/khanegi-b-1.png',
-    backgroundColor: '#98FB98',
-    route: '/category/1',
-  },
-];
-
 export default function ShopHomePage() {
   const router = useRouter();
   const { searchQuery } = useShopContext();
   const { shopCode, shopPath, shopApi, getCustomerToken } = useShopStorefront();
   const bestSellingFetchedRef = useRef(false);
-  const categoriesFetchedRef = useRef(false);
   const [latestProducts, setLatestProducts] = useState<Product[]>([]);
   const [bestSellingProducts, setBestSellingProducts] = useState<Product[]>([]);
   const [bestSellingLoading, setBestSellingLoading] = useState(true);
@@ -207,8 +149,14 @@ export default function ShopHomePage() {
   const [totalProducts, setTotalProducts] = useState(0);
   const [cartItemCount, setCartItemCount] = useState(0);
   const [cartUpdateTrigger, setCartUpdateTrigger] = useState(0);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<ShopCategory[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+
+  const { banners: categoryBanners, cards: categoryCards } = useMemo(
+    () => getHomepageCategorySections(categories),
+    [categories],
+  );
 
   const fetchProducts = useCallback(async (page: number = 1, isInitial: boolean = false, search: string = '') => {
     try {
@@ -299,22 +247,22 @@ export default function ShopHomePage() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await apiRequestError("Get", {}, {}, shopApi("/api/category?tree=true"), false, false, "");
-        let categoriesData: Category[] = [];
-        
-        if (!res.hasError) {
-          if (Array.isArray(res)) {
-            categoriesData = res;
-          } else if (res.data && Array.isArray(res.data)) {
-            categoriesData = res.data;
-          }
-        }
-        
-        // فقط دسته‌بندی‌های سطح اول (parent_id = null)
-        const rootCategories = categoriesData.filter((cat: Category) => cat.parent_id === null);
-        setCategories(rootCategories);
+        setCategoriesLoading(true);
+        const res = await apiRequestError(
+          "Get",
+          {},
+          {},
+          shopApi("/api/category?tree=true"),
+          false,
+          false,
+          "",
+        );
+        setCategories(parseCategoriesFromApi(res));
       } catch (error) {
         console.error('Error fetching categories:', error);
+        setCategories([]);
+      } finally {
+        setCategoriesLoading(false);
       }
     };
     fetchCategories();
@@ -362,8 +310,8 @@ export default function ShopHomePage() {
     return Math.round(((originalPrice - salePrice) / originalPrice) * 100);
   };
 
-  const handleCategoryClick = (route: string) => {
-    router.push(shopPath(route));
+  const handleCategoryClick = (categoryId: number) => {
+    router.push(shopPath(`/category/${categoryId}`));
   };
 
   const getProductImage = (product: Product): string => {
@@ -723,25 +671,48 @@ export default function ShopHomePage() {
 
        
 
-        {/* Category Banners - Hide when searching */}
-        {!searchQuery && (
+        {/* Category sections from API - Hide when searching */}
+        {!searchQuery && (categoriesLoading || categoryBanners.length > 0 || categoryCards.length > 0) && (
           <>
-            {/* Category Banners - Boys and Girls */}
+            {categoriesLoading ? (
+              <Box sx={{ marginTop: { xs: '16px', md: '24px' }, marginBottom: { xs: '24px', md: '32px' } }}>
+                <Grid container spacing={{ xs: 2, md: 3 }} sx={{ marginBottom: { xs: '24px', md: '32px' } }}>
+                  {[1, 2].map((item) => (
+                    <Grid item xs={12} md={6} key={item}>
+                      <Box
+                        sx={{
+                          borderRadius: '24px',
+                          height: { xs: '200px', sm: '250px', md: '300px' },
+                          bgcolor: '#f5f5f5',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <CircularProgress size={32} sx={{ color: '#667eea' }} />
+                      </Box>
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            ) : (
+              <>
+            {categoryBanners.length > 0 && (
             <Grid
               container
               spacing={{ xs: 2, md: 3 }}
               sx={{ marginBottom: { xs: '24px', md: '32px' }, marginTop: { xs: '16px', md: '24px' } }}
             >
-              {categoryBanners.map((banner) => (
-                <Grid item xs={12} md={6} key={banner.id}>
+              {categoryBanners.map((category, index) => (
+                <Grid item xs={12} md={6} key={category.id}>
                   <Card
-                    onClick={() => handleCategoryClick(banner.route)}
+                    onClick={() => handleCategoryClick(category.id)}
                     sx={{ 
                       position: 'relative',
                       borderRadius: '24px',
                       overflow: 'hidden',
                       cursor: 'pointer',
-                      backgroundColor: banner.backgroundColor,
+                      backgroundColor: getCategoryBackgroundColor(category, index),
                       height: { xs: '200px', sm: '250px', md: '300px' },
                       transition: 'transform 0.3s, box-shadow 0.3s',
                       '&:hover': {
@@ -761,8 +732,8 @@ export default function ShopHomePage() {
                       }}
                     >
                       <Image
-                        src={banner.image}
-                        alt={banner.titleFa}
+                        src={getCategoryImageUrl(category)}
+                        alt={category.name}
                         fill
                         style={{
                           objectFit: 'contain',
@@ -770,24 +741,44 @@ export default function ShopHomePage() {
                         }}
                         priority
                       />
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          bottom: { xs: '12px', md: '16px' },
+                          right: { xs: '16px', md: '20px' },
+                          zIndex: 2,
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            fontSize: { xs: '18px', md: '22px' },
+                            fontWeight: 'bold',
+                            color: '#fff',
+                            textShadow: '0 2px 8px rgba(0,0,0,0.5)',
+                          }}
+                        >
+                          {category.name}
+                        </Typography>
+                      </Box>
                     </Box>
                   </Card>
                 </Grid>
               ))}
             </Grid>
+            )}
 
-            {/* Category Cards - 4 in a row on desktop */}
+            {categoryCards.length > 0 && (
             <Grid container spacing={{ xs: 2, md: 2 }} sx={{ marginBottom: { xs: '24px', md: '32px' } }}>
-              {categoryCards.map((card) => (
-                <Grid item xs={6} md={3} key={card.id}>
+              {categoryCards.map((category, index) => (
+                <Grid item xs={6} md={3} key={category.id}>
                   <Card
-                    onClick={() => handleCategoryClick(card.route)}
+                    onClick={() => handleCategoryClick(category.id)}
                     sx={{
                       position: 'relative',
                       borderRadius: '20px',
                       overflow: 'hidden',
                       cursor: 'pointer',
-                      backgroundColor: card.backgroundColor,
+                      backgroundColor: getCategoryBackgroundColor(category, index + 2),
                       height: { xs: '120px', sm: '140px', md: '160px' },
                       transition: 'transform 0.3s, box-shadow 0.3s',
                       '&:hover': {
@@ -804,8 +795,8 @@ export default function ShopHomePage() {
                       }}
                     >
                       <Image
-                        src={card.image}
-                        alt={`${card.title} ${card.subtitle}`}
+                        src={getCategoryImageUrl(category)}
+                        alt={category.name}
                         fill
                         style={{
                           objectFit: 'cover',
@@ -827,27 +818,19 @@ export default function ShopHomePage() {
                         color: '#fff',
                         textShadow: '0 2px 6px rgba(0,0,0,0.6)',
                         lineHeight: 1.2,
-                        marginBottom: '2px',
                       }}
                     >
-                      {card.title}
+                      {category.name}
                       </Typography>
-                    <Typography
-                      sx={{
-                        fontSize: { xs: '11px', sm: '12px', md: '14px' },
-                        fontWeight: '600',
-                        color: '#fff',
-                        textShadow: '0 2px 6px rgba(0,0,0,0.6)',
-                      }}
-                    >
-                      {card.subtitle}
-                        </Typography>
                       </Box>
                     </Box>
                   </Card>
                 </Grid>
               ))}
             </Grid>
+            )}
+              </>
+            )}
           </>
         )}
 
