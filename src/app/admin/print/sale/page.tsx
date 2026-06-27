@@ -436,7 +436,7 @@ function SaleReceiptPrintContent() {
 
   );
 
-  const [showSettings, setShowSettings] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
 
 
 

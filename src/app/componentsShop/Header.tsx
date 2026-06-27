@@ -37,6 +37,8 @@ import {
 } from '@/app/lib/shopAccess';
 import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import StorefrontIcon from '@mui/icons-material/Storefront';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import ShoppingCartCheckoutIcon from '@mui/icons-material/ShoppingCartCheckout';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import CardMembershipIcon from '@mui/icons-material/CardMembership';
 import AdminThemeMenuItem from '@/app/admin/theme/AdminThemeMenuItem';
@@ -1210,6 +1212,27 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
             <SmsIcon sx={{ color: "#2196f3", fontSize: "22px" }} />
             ارسال پیامک
           </MenuItem>
+          <MenuItem
+            onClick={() => handleMenuClick("/admin/sms-packages")}
+            sx={{
+              color: "var(--admin-text)",
+              fontSize: "15px",
+              padding: "12px 20px",
+              borderRadius: "8px",
+              margin: "4px 8px",
+              transition: "all 0.2s ease",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              "&:hover": {
+                backgroundColor: "var(--admin-menu-hover)",
+                transform: "translateX(-4px)",
+              }
+            }}
+          >
+            <ShoppingCartCheckoutIcon sx={{ color: "#ff9800", fontSize: "22px" }} />
+            خرید بسته پیامک
+          </MenuItem>
         </Menu>
 
         {/* Admin submenu — فقط شماره 09399166196 */}
@@ -1248,6 +1271,26 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
           >
             <StorefrontIcon sx={{ color: "#ff9800", fontSize: "22px" }} />
             مدیریت فروشگاه‌ها
+          </MenuItem>
+          <MenuItem
+            onClick={() => handleMenuClick("/admin/sms-package-orders")}
+            sx={{
+              color: "var(--admin-text)",
+              fontSize: "15px",
+              padding: "12px 20px",
+              borderRadius: "8px",
+              margin: "4px 8px",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              "&:hover": {
+                backgroundColor: "rgba(255, 152, 0, 0.12)",
+                transform: "translateX(-4px)",
+              },
+            }}
+          >
+            <ReceiptLongIcon sx={{ color: "#ff9800", fontSize: "22px" }} />
+            درخواست‌های بسته پیامک
           </MenuItem>
         </Menu>
       </Container>

@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Box, Card, CardContent, Typography, CircularProgress } from "@mui/material";
+import { Box, Card, CardContent, Typography, CircularProgress, Button } from "@mui/material";
 import SmsIcon from "@mui/icons-material/Sms";
+import ShoppingCartCheckoutIcon from "@mui/icons-material/ShoppingCartCheckout";
+import { useRouter } from "next/navigation";
 import tokenCode from "@/app/coponent/tokenCode";
 import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
 import {
@@ -41,6 +43,7 @@ export default function ShopSmsQuotaCard({
   estimateRecipientCount = 0,
   compact = false,
 }: ShopSmsQuotaCardProps) {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [quota, setQuota] = useState(0);
   const [serverEstimate, setServerEstimate] = useState<number | null>(null);
@@ -211,11 +214,33 @@ export default function ShopSmsQuotaCard({
                     fontWeight: 600,
                   }}
                 >
-                  اعتبار کافی نیست. با ادمین برای شارژ تماس بگیرید.
+                  اعتبار کافی نیست. بسته پیامک خریداری کنید یا با ادمین تماس بگیرید.
                 </Typography>
               )}
             </Box>
           )}
+
+        {!loading && (
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<ShoppingCartCheckoutIcon />}
+            onClick={() => router.push("/admin/sms-packages")}
+            sx={{
+              mt: 1.5,
+              width: "100%",
+              borderColor: "var(--admin-accent-border)",
+              color: "var(--admin-accent)",
+              fontSize: compact ? "12px" : "13px",
+              "&:hover": {
+                borderColor: "var(--admin-accent)",
+                bgcolor: "var(--admin-menu-hover)",
+              },
+            }}
+          >
+            خرید بسته پیامک
+          </Button>
+        )}
       </CardContent>
     </Card>
   );

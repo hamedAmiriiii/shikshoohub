@@ -3,10 +3,14 @@ export const ADMIN_POS_SETTINGS_CHANGED_EVENT = "admin-pos-settings-changed";
 
 export type AdminPosSettings = {
   showProductListOnMainPage: boolean;
+  menuMode: boolean;
+  installmentPaymentEnabled: boolean;
 };
 
 const DEFAULT_SETTINGS: AdminPosSettings = {
   showProductListOnMainPage: false,
+  menuMode: false,
+  installmentPaymentEnabled: true,
 };
 
 export function readAdminPosSettings(): AdminPosSettings {

@@ -16,8 +16,10 @@ import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 import LoyaltyIcon from "@mui/icons-material/Loyalty";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
+import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import EventIcon from "@mui/icons-material/Event";
 import PercentIcon from "@mui/icons-material/Percent";
+import PaymentsIcon from "@mui/icons-material/Payments";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { apiRequestError } from "@/app/lib/apiRequestError/client";
@@ -137,9 +139,14 @@ export default function SettingsPage() {
   const [isSavingExpiry, setIsSavingExpiry] = useState(false);
   const [isSavingInterestRate, setIsSavingInterestRate] = useState(false);
   const [showProductListOnMainPage, setShowProductListOnMainPage] = useState(false);
+  const [menuMode, setMenuMode] = useState(false);
+  const [installmentPaymentEnabled, setInstallmentPaymentEnabled] = useState(true);
 
   useEffect(() => {
-    setShowProductListOnMainPage(readAdminPosSettings().showProductListOnMainPage);
+    const settings = readAdminPosSettings();
+    setShowProductListOnMainPage(settings.showProductListOnMainPage);
+    setMenuMode(settings.menuMode);
+    setInstallmentPaymentEnabled(settings.installmentPaymentEnabled);
   }, []);
 
   const handleToggleProductListOnMainPage = (
@@ -152,6 +159,28 @@ export default function SettingsPage() {
       enabled
         ? "لیست کالا در صفحه فروش نمایش داده می‌شود"
         : "لیست کالا از صفحه فروش پنهان شد",
+    );
+  };
+
+  const handleToggleMenuMode = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setMenuMode(enabled);
+    writeAdminPosSettings({ menuMode: enabled });
+    toast.success(
+      enabled
+        ? "حالت منو فعال شد — صفحه فروش به نمای کارتی تغییر می‌کند"
+        : "حالت منو غیرفعال شد",
+    );
+  };
+
+  const handleToggleInstallmentPayment = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setInstallmentPaymentEnabled(enabled);
+    writeAdminPosSettings({ installmentPaymentEnabled: enabled });
+    toast.success(
+      enabled
+        ? "گزینه‌های نقدی و اقساطی در صفحه فروش نمایش داده می‌شوند"
+        : "گزینه‌های نقدی و اقساطی از صفحه فروش پنهان شدند",
     );
   };
 
@@ -368,7 +397,54 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+   
+
       <SettingsSectionCard
+        icon={<Inventory2Icon sx={{ fontSize: 22 }} />}
+        title="لیست کالا در صفحه فروش"
+        hint="جستجو و افزودن سریع به سبد از کش محلی"
+        action={
+          <Switch
+            size="small"
+            checked={showProductListOnMainPage}
+            onChange={handleToggleProductListOnMainPage}
+            disabled={menuMode}
+            sx={switchSx}
+          />
+        }
+      />
+
+      <SettingsSectionCard
+        icon={<RestaurantMenuIcon sx={{ fontSize: 22 }} />}
+        title="حالت منو"
+        hint="نمایش کارتی کالاها با فیلتر دسته‌بندی؛ جایگزین صفحه فروش عادی"
+        action={
+          <Switch
+            size="small"
+            checked={menuMode}
+            onChange={handleToggleMenuMode}
+            sx={switchSx}
+          />
+        }
+      />
+
+      <SettingsSectionCard
+        icon={<PaymentsIcon sx={{ fontSize: 22 }} />}
+        title="نحوه پرداخت در فروش"
+        hint="نمایش گزینه نقدی و اقساطی هنگام ثبت فروش"
+        action={
+          <Switch
+            size="small"
+            checked={installmentPaymentEnabled}
+            onChange={handleToggleInstallmentPayment}
+            sx={switchSx}
+          />
+        }
+      />
+
+
+
+<SettingsSectionCard
         icon={<LoyaltyIcon sx={{ fontSize: 22 }} />}
         title="باشگاه مشتریان"
         hint="اعتبار و امتیاز مشتری بر اساس مبلغ خرید"
@@ -389,21 +465,9 @@ export default function SettingsPage() {
         <LoyaltyCreditTiersSettings disabled={!loyaltyCreditEnabled} />
       </SettingsSectionCard>
 
-      <SettingsSectionCard
-        icon={<Inventory2Icon sx={{ fontSize: 22 }} />}
-        title="لیست کالا در صفحه فروش"
-        hint="جستجو و افزودن سریع به سبد از کش محلی"
-        action={
-          <Switch
-            size="small"
-            checked={showProductListOnMainPage}
-            onChange={handleToggleProductListOnMainPage}
-            sx={switchSx}
-          />
-        }
-      />
 
-      <SettingsSectionCard
+
+      {/* <SettingsSectionCard
         icon={<EventIcon sx={{ fontSize: 22 }} />}
         title="انقضای اعتبار"
         hint="مدت اعتبار مشتری · ۱ تا ۳۶۵ روز"
@@ -445,9 +509,9 @@ export default function SettingsPage() {
             {isSavingExpiry ? "…" : "ذخیره"}
           </Button>
         </Box>
-      </SettingsSectionCard>
+      </SettingsSectionCard> */}
 
-      <SettingsSectionCard
+      {/* <SettingsSectionCard
         icon={<PercentIcon sx={{ fontSize: 22 }} />}
         title="نرخ سود اقساط"
         hint="درصد ماهانه · ۰ تا ۱۰۰"
@@ -493,7 +557,7 @@ export default function SettingsPage() {
             {isSavingInterestRate ? "…" : "ذخیره"}
           </Button>
         </Box>
-      </SettingsSectionCard>
+      </SettingsSectionCard> */}
 
       <ToastContainer
         autoClose={3000}

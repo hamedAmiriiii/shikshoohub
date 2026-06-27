@@ -51,6 +51,7 @@ import {
   ADMIN_POS_SETTINGS_CHANGED_EVENT,
 } from '@/app/lib/adminPosSettings';
 import SaleProductListPanel from '@/app/admin/SaleProductListPanel';
+import AdminMenuModeView from '@/app/admin/AdminMenuModeView';
 import { publishAdminSaleCartSnapshot } from '@/app/admin/onboarding/adminSaleCartCheck';
 import CategoryIcon from '@mui/icons-material/Category';
 import {
@@ -135,6 +136,8 @@ export default function ShoppingPage() {
   const [salesByDay, setSalesByDay] = useState<SalesByDaySnapshot | null>(null);
   const [productsCount, setProductsCount] = useState(0);
   const [showProductListOnMainPage, setShowProductListOnMainPage] = useState(false);
+  const [menuMode, setMenuMode] = useState(false);
+  const [installmentPaymentEnabled, setInstallmentPaymentEnabled] = useState(true);
   const [saleSuccessOpen, setSaleSuccessOpen] = useState(false);
   const [lastSaleReceipt, setLastSaleReceipt] = useState<SaleReceiptData | null>(null);
   const [isRegisteringUser, setIsRegisteringUser] = useState(false);
@@ -625,13 +628,43 @@ export default function ShoppingPage() {
   }, [paymentType, installmentCount, total, useCreditAmount, discounttype, phone]);
 
   useEffect(() => {
-    setShowProductListOnMainPage(readAdminPosSettings().showProductListOnMainPage);
-    const onSettingsChange = () => {
-      setShowProductListOnMainPage(readAdminPosSettings().showProductListOnMainPage);
+    const applyPosSettings = () => {
+      const settings = readAdminPosSettings();
+      setShowProductListOnMainPage(settings.showProductListOnMainPage);
+      setMenuMode(settings.menuMode);
+      setInstallmentPaymentEnabled(settings.installmentPaymentEnabled);
     };
-    window.addEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, onSettingsChange);
-    return () => window.removeEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, onSettingsChange);
+    applyPosSettings();
+    window.addEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, applyPosSettings);
+    return () => window.removeEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, applyPosSettings);
   }, []);
+
+  useEffect(() => {
+    if (!installmentPaymentEnabled && paymentType === "installment") {
+      setPaymentType("cash");
+      setInstallmentCount(2);
+      setInstallmentCalculation(null);
+      installmentCalculationRef.current = null;
+      setInstallmentCreditError("");
+    }
+  }, [installmentPaymentEnabled, paymentType]);
+
+  const clearMenuCart = useCallback(() => {
+    setCart([]);
+    setTotal(0);
+    setPhone("");
+    setCredit(0);
+    setUseCreditAmount(0);
+    setDiscounttype(0);
+    setDiscountDisplay("");
+    setDiscountError("");
+    setBackPrice(0);
+    setInstallmentCalculation(null);
+    installmentCalculationRef.current = null;
+    setPaymentType("cash");
+    setInstallmentCount(2);
+    resetPaymentSettlement();
+  }, [resetPaymentSettlement]);
 
   const addProductToCart = useCallback((item: any) => {
     setCart((prevCart) => {
@@ -1457,7 +1490,106 @@ export default function ShoppingPage() {
           </Box>
         )}
 
-        {/* Desktop Layout */}
+        {menuMode && (
+          <AdminMenuModeView
+            products={items}
+            onAddProduct={addProductToCart}
+            formatNumber={formatNumber}
+            cartPanel={
+              cart.length > 0
+                ? {
+                    cart,
+                    total,
+                    formatNumber,
+                    onUpdateQuantity: updateQuantity,
+                    onRemoveItem: removeItemFromCart,
+                    onClearCart: clearMenuCart,
+                    phone,
+                    onChangePhone,
+                    checkingCredit,
+                    credit,
+                    useCreditAmount,
+                    discounttype,
+                    discountDisplay,
+                    discountError,
+                    isDiscountFocused,
+                    onDiscountFocus: () => setIsDiscountFocused(true),
+                    onDiscountChange: (value: string) => {
+                      const cleaned = value.replace(/,/g, "");
+                      if (cleaned === "" || /^\d+$/.test(cleaned)) {
+                        const numValue = cleaned === "" ? 0 : Number(cleaned);
+                        const maxDiscount = Math.floor(total * 0.15);
+                        if (numValue > maxDiscount) {
+                          setDiscountError(
+                            `حداکثر ${formatNumber(maxDiscount)} تومان`,
+                          );
+                          setDiscounttype(0);
+                          setDiscountDisplay("");
+                        } else {
+                          setDiscountError("");
+                          setDiscounttype(numValue);
+                          setDiscountDisplay(cleaned === "" ? "" : cleaned);
+                        }
+                      }
+                    },
+                    onDiscountBlur: (value: string) => {
+                      setIsDiscountFocused(false);
+                      const cleaned = value.replace(/,/g, "");
+                      if (cleaned === "" || cleaned === "0" || Number(cleaned) === 0) {
+                        setDiscountDisplay("");
+                        setDiscounttype(0);
+                        setDiscountError("");
+                      } else {
+                        setDiscountDisplay(
+                          new Intl.NumberFormat("fa-IR").format(Number(cleaned)),
+                        );
+                      }
+                    },
+                    paymentType,
+                    onPaymentTypeChange: (type) => {
+                      setPaymentType(type);
+                      if (type === "cash") {
+                        setInstallmentCount(2);
+                        setInstallmentCalculation(null);
+                        installmentCalculationRef.current = null;
+                        setInstallmentCreditError("");
+                      } else {
+                        setDiscounttype(0);
+                        setDiscountDisplay("");
+                        setDiscountError("");
+                      }
+                    },
+                    installmentCount,
+                    onInstallmentCountChange: setInstallmentCount,
+                    payableNow,
+                    settlementMode,
+                    onSettlementModeChange: (mode) => {
+                      setSettlementMode(mode);
+                      setPaymentSplitError("");
+                      if (mode === "split") {
+                        setCardAmountInput(String(payableNow));
+                        setCashAmountInput("0");
+                      }
+                    },
+                    cardAmountInput,
+                    cashAmountInput,
+                    onCardAmountChange: handleCardAmountChange,
+                    onCashAmountChange: handleCashAmountChange,
+                    paymentSplitError,
+                    paymentFieldsValid,
+                    isSubmitting,
+                    onConfirm: confirm,
+                    calculatingInstallments,
+                    installmentCreditError,
+                    installmentCalculation,
+                    installmentPaymentEnabled,
+                  }
+                : null
+            }
+          />
+        )}
+
+        {!menuMode && (
         <Grid container spacing={3} sx={{ maxWidth: { md: "1400px" }, margin: { md: "0 auto" } }}>
           {/* Cart Items */}
           <Grid item xs={12} md={cart.length > 0 ? 8 : 12}>
@@ -2182,6 +2314,7 @@ export default function ShoppingPage() {
                     </CardContent>
                   )}
                   <CardContent sx={{ padding: { xs: "12px", md: "20px" }, paddingTop: 0 }}>
+                    {installmentPaymentEnabled && (
                     <Box sx={{
                       display: "flex",
                       alignItems: "center",
@@ -2265,7 +2398,8 @@ export default function ShoppingPage() {
                       </RadioGroup>
                     </FormControl>
                     </Box>
-                    {paymentType === 'installment' && (
+                    )}
+                    {installmentPaymentEnabled && paymentType === 'installment' && (
                       <Box sx={{ marginTop: { xs: "12px", md: "16px" } }}>
                         <Typography sx={{ 
                           color: "var(--admin-text)", 
@@ -2633,7 +2767,7 @@ export default function ShoppingPage() {
                         </Typography>
                       </Box>
                     )}
-                    {paymentType === 'installment' && installmentCount >= 2 && (
+                    {installmentPaymentEnabled && paymentType === 'installment' && installmentCount >= 2 && (
                       <Box sx={{ 
                         marginTop: { xs: "12px", md: "16px" }, 
                         padding: { xs: "12px", md: "16px" }, 
@@ -2729,7 +2863,7 @@ export default function ShoppingPage() {
                     !total || 
                     isSubmitting || 
                     (payableNow > 0 && !paymentFieldsValid) ||
-                    (paymentType === 'installment' && (
+                    (installmentPaymentEnabled && paymentType === 'installment' && (
                       !phone || 
                       phone.trim() === '' || 
                       !!installmentCreditError || 
@@ -2783,9 +2917,10 @@ export default function ShoppingPage() {
             </Grid>
           )}
         </Grid>
+        )}
       </Container>
 
-      {showProductListOnMainPage && (
+      {!menuMode && showProductListOnMainPage && (
         <Box sx={{ display: { xs: "none", md: "block" } }}>
           <SaleProductListPanel
             variant="floating"
@@ -2797,6 +2932,7 @@ export default function ShoppingPage() {
       )}
 
       {/* Floating Action Button */}
+      {!menuMode && (
       <Button
         data-admin-tour="scan-product"
         onClick={handleOpenModal}
@@ -2818,6 +2954,7 @@ export default function ShoppingPage() {
       >
         <AddIcon sx={{ fontSize: { xs: "32px", md: "40px" } }} />
       </Button>
+      )}
 
 
       <Modal open={openModal} onClose={handleCloseModal}>
