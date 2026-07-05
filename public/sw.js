@@ -1,25 +1,41 @@
-const CACHE_NAME = 'webino-pwa-v2';
+const CACHE_NAME = 'webino-pwa-v4';
+const ADMIN_CACHE_NAME = 'webino-admin-shell-v2';
 const OFFLINE_URL = '/offline.html';
-const PRECACHE_URLS = [OFFLINE_URL, '/manifest.json', '/icon-192.png', '/icon-512.png'];
+const PRECACHE_URLS = [
+  OFFLINE_URL,
+  '/manifest.json',
+  '/manifest-admin.json',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/admin',
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
+    Promise.all([
+      caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS)),
+      caches.open(ADMIN_CACHE_NAME).then((cache) =>
+        cache.addAll(['/admin', '/offline.html', '/manifest-admin.json']),
+      ),
+    ]),
   );
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) =>
-      Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
+    caches
+      .keys()
+      .then((cacheNames) =>
+        Promise.all(
+          cacheNames.map((cacheName) => {
+            if (cacheName !== CACHE_NAME && cacheName !== ADMIN_CACHE_NAME) {
+              return caches.delete(cacheName);
+            }
+          }),
+        ),
       )
-    ).then(() => self.clients.claim())
+      .then(() => self.clients.claim()),
   );
 });
 
@@ -29,6 +45,15 @@ self.addEventListener('message', (event) => {
   }
 });
 
+function isAdminNavigation(url) {
+  return url.pathname === '/admin' || url.pathname.startsWith('/admin/');
+}
+
+/** فایل‌های Next.js نباید توسط SW کش شوند — باعث 404 روی chunkها می‌شود */
+function shouldBypassServiceWorker(url) {
+  return url.pathname.startsWith('/_next/') || url.pathname.startsWith('/api/');
+}
+
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') {
     return;
@@ -36,6 +61,27 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  if (shouldBypassServiceWorker(url)) {
+    return;
+  }
+
+  if (event.request.mode === 'navigate' && isAdminNavigation(url)) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response.status === 200) {
+            const clone = response.clone();
+            caches.open(ADMIN_CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() =>
+          caches.match(event.request).then((cached) => cached || caches.match('/admin') || caches.match(OFFLINE_URL)),
+        ),
+    );
     return;
   }
 
@@ -63,7 +109,7 @@ self.addEventListener('fetch', (event) => {
             statusText: 'Service Unavailable',
             headers: new Headers({ 'Content-Type': 'text/plain' }),
           });
-        })
-      )
+        }),
+      ),
   );
 });

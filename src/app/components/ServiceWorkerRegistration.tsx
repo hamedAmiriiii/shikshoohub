@@ -42,9 +42,14 @@ export default function ServiceWorkerRegistration() {
       } else {
         window.addEventListener('load', registerSW, { once: true });
       }
-    } else if (process.env.NODE_ENV === 'development') {
-      // در dev هم SW برای تست PWA روی localhost (آیکون + manifest)
-      registerSW().catch(() => {});
+    } else {
+      // در dev، SW باعث کش شدن chunkهای _next و خطای 404 می‌شود
+      void navigator.serviceWorker.getRegistrations().then((registrations) => {
+        registrations.forEach((registration) => registration.unregister());
+      });
+      void caches.keys().then((keys) => {
+        keys.forEach((key) => caches.delete(key));
+      });
     }
 
     const onControllerChange = () => {

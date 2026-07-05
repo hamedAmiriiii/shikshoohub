@@ -1,361 +1,270 @@
 "use client";
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { 
-  Box, 
-  Container, 
-  Typography, 
-  Card, 
-  CardContent, 
-  Button, 
-  IconButton, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
+
+import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  CircularProgress,
+  Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   Paper,
-  CircularProgress
-} from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import CloudQueueIcon from '@mui/icons-material/CloudQueue';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import { apiRequestError } from '@/app/lib/apiRequestError/client';
+  Typography,
+} from "@mui/material";
+import DeleteIcon from "@mui/icons-material/Delete";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import CloudQueueIcon from "@mui/icons-material/CloudQueue";
+import ReplayIcon from "@mui/icons-material/Replay";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import {
+  OUTBOX_CHANGED_EVENT,
+  clearOutbox,
+  listOutboxItems,
+  outboxItemToLegacyPending,
+  removeOutboxItem,
+  syncAllPendingPurchases,
+  syncOutboxItem,
+  type OutboxItem,
+} from "@/app/lib/offline";
 
-const formatNumber = (num: number) => {
-  return new Intl.NumberFormat('fa-IR').format(num);
-};
+const formatNumber = (num: number) => new Intl.NumberFormat("fa-IR").format(num);
 
-const formatDate = (timestamp: number) => {
-  const date = new Date(timestamp);
-  return new Intl.DateTimeFormat('fa-IR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(date);
+const formatDate = (timestamp: number) =>
+  new Intl.DateTimeFormat("fa-IR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(timestamp));
+
+const statusLabel: Record<string, { label: string; color: "default" | "warning" | "error" | "info" }> = {
+  pending: { label: "در انتظار", color: "warning" },
+  syncing: { label: "در حال ارسال", color: "info" },
+  failed: { label: "ناموفق", color: "error" },
 };
 
 export default function PendingPurchasesPage() {
   const router = useRouter();
-  const [pendingPurchases, setPendingPurchases] = useState<any[]>([]);
+  const [items, setItems] = useState<OutboxItem[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
+  const [confirmClearOpen, setConfirmClearOpen] = useState(false);
 
-  // Online/Offline detection
+  const reload = useCallback(async () => {
+    try {
+      const all = await listOutboxItems();
+      setItems(all.filter((item) => item.type === "purchase"));
+    } catch (error) {
+      console.error("load outbox failed:", error);
+    }
+  }, []);
+
   useEffect(() => {
-    const updateOnlineStatus = () => {
-      setIsOnline(navigator.onLine);
-    };
-
+    const updateOnlineStatus = () => setIsOnline(navigator.onLine);
     updateOnlineStatus();
-    window.addEventListener('online', updateOnlineStatus);
-    window.addEventListener('offline', updateOnlineStatus);
-
+    window.addEventListener("online", updateOnlineStatus);
+    window.addEventListener("offline", updateOnlineStatus);
     return () => {
-      window.removeEventListener('online', updateOnlineStatus);
-      window.removeEventListener('offline', updateOnlineStatus);
+      window.removeEventListener("online", updateOnlineStatus);
+      window.removeEventListener("offline", updateOnlineStatus);
     };
   }, []);
 
-  // بارگذاری خریدهای pending از localStorage
   useEffect(() => {
-    const loadPendingPurchases = () => {
-      try {
-        const pending = localStorage.getItem('pending_purchases');
-        if (pending) {
-          const parsed = JSON.parse(pending);
-          if (Array.isArray(parsed)) {
-            setPendingPurchases(parsed);
-          }
-        }
-      } catch (error) {
-        console.error('خطا در خواندن خریدهای pending:', error);
-      }
-    };
+    reload();
+    window.addEventListener(OUTBOX_CHANGED_EVENT, reload);
+    return () => window.removeEventListener(OUTBOX_CHANGED_EVENT, reload);
+  }, [reload]);
 
-    loadPendingPurchases();
-
-    // بروزرسانی هر 2 ثانیه
-    const interval = setInterval(loadPendingPurchases, 2000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // تابع sync برای خریدهای pending
-  const syncPendingPurchases = async () => {
-    if (pendingPurchases.length === 0 || isSyncing) return;
-    
+  const syncAll = async () => {
+    if (items.length === 0 || isSyncing) return;
     setIsSyncing(true);
-    const purchasesToSync = [...pendingPurchases];
-    const successful: string[] = [];
-    const failed: any[] = [];
-
-    for (let i = 0; i < purchasesToSync.length; i++) {
-      const purchase = purchasesToSync[i];
-      
-      try {
-        const res = await apiRequestError("Post", {}, purchase.data, `/api/purchased-products`, true, true, "");
-        
-        if (res.hasError) {
-          failed.push(purchase);
-        } else {
-          successful.push(purchase.id);
-        }
-      } catch (error) {
-        console.error(`خطا در sync خرید ${purchase.id}:`, error);
-        failed.push(purchase);
+    try {
+      const result = await syncAllPendingPurchases();
+      await reload();
+      const ok = result.successful.length + result.duplicate.length;
+      if (ok > 0 && result.failed.length === 0) {
+        toast.success(`${ok} خرید با موفقیت ثبت شد`);
+      } else if (ok > 0) {
+        toast.success(`${ok} خرید ثبت شد`);
+        toast.warn(`${result.failed.length} خرید هنوز در صف است`);
+      } else if (result.failed.length > 0) {
+        toast.error("ثبت خریدها ناموفق بود");
       }
-      
-      if (i < purchasesToSync.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 200));
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const retryOne = async (item: OutboxItem) => {
+    setIsSyncing(true);
+    try {
+      const outcome = await syncOutboxItem(item);
+      await reload();
+      if (outcome === "success" || outcome === "duplicate") {
+        toast.success("خرید ثبت شد");
+      } else {
+        toast.error(item.lastError || "ثبت ناموفق بود");
       }
-    }
-
-    const remaining = failed;
-    setPendingPurchases(remaining);
-    localStorage.setItem('pending_purchases', JSON.stringify(remaining));
-
-    if (successful.length > 0 && failed.length === 0) {
-      toast.success(`${successful.length} خرید با موفقیت ثبت شد`);
-    } else if (successful.length > 0 && failed.length > 0) {
-      toast.success(`${successful.length} خرید با موفقیت ثبت شد`);
-      toast.warn(`${failed.length} خرید هنوز ثبت نشده است`);
-    } else if (successful.length === 0 && failed.length > 0) {
-      toast.error(`${failed.length} خرید ثبت نشد. لطفاً دوباره تلاش کنید`);
-    }
-
-    setIsSyncing(false);
-  };
-
-  // حذف یک خرید از صف
-  const deletePendingPurchase = (purchaseId: string) => {
-    const updated = pendingPurchases.filter(p => p.id !== purchaseId);
-    setPendingPurchases(updated);
-    localStorage.setItem('pending_purchases', JSON.stringify(updated));
-    toast.success("خرید از صف حذف شد");
-  };
-
-  // حذف همه خریدها
-  const deleteAllPendingPurchases = () => {
-    if (window.confirm('آیا مطمئن هستید که می‌خواهید همه خریدهای در انتظار را حذف کنید؟')) {
-      setPendingPurchases([]);
-      localStorage.setItem('pending_purchases', JSON.stringify([]));
-      toast.success("همه خریدها حذف شدند");
+    } finally {
+      setIsSyncing(false);
     }
   };
 
-  const calculateTotal = (cart: any[]) => {
-    return cart.reduce((sum, item) => {
-      return sum + (Number(item.sale_price) * item.quantity);
-    }, 0);
+  const deleteOne = async (id: string) => {
+    await removeOutboxItem(id);
+    await reload();
+    toast.success("از صف حذف شد");
+  };
+
+  const deleteAll = async () => {
+    await clearOutbox();
+    setConfirmClearOpen(false);
+    await reload();
+    toast.success("همه عملیات معلق حذف شدند");
+  };
+
+  const calculateTotal = (item: OutboxItem) => {
+    if (typeof item.meta.total === "number") return item.meta.total;
+    const cart = item.meta.cart;
+    if (!Array.isArray(cart)) return 0;
+    return cart.reduce((sum, row: any) => sum + Number(row?.sale_price || 0) * Number(row?.quantity || 0), 0);
   };
 
   return (
-    <Box sx={{ position: 'relative', minHeight: '100vh', direction: "rtl", background: "var(--admin-bg-gradient)" }}>
-      <Container maxWidth="xl" sx={{ padding: { xs: '12px', md: '24px' }, paddingBottom: { xs: '100px', md: '40px' } }}>
-        {/* Header */}
-        <Box sx={{ 
-          display: "flex", 
-          justifyContent: "space-between", 
-          alignItems: "center",
-          marginBottom: { xs: "16px", md: "24px" }
-        }}>
+    <Box sx={{ position: "relative", minHeight: "100vh", direction: "rtl", background: "var(--admin-bg-gradient)" }}>
+      <Container maxWidth="xl" sx={{ padding: { xs: "12px", md: "24px" }, paddingBottom: { xs: "100px", md: "40px" } }}>
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: { xs: 2, md: 3 } }}>
           <IconButton
-            onClick={() => router.push('/admin')}
-            sx={{
-              color: "var(--admin-text)",
-              backgroundColor: "var(--admin-divider)",
-              "&:hover": {
-                backgroundColor: "var(--admin-icon-bg)",
-              },
-            }}
+            onClick={() => router.push("/admin")}
+            sx={{ color: "var(--admin-text)", backgroundColor: "var(--admin-divider)" }}
           >
             <ArrowBackIcon />
           </IconButton>
-          <Typography sx={{ 
-            fontWeight: "700", 
-            fontSize: { xs: "18px", md: "24px" }, 
-            color: "var(--admin-text)"
-          }}>
-            خریدهای در انتظار
+          <Typography sx={{ fontWeight: 700, fontSize: { xs: 18, md: 24 }, color: "var(--admin-text)" }}>
+            عملیات معلق
           </Typography>
-          <Box sx={{ width: "40px" }} />
+          <Box sx={{ width: 40 }} />
         </Box>
 
-        {/* Status Banner */}
         {!isOnline && (
-          <Box sx={{
-            backgroundColor: "#ff9800",
-            color: "var(--admin-text)",
-            padding: { xs: "8px 12px", md: "12px 20px" },
-            borderRadius: { xs: "8px", md: "12px" },
-            marginBottom: { xs: "12px", md: "16px" },
-            display: "flex",
-            alignItems: "center",
-            gap: "8px"
-          }}>
-            <CloudQueueIcon sx={{ fontSize: { xs: "18px", md: "24px" } }} />
-            <Typography sx={{ fontSize: { xs: "12px", md: "14px" }, fontWeight: "600" }}>
-              حالت Offline - خریدها بعد از اتصال به اینترنت ارسال می‌شوند
+          <Box sx={{ backgroundColor: "#ff9800", color: "var(--admin-text)", p: 1.5, borderRadius: 2, mb: 2, display: "flex", alignItems: "center", gap: 1 }}>
+            <CloudQueueIcon />
+            <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
+              حالت Offline — پس از اتصال، همگام‌سازی کنید
             </Typography>
           </Box>
         )}
 
-        {/* Actions */}
-        {pendingPurchases.length > 0 && (
-          <Box sx={{ 
-            display: "flex", 
-            gap: "12px", 
-            marginBottom: "16px",
-            flexDirection: { xs: "column", md: "row" }
-          }}>
-            {isOnline && !isSyncing && (
+        {items.length > 0 && (
+          <Box sx={{ display: "flex", gap: 1.5, mb: 2, flexDirection: { xs: "column", md: "row" } }}>
+            {isOnline && (
               <Button
-                onClick={syncPendingPurchases}
+                onClick={syncAll}
+                disabled={isSyncing}
                 variant="contained"
-                sx={{
-                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                  color: "var(--admin-text)",
-                  fontWeight: "600",
-                  "&:hover": {
-                    transform: "translateY(-2px)",
-                  }
-                }}
+                startIcon={isSyncing ? <CircularProgress size={18} color="inherit" /> : undefined}
               >
-                همگام‌سازی همه خریدها
-              </Button>
-            )}
-            {isSyncing && (
-              <Button
-                disabled
-                variant="contained"
-                startIcon={<CircularProgress size={20} sx={{ color: "var(--admin-text)" }} />}
-                sx={{
-                  background: "var(--admin-divider)",
-                  color: "var(--admin-text)",
-                }}
-              >
-                در حال همگام‌سازی...
+                {isSyncing ? "در حال همگام‌سازی..." : "همگام‌سازی همه"}
               </Button>
             )}
             <Button
-              onClick={deleteAllPendingPurchases}
+              onClick={() => setConfirmClearOpen(true)}
               variant="outlined"
-              sx={{
-                borderColor: "#ff4444",
-                color: "#ff4444",
-                "&:hover": {
-                  borderColor: "#ff6666",
-                  backgroundColor: "rgba(255, 68, 68, 0.1)",
-                }
-              }}
+              sx={{ borderColor: "#ff4444", color: "#ff4444" }}
             >
               حذف همه
             </Button>
           </Box>
         )}
 
-        {/* Purchases List */}
-        {pendingPurchases.length > 0 ? (
-          <TableContainer 
-            component={Paper} 
-            sx={{ 
-              borderRadius: { xs: "12px", md: "16px" },
-              backgroundColor: "var(--admin-surface)",
-              border: "1px solid rgba(55, 84, 165, 0.3)",
-            }}
-          >
+        {items.length > 0 ? (
+          <TableContainer component={Paper} sx={{ borderRadius: 2, backgroundColor: "var(--admin-surface)" }}>
             <Table>
               <TableHead>
                 <TableRow sx={{ backgroundColor: "var(--admin-surface-alt)" }}>
-                  <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600" }}>
-                    تاریخ
-                  </TableCell>
-                  <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600" }}>
-                    شماره تلفن
-                  </TableCell>
-                  <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600" }}>
-                    تعداد کالا
-                  </TableCell>
-                  <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600" }}>
-                    مجموع
-                  </TableCell>
-                  <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600" }}>
-                    عملیات
-                  </TableCell>
+                  <TableCell align="right">تاریخ</TableCell>
+                  <TableCell align="right">تلفن</TableCell>
+                  <TableCell align="right">مبلغ</TableCell>
+                  <TableCell align="right">وضعیت</TableCell>
+                  <TableCell align="right">عملیات</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {pendingPurchases.map((purchase) => (
-                  <TableRow 
-                    key={purchase.id}
-                    sx={{
-                      backgroundColor: "var(--admin-surface)",
-                      "&:hover": {
-                        backgroundColor: "var(--admin-surface-alt)",
-                      }
-                    }}
-                  >
-                    <TableCell align="right" sx={{ color: "var(--admin-text)" }}>
-                      {formatDate(purchase.timestamp)}
-                    </TableCell>
-                    <TableCell align="right" sx={{ color: "var(--admin-text)" }}>
-                      {purchase.phone || "بدون شماره تلفن"}
-                    </TableCell>
-                    <TableCell align="right" sx={{ color: "var(--admin-text)" }}>
-                      {purchase.cart?.length || purchase.data?.products?.length || 0} کالا
-                    </TableCell>
-                    <TableCell align="right" sx={{ color: "var(--admin-accent)", fontWeight: "600" }}>
-                      {formatNumber(purchase.total || calculateTotal(purchase.cart || []))} تومان
-                    </TableCell>
-                    <TableCell align="right">
-                      <IconButton
-                        onClick={() => deletePendingPurchase(purchase.id)}
-                        sx={{
-                          color: "#ff4444",
-                          "&:hover": {
-                            backgroundColor: "rgba(255, 68, 68, 0.1)",
-                          }
-                        }}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {items.map((item) => {
+                  const legacy = outboxItemToLegacyPending(item);
+                  const chip = statusLabel[item.status] ?? statusLabel.pending;
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell align="right">{formatDate(item.createdAt)}</TableCell>
+                      <TableCell align="right">{legacy.phone || "—"}</TableCell>
+                      <TableCell align="right" sx={{ color: "var(--admin-accent)", fontWeight: 600 }}>
+                        {formatNumber(calculateTotal(item))} تومان
+                      </TableCell>
+                      <TableCell align="right">
+                        <Chip size="small" color={chip.color} label={chip.label} />
+                        {item.lastError ? (
+                          <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)", mt: 0.5 }}>
+                            {item.lastError}
+                          </Typography>
+                        ) : null}
+                      </TableCell>
+                      <TableCell align="right">
+                        {isOnline ? (
+                          <IconButton size="small" onClick={() => retryOne(item)} disabled={isSyncing} title="تلاش مجدد">
+                            <ReplayIcon fontSize="small" />
+                          </IconButton>
+                        ) : null}
+                        <IconButton size="small" onClick={() => deleteOne(item.id)} sx={{ color: "#ff4444" }}>
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </TableContainer>
         ) : (
-          <Card sx={{ 
-            backgroundColor: "var(--admin-surface)", 
-            borderRadius: { xs: "12px", md: "16px" },
-            border: "1px solid rgba(55, 84, 165, 0.3)",
-            textAlign: "center",
-            padding: { xs: "24px", md: "48px" }
-          }}>
+          <Card sx={{ backgroundColor: "var(--admin-surface)", textAlign: "center", p: 4 }}>
             <CardContent>
-              <CloudQueueIcon sx={{ 
-                fontSize: { xs: "48px", md: "80px" }, 
-                color: "var(--admin-text-secondary)", 
-                marginBottom: { xs: "12px", md: "20px" } 
-              }} />
-              <Typography sx={{ 
-                color: "var(--admin-text-muted)", 
-                fontSize: { xs: "14px", md: "20px" } 
-              }}>
-                هیچ خرید در انتظاری وجود ندارد
-              </Typography>
+              <CloudQueueIcon sx={{ fontSize: 64, color: "var(--admin-text-secondary)", mb: 2 }} />
+              <Typography sx={{ color: "var(--admin-text-muted)" }}>عملیات معلقی وجود ندارد</Typography>
             </CardContent>
           </Card>
         )}
       </Container>
-      <ToastContainer autoClose={3000} style={{ marginBottom: '76px', borderRadius: "15px" }} position={"bottom-right"} />
+
+      <Dialog open={confirmClearOpen} onClose={() => setConfirmClearOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle>حذف همه عملیات معلق</DialogTitle>
+        <DialogContent>
+          <DialogContentText>همه خریدهای در صف حذف شوند؟ این عمل قابل بازگشت نیست.</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmClearOpen(false)}>انصراف</Button>
+          <Button color="error" variant="contained" onClick={deleteAll}>
+            حذف همه
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <ToastContainer autoClose={3000} style={{ marginBottom: "76px" }} position="bottom-right" rtl />
     </Box>
   );
 }
-
