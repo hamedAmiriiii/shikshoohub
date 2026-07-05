@@ -18,6 +18,7 @@ import RemoveIcon from "@mui/icons-material/Remove";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
 import PhoneNumberInput from "@/app/coponent/PhoneNumberInput/PhoneNumberInput";
+import type { PaymentType } from "@/app/lib/paymentTypes";
 
 type SettlementMode = "split" | "card_all" | "cash_all";
 
@@ -66,8 +67,8 @@ export type AdminMenuModeCartPanelProps = {
   onDiscountFocus: () => void;
   onDiscountChange: (value: string) => void;
   onDiscountBlur: (value: string) => void;
-  paymentType: "cash" | "installment";
-  onPaymentTypeChange: (type: "cash" | "installment") => void;
+  paymentType: PaymentType;
+  onPaymentTypeChange: (type: PaymentType) => void;
   installmentCount: number;
   onInstallmentCountChange: (count: number) => void;
   payableNow: number;
@@ -85,6 +86,7 @@ export type AdminMenuModeCartPanelProps = {
   installmentCreditError: string;
   installmentCalculation: any;
   installmentPaymentEnabled?: boolean;
+  debtPaymentEnabled?: boolean;
 };
 
 export default function AdminMenuModeCartPanel({
@@ -125,13 +127,16 @@ export default function AdminMenuModeCartPanel({
   installmentCreditError,
   installmentCalculation,
   installmentPaymentEnabled = true,
+  debtPaymentEnabled = false,
 }: AdminMenuModeCartPanelProps) {
   const finalTotal = Math.max(0, total - useCreditAmount - discounttype);
+  const showPaymentTypeSelector = installmentPaymentEnabled || debtPaymentEnabled;
 
   const submitDisabled =
     !total ||
     isSubmitting ||
-    (payableNow > 0 && !paymentFieldsValid) ||
+    (paymentType !== "debt" && payableNow > 0 && !paymentFieldsValid) ||
+    (paymentType === "debt" && (!phone || phone.trim() === "")) ||
     (installmentPaymentEnabled &&
       paymentType === "installment" &&
       (!phone ||
@@ -308,26 +313,41 @@ export default function AdminMenuModeCartPanel({
           />
         )}
 
-        {installmentPaymentEnabled && (
+        {showPaymentTypeSelector && (
           <FormControl component="fieldset" sx={{ minWidth: 0 }}>
             <RadioGroup
               row
               value={paymentType}
-              onChange={(e) => onPaymentTypeChange(e.target.value as "cash" | "installment")}
-              sx={{ gap: 0, "& .MuiFormControlLabel-root": { mr: 0, ml: 0 } }}
+              onChange={(e) => onPaymentTypeChange(e.target.value as PaymentType)}
+              sx={{ gap: 0, flexWrap: "wrap", "& .MuiFormControlLabel-root": { mr: 0, ml: 0 } }}
             >
               <FormControlLabel
                 value="cash"
                 control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 14 } }} />}
                 label={<Typography sx={{ fontSize: "9px" }}>نقد</Typography>}
               />
-              <FormControlLabel
-                value="installment"
-                control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 14 } }} />}
-                label={<Typography sx={{ fontSize: "9px" }}>قسط</Typography>}
-              />
+              {installmentPaymentEnabled && (
+                <FormControlLabel
+                  value="installment"
+                  control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 14 } }} />}
+                  label={<Typography sx={{ fontSize: "9px" }}>قسط</Typography>}
+                />
+              )}
+              {debtPaymentEnabled && (
+                <FormControlLabel
+                  value="debt"
+                  control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 14 } }} />}
+                  label={<Typography sx={{ fontSize: "9px" }}>نسیه</Typography>}
+                />
+              )}
             </RadioGroup>
           </FormControl>
+        )}
+
+        {paymentType === "debt" && (
+          <Typography sx={{ fontSize: "8px", color: "#ff9800", lineHeight: 1.3 }}>
+            ثبت قرضی — مبلغ به بدهی مشتری اضافه می‌شود
+          </Typography>
         )}
 
         {installmentPaymentEnabled && paymentType === "installment" && (

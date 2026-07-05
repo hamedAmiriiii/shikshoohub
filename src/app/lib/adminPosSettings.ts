@@ -5,12 +5,14 @@ export type AdminPosSettings = {
   showProductListOnMainPage: boolean;
   menuMode: boolean;
   installmentPaymentEnabled: boolean;
+  debtPaymentEnabled: boolean;
 };
 
 const DEFAULT_SETTINGS: AdminPosSettings = {
   showProductListOnMainPage: false,
   menuMode: false,
   installmentPaymentEnabled: true,
+  debtPaymentEnabled: false,
 };
 
 export function readAdminPosSettings(): AdminPosSettings {

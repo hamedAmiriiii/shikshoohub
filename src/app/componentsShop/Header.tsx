@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Box, Typography, IconButton, Menu, MenuItem, Container, Button } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import MenuIcon from '@mui/icons-material/Menu';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import PersonIcon from '@mui/icons-material/Person';
@@ -41,6 +42,7 @@ import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import ShoppingCartCheckoutIcon from '@mui/icons-material/ShoppingCartCheckout';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import CardMembershipIcon from '@mui/icons-material/CardMembership';
+import BadgeIcon from '@mui/icons-material/Badge';
 import AdminThemeMenuItem from '@/app/admin/theme/AdminThemeMenuItem';
 
 interface HeaderProps {
@@ -57,6 +59,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
   const [financialMenuAnchor, setFinancialMenuAnchor] = useState<null | HTMLElement>(null);
   const [expensesMenuAnchor, setExpensesMenuAnchor] = useState<null | HTMLElement>(null);
   const [installmentsMenuAnchor, setInstallmentsMenuAnchor] = useState<null | HTMLElement>(null);
+  const [payrollMenuAnchor, setPayrollMenuAnchor] = useState<null | HTMLElement>(null);
   const [productManagementMenuAnchor, setProductManagementMenuAnchor] = useState<null | HTMLElement>(null);
   const [adminMenuAnchor, setAdminMenuAnchor] = useState<null | HTMLElement>(null);
   const [smsMenuAnchor, setSmsMenuAnchor] = useState<null | HTMLElement>(null);
@@ -134,6 +137,7 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
     setFinancialMenuAnchor(null);
     setExpensesMenuAnchor(null);
     setInstallmentsMenuAnchor(null);
+    setPayrollMenuAnchor(null);
     setProductManagementMenuAnchor(null);
     setAdminMenuAnchor(null);
     setSmsMenuAnchor(null);
@@ -170,6 +174,15 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
 
   const handleInstallmentsMenuClose = () => {
     setInstallmentsMenuAnchor(null);
+  };
+
+  const handlePayrollMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    setPayrollMenuAnchor(event.currentTarget);
+  };
+
+  const handlePayrollMenuClose = () => {
+    setPayrollMenuAnchor(null);
   };
 
   const handleProductManagementMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -881,6 +894,31 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
             <TrendingUpIcon sx={{ color: "#78b568", fontSize: "22px" }} />
             سود و ضرر
           </MenuItem>
+          <MenuItem
+            onClick={handlePayrollMenuOpen}
+            sx={{
+              color: "var(--admin-text)",
+              fontSize: "15px",
+              padding: "12px 20px",
+              borderRadius: "8px",
+              margin: "4px 8px",
+              transition: "all 0.2s ease",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "12px",
+              "&:hover": {
+                backgroundColor: "var(--admin-menu-hover)",
+                transform: "translateX(-4px)",
+              }
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <BadgeIcon sx={{ color: "#78b568", fontSize: "22px" }} />
+              حقوق
+            </Box>
+            <ChevronLeftIcon sx={{ fontSize: "20px" }} />
+          </MenuItem>
         </Menu>
 
         {/* Expenses Submenu */}
@@ -1014,6 +1052,115 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
           >
             <CreditCardIcon sx={{ color: "var(--admin-info-icon)", fontSize: "22px" }} />
             اعتبار اقساطی
+          </MenuItem>
+          <MenuItem
+            onClick={() => handleMenuClick("/admin/purchase-debts")}
+            sx={{
+              color: "var(--admin-text)",
+              fontSize: "15px",
+              padding: "12px 20px",
+              borderRadius: "8px",
+              margin: "4px 8px",
+              transition: "all 0.2s ease",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              "&:hover": {
+                backgroundColor: "var(--admin-menu-hover)",
+                transform: "translateX(-4px)",
+              }
+            }}
+          >
+            <AccountBalanceWalletIcon sx={{ color: "var(--admin-accent)", fontSize: "22px" }} />
+            بدهکاران (نسیه)
+          </MenuItem>
+        </Menu>
+
+        {/* Payroll Submenu */}
+        <Menu
+          anchorEl={payrollMenuAnchor}
+          open={Boolean(payrollMenuAnchor)}
+          onClose={handlePayrollMenuClose}
+          anchorOrigin={{
+            vertical: 'top',
+            horizontal: 'left',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}
+          sx={{
+            "& .MuiPaper-root": {
+              backgroundColor: "var(--admin-surface)",
+              borderRadius: "16px",
+              border: "1px solid var(--admin-accent-border)",
+              minWidth: "220px",
+              padding: "8px 0",
+            }
+          }}
+        >
+          <MenuItem
+            onClick={() => handleMenuClick("/admin/payroll")}
+            sx={{
+              color: "var(--admin-text)",
+              fontSize: "15px",
+              padding: "12px 20px",
+              borderRadius: "8px",
+              margin: "4px 8px",
+              transition: "all 0.2s ease",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              "&:hover": {
+                backgroundColor: "var(--admin-menu-hover)",
+                transform: "translateX(-4px)",
+              }
+            }}
+          >
+            <BadgeIcon sx={{ color: "#78b568", fontSize: "22px" }} />
+            لیست حقوق
+          </MenuItem>
+          <MenuItem
+            onClick={() => handleMenuClick("/admin/payroll/employees")}
+            sx={{
+              color: "var(--admin-text)",
+              fontSize: "15px",
+              padding: "12px 20px",
+              borderRadius: "8px",
+              margin: "4px 8px",
+              transition: "all 0.2s ease",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              "&:hover": {
+                backgroundColor: "var(--admin-menu-hover)",
+                transform: "translateX(-4px)",
+              }
+            }}
+          >
+            <PeopleIcon sx={{ color: "var(--admin-accent)", fontSize: "22px" }} />
+            کارمندها
+          </MenuItem>
+          <MenuItem
+            onClick={() => handleMenuClick("/admin/payroll/settings")}
+            sx={{
+              color: "var(--admin-text)",
+              fontSize: "15px",
+              padding: "12px 20px",
+              borderRadius: "8px",
+              margin: "4px 8px",
+              transition: "all 0.2s ease",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              "&:hover": {
+                backgroundColor: "var(--admin-menu-hover)",
+                transform: "translateX(-4px)",
+              }
+            }}
+          >
+            <SettingsIcon sx={{ color: "var(--admin-accent)", fontSize: "22px" }} />
+            تنظیمات حقوق
           </MenuItem>
         </Menu>
 

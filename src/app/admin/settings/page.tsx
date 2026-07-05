@@ -20,6 +20,7 @@ import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import EventIcon from "@mui/icons-material/Event";
 import PercentIcon from "@mui/icons-material/Percent";
 import PaymentsIcon from "@mui/icons-material/Payments";
+import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { apiRequestError } from "@/app/lib/apiRequestError/client";
@@ -141,12 +142,14 @@ export default function SettingsPage() {
   const [showProductListOnMainPage, setShowProductListOnMainPage] = useState(false);
   const [menuMode, setMenuMode] = useState(false);
   const [installmentPaymentEnabled, setInstallmentPaymentEnabled] = useState(true);
+  const [debtPaymentEnabled, setDebtPaymentEnabled] = useState(false);
 
   useEffect(() => {
     const settings = readAdminPosSettings();
     setShowProductListOnMainPage(settings.showProductListOnMainPage);
     setMenuMode(settings.menuMode);
     setInstallmentPaymentEnabled(settings.installmentPaymentEnabled);
+    setDebtPaymentEnabled(settings.debtPaymentEnabled);
   }, []);
 
   const handleToggleProductListOnMainPage = (
@@ -181,6 +184,17 @@ export default function SettingsPage() {
       enabled
         ? "گزینه‌های نقدی و اقساطی در صفحه فروش نمایش داده می‌شوند"
         : "گزینه‌های نقدی و اقساطی از صفحه فروش پنهان شدند",
+    );
+  };
+
+  const handleToggleDebtPayment = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setDebtPaymentEnabled(enabled);
+    writeAdminPosSettings({ debtPaymentEnabled: enabled });
+    toast.success(
+      enabled
+        ? "گزینه پرداخت نسیه در صفحه فروش فعال شد"
+        : "گزینه پرداخت نسیه از صفحه فروش پنهان شد",
     );
   };
 
@@ -437,6 +451,20 @@ export default function SettingsPage() {
             size="small"
             checked={installmentPaymentEnabled}
             onChange={handleToggleInstallmentPayment}
+            sx={switchSx}
+          />
+        }
+      />
+
+      <SettingsSectionCard
+        icon={<AccountBalanceWalletIcon sx={{ fontSize: 22 }} />}
+        title="پرداخت نسیه (قرضی)"
+        hint="نمایش گزینه نسیه هنگام ثبت فروش؛ مشتری بدهکار می‌شود"
+        action={
+          <Switch
+            size="small"
+            checked={debtPaymentEnabled}
+            onChange={handleToggleDebtPayment}
             sx={switchSx}
           />
         }

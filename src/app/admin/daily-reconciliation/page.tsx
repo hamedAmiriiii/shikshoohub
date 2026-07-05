@@ -70,9 +70,11 @@ interface SalesSnapshot {
   card_amount: number;
   cash_amount: number;
   installments_collected: number;
+  debts_collected: number;
   discount_given: number;
   total_collected: number;
   credit_used_total: number;
+  uncollected_debts: number;
 }
 
 interface DailySalesApiResponse {
@@ -82,9 +84,11 @@ interface DailySalesApiResponse {
   cash_amount: number;
   card_amount: number;
   installments_collected: number;
+  debts_collected: number;
   discount_given: number;
   total_collected: number;
   credit_used_total: number;
+  uncollected_debts: number;
 }
 
 interface DepositsSnapshot {
@@ -241,9 +245,11 @@ function parseDailySalesResponse(res: unknown): DailySalesApiResponse | null {
       cash_amount: Math.floor(Number(obj.cash_amount) || 0),
       card_amount: Math.floor(Number(obj.card_amount) || 0),
       installments_collected: Math.floor(Number(obj.installments_collected) || 0),
+      debts_collected: Math.floor(Number(obj.debts_collected) || 0),
       discount_given: Math.floor(Number(obj.discount_given) || 0),
       total_collected: Math.floor(Number(obj.total_collected) || 0),
       credit_used_total: Math.floor(Number(obj.credit_used_total) || 0),
+      uncollected_debts: Math.floor(Number(obj.uncollected_debts) || 0),
     };
   };
 
@@ -276,9 +282,11 @@ function salesSnapshotFromRecord(source: Record<string, unknown>): SalesSnapshot
     cash_amount: salesField(source, nested, "cash_amount"),
     card_amount: salesField(source, nested, "card_amount"),
     installments_collected: salesField(source, nested, "installments_collected"),
+    debts_collected: salesField(source, nested, "debts_collected"),
     discount_given: salesField(source, nested, "discount_given"),
     total_collected: salesField(source, nested, "total_collected"),
     credit_used_total: salesField(source, nested, "credit_used_total"),
+    uncollected_debts: salesField(source, nested, "uncollected_debts"),
   };
 }
 
@@ -1069,9 +1077,11 @@ export default function DailyReconciliationPage() {
                   <StyledTableCell align="center">نقد </StyledTableCell>
                   <StyledTableCell align="center">کارت</StyledTableCell>
                   <StyledTableCell align="center">اقساط</StyledTableCell>
+                  <StyledTableCell align="center">وصول نسیه</StyledTableCell>
                   <StyledTableCell align="center">تخفیف</StyledTableCell>
                   <StyledTableCell align="center">جمع وصول</StyledTableCell>
                   <StyledTableCell align="center">اعتبارمصرف‌شده</StyledTableCell>
+                  <StyledTableCell align="center">بدهی باز</StyledTableCell>
                   <StyledTableCell align="center">بروزرسانی </StyledTableCell>
                   <StyledTableCell
                     align="center"
@@ -1163,6 +1173,9 @@ export default function DailyReconciliationPage() {
                         {formatNumber(row.sales?.installments_collected ?? 0)}
                       </StyledTableCell>
                       <StyledTableCell align="center">
+                        {formatNumber(row.sales?.debts_collected ?? 0)}
+                      </StyledTableCell>
+                      <StyledTableCell align="center">
                         {formatNumber(row.sales?.discount_given ?? 0)}
                       </StyledTableCell>
                       <StyledTableCell align="center">
@@ -1172,6 +1185,9 @@ export default function DailyReconciliationPage() {
                       </StyledTableCell>
                       <StyledTableCell align="center">
                         {formatNumber(row.sales?.credit_used_total ?? 0)}
+                      </StyledTableCell>
+                      <StyledTableCell align="center">
+                        {formatNumber(row.sales?.uncollected_debts ?? 0)}
                       </StyledTableCell>
                       <StyledTableCell align="center">
                         <Button
@@ -1394,12 +1410,14 @@ export default function DailyReconciliationPage() {
                       <MobileStat label="نقد" value={sales?.cash_amount ?? 0} />
                       <MobileStat label="کارت" value={sales?.card_amount ?? 0} />
                       <MobileStat label="اقساط" value={sales?.installments_collected ?? 0} />
+                      <MobileStat label="وصول نسیه" value={sales?.debts_collected ?? 0} />
                       <MobileStat label="تخفیف" value={sales?.discount_given ?? 0} />
                       <MobileStat label="جمع وصول" value={sales?.total_collected ?? 0} accent />
                       <MobileStat
                         label="اعتبار مصرف‌شده"
                         value={sales?.credit_used_total ?? 0}
                       />
+                      <MobileStat label="بدهی باز" value={sales?.uncollected_debts ?? 0} />
                     </Box>
 
                     <Button

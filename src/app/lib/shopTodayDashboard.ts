@@ -8,6 +8,8 @@ export interface TodayDashboardSnapshot {
   totalSales: number;
   totalProfit: number;
   inventorySaleValue: number;
+  debtsCollected?: number;
+  uncollectedDebts?: number;
   updatedAt: number;
 }
 
@@ -67,6 +69,8 @@ export async function fetchAndCacheTodayDashboard(): Promise<TodayDashboardSnaps
       inventorySaleValue: Math.floor(
         Number(inventory.total_sale_value) || 0,
       ),
+      debtsCollected: Math.floor(Number(today.debts_collected) || 0),
+      uncollectedDebts: Math.floor(Number(today.uncollected_debts) || 0),
       updatedAt: Date.now(),
     };
 

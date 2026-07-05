@@ -20,6 +20,7 @@ import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import PhoneIcon from '@mui/icons-material/Phone';
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import PrintIcon from '@mui/icons-material/Print';
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 
 const SUPPORT_PHONE = "09399166196";
 const BALE_PROFILE_URL = "https://ble.ir/AmiriWebino";
@@ -45,11 +46,25 @@ import {
   type SalesByDaySnapshot,
 } from '@/app/lib/shopSalesByDay';
 import SalesByDayChart from '@/app/coponent/SalesByDayChart';
-import { readProductsCountFromCache, PRODUCTS_CACHE_KEY } from '@/app/lib/productsCache';
+import { readProductsCountFromCache } from '@/app/lib/productsCache';
+import {
+  OUTBOX_CHANGED_EVENT,
+  attachClientIdToPayload,
+  enqueueOutboxItem,
+  listPendingOutboxItems,
+  outboxItemToLegacyPending,
+  readProductsCacheAsync,
+  saveProductsCache,
+  savePosSettingsCache,
+  syncAllPendingPurchases,
+  upsertCustomerCreditCache,
+  findCustomerCreditInCache,
+} from '@/app/lib/offline';
 import {
   readAdminPosSettings,
   ADMIN_POS_SETTINGS_CHANGED_EVENT,
 } from '@/app/lib/adminPosSettings';
+import type { PaymentType } from '@/app/lib/paymentTypes';
 import SaleProductListPanel from '@/app/admin/SaleProductListPanel';
 import AdminMenuModeView from '@/app/admin/AdminMenuModeView';
 import { publishAdminSaleCartSnapshot } from '@/app/admin/onboarding/adminSaleCartCheck';
@@ -126,7 +141,7 @@ export default function ShoppingPage() {
   const [isOnline, setIsOnline] = useState(true);
   const [pendingPurchases, setPendingPurchases] = useState<any[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [paymentType, setPaymentType] = useState<'cash' | 'installment'>('cash'); // نوع پرداخت: نقدی یا اقساطی
+  const [paymentType, setPaymentType] = useState<PaymentType>('cash');
   const [installmentCount, setInstallmentCount] = useState<number>(2); // تعداد اقساط (حداقل 2)
   const [installmentCalculation, setInstallmentCalculation] = useState<any>(null); // اطلاعات محاسبه شده اقساط
   const [calculatingInstallments, setCalculatingInstallments] = useState(false); // وضعیت در حال محاسبه
@@ -138,6 +153,7 @@ export default function ShoppingPage() {
   const [showProductListOnMainPage, setShowProductListOnMainPage] = useState(false);
   const [menuMode, setMenuMode] = useState(false);
   const [installmentPaymentEnabled, setInstallmentPaymentEnabled] = useState(true);
+  const [debtPaymentEnabled, setDebtPaymentEnabled] = useState(false);
   const [saleSuccessOpen, setSaleSuccessOpen] = useState(false);
   const [lastSaleReceipt, setLastSaleReceipt] = useState<SaleReceiptData | null>(null);
   const [isRegisteringUser, setIsRegisteringUser] = useState(false);
@@ -168,6 +184,7 @@ export default function ShoppingPage() {
   }, []);
 
   const payableNow = useMemo(() => {
+    if (paymentType === "debt") return 0;
     if (paymentType === "installment") {
       const calc = installmentCalculation;
       const first = calc?.installment_details?.[0];
@@ -350,136 +367,96 @@ export default function ShoppingPage() {
     }
   }, [items.length]);
 
-  // بارگذاری خریدهای pending از localStorage
+  // بارگذاری صف outbox از IndexedDB
   useEffect(() => {
-    try {
-      const pending = localStorage.getItem('pending_purchases');
-      if (pending) {
-        const parsed = JSON.parse(pending);
-        if (Array.isArray(parsed)) {
-          setPendingPurchases(parsed);
-        }
+    const loadPending = async () => {
+      try {
+        const items = await listPendingOutboxItems();
+        setPendingPurchases(items.map(outboxItemToLegacyPending));
+      } catch (error) {
+        console.error('خطا در خواندن صف outbox:', error);
       }
-    } catch (error) {
-      console.error('خطا در خواندن خریدهای pending:', error);
-    }
+    };
+
+    loadPending();
+    window.addEventListener(OUTBOX_CHANGED_EVENT, loadPending);
+    return () => window.removeEventListener(OUTBOX_CHANGED_EVENT, loadPending);
   }, []);
 
-  // تابع sync برای خریدهای pending
+  // تابع sync برای خریدهای pending (IndexedDB outbox)
   const syncPendingPurchases = useCallback(async () => {
-    if (pendingPurchases.length === 0 || isSyncing) return;
-    
-    // جلوگیری از sync مکرر - حداقل 5 ثانیه بین هر sync
+    if (isSyncing) return;
+
+    const pending = await listPendingOutboxItems();
+    if (pending.length === 0) return;
+
     const now = Date.now();
     const timeSinceLastSync = now - lastSyncTimeRef.current;
-    if (timeSinceLastSync < 50000) {
+    if (timeSinceLastSync < 5000) {
       console.log('Sync خیلی زود است، صبر کنید...');
       return;
     }
-    
+
     setIsSyncing(true);
     lastSyncTimeRef.current = now;
-    
-    // استفاده از snapshot برای جلوگیری از تغییرات در حین پردازش
-    const purchasesToSync = [...pendingPurchases];
-    console.log(`شروع sync برای ${purchasesToSync.length} خرید`);
-    
-    const successful: string[] = [];
-    const failed: any[] = [];
 
-    // پردازش همه خریدها به صورت sequential (یکی یکی)
-    for (let i = 0; i < purchasesToSync.length; i++) {
-      const purchase = purchasesToSync[i];
-      console.log(`در حال پردازش خرید ${i + 1} از ${purchasesToSync.length}:`, purchase.id, purchase.data);
-      
-      try {
-        const res = await apiRequestError("Post", {}, purchase.data, `/api/purchased-products`, true, true, "");
-        
-        if (res.hasError) {
-          failed.push(purchase);
-          console.log(`خرید ${purchase.id} ناموفق:`, res.errorText);
-        } else {
-          successful.push(purchase.id);
-          console.log(`خرید ${purchase.id} با موفقیت ثبت شد`);
-        }
-      } catch (error) {
-        console.error(`خطا در sync خرید ${purchase.id}:`, error);
-        failed.push(purchase);
-      }
-      
-      // یک تاخیر کوچک بین هر درخواست برای جلوگیری از race condition
-      if (i < purchasesToSync.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
-    }
+    const result = await syncAllPendingPurchases();
+    const remaining = await listPendingOutboxItems();
+    setPendingPurchases(remaining.map(outboxItemToLegacyPending));
 
-    console.log(`نتایج sync: ${successful.length} موفق، ${failed.length} ناموفق`);
-    console.log('خریدهای موفق:', successful);
-    console.log('خریدهای ناموفق:', failed.map(f => f.id));
+    const successCount = result.successful.length + result.duplicate.length;
 
-    // بروزرسانی state و localStorage
-    const remaining = failed; // فقط خریدهای ناموفق باقی می‌مانند
-    setPendingPurchases(remaining);
-    localStorage.setItem('pending_purchases', JSON.stringify(remaining));
-
-    // نمایش پیام‌های مناسب - فقط یک بار
-    if (successful.length > 0) {
+    if (successCount > 0) {
       void refreshShopDashboard();
     }
 
-    if (successful.length > 0 && failed.length === 0) {
-      // همه موفق بودند
-      toast.success(`${successful.length} خرید با موفقیت ثبت شد`);
-    } else if (successful.length > 0 && failed.length > 0) {
-      // بعضی موفق، بعضی ناموفق
-      toast.success(`${successful.length} خرید با موفقیت ثبت شد`);
-      toast.warn(`${failed.length} خرید هنوز ثبت نشده است`);
-    } else if (successful.length === 0 && failed.length > 0) {
-      // همه ناموفق بودند - فقط یک بار نمایش بده
-      toast.error(`${failed.length} خرید ثبت نشد. لطفاً دوباره تلاش کنید`, {
-        toastId: 'sync-failed' // استفاده از toastId برای جلوگیری از نمایش مکرر
+    if (successCount > 0 && result.failed.length === 0) {
+      toast.success(`${successCount} خرید با موفقیت ثبت شد`);
+    } else if (successCount > 0 && result.failed.length > 0) {
+      toast.success(`${successCount} خرید با موفقیت ثبت شد`);
+      toast.warn(`${result.failed.length} خرید هنوز ثبت نشده است`);
+    } else if (successCount === 0 && result.failed.length > 0) {
+      toast.error(`${result.failed.length} خرید ثبت نشد. لطفاً دوباره تلاش کنید`, {
+        toastId: 'sync-failed',
       });
     }
 
     setIsSyncing(false);
-  }, [pendingPurchases, isSyncing, refreshShopDashboard]);
+  }, [isSyncing, refreshShopDashboard]);
 
-  // Auto-sync خریدهای pending وقتی online می‌شود - فقط یک بار
+  // Auto-sync خریدهای pending وقتی online می‌شود
   useEffect(() => {
-    // فقط وقتی online می‌شود و خرید pending داریم و در حال sync نیستیم
-    if (isOnline && pendingPurchases.length > 0 && !isSyncing) {
-      // فقط یک بار sync کن - نه هر بار که state تغییر می‌کند
-      const timeSinceLastSync = Date.now() - lastSyncTimeRef.current;
-      if (timeSinceLastSync > 5000) {
-        syncPendingPurchases();
-      }
+    if (isOnline && !isSyncing) {
+      void listPendingOutboxItems().then((items) => {
+        if (items.length > 0) {
+          const timeSinceLastSync = Date.now() - lastSyncTimeRef.current;
+          if (timeSinceLastSync > 5000) {
+            syncPendingPurchases();
+          }
+        }
+      });
     }
-  }, [isOnline]); // فقط isOnline را track کن، نه pendingPurchases.length
+  }, [isOnline, isSyncing, syncPendingPurchases]);
 
   useEffect(() => {
     let hasCachedData = false;
     
     // خواندن از cache (localStorage) در ابتدا - همیشه از cache استفاده کن
-    const loadCachedProducts = () => {
+    const loadCachedProducts = async () => {
       try {
-        const cachedData = localStorage.getItem(PRODUCTS_CACHE_KEY);
-        
-        if (cachedData) {
-          const parsedData = JSON.parse(cachedData);
-          if (Array.isArray(parsedData) && parsedData.length > 0) {
-            setItems(parsedData);
-            setProductsCount(parsedData.length);
-            hasCachedData = true;
-            console.log('محصولات از cache بارگذاری شد:', parsedData.length, 'محصول');
-          }
+        const parsedData = await readProductsCacheAsync();
+        if (Array.isArray(parsedData) && parsedData.length > 0) {
+          setItems(parsedData);
+          setProductsCount(parsedData.length);
+          hasCachedData = true;
+          console.log('محصولات از cache بارگذاری شد:', parsedData.length, 'محصول');
         }
       } catch (error) {
         console.error('خطا در خواندن cache:', error);
       }
     };
 
-    // بارگذاری از cache - همیشه اول cache را بارگذاری کن
-    loadCachedProducts();
+    void loadCachedProducts();
 
     // دریافت از API و بروزرسانی cache (بدون پاک کردن cache قدیمی)
     const fetchProducts = async () => {
@@ -500,8 +477,7 @@ export default function ShoppingPage() {
         // فقط در صورت موفقیت، cache را بروزرسانی کن (هرگز پاک نکن)
         if (Array.isArray(res) && res.length > 0) {
           try {
-            localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(res));
-            localStorage.setItem('products_cache_timestamp', Date.now().toString());
+            await saveProductsCache(res);
             console.log('Cache بروزرسانی شد:', res.length, 'محصول');
           } catch (error) {
             console.error('خطا در ذخیره cache:', error);
@@ -633,6 +609,8 @@ export default function ShoppingPage() {
       setShowProductListOnMainPage(settings.showProductListOnMainPage);
       setMenuMode(settings.menuMode);
       setInstallmentPaymentEnabled(settings.installmentPaymentEnabled);
+      setDebtPaymentEnabled(settings.debtPaymentEnabled);
+      void savePosSettingsCache(settings);
     };
     applyPosSettings();
     window.addEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, applyPosSettings);
@@ -648,6 +626,12 @@ export default function ShoppingPage() {
       setInstallmentCreditError("");
     }
   }, [installmentPaymentEnabled, paymentType]);
+
+  useEffect(() => {
+    if (!debtPaymentEnabled && paymentType === "debt") {
+      setPaymentType("cash");
+    }
+  }, [debtPaymentEnabled, paymentType]);
 
   const clearMenuCart = useCallback(() => {
     setCart([]);
@@ -821,6 +805,47 @@ export default function ShoppingPage() {
     openSaleReceiptPrintPage("/admin/print/sale", lastSaleReceipt);
   }, [lastSaleReceipt]);
 
+  const resetCartAfterQueuedSale = useCallback(() => {
+    setCart([]);
+    setTotal(0);
+    setScannedCode("");
+    setPhone("");
+    setCredit(0);
+    setUseCreditAmount(0);
+    setDiscounttype(0);
+    setDiscountDisplay("");
+    setDiscountError("");
+    setBackPrice(0);
+    setInstallmentCalculation(null);
+    installmentCalculationRef.current = null;
+    setPaymentType("cash");
+    setInstallmentCount(2);
+    resetPaymentSettlement();
+    setIsSubmitting(false);
+  }, [resetPaymentSettlement]);
+
+  const queueCurrentPurchase = useCallback(
+    async (
+      purchasePayload: Record<string, unknown>,
+      clientId: string,
+      message: string,
+      level: "success" | "warn" = "success",
+    ) => {
+      await enqueueOutboxItem({
+        type: "purchase",
+        clientId,
+        payload: purchasePayload,
+        meta: { cart, total, phone },
+      });
+      const items = await listPendingOutboxItems();
+      setPendingPurchases(items.map(outboxItemToLegacyPending));
+      if (level === "warn") toast.warn(message);
+      else toast.success(message);
+      resetCartAfterQueuedSale();
+    },
+    [cart, total, phone, resetCartAfterQueuedSale],
+  );
+
   const confirm = useCallback(() => {
     // اعتبارسنجی تخفیف قبل از ارسال
     if (discounttype > 0) {
@@ -830,6 +855,13 @@ export default function ShoppingPage() {
         setIsSubmitting(false);
         return;
       }
+    }
+
+    // اعتبارسنجی: برای خرید نسیه باید شماره تلفن وارد شود
+    if (paymentType === 'debt' && !phone) {
+      toast.error("برای خرید نسیه باید شماره تلفن مشتری را وارد کنید");
+      setIsSubmitting(false);
+      return;
     }
 
     // اعتبارسنجی: برای خرید اقساطی باید شماره تلفن وارد شود
@@ -873,7 +905,7 @@ export default function ShoppingPage() {
       // installment_amount در response برمی‌گردد و نیازی به ارسال نیست
     }
 
-    if (payableNow > 0) {
+    if (paymentType !== 'debt' && payableNow > 0) {
       if (!paymentFieldsValid) {
         const msg =
           settlementMode === "split"
@@ -894,48 +926,15 @@ export default function ShoppingPage() {
       setPaymentSplitError("");
     }
 
-    // اگر offline است، در queue ذخیره کن
+    const { clientId, payload: purchasePayload } = attachClientIdToPayload(loadData);
+
+    // اگر offline است، در outbox ذخیره کن
     if (!isOnline) {
-      // ساخت ID یکتا با استفاده از timestamp + random + counter
-      const timestamp = Date.now();
-      const random = Math.random().toString(36).substr(2, 9);
-      const counter = pendingPurchases.length;
-      const purchaseId = `purchase_${timestamp}_${random}_${counter}`;
-      const pendingPurchase = {
-        id: purchaseId,
-        data: loadData,
-        timestamp: timestamp,
-        cart: cart,
-        total: total,
-        phone: phone
-      };
-
-      const updatedPending = [...pendingPurchases, pendingPurchase];
-      setPendingPurchases(updatedPending);
-      
-      try {
-        localStorage.setItem('pending_purchases', JSON.stringify(updatedPending));
-      } catch (error) {
-        console.error('خطا در ذخیره خرید pending:', error);
-      }
-
-      toast.success("خرید در صف ثبت قرار گرفت (حالت offline)");
-      setCart([]);
-      setTotal(0);
-      setScannedCode("");
-      setPhone("");
-      setCredit(0);
-      setUseCreditAmount(0);
-      setDiscounttype(0);
-      setDiscountDisplay('');
-      setDiscountError('');
-      setBackPrice(0);
-      setInstallmentCalculation(null);
-      installmentCalculationRef.current = null;
-      setPaymentType('cash');
-      setInstallmentCount(2);
-      resetPaymentSettlement();
-      setIsSubmitting(false);
+      void queueCurrentPurchase(
+        purchasePayload,
+        clientId,
+        "خرید در صف ثبت قرار گرفت (حالت offline)",
+      );
       return;
     }
 
@@ -969,8 +968,7 @@ export default function ShoppingPage() {
     }
 
     const purchaseToken = tokenCode() || '';
-    // اگر online است، مستقیماً ارسال کن
-    apiRequestError("Post", {}, loadData, `/api/purchased-products`, true, true, purchaseToken).then((res) => {
+    apiRequestError("Post", {}, purchasePayload, `/api/purchased-products`, true, true, purchaseToken).then((res) => {
      console.log("res : ",res);
      
       if (res.hasError) {
@@ -988,51 +986,16 @@ export default function ShoppingPage() {
         }
 
         if (isInventoryError) {
-          // برای ارور موجودی، خرید را ذخیره نکن و متوقف کن
           setIsSubmitting(false);
           return;
         }
 
-        // اگر خطا بود و موجودی نبود، در queue ذخیره کن
-        const timestamp = Date.now();
-        const random = Math.random().toString(36).substr(2, 9);
-        const counter = pendingPurchases.length;
-        const purchaseId = `purchase_${timestamp}_${random}_${counter}`;
-        const pendingPurchase = {
-          id: purchaseId,
-          data: loadData,
-          timestamp: timestamp,
-          cart: cart,
-          total: total,
-          phone: phone
-        };
-
-        const updatedPending = [...pendingPurchases, pendingPurchase];
-        setPendingPurchases(updatedPending);
-        
-        try {
-          localStorage.setItem('pending_purchases', JSON.stringify(updatedPending));
-        } catch (error) {
-          console.error('خطا در ذخیره خرید pending:', error);
-        }
-
-        toast.warn("خرید در صف ثبت قرار گرفت (خطا در ارسال)");
-        setCart([]);
-        setTotal(0);
-        setScannedCode("");
-        setPhone("");
-        setCredit(0);
-        setUseCreditAmount(0);
-        setDiscounttype(0);
-        setDiscountDisplay('');
-        setDiscountError('');
-        setBackPrice(0);
-        setInstallmentCalculation(null);
-        installmentCalculationRef.current = null;
-        setPaymentType('cash');
-        setInstallmentCount(2);
-        resetPaymentSettlement();
-        setIsSubmitting(false);
+        void queueCurrentPurchase(
+          purchasePayload,
+          clientId,
+          "خرید در صف ثبت قرار گرفت (خطا در ارسال)",
+          "warn",
+        );
         return;
       }
       let successMessage = "خرید ثبت شد";
@@ -1044,49 +1007,14 @@ export default function ShoppingPage() {
       finalizeSuccessfulSale(res, successMessage);
     }).catch((error) => {
       console.error("Error submitting purchase:", error);
-      
-      // در صورت خطا، در queue ذخیره کن
-      const timestamp = Date.now();
-      const random = Math.random().toString(36).substr(2, 9);
-      const counter = pendingPurchases.length;
-      const purchaseId = `purchase_${timestamp}_${random}_${counter}`;
-      const pendingPurchase = {
-        id: purchaseId,
-        data: loadData,
-        timestamp: timestamp,
-        cart: cart,
-        total: total,
-        phone: phone
-      };
-
-      const updatedPending = [...pendingPurchases, pendingPurchase];
-      setPendingPurchases(updatedPending);
-      
-      try {
-        localStorage.setItem('pending_purchases', JSON.stringify(updatedPending));
-      } catch (error) {
-        console.error('خطا در ذخیره خرید pending:', error);
-      }
-
-      toast.warn("خرید در صف ثبت قرار گرفت (خطا در اتصال)");
-      setCart([]);
-      setTotal(0);
-      setScannedCode("");
-      setPhone("");
-      setCredit(0);
-      setUseCreditAmount(0);
-      setDiscounttype(0);
-      setDiscountDisplay('');
-      setDiscountError('');
-      setBackPrice(0);
-      setInstallmentCalculation(null);
-      installmentCalculationRef.current = null;
-      setPaymentType('cash');
-      setInstallmentCount(2);
-      resetPaymentSettlement();
-      setIsSubmitting(false);
+      void queueCurrentPurchase(
+        purchasePayload,
+        clientId,
+        "خرید در صف ثبت قرار گرفت (خطا در اتصال)",
+        "warn",
+      );
     });
-  }, [cart, phone, useCreditAmount, isOnline, pendingPurchases, discounttype, total, formatNumber, paymentType, installmentCount, payableNow, paymentFieldsValid, settlementMode, appendPaymentSettlement, resetPaymentSettlement, installmentCalculation, calculatingInstallments, installmentCreditError, finalizeSuccessfulSale]);
+  }, [cart, phone, useCreditAmount, isOnline, discounttype, total, formatNumber, paymentType, installmentCount, payableNow, paymentFieldsValid, settlementMode, appendPaymentSettlement, resetPaymentSettlement, installmentCalculation, calculatingInstallments, installmentCreditError, finalizeSuccessfulSale, queueCurrentPurchase]);
 
   // بررسی اعتبارسنجی تخفیف هنگام تغییر total
   useEffect(() => {
@@ -1233,6 +1161,24 @@ export default function ShoppingPage() {
 
   const checkCredit = async (phoneNumber: string) => {
     setCheckingCredit(true);
+
+    if (!navigator.onLine) {
+      try {
+        const cached = await findCustomerCreditInCache(phoneNumber);
+        if (cached) {
+          setCredit(cached.credit);
+          setUseCreditAmount(cached.useCredit);
+        } else {
+          setCredit(0);
+          setUseCreditAmount(0);
+          toast.warn("اعتبار مشتری در حالت آفلاین در دسترس نیست");
+        }
+      } finally {
+        setCheckingCredit(false);
+      }
+      return;
+    }
+
     const token = tokenCode();
     try {
       const res = await apiRequestError("Get", {}, {}, `/api/purchased-products/credit?phone=${phoneNumber}`, true, true, token);
@@ -1255,6 +1201,11 @@ export default function ShoppingPage() {
       
       setCredit(creditValue);
       setUseCreditAmount(useCreditValue);
+      void upsertCustomerCreditCache({
+        phone: phoneNumber,
+        credit: creditValue,
+        useCredit: useCreditValue,
+      });
     } catch (error) {
       console.error("Error checking credit:", error);
       setCredit(0);
@@ -1553,7 +1504,7 @@ export default function ShoppingPage() {
                         setInstallmentCalculation(null);
                         installmentCalculationRef.current = null;
                         setInstallmentCreditError("");
-                      } else {
+                      } else if (type === "installment") {
                         setDiscounttype(0);
                         setDiscountDisplay("");
                         setDiscountError("");
@@ -1583,6 +1534,7 @@ export default function ShoppingPage() {
                     installmentCreditError,
                     installmentCalculation,
                     installmentPaymentEnabled,
+                    debtPaymentEnabled,
                   }
                 : null
             }
@@ -1851,6 +1803,26 @@ export default function ShoppingPage() {
                               suffix: "تومان",
                               gradient: "linear-gradient(135deg, #4facfe 0%,rgb(13, 76, 80) 100%)",
                             },
+                            ...(todayDashboard &&
+                            (todayDashboard.debtsCollected != null ||
+                              todayDashboard.uncollectedDebts != null)
+                              ? [
+                                  {
+                                    icon: <AccountBalanceWalletIcon sx={{ fontSize: 20 }} />,
+                                    label: "وصول نسیه",
+                                    value: formatNumber(todayDashboard.debtsCollected ?? 0),
+                                    suffix: "تومان",
+                                    gradient: "linear-gradient(135deg, #ff9800 0%, #f57c00 100%)",
+                                  },
+                                  {
+                                    icon: <WarningIcon sx={{ fontSize: 20 }} />,
+                                    label: "بدهی باز",
+                                    value: formatNumber(todayDashboard.uncollectedDebts ?? 0),
+                                    suffix: "تومان",
+                                    gradient: "linear-gradient(135deg, #ef5350 0%, #c62828 100%)",
+                                  },
+                                ]
+                              : []),
                           ].map((stat) => (
                             <Grid item xs={6} key={stat.label}>
                               <Box
@@ -2314,7 +2286,7 @@ export default function ShoppingPage() {
                     </CardContent>
                   )}
                   <CardContent sx={{ padding: { xs: "12px", md: "20px" }, paddingTop: 0 }}>
-                    {installmentPaymentEnabled && (
+                    {(installmentPaymentEnabled || debtPaymentEnabled) && (
                     <Box sx={{
                       display: "flex",
                       alignItems: "center",
@@ -2335,14 +2307,14 @@ export default function ShoppingPage() {
                         row
                         value={paymentType}
                         onChange={(e) => {
-                          setPaymentType(e.target.value as 'cash' | 'installment');
-                          if (e.target.value === 'cash') {
+                          const next = e.target.value as PaymentType;
+                          setPaymentType(next);
+                          if (next === 'cash') {
                             setInstallmentCount(2);
                             setInstallmentCalculation(null);
                             installmentCalculationRef.current = null;
                             setInstallmentCreditError('');
-                          } else if (e.target.value === 'installment') {
-                            // صفر کردن تخفیف در حالت اقساطی
+                          } else if (next === 'installment') {
                             setDiscounttype(0);
                             setDiscountDisplay('');
                             setDiscountError('');
@@ -2352,7 +2324,7 @@ export default function ShoppingPage() {
                           display: "flex",
                           gap: { xs: "4px", md: "12px" },
                           justifyContent: { xs: "flex-start", sm: "flex-end" },
-                          flexWrap: "nowrap",
+                          flexWrap: "wrap",
                         }}
                       >
                         <FormControlLabel
@@ -2375,6 +2347,7 @@ export default function ShoppingPage() {
                           }
                           sx={{ mr: 0, ml: 0 }}
                         />
+                        {installmentPaymentEnabled && (
                         <FormControlLabel
                           value="installment"
                           control={
@@ -2395,9 +2368,44 @@ export default function ShoppingPage() {
                           }
                           sx={{ mr: 0, ml: 0 }}
                         />
+                        )}
+                        {debtPaymentEnabled && (
+                        <FormControlLabel
+                          value="debt"
+                          control={
+                            <Radio
+                              size="small"
+                              sx={{
+                                color: "var(--admin-text-secondary)",
+                                "&.Mui-checked": {
+                                  color: "var(--admin-accent)"
+                                }
+                              }}
+                            />
+                          }
+                          label={
+                            <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "14px" } }}>
+                              نسیه
+                            </Typography>
+                          }
+                          sx={{ mr: 0, ml: 0 }}
+                        />
+                        )}
                       </RadioGroup>
                     </FormControl>
                     </Box>
+                    )}
+                    {paymentType === 'debt' && (
+                      <Box sx={{ mt: { xs: "8px", md: "12px" }, p: { xs: "8px", md: "12px" }, bgcolor: "var(--admin-surface-alt)", borderRadius: "8px" }}>
+                        <Typography sx={{ color: "#ff9800", fontSize: { xs: "11px", md: "13px" } }}>
+                          فاکتور نسیه — مبلغ به بدهی مشتری اضافه می‌شود و پرداخت نقد/کارت ثبت نمی‌شود.
+                        </Typography>
+                        {(!phone || phone.trim() === '') && (
+                          <Typography sx={{ color: "#e57373", fontSize: { xs: "11px", md: "12px" }, mt: 0.5 }}>
+                            شماره تلفن مشتری الزامی است
+                          </Typography>
+                        )}
+                      </Box>
                     )}
                     {installmentPaymentEnabled && paymentType === 'installment' && (
                       <Box sx={{ marginTop: { xs: "12px", md: "16px" } }}>
@@ -2540,7 +2548,7 @@ export default function ShoppingPage() {
                         )}
                       </Box>
                     )}
-                    {payableNow > 0 && (
+                    {paymentType === 'cash' && payableNow > 0 && (
                       <Box
                         sx={{
                           marginTop: { xs: "12px", md: "16px" },
@@ -2870,7 +2878,8 @@ export default function ShoppingPage() {
                       (installmentCalculation && installmentCalculation.has_enough_credit === false) ||
                       !installmentCalculation?.installment_amount ||
                       calculatingInstallments
-                    ))
+                    )) ||
+                    (paymentType === 'debt' && (!phone || phone.trim() === ''))
                   }
                   onClick={(e) => {
                     e.preventDefault();
