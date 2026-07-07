@@ -1,16 +1,12 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { useEffect, useMemo } from "react";
+import { Component, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Box, Typography } from "@mui/material";
+import BarcodeScanner from "react-qr-barcode-scanner";
 import {
   ensureMediaDevicesGetSupportedConstraints,
   isTorchConstraintSupported,
 } from "@/app/lib/mediaDevicesPolyfill";
-
-const BarcodeScanner = dynamic(() => import("react-qr-barcode-scanner"), {
-  ssr: false,
-  loading: () => null,
-});
 
 type ScannerProps = {
   width?: number | string;
@@ -24,12 +20,51 @@ type ScannerProps = {
   stopStream?: boolean;
 };
 
+function ScannerUnavailable({ message }: { message: string }) {
+  return (
+    <Box
+      sx={{
+        width: "100%",
+        minHeight: 120,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        p: 2,
+        textAlign: "center",
+      }}
+    >
+      <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "13px", lineHeight: 1.6 }}>
+        {message}
+      </Typography>
+    </Box>
+  );
+}
+
+class ScannerErrorBoundary extends Component<
+  { children: ReactNode; fallback: ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  render() {
+    if (this.state.hasError) return this.props.fallback;
+    return this.props.children;
+  }
+}
+
 export default function SafeBarcodeScanner({
   torch,
   ...props
 }: ScannerProps) {
+  const [mounted, setMounted] = useState(false);
+
   useEffect(() => {
     ensureMediaDevicesGetSupportedConstraints();
+    setMounted(true);
   }, []);
 
   const safeTorch = useMemo(() => {
@@ -37,5 +72,15 @@ export default function SafeBarcodeScanner({
     return isTorchConstraintSupported() ? torch : undefined;
   }, [torch]);
 
-  return <BarcodeScanner {...props} torch={safeTorch} />;
+  const offlineFallback = (
+    <ScannerUnavailable message="دوربین در حالت آفلاین در دسترس نیست. لطفاً کد را دستی وارد کنید." />
+  );
+
+  if (!mounted) return null;
+
+  return (
+    <ScannerErrorBoundary fallback={offlineFallback}>
+      <BarcodeScanner {...props} torch={safeTorch} />
+    </ScannerErrorBoundary>
+  );
 }

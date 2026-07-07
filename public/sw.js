@@ -1,5 +1,5 @@
-const CACHE_NAME = 'webino-pwa-v4';
-const ADMIN_CACHE_NAME = 'webino-admin-shell-v2';
+const CACHE_NAME = 'webino-pwa-v5';
+const ADMIN_CACHE_NAME = 'webino-admin-shell-v3';
 const OFFLINE_URL = '/offline.html';
 const PRECACHE_URLS = [
   OFFLINE_URL,
@@ -49,7 +49,12 @@ function isAdminNavigation(url) {
   return url.pathname === '/admin' || url.pathname.startsWith('/admin/');
 }
 
-/** فایل‌های Next.js نباید توسط SW کش شوند — باعث 404 روی chunkها می‌شود */
+/** فایل‌های استاتیک Next با hash در نام — امن برای کش آفلاین */
+function isNextStaticAsset(url) {
+  return url.pathname.startsWith('/_next/static/');
+}
+
+/** درخواست‌های دیگر Next و API نباید توسط SW intercept شوند */
 function shouldBypassServiceWorker(url) {
   return url.pathname.startsWith('/_next/') || url.pathname.startsWith('/api/');
 }
@@ -61,6 +66,32 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  if (isNextStaticAsset(url)) {
+    event.respondWith(
+      caches.open(CACHE_NAME).then(async (cache) => {
+        const cached = await cache.match(event.request);
+        if (cached) return cached;
+        try {
+          const response = await fetch(event.request);
+          if (response.ok) {
+            await cache.put(event.request, response.clone());
+          }
+          return response;
+        } catch {
+          return (
+            cached ||
+            new Response('Offline', {
+              status: 503,
+              statusText: 'Service Unavailable',
+              headers: new Headers({ 'Content-Type': 'text/plain' }),
+            })
+          );
+        }
+      }),
+    );
     return;
   }
 
