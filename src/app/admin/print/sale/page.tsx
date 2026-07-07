@@ -4,7 +4,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import {
 
@@ -427,6 +427,7 @@ function SettingsSection({
 function SaleReceiptPrintContent() {
 
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [receipt, setReceipt] = useState<SaleReceiptData | null>(null);
 
@@ -437,6 +438,7 @@ function SaleReceiptPrintContent() {
   );
 
   const [showSettings, setShowSettings] = useState(false);
+  const directPrintMode = searchParams.get("direct") === "1";
 
 
 
@@ -455,14 +457,17 @@ function SaleReceiptPrintContent() {
 
 
   useEffect(() => {
-
     if (!receipt || !settings.autoPrint) return;
-
     const timer = setTimeout(() => window.print(), 400);
-
+    if (directPrintMode) {
+      const closeTimer = setTimeout(() => window.close(), 1400);
+      return () => {
+        clearTimeout(timer);
+        clearTimeout(closeTimer);
+      };
+    }
     return () => clearTimeout(timer);
-
-  }, [receipt, settings.autoPrint]);
+  }, [directPrintMode, receipt, settings.autoPrint]);
 
 
 
@@ -570,7 +575,8 @@ function SaleReceiptPrintContent() {
 
 
 
-      <Box className="no-print" sx={{ direction: "rtl", bgcolor: "#f3f4f6", minHeight: "100vh", p: 2 }}>
+      {!directPrintMode && (
+        <Box className="no-print" sx={{ direction: "rtl", bgcolor: "#f3f4f6", minHeight: "100vh", p: 2 }}>
 
         <Box sx={{ maxWidth: 820, mx: "auto" }}>
 
@@ -1104,11 +1110,12 @@ function SaleReceiptPrintContent() {
 
         </Box>
 
-      </Box>
+        </Box>
+      )}
 
 
 
-      <Box sx={{ display: "none" }} className="print-only">
+      <Box sx={{ display: directPrintMode ? "block" : "none" }} className="print-only">
 
         <ReceiptPreview receipt={receipt} settings={settings} paperWidthMm={paperWidthMm} />
 

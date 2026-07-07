@@ -21,6 +21,7 @@ import EventIcon from "@mui/icons-material/Event";
 import PercentIcon from "@mui/icons-material/Percent";
 import PaymentsIcon from "@mui/icons-material/Payments";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
+import PrintIcon from "@mui/icons-material/Print";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { apiRequestError } from "@/app/lib/apiRequestError/client";
@@ -33,6 +34,10 @@ import {
   writeAdminPosSettings,
 } from "@/app/lib/adminPosSettings";
 import LoyaltyCreditTiersSettings from "@/app/admin/settings/LoyaltyCreditTiersSettings";
+import {
+  readSaleReceiptPrintSettings,
+  writeSaleReceiptPrintSettings,
+} from "@/app/lib/saleReceiptPrint";
 
 const settingsCardSx = {
   backgroundColor: "var(--admin-surface)",
@@ -143,6 +148,7 @@ export default function SettingsPage() {
   const [menuMode, setMenuMode] = useState(false);
   const [installmentPaymentEnabled, setInstallmentPaymentEnabled] = useState(true);
   const [debtPaymentEnabled, setDebtPaymentEnabled] = useState(false);
+  const [directPrintEnabled, setDirectPrintEnabled] = useState(false);
 
   useEffect(() => {
     const settings = readAdminPosSettings();
@@ -150,6 +156,7 @@ export default function SettingsPage() {
     setMenuMode(settings.menuMode);
     setInstallmentPaymentEnabled(settings.installmentPaymentEnabled);
     setDebtPaymentEnabled(settings.debtPaymentEnabled);
+    setDirectPrintEnabled(readSaleReceiptPrintSettings().autoPrint);
   }, []);
 
   const handleToggleProductListOnMainPage = (
@@ -195,6 +202,17 @@ export default function SettingsPage() {
       enabled
         ? "گزینه پرداخت نسیه در صفحه فروش فعال شد"
         : "گزینه پرداخت نسیه از صفحه فروش پنهان شد",
+    );
+  };
+
+  const handleToggleDirectPrint = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setDirectPrintEnabled(enabled);
+    writeSaleReceiptPrintSettings({ autoPrint: enabled });
+    toast.success(
+      enabled
+        ? "حالت چاپ مستقیم فعال شد؛ پیش‌نمایش چاپ نمایش داده نمی‌شود"
+        : "حالت پیش‌نمایش چاپ فعال شد",
     );
   };
 
@@ -465,6 +483,20 @@ export default function SettingsPage() {
             size="small"
             checked={debtPaymentEnabled}
             onChange={handleToggleDebtPayment}
+            sx={switchSx}
+          />
+        }
+      />
+
+      <SettingsSectionCard
+        icon={<PrintIcon sx={{ fontSize: 22 }} />}
+        title="چاپ مستقیم فاکتور"
+        hint="با فعال‌سازی، پیش‌نمایش چاپ مخفی می‌شود و فاکتور مستقیم چاپ می‌گردد"
+        action={
+          <Switch
+            size="small"
+            checked={directPrintEnabled}
+            onChange={handleToggleDirectPrint}
             sx={switchSx}
           />
         }

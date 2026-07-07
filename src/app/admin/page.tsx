@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { Button, Modal, Box, Typography, Table, TableBody, TableContainer, TableHead, TableRow, Paper, IconButton, Input, Card, CardContent, Grid, Container, CircularProgress, TextField, FormControl, FormLabel, RadioGroup, FormControlLabel, Radio } from '@mui/material';
+import { Button, Modal, Dialog, DialogTitle, DialogContent, DialogActions, Box, Typography, Table, TableBody, TableContainer, TableHead, TableRow, Paper, IconButton, Input, Card, CardContent, Grid, Container, CircularProgress, TextField, FormControl, FormLabel, RadioGroup, FormControlLabel, Radio, Tooltip } from '@mui/material';
 import SafeBarcodeScanner from "@/app/coponent/SafeBarcodeScanner";
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
@@ -10,6 +10,7 @@ import FlashlightOffIcon from '@mui/icons-material/FlashlightOff';
 import CloudOffIcon from '@mui/icons-material/CloudOff';
 import CloudQueueIcon from '@mui/icons-material/CloudQueue';
 import SyncIcon from '@mui/icons-material/Sync';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import WarningIcon from '@mui/icons-material/Warning';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import TodayIcon from '@mui/icons-material/Today';
@@ -25,6 +26,11 @@ import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 const SUPPORT_PHONE = "09399166196";
 const BALE_PROFILE_URL = "https://ble.ir/AmiriWebino";
 const RUBIKA_PROFILE_URL = "https://rubika.ir/WebinoPlus";
+const NETWORK_TIMEOUT_MS = 8000;
+const NETWORK_GOOD_MS = 4000;
+const BOOTSTRAP_NETWORK_DELAY_MS = 8000;
+const NETWORK_TIMEOUT_ERROR = "NETWORK_TIMEOUT";
+const SLOW_NETWORK_TOAST_ID = "slow-network-offline";
 import { styled } from '@mui/material/styles';
 import TableCell, { tableCellClasses } from '@mui/material/TableCell';
 import { apiRequestError } from '@/app/lib/apiRequestError/client';
@@ -46,7 +52,7 @@ import {
   type SalesByDaySnapshot,
 } from '@/app/lib/shopSalesByDay';
 import SalesByDayChart from '@/app/coponent/SalesByDayChart';
-import { readProductsCountFromCache } from '@/app/lib/productsCache';
+import { readProductsCountFromCache, readProductsFromCache } from '@/app/lib/productsCache';
 import {
   OUTBOX_CHANGED_EVENT,
   attachClientIdToPayload,
@@ -73,6 +79,7 @@ import {
   type SaleReceiptData,
   saveSaleReceiptPrintData,
   openSaleReceiptPrintPage,
+  readSaleReceiptPrintSettings,
 } from '@/app/lib/saleReceiptPrint';
 
 
@@ -139,6 +146,10 @@ export default function ShoppingPage() {
   const [checkingCredit, setCheckingCredit] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
+  const [forcedOffline, setForcedOffline] = useState(false);
+  const [isCheckingNetworkSpeed, setIsCheckingNetworkSpeed] = useState(false);
+  const [networkWarningOpen, setNetworkWarningOpen] = useState(false);
+  const [networkWarningMessage, setNetworkWarningMessage] = useState("");
   const [pendingPurchases, setPendingPurchases] = useState<any[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [paymentType, setPaymentType] = useState<PaymentType>('cash');
@@ -149,6 +160,7 @@ export default function ShoppingPage() {
   const [registerPhone, setRegisterPhone] = useState('');
   const [todayDashboard, setTodayDashboard] = useState<TodayDashboardSnapshot | null>(null);
   const [salesByDay, setSalesByDay] = useState<SalesByDaySnapshot | null>(null);
+  const [isRefreshingDashboard, setIsRefreshingDashboard] = useState(false);
   const [productsCount, setProductsCount] = useState(0);
   const [showProductListOnMainPage, setShowProductListOnMainPage] = useState(false);
   const [menuMode, setMenuMode] = useState(false);
@@ -156,6 +168,7 @@ export default function ShoppingPage() {
   const [debtPaymentEnabled, setDebtPaymentEnabled] = useState(false);
   const [saleSuccessOpen, setSaleSuccessOpen] = useState(false);
   const [lastSaleReceipt, setLastSaleReceipt] = useState<SaleReceiptData | null>(null);
+  const [skipPrintPreview, setSkipPrintPreview] = useState(false);
   const [isRegisteringUser, setIsRegisteringUser] = useState(false);
   const lastSyncTimeRef = useRef<number>(0);
   const installmentCalcRequestIdRef = useRef(0);
@@ -169,6 +182,19 @@ export default function ShoppingPage() {
   const [cardAmountInput, setCardAmountInput] = useState("");
   const [cashAmountInput, setCashAmountInput] = useState("");
   const [paymentSplitError, setPaymentSplitError] = useState("");
+  const effectiveOnline = isOnline && !forcedOffline;
+
+  const withTimeout = useCallback(
+    async <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
+      return await Promise.race([
+        promise,
+        new Promise<T>((_, reject) =>
+          setTimeout(() => reject(new Error(NETWORK_TIMEOUT_ERROR)), timeoutMs),
+        ),
+      ]);
+    },
+    [],
+  );
 
   const parseAmountInput = useCallback((value: string): number => {
     const persianDigits = "۰۱۲۳۴۵۶۷۸۹";
@@ -316,7 +342,11 @@ export default function ShoppingPage() {
   // Online/Offline detection
   useEffect(() => {
     const updateOnlineStatus = () => {
-      setIsOnline(navigator.onLine);
+      const online = navigator.onLine;
+      setIsOnline(online);
+      if (!online) {
+        setForcedOffline(false);
+      }
     };
 
 
@@ -342,13 +372,19 @@ export default function ShoppingPage() {
   }, [searchParams]);
 
   const refreshShopDashboard = useCallback(async () => {
-    const [todaySnap, salesSnap] = await Promise.all([
-      fetchAndCacheTodayDashboard(),
-      fetchAndCacheSalesByDay(10),
-    ]);
-    if (todaySnap) setTodayDashboard(todaySnap);
-    if (salesSnap) setSalesByDay(salesSnap);
-  }, []);
+    if (isRefreshingDashboard) return;
+    setIsRefreshingDashboard(true);
+    try {
+      const [todaySnap, salesSnap] = await Promise.all([
+        fetchAndCacheTodayDashboard(),
+        fetchAndCacheSalesByDay(10),
+      ]);
+      if (todaySnap) setTodayDashboard(todaySnap);
+      if (salesSnap) setSalesByDay(salesSnap);
+    } finally {
+      setIsRefreshingDashboard(false);
+    }
+  }, [isRefreshingDashboard]);
 
   useEffect(() => {
     const cachedToday = readTodayDashboardCache();
@@ -358,8 +394,7 @@ export default function ShoppingPage() {
     }
     setSalesByDay(readSalesByDayCache());
     setProductsCount(readProductsCountFromCache());
-    void refreshShopDashboard();
-  }, [refreshShopDashboard]);
+  }, []);
 
   useEffect(() => {
     if (items.length > 0) {
@@ -406,10 +441,6 @@ export default function ShoppingPage() {
 
     const successCount = result.successful.length + result.duplicate.length;
 
-    if (successCount > 0) {
-      void refreshShopDashboard();
-    }
-
     if (successCount > 0 && result.failed.length === 0) {
       toast.success(`${successCount} خرید با موفقیت ثبت شد`);
     } else if (successCount > 0 && result.failed.length > 0) {
@@ -422,11 +453,11 @@ export default function ShoppingPage() {
     }
 
     setIsSyncing(false);
-  }, [isSyncing, refreshShopDashboard]);
+  }, [isSyncing]);
 
   // Auto-sync خریدهای pending وقتی online می‌شود
   useEffect(() => {
-    if (isOnline && !isSyncing) {
+    if (effectiveOnline && !isSyncing) {
       void listPendingOutboxItems().then((items) => {
         if (items.length > 0) {
           const timeSinceLastSync = Date.now() - lastSyncTimeRef.current;
@@ -436,74 +467,148 @@ export default function ShoppingPage() {
         }
       });
     }
-  }, [isOnline, isSyncing, syncPendingPurchases]);
+  }, [effectiveOnline, isSyncing, syncPendingPurchases]);
+
+  const checkNetworkSpeed = useCallback(async () => {
+    if (!navigator.onLine) {
+      setNetworkWarningMessage("اتصال اینترنت در دسترس نیست. بهتر است در حالت آفلاین بمانید.");
+      setNetworkWarningOpen(true);
+      return;
+    }
+
+    setIsCheckingNetworkSpeed(true);
+    try {
+      const token = tokenCode();
+      const startedAt = Date.now();
+      const res = await withTimeout(
+        apiRequestError("Get", {}, {}, `/api/product-all`, true, true, token),
+        NETWORK_TIMEOUT_MS,
+      );
+      const elapsed = Date.now() - startedAt;
+
+      if (!res?.hasError && elapsed <= NETWORK_GOOD_MS) {
+        if (Array.isArray(res) && res.length > 0) {
+          await saveProductsCache(res);
+          setItems(res);
+          setProductsCount(res.length);
+        }
+        setForcedOffline(false);
+        toast.success(`سرعت شبکه مناسب است (${elapsed}ms) — به حالت آنلاین برگشتید.`);
+        return;
+      }
+
+      setNetworkWarningMessage(
+        elapsed > NETWORK_GOOD_MS
+          ? `پاسخ شبکه کند بود (${elapsed}ms). بهتر است در حالت آفلاین بمانید.`
+          : "وضعیت اینترنت پایدار نیست. بهتر است در حالت آفلاین بمانید.",
+      );
+      setNetworkWarningOpen(true);
+    } catch (error) {
+      setNetworkWarningMessage("وضعیت اینترنت خوب نیست. بهتر است در حالت آفلاین بمانید.");
+      setNetworkWarningOpen(true);
+    } finally {
+      setIsCheckingNetworkSpeed(false);
+    }
+  }, [withTimeout]);
 
   useEffect(() => {
+    let isActive = true;
     let hasCachedData = false;
-    
-    // خواندن از cache (localStorage) در ابتدا - همیشه از cache استفاده کن
-    const loadCachedProducts = async () => {
-      try {
-        const parsedData = await readProductsCacheAsync();
-        if (Array.isArray(parsedData) && parsedData.length > 0) {
-          setItems(parsedData);
-          setProductsCount(parsedData.length);
-          hasCachedData = true;
-          console.log('محصولات از cache بارگذاری شد:', parsedData.length, 'محصول');
-        }
-      } catch (error) {
-        console.error('خطا در خواندن cache:', error);
-      }
-    };
 
-    void loadCachedProducts();
+    const applyCachedProducts = (list: any[], source: "localStorage" | "indexedDB") => {
+      if (!isActive || !Array.isArray(list) || list.length === 0) return;
+      setItems(list);
+      setProductsCount(list.length);
+      hasCachedData = true;
+      console.log(`محصولات از ${source} بارگذاری شد:`, list.length, "محصول");
+    };
 
     // دریافت از API و بروزرسانی cache (بدون پاک کردن cache قدیمی)
     const fetchProducts = async () => {
       try {
         const token = tokenCode();
-        const res = await apiRequestError("Get", {}, {}, `/api/product-all`, true, true, token);
+        const res = await withTimeout(
+          apiRequestError("Get", {}, {}, `/api/product-all`, true, true, token),
+          NETWORK_TIMEOUT_MS,
+        );
+        if (!isActive) return;
         console.log('res : ',res);
         if (res.hasError) {
-          // اگر خطا بود و cache داشتیم، از cache استفاده می‌کنیم (قبلاً set شده)
           if (!hasCachedData) {
-            toast.error("خطا در دریافت محصولات");
+            toast.error("خطا در دریافت محصولات", { toastId: "products-fetch-error" });
           } else {
-            toast.warn("خطا در بروزرسانی محصولات - از cache استفاده می‌شود");
+            toast.warn("خطا در بروزرسانی محصولات - از cache استفاده می‌شود", {
+              toastId: "products-cache-fallback",
+            });
           }
           return;
         }
         
-        // فقط در صورت موفقیت، cache را بروزرسانی کن (هرگز پاک نکن)
         if (Array.isArray(res) && res.length > 0) {
           try {
             await saveProductsCache(res);
-            console.log('Cache بروزرسانی شد:', res.length, 'محصول');
+            console.log(' بروزرسانی شد:', res.length, 'محصول');
           } catch (error) {
-            console.error('خطا در ذخیره cache:', error);
+            console.error('خطا در ذخیره محصولات:', error);
           }
           
-          // بروزرسانی state
+          if (!isActive) return;
           setItems(res);
           setProductsCount(res.length);
           console.log('محصولات از API بروزرسانی شد');
         } else {
-          console.warn('داده‌های دریافتی معتبر نیستند، cache حفظ می‌شود');
+          console.warn('داده‌های دریافتی معتبر نیستند،  حفظ می‌شود');
         }
       } catch (error) {
+        if (!isActive) return;
         console.error('خطا در دریافت محصولات:', error);
-        // اگر خطا بود و cache داشتیم، از cache استفاده می‌کنیم (قبلاً set شده)
+        const isTimeout =
+          error instanceof Error && error.message === NETWORK_TIMEOUT_ERROR && navigator.onLine;
+        if (isTimeout) {
+          setForcedOffline(true);
+          toast.warn("اینترنت کند است؛ سیستم موقتاً روی حالت آفلاین رفت.", {
+            toastId: SLOW_NETWORK_TOAST_ID,
+          });
+          return;
+        }
         if (!hasCachedData) {
-          toast.error("خطا در دریافت محصولات");
+          toast.error("خطا در دریافت محصولات", { toastId: "products-fetch-error" });
         } else {
-          toast.warn("خطا در بروزرسانی محصولات - از cache استفاده می‌شود");
+          toast.warn("خطا در بروزرسانی محصولات - از cache استفاده می‌شود", {
+            toastId: "products-cache-fallback",
+          });
         }
       }
     };
 
-    // دریافت از API در background (بدون پاک کردن cache)
-    fetchProducts();
-  }, []);
+    const bootstrapProducts = async () => {
+      // 1) سریع‌ترین مسیر: cache هم‌زمان localStorage
+      try {
+        const localCached = readProductsFromCache();
+        applyCachedProducts(localCached as any[], "localStorage");
+      } catch (error) {
+        console.error("خطا در خواندن cache localStorage:", error);
+      }
+
+      // 2) سپس cache یکپارچه IndexedDB
+      try {
+        const idbCached = await readProductsCacheAsync();
+        applyCachedProducts(idbCached as any[], "indexedDB");
+      } catch (error) {
+        console.error("خطا در خواندن cache indexedDB:", error);
+      }
+
+      // 3) پس از مهلت اولیه، refresh از API
+      await new Promise((resolve) => setTimeout(resolve, BOOTSTRAP_NETWORK_DELAY_MS));
+      if (!isActive) return;
+      await fetchProducts();
+    };
+
+    void bootstrapProducts();
+    return () => {
+      isActive = false;
+    };
+  }, [withTimeout]);
 
   const normalizeInstallmentResult = (res: any): any => ({
     ...res,
@@ -786,15 +891,16 @@ export default function ShoppingPage() {
     (res: any, successMessage: string) => {
       const purchaseId = res?.id ?? res?.purchase_id ?? res?.data?.id;
       const receipt = buildSaleReceiptFromCurrentSale(purchaseId);
+      const directPrint = Boolean(readSaleReceiptPrintSettings().autoPrint);
       saveSaleReceiptPrintData(receipt);
       setLastSaleReceipt(receipt);
+      setSkipPrintPreview(directPrint);
       setSaleSuccessOpen(true);
       toast.success(successMessage);
-      void refreshShopDashboard();
       resetCartAfterSale();
       setIsSubmitting(false);
     },
-    [buildSaleReceiptFromCurrentSale, refreshShopDashboard, resetCartAfterSale],
+    [buildSaleReceiptFromCurrentSale, resetCartAfterSale],
   );
 
   const handlePrintLastSaleReceipt = useCallback(() => {
@@ -802,8 +908,11 @@ export default function ShoppingPage() {
       toast.error("اطلاعات فاکتور در دسترس نیست");
       return;
     }
-    openSaleReceiptPrintPage("/admin/print/sale", lastSaleReceipt);
-  }, [lastSaleReceipt]);
+    openSaleReceiptPrintPage(
+      skipPrintPreview ? "/admin/print/sale?direct=1" : "/admin/print/sale",
+      lastSaleReceipt,
+    );
+  }, [lastSaleReceipt, skipPrintPreview]);
 
   const resetCartAfterQueuedSale = useCallback(() => {
     setCart([]);
@@ -831,19 +940,25 @@ export default function ShoppingPage() {
       message: string,
       level: "success" | "warn" = "success",
     ) => {
+      const receipt = buildSaleReceiptFromCurrentSale();
+      const directPrint = Boolean(readSaleReceiptPrintSettings().autoPrint);
       await enqueueOutboxItem({
         type: "purchase",
         clientId,
         payload: purchasePayload,
         meta: { cart, total, phone },
       });
+      saveSaleReceiptPrintData(receipt);
+      setLastSaleReceipt(receipt);
+      setSkipPrintPreview(directPrint);
+      setSaleSuccessOpen(true);
       const items = await listPendingOutboxItems();
       setPendingPurchases(items.map(outboxItemToLegacyPending));
       if (level === "warn") toast.warn(message);
       else toast.success(message);
       resetCartAfterQueuedSale();
     },
-    [cart, total, phone, resetCartAfterQueuedSale],
+    [buildSaleReceiptFromCurrentSale, cart, total, phone, resetCartAfterQueuedSale],
   );
 
   const confirm = useCallback(() => {
@@ -929,7 +1044,7 @@ export default function ShoppingPage() {
     const { clientId, payload: purchasePayload } = attachClientIdToPayload(loadData);
 
     // اگر offline است، در outbox ذخیره کن
-    if (!isOnline) {
+    if (!effectiveOnline) {
       void queueCurrentPurchase(
         purchasePayload,
         clientId,
@@ -968,7 +1083,10 @@ export default function ShoppingPage() {
     }
 
     const purchaseToken = tokenCode() || '';
-    apiRequestError("Post", {}, purchasePayload, `/api/purchased-products`, true, true, purchaseToken).then((res) => {
+    withTimeout(
+      apiRequestError("Post", {}, purchasePayload, `/api/purchased-products`, true, true, purchaseToken),
+      NETWORK_TIMEOUT_MS,
+    ).then((res) => {
      console.log("res : ",res);
      
       if (res.hasError) {
@@ -1007,14 +1125,17 @@ export default function ShoppingPage() {
       finalizeSuccessfulSale(res, successMessage);
     }).catch((error) => {
       console.error("Error submitting purchase:", error);
+      if (error instanceof Error && error.message === NETWORK_TIMEOUT_ERROR && navigator.onLine) {
+        setForcedOffline(true);
+      }
       void queueCurrentPurchase(
         purchasePayload,
         clientId,
-        "خرید در صف ثبت قرار گرفت (خطا در اتصال)",
+        "خرید در صف ثبت قرار گرفت (اتصال کند/نامطمئن — حالت آفلاین فعال شد)",
         "warn",
       );
     });
-  }, [cart, phone, useCreditAmount, isOnline, discounttype, total, formatNumber, paymentType, installmentCount, payableNow, paymentFieldsValid, settlementMode, appendPaymentSettlement, resetPaymentSettlement, installmentCalculation, calculatingInstallments, installmentCreditError, finalizeSuccessfulSale, queueCurrentPurchase]);
+  }, [cart, phone, useCreditAmount, effectiveOnline, discounttype, total, formatNumber, paymentType, installmentCount, payableNow, paymentFieldsValid, settlementMode, appendPaymentSettlement, resetPaymentSettlement, installmentCalculation, calculatingInstallments, installmentCreditError, finalizeSuccessfulSale, queueCurrentPurchase, withTimeout]);
 
   // بررسی اعتبارسنجی تخفیف هنگام تغییر total
   useEffect(() => {
@@ -1357,7 +1478,7 @@ export default function ShoppingPage() {
       <Container maxWidth="xl" sx={{ padding: { xs: '12px', md: '24px' }, paddingBottom: { xs: '140px', md: '56px' } }}>
 
         {/* Offline Status Banner */}
-        {!isOnline && (
+        {!effectiveOnline && (
           <Box sx={{
             backgroundColor: "#ff9800",
             color: "var(--admin-text)",
@@ -1375,6 +1496,21 @@ export default function ShoppingPage() {
                 حالت Offline - خریدها در صف ثبت قرار می‌گیرند
               </Typography>
             </Box>
+            <Button
+              size="small"
+              variant="contained"
+              onClick={checkNetworkSpeed}
+              disabled={isCheckingNetworkSpeed}
+              sx={{
+                minWidth: { xs: 112, md: 140 },
+                bgcolor: "#fff",
+                color: "#d97706",
+                fontSize: { xs: "11px", md: "12px" },
+                "&:hover": { bgcolor: "#f8fafc" },
+              }}
+            >
+              {isCheckingNetworkSpeed ? "در حال بررسی..." : "بررسی سرعت شبکه"}
+            </Button>
           </Box>
         )}
 
@@ -1383,7 +1519,7 @@ export default function ShoppingPage() {
           <Box 
             onClick={() => router.push('/admin/pending-purchases')}
             sx={{
-              backgroundColor: isOnline ? "#2196f3" : "#ff9800",
+              backgroundColor: effectiveOnline ? "#2196f3" : "#ff9800",
               color: "var(--admin-text)",
               padding: { xs: "8px 12px", md: "12px 20px" },
               borderRadius: { xs: "8px", md: "12px" },
@@ -1395,13 +1531,13 @@ export default function ShoppingPage() {
               cursor: "pointer",
               transition: "all 0.3s ease",
               "&:hover": {
-                backgroundColor: isOnline ? "#1976d2" : "#f57c00",
+                backgroundColor: effectiveOnline ? "#1976d2" : "#f57c00",
                 transform: "translateY(-2px)",
               }
             }}
           >
             <Box sx={{ display: "flex", alignItems: "center", gap: "8px", flex: 1 }}>
-              {isOnline ? (
+              {effectiveOnline ? (
                 <>
                   <CloudQueueIcon sx={{ fontSize: { xs: "18px", md: "24px" } }} />
                   <Typography sx={{ fontSize: { xs: "12px", md: "14px" }, fontWeight: "600" }}>
@@ -1417,7 +1553,7 @@ export default function ShoppingPage() {
                 </>
               )}
             </Box>
-            {isOnline && !isSyncing && (
+            {effectiveOnline && !isSyncing && (
               <IconButton
                 onClick={(e) => {
                   e.stopPropagation();
@@ -1758,7 +1894,7 @@ export default function ShoppingPage() {
                       <CardContent sx={{ padding: { xs: "16px", md: "20px" }, height: "100%" }}>
                         <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: { xs: 1.5, md: 2 } }}>
                           <TodayIcon sx={{ color: "var(--admin-accent)", fontSize: { xs: 22, md: 26 } }} />
-                          <Box>
+                          <Box sx={{ flex: 1 }}>
                             <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: { xs: "15px", md: "17px" } }}>
                               {todayDashboard?.dateKey === getLocalDateKey()
                                 ? "عملکرد امروز"
@@ -1766,10 +1902,27 @@ export default function ShoppingPage() {
                             </Typography>
                             <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: { xs: "11px", md: "12px" } }}>
                               {todayDashboard
-                                ? "بعد از هر خرید به‌روز می‌شود"
+                                ? "برای بروزرسانی آمار، دکمه رفرش را بزنید"
                                 : "پس از اولین فروش امروز اینجا نمایش داده می‌شود"}
                             </Typography>
                           </Box>
+                          <Tooltip title="بروزرسانی آمار فروش">
+                            <span>
+                              <IconButton
+                                size="small"
+                                onClick={() => void refreshShopDashboard()}
+                                disabled={isRefreshingDashboard}
+                                sx={{ color: "var(--admin-accent)" }}
+                                aria-label="بروزرسانی آمار فروش"
+                              >
+                                {isRefreshingDashboard ? (
+                                  <CircularProgress size={20} color="inherit" />
+                                ) : (
+                                  <RefreshIcon fontSize="small" />
+                                )}
+                              </IconButton>
+                            </span>
+                          </Tooltip>
                         </Box>
 
                         <Grid container spacing={{ xs: 1.25, md: 1.5 }}>
@@ -1898,7 +2051,12 @@ export default function ShoppingPage() {
                       }}
                     >
                       <CardContent sx={{ padding: { xs: "16px", md: "20px" }, height: "100%" }}>
-                        <SalesByDayChart data={salesByDay} formatNumber={formatNumber} />
+                        <SalesByDayChart
+                          data={salesByDay}
+                          formatNumber={formatNumber}
+                          onRefresh={() => void refreshShopDashboard()}
+                          isRefreshing={isRefreshingDashboard}
+                        />
                       </CardContent>
                     </Card>
                   </Grid>
@@ -3105,7 +3263,7 @@ export default function ShoppingPage() {
         >
           <CheckCircleIcon sx={{ fontSize: 56, color: "#1ab44d", mb: 1.5 }} />
           <Typography id="sale-success-modal" sx={{ fontWeight: 700, fontSize: "18px", color: "var(--admin-text)", mb: 1 }}>
-            خرید با موفقیت ثبت شد
+            {lastSaleReceipt?.purchaseId != null ? "خرید با موفقیت ثبت شد" : "خرید در صف آفلاین ثبت شد"}
           </Typography>
           {lastSaleReceipt?.purchaseId != null && (
             <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "14px", mb: 2 }}>
@@ -3141,6 +3299,25 @@ export default function ShoppingPage() {
           </Box>
         </Box>
       </Modal>
+
+      <Dialog
+        open={networkWarningOpen}
+        onClose={() => setNetworkWarningOpen(false)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle sx={{ direction: "rtl", textAlign: "right" }}>بررسی وضعیت اینترنت</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ direction: "rtl", textAlign: "right", color: "var(--admin-text)" }}>
+            {networkWarningMessage || "وضعیت اینترنت خوب نیست و بهتر است در حالت آفلاین بمانید."}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ direction: "rtl", justifyContent: "flex-start", px: 2, pb: 2 }}>
+          <Button variant="contained" onClick={() => setNetworkWarningOpen(false)}>
+            متوجه شدم
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <ToastContainer autoClose={3000} style={{ marginBottom: '76px', borderRadius: "15px" }} position={"bottom-right"} />
     </Box>

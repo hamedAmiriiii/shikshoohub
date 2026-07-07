@@ -1,7 +1,8 @@
 "use client";
 
-import { Box, Typography, Tooltip } from "@mui/material";
+import { Box, Typography, Tooltip, IconButton, CircularProgress } from "@mui/material";
 import ShowChartIcon from "@mui/icons-material/ShowChart";
+import RefreshIcon from "@mui/icons-material/Refresh";
 import type { SalesByDaySnapshot } from "@/app/lib/shopSalesByDay";
 
 function shortJalaliLabel(dateJalali: string): string {
@@ -19,11 +20,13 @@ function formatCompact(n: number): string {
 type Props = {
   data: SalesByDaySnapshot | null;
   formatNumber: (n: number) => string;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 };
 
 const CHART_BAR_AREA_PX = { xs: 140, md: 180 } as const;
 
-export default function SalesByDayChart({ data, formatNumber }: Props) {
+export default function SalesByDayChart({ data, formatNumber, onRefresh, isRefreshing }: Props) {
   const daily = data?.daily ?? [];
   const maxSales = Math.max(1, ...daily.map((d) => d.total_sales));
   const hasData = daily.length > 0;
@@ -51,9 +54,28 @@ export default function SalesByDayChart({ data, formatNumber }: Props) {
           <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: { xs: "11px", md: "12px" } }}>
             {data?.from_date_jalali && data?.to_date_jalali
               ? `${data.from_date_jalali} تا ${data.to_date_jalali}`
-              : "پس از اولین فروش نمایش داده می‌شود"}
+              : "برای بروزرسانی نمودار، دکمه رفرش را بزنید"}
           </Typography>
         </Box>
+        {onRefresh && (
+          <Tooltip title="بروزرسانی نمودار فروش">
+            <span>
+              <IconButton
+                size="small"
+                onClick={onRefresh}
+                disabled={isRefreshing}
+                sx={{ color: "var(--admin-accent)" }}
+                aria-label="بروزرسانی نمودار فروش"
+              >
+                {isRefreshing ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : (
+                  <RefreshIcon fontSize="small" />
+                )}
+              </IconButton>
+            </span>
+          </Tooltip>
+        )}
         {data && (
           <Box sx={{ textAlign: "left" }}>
             <Typography sx={{ color: "var(--admin-accent)", fontWeight: 700, fontSize: { xs: "13px", md: "15px" } }}>

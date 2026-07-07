@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Box,
@@ -147,6 +147,11 @@ export default function PendingPurchasesPage() {
     return cart.reduce((sum, row: any) => sum + Number(row?.sale_price || 0) * Number(row?.quantity || 0), 0);
   };
 
+  const pendingSalesTotal = useMemo(
+    () => items.reduce((sum, item) => sum + calculateTotal(item), 0),
+    [items],
+  );
+
   return (
     <Box sx={{ position: "relative", minHeight: "100vh", direction: "rtl", background: "var(--admin-bg-gradient)" }}>
       <Container maxWidth="xl" sx={{ padding: { xs: "12px", md: "24px" }, paddingBottom: { xs: "100px", md: "40px" } }}>
@@ -170,6 +175,22 @@ export default function PendingPurchasesPage() {
               حالت Offline — پس از اتصال، همگام‌سازی کنید
             </Typography>
           </Box>
+        )}
+
+        {items.length > 0 && (
+          <Card sx={{ mb: 2, borderRadius: 2, backgroundColor: "var(--admin-surface)", border: "1px solid var(--admin-border)" }}>
+            <CardContent sx={{ py: 1.5 }}>
+              <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>
+                مجموع فروش ثبت‌نشده
+              </Typography>
+              <Typography sx={{ color: "var(--admin-accent)", fontWeight: 700, fontSize: 24, mt: 0.5 }}>
+                {formatNumber(pendingSalesTotal)} تومان
+              </Typography>
+              <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: 12, mt: 0.25 }}>
+                {formatNumber(items.length)} خرید در صف
+              </Typography>
+            </CardContent>
+          </Card>
         )}
 
         {items.length > 0 && (
