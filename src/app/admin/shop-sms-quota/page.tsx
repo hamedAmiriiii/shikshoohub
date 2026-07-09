@@ -14,6 +14,7 @@ import ShopSmsQuotaActions, {
   ShopSmsQuotaMobileCard,
   ShopSmsQuotaRow,
   AccessStatusChip,
+  SubscriptionStatusChip,
 } from "./ShopSmsQuotaActions";
 
 const formatNumber = (n: number) => new Intl.NumberFormat("fa-IR").format(n);
@@ -120,6 +121,12 @@ export default function AdminShopSmsQuotaPage() {
       {
         label: "وضعیت",
         field: (item: ShopSmsQuotaRow) => <AccessStatusChip item={item} />,
+        width: "8%",
+        align: "center" as const,
+      },
+      {
+        label: "پلن",
+        field: (item: ShopSmsQuotaRow) => <SubscriptionStatusChip item={item} />,
         width: "8%",
         align: "center" as const,
       },

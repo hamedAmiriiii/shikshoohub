@@ -13,8 +13,9 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
   const isAdminPage = pathname?.startsWith("/admin");
   const isLandingPage = pathname?.startsWith("/landing");
   const isCustomerAuth = isCustomerAuthPath(pathname);
+  const isReferralPage = pathname?.startsWith("/referrals");
 
-  if (isAdminPage || isLandingPage || isCustomerAuth) {
+  if (isAdminPage || isLandingPage || isCustomerAuth || isReferralPage) {
     return <>{children}</>;
   }
 

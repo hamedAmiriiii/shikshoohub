@@ -1,12 +1,17 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { resolveCustomerShopCode } from "@/app/lib/shopStorefront";
 
 export function useResolvedCustomerShop(explicitShop?: string) {
   const searchParams = useSearchParams();
   const [pickedShop, setPickedShop] = useState<string | null>(null);
+  const [includeStoredShop, setIncludeStoredShop] = useState(false);
+
+  useEffect(() => {
+    setIncludeStoredShop(true);
+  }, []);
 
   const shopCode = useMemo(
     () =>
@@ -14,8 +19,9 @@ export function useResolvedCustomerShop(explicitShop?: string) {
         explicitShop: explicitShop || pickedShop,
         queryShop: searchParams.get("shop"),
         redirect: searchParams.get("redirect"),
+        includeStoredShop,
       }),
-    [explicitShop, pickedShop, searchParams],
+    [explicitShop, pickedShop, searchParams, includeStoredShop],
   );
 
   return {

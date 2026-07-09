@@ -23,6 +23,7 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import FactoryIcon from '@mui/icons-material/Factory';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import ShareIcon from '@mui/icons-material/Share';
 import Divider from '@mui/material/Divider';
 import { useRouter, usePathname } from 'next/navigation';
 import { isSuperAdminUser, getUserPhoneFromRecord } from '@/app/lib/superAdmin';
@@ -114,6 +115,12 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
     !shopAccessExpired && user ? getAccessMenuSummary(shopAccess) : null;
 
   const displayPhone = user ? getUserPhoneFromRecord(user as Record<string, unknown>) : '';
+  const hasShop = Boolean((user as any)?.atelier || (user as any)?.atelier_id || (user as any)?.shop_code);
+
+  const copyReferralLink = async () => {
+    handleMenuClose();
+    router.push("/admin/referral");
+  };
 
   const handleBuySubscription = () => {
     handleMenuClose();
@@ -391,6 +398,26 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
               <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 {rightAction}
               </Box>
+            )}
+            {hasShop && (
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => void copyReferralLink()}
+                startIcon={<ShareIcon sx={{ fontSize: { xs: 18, md: 20 } }} />}
+                sx={{
+                  borderColor: "#26a69a",
+                  color: "#26a69a",
+                  minWidth: { xs: 36, md: "auto" },
+                  px: { xs: 0.8, md: 1.4 },
+                  py: { xs: 0.45, md: 0.65 },
+                  "&:hover": { borderColor: "#00897b", backgroundColor: "rgba(38,166,154,0.08)" },
+                }}
+              >
+                <Box component="span" sx={{ display: { xs: "none", md: "inline" }, whiteSpace: "nowrap" }}>
+                  معرفی دوستان
+                </Box>
+              </Button>
             )}
             {user && (
               <>
@@ -1317,6 +1344,27 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
             }
           }}
         >
+          <MenuItem
+            onClick={() => handleMenuClick("/admin/referral")}
+            sx={{
+              color: "var(--admin-text)",
+              fontSize: "15px",
+              padding: "12px 20px",
+              borderRadius: "8px",
+              margin: "4px 8px",
+              transition: "all 0.2s ease",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              "&:hover": {
+                backgroundColor: "var(--admin-menu-hover)",
+                transform: "translateX(-4px)",
+              },
+            }}
+          >
+            <ShareIcon sx={{ color: "#26a69a", fontSize: "22px" }} />
+            پنل معرفی
+          </MenuItem>
           <MenuItem
             onClick={() => handleMenuClick("/admin/shop-sms-logs")}
             sx={{

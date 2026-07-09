@@ -297,6 +297,39 @@ const List: React.FC<Props> = ({
   renderRowActions,
   hidePrintAction = false,
 }) => {
+  const actionsHeaderCellSx = {
+    fontWeight: "600",
+    backgroundColor: "var(--admin-surface-alt)",
+    color: "var(--admin-text)",
+    fontSize: "16px",
+    padding: "16px 12px",
+    minWidth: "280px",
+    width: "280px",
+    position: "sticky" as const,
+    right: 0,
+    zIndex: 2,
+    boxShadow: "-4px 0 8px -4px rgba(0,0,0,0.12)",
+  };
+
+  const actionsBodyCellSx = {
+    color: "var(--admin-text)",
+    fontSize: 16,
+    padding: "12px",
+    minWidth: "280px",
+    width: "280px",
+    position: "sticky" as const,
+    right: 0,
+    zIndex: 1,
+    backgroundColor: "var(--admin-surface)",
+    boxShadow: "-4px 0 8px -4px rgba(0,0,0,0.12)",
+    ".MuiTableRow-root:nth-of-type(even) &": {
+      backgroundColor: "var(--admin-surface-alt)",
+    },
+    ".MuiTableRow-root:hover &": {
+      backgroundColor: "var(--admin-menu-hover)",
+    },
+  };
+
   const { ref, inView } = useInView();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -560,8 +593,6 @@ const List: React.FC<Props> = ({
       <Grid
         item
         xs={12}
-        xl={filterComponent ? 8 : 12}
-        lg={filterComponent ? 8 : 12}
         sx={{
           display: "flex",
           flexDirection: "column",
@@ -571,9 +602,9 @@ const List: React.FC<Props> = ({
           mx: isDesktop ? 0 : "auto",
         }}
       >
-        <Grid container sx={{ width: "100%", justifyContent: "center", mx: "auto" }}>
-          <Grid display="flex" item sx={{ width: "100%", maxWidth: "100%", justifyContent: "center", mt: 2, gap: 2, mx: 1, boxSizing: "border-box" }}>
-            <Grid item xs={12} sm={12} md={8} lg={10} sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}>
+        <Grid container sx={{ width: "100%", mx: 0 }}>
+          <Grid display="flex" item xs={12} sx={{ width: "100%", maxWidth: "100%", mt: 2, gap: 2, boxSizing: "border-box" }}>
+            <Grid item xs={12} sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}>
               <Box sx={{ flex: 1 }}>
                 <CustomizedInputBase />
               </Box>
@@ -604,7 +635,7 @@ const List: React.FC<Props> = ({
           </Grid>
 
           {total && total != 0 && (
-            <Grid display="flex" item sx={{ width: "100%", maxWidth: "100%", justifyContent: "space-between", mt: 2, mx: 1, boxSizing: "border-box" }}>
+            <Grid display="flex" item xs={12} sx={{ width: "100%", maxWidth: "100%", justifyContent: "space-between", mt: 2, boxSizing: "border-box" }}>
               {showTotal && (
                 <Box display="flex" flexDirection="column">
                   <Typography sx={{ color: "var(--admin-text)" }}>تعداد کل {textTotal[0]}: {total}{textTotal[1]}</Typography>
@@ -616,7 +647,7 @@ const List: React.FC<Props> = ({
             </Grid>
           )}
 
-          <Grid container xs={12} sx={{ width: "100%", mx: isDesktop ? 0 : "auto", mt: 1, mb: 5 }}>
+          <Grid container item xs={12} sx={{ width: "100%", mx: 0, mt: 1, mb: 5 }}>
             {isPageLoading || isLoading ? (
               <Box sx={{ width: "100%", display: "flex", justifyContent: "center", alignItems: "center", padding: "40px" }}>
                 <CircularProgress />
@@ -637,9 +668,14 @@ const List: React.FC<Props> = ({
                         overflowX: 'auto'
                       }}
                     >
-                      <Table sx={{ minWidth: 650 }} aria-label="simple table">
+                      <Table sx={{ minWidth: 650, direction: "rtl" }} aria-label="simple table">
                         <TableHead>
                           <TableRow>
+                            {(CartComponent || renderRowActions) && (
+                              <TableCell align="center" sx={actionsHeaderCellSx}>
+                                عملیات
+                              </TableCell>
+                            )}
                             {desktopColumns?.map((column, idx) => (
                               <TableCell 
                                 key={idx} 
@@ -656,22 +692,6 @@ const List: React.FC<Props> = ({
                                 {column.label}
                               </TableCell>
                             ))}
-                            {(CartComponent || renderRowActions) && (
-                              <TableCell 
-                                align="center" 
-                                sx={{ 
-                                  fontWeight: "600",
-                                  backgroundColor: "var(--admin-surface-alt)",
-                                  color: "var(--admin-text)",
-                                  fontSize: "16px",
-                                  padding: "16px 24px",
-                                  minWidth: '250px',
-                                  width: '290px'
-                                }}
-                              >
-                                عملیات
-                              </TableCell>
-                            )}
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -689,31 +709,8 @@ const List: React.FC<Props> = ({
                                 '&:last-child td, &:last-child th': { border: 0 } 
                               }}
                             >
-                              {desktopColumns?.map((column, colIdx) => (
-                                <TableCell 
-                                  key={colIdx} 
-                                  align="right"
-                                  sx={{
-                                    color: "var(--admin-text)",
-                                    fontSize: 16,
-                                    padding: "16px 24px",
-                                    ...(colIdx === 0 ? { minWidth: '300px', width: '300px' } : {}),
-                                  }}
-                                >
-                                  {getFieldValue(item, column.field)}
-                                </TableCell>
-                              ))}
                               {(CartComponent || renderRowActions) && (
-                                <TableCell 
-                                  align="center"
-                                  sx={{
-                                    color: "var(--admin-text)",
-                                    fontSize: 16,
-                                    padding: "16px 24px",
-                                    minWidth: '250px',
-                                    width: '250px'
-                                  }}
-                                >
+                                <TableCell align="center" sx={actionsBodyCellSx}>
                                   {renderRowActions ? (
                                     renderRowActions(item)
                                   ) : (
@@ -732,6 +729,20 @@ const List: React.FC<Props> = ({
                                   )}
                                 </TableCell>
                               )}
+                              {desktopColumns?.map((column, colIdx) => (
+                                <TableCell 
+                                  key={colIdx} 
+                                  align="right"
+                                  sx={{
+                                    color: "var(--admin-text)",
+                                    fontSize: 16,
+                                    padding: "16px 24px",
+                                    ...(colIdx === 0 ? { minWidth: '300px', width: '300px' } : {}),
+                                  }}
+                                >
+                                  {getFieldValue(item, column.field)}
+                                </TableCell>
+                              ))}
                             </TableRow>
                           ))}
                         </TableBody>

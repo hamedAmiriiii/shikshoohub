@@ -123,6 +123,8 @@ export function resolveCustomerShopCode(options: {
   explicitShop?: string | null;
   queryShop?: string | null;
   redirect?: string | null;
+  /** فقط پس از hydration فعال شود تا SSR و کلاینت یکسان بمانند */
+  includeStoredShop?: boolean;
 }): string | null {
   const fromExplicit = options.explicitShop?.trim();
   if (fromExplicit) return fromExplicit;
@@ -135,8 +137,10 @@ export function resolveCustomerShopCode(options: {
     : null;
   if (fromRedirect) return fromRedirect;
 
-  const fromStorage = getLastShopCode();
-  if (fromStorage) return fromStorage;
+  if (options.includeStoredShop) {
+    const fromStorage = getLastShopCode();
+    if (fromStorage) return fromStorage;
+  }
 
   const fromEnv = process.env.NEXT_PUBLIC_DEFAULT_SHOP?.trim();
   if (fromEnv) return fromEnv;

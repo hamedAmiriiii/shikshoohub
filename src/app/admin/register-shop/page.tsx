@@ -13,7 +13,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { apiRequestError } from "@/app/lib/apiRequestError/client";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import PhoneIcon from "@mui/icons-material/Phone";
 import LockIcon from "@mui/icons-material/Lock";
 import PersonIcon from "@mui/icons-material/Person";
@@ -43,8 +44,10 @@ function parseErrorBody(errorText: string | undefined): {
 /** تایمر واحد: اعتبار کد و فاصلهٔ ارسال مجدد (۵ دقیقه) */
 const CODE_TIMER_SECONDS = 5 * 60;
 
-export default function RegisterShopPage() {
+function RegisterShopPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const referralCode = searchParams.get("ref")?.trim() || "";
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
@@ -214,7 +217,7 @@ export default function RegisterShopPage() {
 
     setIsLoading(true);
     try {
-      const body = {
+      const body: Record<string, unknown> = {
         name: name.trim(),
         last_name: lastName.trim(),
         type: [2],
@@ -224,6 +227,9 @@ export default function RegisterShopPage() {
         national_code: nationalCode,
         verification_code: code,
       };
+      if (referralCode) {
+        body.referral_code = referralCode;
+      }
 
       const res = await apiRequestError("Post", {}, body, "/api/auth/register", false, false, "");
       console.log("res : ",res);
@@ -370,6 +376,20 @@ export default function RegisterShopPage() {
       <Typography sx={{ textAlign: "center", color: "var(--admin-text-muted)", mb: 2 }}>
         کد به شماره <strong style={{ color: "var(--admin-text)" }}>{phone}</strong> ارسال شده است.
       </Typography>
+
+      {referralCode && (
+        <Typography
+          sx={{
+            textAlign: "center",
+            color: "#26a69a",
+            fontSize: "13px",
+            mb: 2,
+            fontWeight: 600,
+          }}
+        >
+          ثبت‌نام با کد معرف: {referralCode}
+        </Typography>
+      )}
 
       <Box sx={{ display: "flex", flexDirection: "column", gap: "14px" }}>
         <TextField
@@ -578,5 +598,13 @@ export default function RegisterShopPage() {
       </Container>
       <ToastContainer position="top-center" rtl />
     </Box>
+  );
+}
+
+export default function RegisterShopPage() {
+  return (
+    <Suspense fallback={null}>
+      <RegisterShopPageInner />
+    </Suspense>
   );
 }
