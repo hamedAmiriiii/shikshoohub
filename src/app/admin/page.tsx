@@ -73,6 +73,8 @@ import {
 import type { PaymentType } from '@/app/lib/paymentTypes';
 import SaleProductListPanel from '@/app/admin/SaleProductListPanel';
 import AdminMenuModeView from '@/app/admin/AdminMenuModeView';
+import MultiCartToolbar, { MAX_MULTI_CARTS } from '@/app/admin/MultiCartToolbar';
+import { createEmptyCartSlot, type CartSlotSnapshot } from '@/app/admin/multiCartState';
 import { publishAdminSaleCartSnapshot } from '@/app/admin/onboarding/adminSaleCartCheck';
 import CategoryIcon from '@mui/icons-material/Category';
 import {
@@ -127,6 +129,9 @@ export default function ShoppingPage() {
   const [openModal, setOpenModal] = useState(false);
   const [cart, setCart] = useState([]);
   const [total, setTotal] = useState(0);
+  const [cartCount, setCartCount] = useState(1);
+  const [activeCartIndex, setActiveCartIndex] = useState(0);
+  const cartSlotsRef = useRef<CartSlotSnapshot[]>([createEmptyCartSlot()]);
 
   useEffect(() => {
     publishAdminSaleCartSnapshot(cart);
@@ -265,6 +270,116 @@ export default function ShoppingPage() {
     setCashAmountInput("");
     setPaymentSplitError("");
   }, []);
+
+  const captureCurrentSlot = useCallback((): CartSlotSnapshot => ({
+    cart: Array.isArray(cart) ? [...cart] : [],
+    total,
+    phone,
+    credit,
+    useCreditAmount,
+    discounttype,
+    discountDisplay,
+    discountError,
+    backPrice,
+    paymentType,
+    installmentCount,
+    installmentCalculation,
+    installmentCreditError,
+    settlementMode,
+    cardAmountInput,
+    cashAmountInput,
+    paymentSplitError,
+  }), [
+    cart,
+    total,
+    phone,
+    credit,
+    useCreditAmount,
+    discounttype,
+    discountDisplay,
+    discountError,
+    backPrice,
+    paymentType,
+    installmentCount,
+    installmentCalculation,
+    installmentCreditError,
+    settlementMode,
+    cardAmountInput,
+    cashAmountInput,
+    paymentSplitError,
+  ]);
+
+  const applyCartSlot = useCallback((slot: CartSlotSnapshot) => {
+    setCart(slot.cart ?? []);
+    setTotal(slot.total ?? 0);
+    setPhone(slot.phone ?? "");
+    setCredit(slot.credit ?? 0);
+    setUseCreditAmount(slot.useCreditAmount ?? 0);
+    setDiscounttype(slot.discounttype ?? 0);
+    setDiscountDisplay(slot.discountDisplay ?? "");
+    setDiscountError(slot.discountError ?? "");
+    setBackPrice(slot.backPrice ?? 0);
+    setPaymentType(slot.paymentType ?? "cash");
+    setInstallmentCount(slot.installmentCount ?? 2);
+    setInstallmentCalculation(slot.installmentCalculation ?? null);
+    installmentCalculationRef.current = slot.installmentCalculation ?? null;
+    setInstallmentCreditError(slot.installmentCreditError ?? "");
+    setSettlementMode(slot.settlementMode ?? "card_all");
+    setCardAmountInput(slot.cardAmountInput ?? "");
+    setCashAmountInput(slot.cashAmountInput ?? "");
+    setPaymentSplitError(slot.paymentSplitError ?? "");
+    setIsDiscountFocused(false);
+  }, []);
+
+  const switchCart = useCallback(
+    (index: number) => {
+      if (index === activeCartIndex) return;
+      if (index < 0 || index >= cartSlotsRef.current.length) return;
+      const slots = [...cartSlotsRef.current];
+      slots[activeCartIndex] = captureCurrentSlot();
+      cartSlotsRef.current = slots;
+      setActiveCartIndex(index);
+      applyCartSlot(slots[index] ?? createEmptyCartSlot());
+    },
+    [activeCartIndex, captureCurrentSlot, applyCartSlot],
+  );
+
+  const addCartSlot = useCallback(() => {
+    if (cartSlotsRef.current.length >= MAX_MULTI_CARTS) {
+      toast.info("حداکثر ۴ سبد می‌توانید داشته باشید");
+      return;
+    }
+    const slots = [...cartSlotsRef.current];
+    slots[activeCartIndex] = captureCurrentSlot();
+    slots.push(createEmptyCartSlot());
+    cartSlotsRef.current = slots;
+    setCartCount(slots.length);
+    setActiveCartIndex(slots.length - 1);
+    applyCartSlot(createEmptyCartSlot());
+  }, [activeCartIndex, captureCurrentSlot, applyCartSlot]);
+
+  const clearOrRemoveActiveCart = useCallback(
+    (options?: { clearScanned?: boolean }) => {
+      const slots = [...cartSlotsRef.current];
+      if (slots.length <= 1) {
+        const empty = createEmptyCartSlot();
+        cartSlotsRef.current = [empty];
+        setCartCount(1);
+        setActiveCartIndex(0);
+        applyCartSlot(empty);
+        if (options?.clearScanned) setScannedCode("");
+        return;
+      }
+      slots.splice(activeCartIndex, 1);
+      const nextIndex = Math.min(activeCartIndex, slots.length - 1);
+      cartSlotsRef.current = slots;
+      setCartCount(slots.length);
+      setActiveCartIndex(nextIndex);
+      applyCartSlot(slots[nextIndex] ?? createEmptyCartSlot());
+      if (options?.clearScanned) setScannedCode("");
+    },
+    [activeCartIndex, applyCartSlot],
+  );
 
   const paymentFieldsValid = useMemo(() => {
     if (payableNow <= 0) return true;
@@ -739,21 +854,8 @@ export default function ShoppingPage() {
   }, [debtPaymentEnabled, paymentType]);
 
   const clearMenuCart = useCallback(() => {
-    setCart([]);
-    setTotal(0);
-    setPhone("");
-    setCredit(0);
-    setUseCreditAmount(0);
-    setDiscounttype(0);
-    setDiscountDisplay("");
-    setDiscountError("");
-    setBackPrice(0);
-    setInstallmentCalculation(null);
-    installmentCalculationRef.current = null;
-    setPaymentType("cash");
-    setInstallmentCount(2);
-    resetPaymentSettlement();
-  }, [resetPaymentSettlement]);
+    clearOrRemoveActiveCart();
+  }, [clearOrRemoveActiveCart]);
 
   const addProductToCart = useCallback((item: any) => {
     setCart((prevCart) => {
@@ -870,22 +972,8 @@ export default function ShoppingPage() {
   );
 
   const resetCartAfterSale = useCallback(() => {
-    setCart([]);
-    setTotal(0);
-    setScannedCode("");
-    setPhone("");
-    setCredit(0);
-    setUseCreditAmount(0);
-    setDiscounttype(0);
-    setDiscountDisplay("");
-    setDiscountError("");
-    setBackPrice(0);
-    setInstallmentCalculation(null);
-    installmentCalculationRef.current = null;
-    setPaymentType("cash");
-    setInstallmentCount(2);
-    resetPaymentSettlement();
-  }, [resetPaymentSettlement]);
+    clearOrRemoveActiveCart({ clearScanned: true });
+  }, [clearOrRemoveActiveCart]);
 
   const finalizeSuccessfulSale = useCallback(
     (res: any, successMessage: string) => {
@@ -915,23 +1003,9 @@ export default function ShoppingPage() {
   }, [lastSaleReceipt, skipPrintPreview]);
 
   const resetCartAfterQueuedSale = useCallback(() => {
-    setCart([]);
-    setTotal(0);
-    setScannedCode("");
-    setPhone("");
-    setCredit(0);
-    setUseCreditAmount(0);
-    setDiscounttype(0);
-    setDiscountDisplay("");
-    setDiscountError("");
-    setBackPrice(0);
-    setInstallmentCalculation(null);
-    installmentCalculationRef.current = null;
-    setPaymentType("cash");
-    setInstallmentCount(2);
-    resetPaymentSettlement();
+    clearOrRemoveActiveCart({ clearScanned: true });
     setIsSubmitting(false);
-  }, [resetPaymentSettlement]);
+  }, [clearOrRemoveActiveCart]);
 
   const queueCurrentPurchase = useCallback(
     async (
@@ -1477,103 +1551,138 @@ export default function ShoppingPage() {
     <Box sx={{ position: 'relative', minHeight: '100vh', direction: "rtl", background: "var(--admin-bg-gradient)" }}>
       <Container maxWidth="xl" sx={{ padding: { xs: '12px', md: '24px' }, paddingBottom: { xs: '140px', md: '56px' } }}>
 
-        {/* Offline Status Banner */}
-        {!effectiveOnline && (
-          <Box sx={{
-            backgroundColor: "#ff9800",
-            color: "var(--admin-text)",
-            padding: { xs: "8px 12px", md: "12px 20px" },
-            borderRadius: { xs: "8px", md: "12px" },
-            marginBottom: { xs: "12px", md: "16px" },
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            justifyContent: "space-between"
-          }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <CloudOffIcon sx={{ fontSize: { xs: "18px", md: "24px" } }} />
-              <Typography sx={{ fontSize: { xs: "12px", md: "14px" }, fontWeight: "600" }}>
-                حالت Offline - خریدها در صف ثبت قرار می‌گیرند
-              </Typography>
-            </Box>
-            <Button
-              size="small"
-              variant="contained"
-              onClick={checkNetworkSpeed}
-              disabled={isCheckingNetworkSpeed}
-              sx={{
-                minWidth: { xs: 112, md: 140 },
-                bgcolor: "#fff",
-                color: "#d97706",
-                fontSize: { xs: "11px", md: "12px" },
-                "&:hover": { bgcolor: "#f8fafc" },
-              }}
-            >
-              {isCheckingNetworkSpeed ? "در حال بررسی..." : "بررسی سرعت شبکه"}
-            </Button>
-          </Box>
-        )}
-
-        {/* Pending Purchases Banner */}
-        {pendingPurchases.length > 0 && (
-          <Box 
-            onClick={() => router.push('/admin/pending-purchases')}
+        {/* Offline / Pending — یک خط فشرده */}
+        {(!effectiveOnline || pendingPurchases.length > 0) && (
+          <Box
             sx={{
-              backgroundColor: effectiveOnline ? "#2196f3" : "#ff9800",
+              backgroundColor: !effectiveOnline ? "#ff9800" : "#2196f3",
               color: "var(--admin-text)",
-              padding: { xs: "8px 12px", md: "12px 20px" },
+              padding: { xs: "6px 10px", md: "8px 14px" },
               borderRadius: { xs: "8px", md: "12px" },
               marginBottom: { xs: "12px", md: "16px" },
               display: "flex",
               alignItems: "center",
-              gap: "8px",
-              justifyContent: "space-between",
-              cursor: "pointer",
-              transition: "all 0.3s ease",
-              "&:hover": {
-                backgroundColor: effectiveOnline ? "#1976d2" : "#f57c00",
-                transform: "translateY(-2px)",
-              }
+              gap: { xs: 0.75, md: 1 },
+              flexWrap: "nowrap",
+              overflow: "hidden",
             }}
           >
-            <Box sx={{ display: "flex", alignItems: "center", gap: "8px", flex: 1 }}>
-              {effectiveOnline ? (
-                <>
-                  <CloudQueueIcon sx={{ fontSize: { xs: "18px", md: "24px" } }} />
-                  <Typography sx={{ fontSize: { xs: "12px", md: "14px" }, fontWeight: "600" }}>
-                    {pendingPurchases.length} خرید در صف ثبت {isSyncing && "(در حال همگام‌سازی...)"} - کلیک برای مشاهده
-                  </Typography>
-                </>
-              ) : (
-                <>
-                  <WarningIcon sx={{ fontSize: { xs: "18px", md: "24px" } }} />
-                  <Typography sx={{ fontSize: { xs: "12px", md: "14px" }, fontWeight: "600" }}>
-                    {pendingPurchases.length} خرید در صف ثبت (بعد از اتصال به اینترنت ارسال می‌شود) - کلیک برای مشاهده
-                  </Typography>
-                </>
-              )}
-            </Box>
-            {effectiveOnline && !isSyncing && (
-              <IconButton
-                onClick={(e) => {
-                  e.stopPropagation();
-                  syncPendingPurchases();
-                }}
+            {!effectiveOnline && (
+              <Box
                 sx={{
-                  color: "var(--admin-text)",
-                  backgroundColor: "var(--admin-icon-bg)",
-                  padding: { xs: "4px", md: "6px" },
-                  "&:hover": {
-                    backgroundColor: "var(--admin-text-secondary)",
-                  }
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.75,
+                  minWidth: 0,
+                  flex: "1 1 auto",
                 }}
               >
-                <SyncIcon sx={{ fontSize: { xs: "16px", md: "20px" } }} />
-              </IconButton>
+                <CloudOffIcon sx={{ fontSize: { xs: 16, md: 20 }, flexShrink: 0 }} />
+                <Typography
+                  noWrap
+                  sx={{
+                    fontSize: { xs: "11px", md: "13px" },
+                    fontWeight: 600,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  حالت Offline - خریدها در صف ثبت قرار می‌گیرند
+                </Typography>
+              </Box>
             )}
-            {isSyncing && (
-              <CircularProgress size={20} sx={{ color: "var(--admin-text)" }} />
+
+            {effectiveOnline && pendingPurchases.length > 0 && (
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.75,
+                  minWidth: 0,
+                  flex: "1 1 auto",
+                }}
+              >
+                <CloudQueueIcon sx={{ fontSize: { xs: 16, md: 20 }, flexShrink: 0 }} />
+                <Typography
+                  noWrap
+                  sx={{ fontSize: { xs: "11px", md: "13px" }, fontWeight: 600 }}
+                >
+                  {pendingPurchases.length} خرید در صف ثبت
+                  {isSyncing ? " (همگام‌سازی...)" : ""}
+                </Typography>
+              </Box>
             )}
+
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 0.75,
+                flexShrink: 0,
+                ml: "auto",
+              }}
+            >
+              {!effectiveOnline && (
+                <Button
+                  size="small"
+                  variant="contained"
+                  onClick={checkNetworkSpeed}
+                  disabled={isCheckingNetworkSpeed}
+                  sx={{
+                    minWidth: 0,
+                    px: { xs: 1, md: 1.5 },
+                    py: 0.35,
+                    bgcolor: "#fff",
+                    color: "#d97706",
+                    fontSize: { xs: "10px", md: "12px" },
+                    whiteSpace: "nowrap",
+                    "&:hover": { bgcolor: "#f8fafc" },
+                  }}
+                >
+                  {isCheckingNetworkSpeed ? "..." : "بررسی شبکه"}
+                </Button>
+              )}
+
+              {pendingPurchases.length > 0 && (
+                <Button
+                  size="small"
+                  variant="contained"
+                  onClick={() => router.push("/admin/pending-purchases")}
+                  sx={{
+                    minWidth: 0,
+                    px: { xs: 1, md: 1.5 },
+                    py: 0.35,
+                    bgcolor: "#fff",
+                    color: !effectiveOnline ? "#d97706" : "#1565c0",
+                    fontSize: { xs: "10px", md: "12px" },
+                    whiteSpace: "nowrap",
+                    "&:hover": { bgcolor: "#f8fafc" },
+                  }}
+                >
+                  مشاهده صف
+                  {pendingPurchases.length > 0 ? ` (${pendingPurchases.length})` : ""}
+                </Button>
+              )}
+
+              {effectiveOnline && pendingPurchases.length > 0 && !isSyncing && (
+                <IconButton
+                  size="small"
+                  onClick={syncPendingPurchases}
+                  aria-label="همگام‌سازی صف"
+                  sx={{
+                    color: "var(--admin-text)",
+                    backgroundColor: "rgba(255,255,255,0.2)",
+                    p: 0.5,
+                    "&:hover": { backgroundColor: "rgba(255,255,255,0.35)" },
+                  }}
+                >
+                  <SyncIcon sx={{ fontSize: { xs: 16, md: 18 } }} />
+                </IconButton>
+              )}
+              {isSyncing && (
+                <CircularProgress size={16} sx={{ color: "var(--admin-text)" }} />
+              )}
+            </Box>
           </Box>
         )}
 
@@ -1582,105 +1691,106 @@ export default function ShoppingPage() {
             products={items}
             onAddProduct={addProductToCart}
             formatNumber={formatNumber}
-            cartPanel={
-              cart.length > 0
-                ? {
-                    cart,
-                    total,
-                    formatNumber,
-                    onUpdateQuantity: updateQuantity,
-                    onRemoveItem: removeItemFromCart,
-                    onClearCart: clearMenuCart,
-                    phone,
-                    onChangePhone,
-                    checkingCredit,
-                    credit,
-                    useCreditAmount,
-                    discounttype,
-                    discountDisplay,
-                    discountError,
-                    isDiscountFocused,
-                    onDiscountFocus: () => setIsDiscountFocused(true),
-                    onDiscountChange: (value: string) => {
-                      const cleaned = value.replace(/,/g, "");
-                      if (cleaned === "" || /^\d+$/.test(cleaned)) {
-                        const numValue = cleaned === "" ? 0 : Number(cleaned);
-                        const maxDiscount = Math.floor(total * 0.15);
-                        if (numValue > maxDiscount) {
-                          setDiscountError(
-                            `حداکثر ${formatNumber(maxDiscount)} تومان`,
-                          );
-                          setDiscounttype(0);
-                          setDiscountDisplay("");
-                        } else {
-                          setDiscountError("");
-                          setDiscounttype(numValue);
-                          setDiscountDisplay(cleaned === "" ? "" : cleaned);
-                        }
-                      }
-                    },
-                    onDiscountBlur: (value: string) => {
-                      setIsDiscountFocused(false);
-                      const cleaned = value.replace(/,/g, "");
-                      if (cleaned === "" || cleaned === "0" || Number(cleaned) === 0) {
-                        setDiscountDisplay("");
-                        setDiscounttype(0);
-                        setDiscountError("");
-                      } else {
-                        setDiscountDisplay(
-                          new Intl.NumberFormat("fa-IR").format(Number(cleaned)),
-                        );
-                      }
-                    },
-                    paymentType,
-                    onPaymentTypeChange: (type) => {
-                      setPaymentType(type);
-                      if (type === "cash") {
-                        setInstallmentCount(2);
-                        setInstallmentCalculation(null);
-                        installmentCalculationRef.current = null;
-                        setInstallmentCreditError("");
-                      } else if (type === "installment") {
-                        setDiscounttype(0);
-                        setDiscountDisplay("");
-                        setDiscountError("");
-                      }
-                    },
-                    installmentCount,
-                    onInstallmentCountChange: setInstallmentCount,
-                    payableNow,
-                    settlementMode,
-                    onSettlementModeChange: (mode) => {
-                      setSettlementMode(mode);
-                      setPaymentSplitError("");
-                      if (mode === "split") {
-                        setCardAmountInput(String(payableNow));
-                        setCashAmountInput("0");
-                      }
-                    },
-                    cardAmountInput,
-                    cashAmountInput,
-                    onCardAmountChange: handleCardAmountChange,
-                    onCashAmountChange: handleCashAmountChange,
-                    paymentSplitError,
-                    paymentFieldsValid,
-                    isSubmitting,
-                    onConfirm: confirm,
-                    calculatingInstallments,
-                    installmentCreditError,
-                    installmentCalculation,
-                    installmentPaymentEnabled,
-                    debtPaymentEnabled,
+            cartPanel={{
+              cart,
+              total,
+              formatNumber,
+              onUpdateQuantity: updateQuantity,
+              onRemoveItem: removeItemFromCart,
+              onClearCart: clearMenuCart,
+              cartCount,
+              activeCartIndex,
+              onSwitchCart: switchCart,
+              onAddCart: addCartSlot,
+              phone,
+              phoneInputKey: `menu-phone-${activeCartIndex}`,
+              onChangePhone,
+              checkingCredit,
+              credit,
+              useCreditAmount,
+              discounttype,
+              discountDisplay,
+              discountError,
+              isDiscountFocused,
+              onDiscountFocus: () => setIsDiscountFocused(true),
+              onDiscountChange: (value: string) => {
+                const cleaned = value.replace(/,/g, "");
+                if (cleaned === "" || /^\d+$/.test(cleaned)) {
+                  const numValue = cleaned === "" ? 0 : Number(cleaned);
+                  const maxDiscount = Math.floor(total * 0.15);
+                  if (numValue > maxDiscount) {
+                    setDiscountError(
+                      `حداکثر ${formatNumber(maxDiscount)} تومان`,
+                    );
+                    setDiscounttype(0);
+                    setDiscountDisplay("");
+                  } else {
+                    setDiscountError("");
+                    setDiscounttype(numValue);
+                    setDiscountDisplay(cleaned === "" ? "" : cleaned);
                   }
-                : null
-            }
+                }
+              },
+              onDiscountBlur: (value: string) => {
+                setIsDiscountFocused(false);
+                const cleaned = value.replace(/,/g, "");
+                if (cleaned === "" || cleaned === "0" || Number(cleaned) === 0) {
+                  setDiscountDisplay("");
+                  setDiscounttype(0);
+                  setDiscountError("");
+                } else {
+                  setDiscountDisplay(
+                    new Intl.NumberFormat("fa-IR").format(Number(cleaned)),
+                  );
+                }
+              },
+              paymentType,
+              onPaymentTypeChange: (type) => {
+                setPaymentType(type);
+                if (type === "cash") {
+                  setInstallmentCount(2);
+                  setInstallmentCalculation(null);
+                  installmentCalculationRef.current = null;
+                  setInstallmentCreditError("");
+                } else if (type === "installment") {
+                  setDiscounttype(0);
+                  setDiscountDisplay("");
+                  setDiscountError("");
+                }
+              },
+              installmentCount,
+              onInstallmentCountChange: setInstallmentCount,
+              payableNow,
+              settlementMode,
+              onSettlementModeChange: (mode) => {
+                setSettlementMode(mode);
+                setPaymentSplitError("");
+                if (mode === "split") {
+                  setCardAmountInput(String(payableNow));
+                  setCashAmountInput("0");
+                }
+              },
+              cardAmountInput,
+              cashAmountInput,
+              onCardAmountChange: handleCardAmountChange,
+              onCashAmountChange: handleCashAmountChange,
+              paymentSplitError,
+              paymentFieldsValid,
+              isSubmitting,
+              onConfirm: confirm,
+              calculatingInstallments,
+              installmentCreditError,
+              installmentCalculation,
+              installmentPaymentEnabled,
+              debtPaymentEnabled,
+            }}
           />
         )}
 
         {!menuMode && (
         <Grid container spacing={3} sx={{ maxWidth: { md: "1400px" }, margin: { md: "0 auto" } }}>
           {/* Cart Items */}
-          <Grid item xs={12} md={cart.length > 0 ? 8 : 12}>
+          <Grid item xs={12} md={(cart.length > 0 || cartCount > 1) ? 8 : 12}>
             {cart.length > 0 ? (
               <Box sx={{ marginBottom: { xs: "12px", md: "0" } }}>
                 <TableContainer 
@@ -2271,7 +2381,7 @@ export default function ShoppingPage() {
           </Grid>
 
           {/* Total and Submit - Desktop Sidebar */}
-          {cart.length > 0 && (
+          {(cart.length > 0 || cartCount > 1) && (
             <Grid item xs={12} md={4}>
               <Box sx={{ position: { md: "sticky" }, top: { md: "24px" }, pb: { xs: 3, md: 2 } }}>
                 {/* Phone Number Input */}
@@ -2286,9 +2396,16 @@ export default function ShoppingPage() {
                     transform: "translateY(-2px)",
                   }
                 }}>
-                  <CardContent sx={{ padding: { xs: "12px", md: "20px" } }}>
-                  
+                  <CardContent sx={{ padding: { xs: "12px", md: "20px" }, display: "flex", flexDirection: "column", gap: 1.5 }}>
+                    <MultiCartToolbar
+                      cartCount={cartCount}
+                      activeIndex={activeCartIndex}
+                      onSwitch={switchCart}
+                      onAdd={addCartSlot}
+                      onClearOrRemove={clearMenuCart}
+                    />
                     <PhoneNumberInput
+                      key={`phone-${activeCartIndex}`}
                       name="phone"
                       defaultValue={phone}
                       onChange={onChangePhone}
@@ -3106,7 +3223,7 @@ export default function ShoppingPage() {
         sx={{
           position: 'fixed',
           bottom: { xs: '295px', md: '80px' },
-          right: { xs: '16px', md: '40px' },
+          right: { xs: '20px', md: '220px' },
           borderRadius: '50%',
           width: { xs: '56px', md: '72px' },
           height: { xs: '56px', md: '72px' },

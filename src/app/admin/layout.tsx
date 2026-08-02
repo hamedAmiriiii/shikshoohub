@@ -8,6 +8,8 @@ import './theme/admin-theme.css';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
+import { ADMIN_SIDEBAR_WIDTH } from './AdminHamburgerSidebar';
+import { ADMIN_MENU_CART_WIDTH_VAR } from './adminMenuCartLayout';
 
 // Map pathname to page title
 const getPageTitle = (pathname: string | null): string | undefined => {
@@ -131,7 +133,17 @@ export default function ShikshooLayout({
                 backUrl="/admin"
               />
             )}
-            {children}
+            <Box
+              sx={{
+                pl: !isPrintPage && !isPublicAdminPage
+                  ? `var(${ADMIN_MENU_CART_WIDTH_VAR}, 0px)`
+                  : 0,
+                pr: !isPrintPage && !isPublicAdminPage ? { md: `${ADMIN_SIDEBAR_WIDTH}px` } : 0,
+                pb: !isPrintPage && !isPublicAdminPage ? { xs: "80px", md: "24px" } : 0,
+              }}
+            >
+              {children}
+            </Box>
             {!isPrintPage && !isPublicAdminPage && <SimpleBottomNavigationAtelier />}
           </>
         )}

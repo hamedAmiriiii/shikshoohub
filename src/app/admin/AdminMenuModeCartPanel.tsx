@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import {
   Box,
   Typography,
@@ -16,9 +17,15 @@ import {
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import RemoveIcon from "@mui/icons-material/Remove";
 import AddIcon from "@mui/icons-material/Add";
-import CloseIcon from "@mui/icons-material/Close";
 import PhoneNumberInput from "@/app/coponent/PhoneNumberInput/PhoneNumberInput";
 import type { PaymentType } from "@/app/lib/paymentTypes";
+import MultiCartToolbar from "@/app/admin/MultiCartToolbar";
+import {
+  ADMIN_MENU_CART_WIDTH,
+  ADMIN_MENU_CART_WIDTH_VAR,
+} from "@/app/admin/adminMenuCartLayout";
+
+export { ADMIN_MENU_CART_WIDTH, ADMIN_MENU_CART_WIDTH_VAR } from "@/app/admin/adminMenuCartLayout";
 
 type SettlementMode = "split" | "card_all" | "cash_all";
 
@@ -55,7 +62,12 @@ export type AdminMenuModeCartPanelProps = {
   onUpdateQuantity: (itemId: number | string, increment: number) => void;
   onRemoveItem: (itemId: number | string) => void;
   onClearCart: () => void;
+  cartCount: number;
+  activeCartIndex: number;
+  onSwitchCart: (index: number) => void;
+  onAddCart: () => void;
   phone: string;
+  phoneInputKey?: string | number;
   onChangePhone: (value: string) => void;
   checkingCredit: boolean;
   credit: number;
@@ -96,7 +108,12 @@ export default function AdminMenuModeCartPanel({
   onUpdateQuantity,
   onRemoveItem,
   onClearCart,
+  cartCount,
+  activeCartIndex,
+  onSwitchCart,
+  onAddCart,
   phone,
+  phoneInputKey,
   onChangePhone,
   checkingCredit,
   credit,
@@ -132,6 +149,14 @@ export default function AdminMenuModeCartPanel({
   const finalTotal = Math.max(0, total - useCreditAmount - discounttype);
   const showPaymentTypeSelector = installmentPaymentEnabled || debtPaymentEnabled;
 
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty(ADMIN_MENU_CART_WIDTH_VAR, `${ADMIN_MENU_CART_WIDTH}px`);
+    return () => {
+      root.style.removeProperty(ADMIN_MENU_CART_WIDTH_VAR);
+    };
+  }, []);
+
   const submitDisabled =
     !total ||
     isSubmitting ||
@@ -148,19 +173,21 @@ export default function AdminMenuModeCartPanel({
 
   return (
     <Box
+      component="aside"
+      aria-label="سبد خرید"
       sx={{
         position: "fixed",
-        left: { xs: 4, md: 8 },
-        top: { xs: 72, md: 80 },
-        bottom: { xs: 8, md: 16 },
-        width: { xs: 148, sm: 168, md: 188 },
-        zIndex: 1100,
+        left: 0,
+        top: 0,
+        bottom: 0,
+        width: ADMIN_MENU_CART_WIDTH,
+        zIndex: (theme) => theme.zIndex.drawer,
         display: "flex",
         flexDirection: "column",
         bgcolor: "var(--admin-surface)",
-        border: "1px solid var(--admin-accent-border)",
-        borderRadius: "10px",
-        boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
+        borderRight: "1px solid var(--admin-accent-border)",
+        borderRadius: 0,
+        boxSizing: "border-box",
         overflow: "hidden",
         fontSize: "10px",
       }}
@@ -170,22 +197,21 @@ export default function AdminMenuModeCartPanel({
           px: 0.75,
           py: 0.5,
           borderBottom: "1px solid var(--admin-border)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
           bgcolor: "var(--admin-surface-alt)",
           flexShrink: 0,
         }}
       >
-        <Typography sx={{ fontSize: "10px", fontWeight: 700, color: "var(--admin-text)" }}>
-          سبد ({cart.length})
+        <Typography sx={{ fontSize: "10px", fontWeight: 600, color: "var(--admin-text-muted)" }}>
+          سبد {activeCartIndex + 1} · {cart.length} کالا
         </Typography>
-        <IconButton size="small" onClick={onClearCart} sx={{ p: 0.25 }} aria-label="انصراف">
-          <CloseIcon sx={{ fontSize: 14, color: "var(--admin-text-muted)" }} />
-        </IconButton>
       </Box>
 
       <Box sx={{ flex: 1, overflowY: "auto", px: 0.75, py: 0.5 }}>
+        {cart.length === 0 && (
+          <Typography sx={{ fontSize: "9px", color: "var(--admin-text-muted)", textAlign: "center", py: 2 }}>
+            سبد خالی است
+          </Typography>
+        )}
         {cart.map((item) => (
           <Box
             key={item.id}
@@ -264,14 +290,24 @@ export default function AdminMenuModeCartPanel({
           flexShrink: 0,
           borderTop: "1px solid var(--admin-border)",
           px: 0.75,
-          py: 0.75,
+          pt: 0.75,
+          pb: { xs: "88px", md: 1.25 },
           bgcolor: "var(--admin-surface-alt)",
           display: "flex",
           flexDirection: "column",
           gap: 0.5,
         }}
       >
+        <MultiCartToolbar
+          compact
+          cartCount={cartCount}
+          activeIndex={activeCartIndex}
+          onSwitch={onSwitchCart}
+          onAdd={onAddCart}
+          onClearOrRemove={onClearCart}
+        />
         <PhoneNumberInput
+          key={phoneInputKey ?? `menu-phone-${activeCartIndex}`}
           name="menu-phone"
           defaultValue={phone}
           onChange={onChangePhone}
@@ -470,7 +506,7 @@ export default function AdminMenuModeCartPanel({
               flex: 1,
               minWidth: 0,
               fontSize: "9px",
-              py: 0.35,
+              py: 0.3,
               borderColor: "var(--admin-border)",
               color: "var(--admin-text-secondary)",
             }}
@@ -486,7 +522,7 @@ export default function AdminMenuModeCartPanel({
               flex: 1.4,
               minWidth: 0,
               fontSize: "9px",
-              py: 0.35,
+              py: 0.3,
               bgcolor: "var(--admin-accent)",
               "&:hover": { bgcolor: "var(--admin-accent-hover)" },
             }}

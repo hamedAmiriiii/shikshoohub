@@ -39,7 +39,7 @@ type AdminMenuModeViewProps = {
   products: CachedProduct[];
   onAddProduct: (product: CachedProduct) => void;
   formatNumber: (num: number) => string;
-  cartPanel: AdminMenuModeCartPanelProps | null;
+  cartPanel: AdminMenuModeCartPanelProps;
 };
 
 export default function AdminMenuModeView({
@@ -52,7 +52,6 @@ export default function AdminMenuModeView({
   const [search, setSearch] = useState("");
 
   const categories = useMemo(() => buildMenuCategories(products), [products]);
-  const hasCart = Boolean(cartPanel && cartPanel.cart.length > 0);
 
   const filteredProducts = useMemo(() => {
     const byCategory = filterProductsByMenuCategory(products, selectedCategoryId);
@@ -67,14 +66,9 @@ export default function AdminMenuModeView({
 
   return (
     <Box sx={{ position: "relative" }}>
-      {hasCart && cartPanel && <AdminMenuModeCartPanel {...cartPanel} />}
+      <AdminMenuModeCartPanel {...cartPanel} />
 
-      <Box
-        sx={{
-          pl: hasCart ? { xs: "156px", sm: "176px", md: "196px" } : 0,
-          transition: "padding 0.2s ease",
-        }}
-      >
+      <Box>
         <TextField
           size="small"
           fullWidth

@@ -119,8 +119,8 @@ export function getAccessMenuSummary(access: ShopAccessInfo | null): string | nu
   if (!access?.shop_access_ends_at) return null;
   const end = formatAccessEndDate(access.shop_access_ends_at);
   const status = formatAccessStatus(access);
-  if (status) return `اعتبار کاربری تا ${end} — ${status}`;
-  return `اعتبار کاربری تا ${end}`;
+  if (status) return `  ${end} — ${status}`;
+  return ` تا ${end}`;
 }
 
 export function mergeUserWithShopAccess(

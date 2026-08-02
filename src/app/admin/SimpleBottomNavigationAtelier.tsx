@@ -56,7 +56,7 @@ export default function SimpleBottomNavigationAtelier() {
   };
 
   return (
-    <Box sx={{ width: 500, height:"65" }}>
+    <Box sx={{ display: { xs: "block", md: "none" }, width: 500, height: "65" }}>
       <Paper data-admin-tour="bottom-nav" sx={{width:"94%", position: 'fixed', bottom: 12, left: '3%', right: 0 ,borderRadius:'30px', height:"65", backgroundColor: 'var(--admin-bottom-nav-bg)', border: '1px solid var(--admin-border)'}} elevation={2}>
         <BottomNavigation
           sx={{borderRadius:'25px'}}
