@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   Zap,
@@ -10,14 +11,6 @@ import {
   TrendingUp,
   Smartphone,
   CreditCard,
-  Printer,
-  MessageSquare,
-  Gift,
-  Receipt,
-  BarChart3,
-  ClipboardList,
-  FileText,
-  LayoutDashboard,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -26,6 +19,11 @@ import {
   CheckCircle2,
   Menu,
   X,
+  ScanBarcode,
+  WifiOff,
+  Globe,
+  Sparkles,
+  Gift,
 } from "lucide-react";
 
 const REGISTER_URL = "/admin/register-shop";
@@ -36,25 +34,118 @@ const LINK_BALE = "https://ble.ir/AmiriWebino";
 const LINK_RUBIKA = "https://rubika.ir/WebinoPlus";
 
 const BENEFITS = [
-  { icon: Zap, title: "ثبت فروش سریع", desc: "ثبت فاکتور و فروش در چند ثانیه" },
-  { icon: Package, title: "مدیریت انبار", desc: "مشاهده موجودی و کنترل قیمت خرید و فروش" },
-  { icon: Users, title: "مدیریت اقساط و مشتریان", desc: "ثبت بدهی، اقساط و سوابق خرید مشتری" },
-  { icon: TrendingUp, title: "گزارش سود و فروش", desc: "مشاهده فروش و سود روزانه و ماهانه" },
+  { icon: Zap, title: "ثبت فروش سریع", desc: "فاکتور، بارکد و چند سبد همزمان", color: "from-violet-500 to-fuchsia-500" },
+  { icon: Package, title: "مدیریت انبار", desc: "موجودی، قیمت خرید و فروش", color: "from-cyan-500 to-blue-500" },
+  { icon: Users, title: "مشتریان و اقساط", desc: "بدهی، اعتبار و باشگاه مشتریان", color: "from-amber-500 to-orange-500" },
+  { icon: TrendingUp, title: "گزارش سود", desc: "فروش روزانه، ماهانه و سود و ضرر", color: "from-emerald-500 to-teal-500" },
 ];
 
-const FEATURES = [
-  { icon: Smartphone, label: "نصب روی ویندوز و موبایل (PWA)" },
-  { icon: CreditCard, label: "اتصال به کارتخوان" },
-  { icon: Printer, label: "چاپ لیبل کالا" },
-  { icon: Users, label: "مدیریت مشتریان" },
-  { icon: MessageSquare, label: "ارسال پیامک" },
+const FEATURE_CATEGORIES = [
+  {
+    id: "sales",
+    title: "فروش",
+    gradient: "from-violet-600 to-fuchsia-600",
+    items: [
+      "صفحه فروش و حالت منو",
+      "چند سبد همزمان",
+      "اسکن بارکد",
+      "فروش نقدی / کارتی / ترکیبی",
+      "فروش اقساطی و نسیه",
+      "تخفیف و اعتبار مشتری",
+      "صف خرید آفلاین",
+      "چاپ فاکتور و لیبل کالا",
+    ],
+  },
+  {
+    id: "accounting",
+    title: "حسابداری",
+    gradient: "from-cyan-600 to-blue-600",
+    items: [
+      "گزارشات و سود و ضرر",
+      "موجودی انبار",
+      "هزینه‌ها و گزارش هزینه",
+      "اقساط و اعتبار اقساطی",
+      "بدهکاران (نسیه)",
+      "برگشت خرید و تطبیق روزانه",
+      "حقوق و کارمندان",
+      "فاکتورها، دسته‌بندی، تخفیف دسته‌جمعی",
+      "تولیدکنندگان و محصولات پرفروش",
+      "ارسال پیامک و پنل معرفی",
+    ],
+  },
+  {
+    id: "online",
+    title: "فروشگاه آنلاین",
+    gradient: "from-emerald-600 to-teal-600",
+    items: [
+      "سفارشات اینترنتی",
+      "مدیریت محصولات فروشگاه",
+      "دسته‌بندی محصولات",
+      "نمایش قیمت و موجودی",
+      "ثبت و پیگیری سفارش مشتری",
+    ],
+  },
+];
+
+const HIGHLIGHTS = [
+  { icon: Smartphone, label: "نصب PWA روی موبایل و ویندوز" },
+  { icon: ScanBarcode, label: "اسکن بارکد" },
+  { icon: CreditCard, label: "اتصال کارتخوان" },
+  { icon: WifiOff, label: "فروش آفلاین" },
   { icon: Gift, label: "باشگاه مشتریان" },
-  { icon: Receipt, label: "مدیریت هزینه‌ها" },
-  { icon: BarChart3, label: "گزارش فروش" },
-  { icon: ClipboardList, label: "انبارگردانی" },
-  { icon: FileText, label: "چاپ فاکتور" },
-  { icon: CreditCard, label: "فروش اقساطی" },
-  { icon: LayoutDashboard, label: "داشبورد مدیریتی" },
+  { icon: Globe, label: "فروشگاه آنلاین" },
+];
+
+const HERO_IMAGE = "/landing/11.jpg";
+
+const GALLERY = Array.from({ length: 10 }, (_, i) => ({
+  id: i + 1,
+  src: `/landing/${i + 1}.png`,
+  title: [
+    "صفحه فروش",
+    "حالت منو",
+    "لیست محصولات",
+    "گزارشات",
+    "موجودی انبار",
+    "مدیریت مشتریان",
+    "فروش اقساطی",
+    "سفارشات اینترنتی",
+    "چاپ فاکتور",
+    "داشبورد",
+  ][i],
+}));
+
+const PLANS = [
+  {
+    name: "پلن اولیه",
+    price: "۴,۳۰۰,۰۰۰",
+    unit: "تومان / سال",
+    description: "همه امکانات اصلی فروش و حسابداری",
+    popular: false,
+    features: [
+      "فروش، انبار و مشتریان",
+      "گزارشات و سود و ضرر",
+      "فروش اقساطی و نسیه",
+      "چاپ فاکتور و لیبل",
+      "ارسال پیامک",
+      "فروش آفلاین",
+    ],
+  },
+  {
+    name: "پلن باشگاه مشتریان",
+    price: "۵,۵۰۰,۰۰۰",
+    unit: "تومان / سال",
+    description: "پلن اولیه + باشگاه مشتریان و امکانات وفاداری",
+    popular: true,
+    features: [
+      "تمام امکانات پلن اولیه",
+      "باشگاه مشتریان",
+      "اعتبار و امتیاز مشتری",
+      "پیامک مناسبتی",
+      "فروشگاه آنلاین",
+      "پشتیبانی اولویت‌دار",
+    ],
+  },
 ];
 
 const STEPS = [
@@ -63,90 +154,10 @@ const STEPS = [
   { n: "۳", title: "مدیریت فروشگاه", desc: "سود، فروش و گزارش‌ها" },
 ];
 
-const SCREENSHOTS = [
-  {
-    title: "صفحه فروش",
-    desc: "ثبت سریع فاکتور و سبد خرید",
-    gradient: "from-blue-500/20 to-indigo-500/10",
-    content: (
-      <div className="space-y-2 p-3">
-        <div className="flex justify-between text-xs text-slate-600">
-          <span>فروش امروز</span>
-          <span className="font-bold text-blue-600">۱۲,۴۵۰,۰۰۰</span>
-        </div>
-        <div className="h-20 rounded-lg bg-white border border-slate-100 flex items-center justify-center text-slate-400 text-xs">
-          سبد فروش + بارکدخوان
-        </div>
-      </div>
-    ),
-  },
-  {
-    title: "صفحه انبار",
-    desc: "لیست کالا و موجودی",
-    gradient: "from-blue-500/15 to-indigo-500/10",
-    content: (
-      <div className="space-y-1.5 p-3">
-        {["پیراهن مردانه", "کفش ورزشی", "کیف چرم"].map((n, i) => (
-          <div key={i} className="flex justify-between text-xs bg-white rounded-md px-2 py-1.5 border border-slate-100">
-            <span className="text-slate-700">{n}</span>
-            <span className="text-blue-600 font-medium">{[12, 5, 8][i]}</span>
-          </div>
-        ))}
-      </div>
-    ),
-  },
-  {
-    title: "گزارش سود",
-    desc: "نمودار فروش روزانه",
-    gradient: "from-violet-500/15 to-purple-500/10",
-    content: (
-      <div className="p-3 flex items-end gap-1 h-24">
-        {[40, 65, 45, 80, 55, 90, 70].map((h, i) => (
-          <div
-            key={i}
-            className="flex-1 rounded-t bg-gradient-to-t from-blue-500/90 to-emerald-400/80"
-            style={{ height: `${h}%` }}
-          />
-        ))}
-      </div>
-    ),
-  },
-  {
-    title: "مشتریان",
-    desc: "سوابق خرید و اقساط",
-    gradient: "from-amber-500/15 to-orange-500/10",
-    content: (
-      <div className="p-3 space-y-2">
-        <div className="text-xs text-slate-500">اعتبار اقساطی</div>
-        <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-          <div className="h-full w-2/3 bg-gradient-to-l from-blue-500 to-emerald-500 rounded-full" />
-        </div>
-        <div className="text-xs text-slate-600">۳ مشتری — ۲ قسط معوق</div>
-      </div>
-    ),
-  },
-  {
-    title: "چاپ لیبل",
-    desc: "بارکد و قیمت روی لیبل",
-    gradient: "from-slate-500/10 to-slate-600/10",
-    content: (
-      <div className="p-4 flex flex-col items-center gap-2">
-        <div className="w-full h-8 bg-slate-800 rounded" />
-        <div className="text-[10px] text-slate-500 font-mono">||| 1507 |||</div>
-        <div className="text-xs font-bold text-slate-700">۲۹۱,۰۰۰ تومان</div>
-      </div>
-    ),
-  },
-];
-
 const FAQS = [
   {
     q: "آیا روی موبایل نصب می‌شود؟",
     a: "بله. نرم‌افزار PWA است و روی اندروید، iOS و ویندوز از مرورگر قابل نصب و اجرا مانند اپلیکیشن است.",
-  },
-  {
-    q: "آیا نیاز به نصب ویندوز دارد؟",
-    a: "خیر. فقط مرورگر کافی است؛ در ویندوز می‌توانید از منوی مرورگر گزینه نصب را بزنید.",
   },
   {
     q: "آیا به کارتخوان متصل می‌شود؟",
@@ -157,12 +168,12 @@ const FAQS = [
     a: "بله. فروش اقساطی، مدیریت اقساط و اعتبار مشتری پشتیبانی می‌شود.",
   },
   {
-    q: "آیا نسخه آزمایشی رایگان دارد؟",
-    a: "۳۰ روز استفاده رایگان به‌همراه ۲۰ پیامک هدیه برای شروع.",
+    q: "تفاوت دو پلن چیست؟",
+    a: "پلن اولیه شامل فروش و حسابداری کامل است. پلن باشگاه مشتریان علاوه بر آن، باشگاه مشتریان، اعتبار/امتیاز و فروشگاه آنلاین را هم دارد.",
   },
   {
-    q: "آیا اطلاعات فروشگاه امن است؟",
-    a: "داده‌ها روی سرور امن ذخیره می‌شود و هر فروشگاه فقط به اطلاعات خود دسترسی دارد.",
+    q: "آیا نسخه آزمایشی رایگان دارد؟",
+    a: "۳۰ روز استفاده رایگان به‌همراه ۲۰ پیامک هدیه برای شروع.",
   },
 ];
 
@@ -178,15 +189,16 @@ function fadeUp(delay = 0) {
 export default function LandingShopClient() {
   const [navOpen, setNavOpen] = useState(false);
   const [slide, setSlide] = useState(0);
+  const [lightbox, setLightbox] = useState<number | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [phone, setPhone] = useState("");
   const [shopName, setShopName] = useState("");
 
   const nextSlide = useCallback(() => {
-    setSlide((s) => (s + 1) % SCREENSHOTS.length);
+    setSlide((s) => (s + 1) % GALLERY.length);
   }, []);
   const prevSlide = useCallback(() => {
-    setSlide((s) => (s - 1 + SCREENSHOTS.length) % SCREENSHOTS.length);
+    setSlide((s) => (s - 1 + GALLERY.length) % GALLERY.length);
   }, []);
 
   const startFree = () => {
@@ -198,31 +210,29 @@ export default function LandingShopClient() {
   };
 
   return (
-    <div dir="rtl" className="min-h-screen bg-slate-50 text-slate-900 antialiased">
+    <div dir="rtl" className="min-h-screen bg-[#0b0f1a] text-slate-100 antialiased">
       {/* Navbar */}
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200/80">
+      <header className="sticky top-0 z-50 bg-[#0b0f1a]/80 backdrop-blur-xl border-b border-white/10">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/landing" className="font-bold text-xl text-blue-600">
+          <Link href="/landing" className="font-bold text-xl bg-gradient-to-l from-cyan-400 to-fuchsia-400 bg-clip-text text-transparent">
             وبینو
           </Link>
-          <nav className="hidden md:flex items-center gap-8 text-sm text-slate-600">
-            <a href="#features" className="hover:text-blue-600 transition">ویژگی‌ها</a>
-            <a href="#steps" className="hover:text-blue-600 transition">شروع سریع</a>
-            <a href="#screenshots" className="hover:text-blue-600 transition">دمو</a>
-            <a href="#faq" className="hover:text-blue-600 transition">سوالات</a>
-            <Link href={LOGIN_URL} className="hover:text-blue-600 transition">
-              ورود
-            </Link>
+          <nav className="hidden md:flex items-center gap-8 text-sm text-slate-300">
+            <a href="#features" className="hover:text-cyan-400 transition">امکانات</a>
+            <a href="#screenshots" className="hover:text-cyan-400 transition">گالری</a>
+            <a href="#pricing" className="hover:text-cyan-400 transition">تعرفه</a>
+            <a href="#faq" className="hover:text-cyan-400 transition">سوالات</a>
+            <Link href={LOGIN_URL} className="hover:text-cyan-400 transition">ورود</Link>
             <Link
               href={REGISTER_URL}
-              className="bg-blue-600 text-white px-5 py-2 rounded-xl hover:bg-blue-700 transition font-medium shadow-sm shadow-blue-600/20"
+              className="bg-gradient-to-l from-violet-600 to-fuchsia-600 text-white px-5 py-2 rounded-xl hover:opacity-90 transition font-medium shadow-lg shadow-fuchsia-900/30"
             >
               شروع رایگان
             </Link>
           </nav>
           <button
             type="button"
-            className="md:hidden p-2 text-slate-600"
+            className="md:hidden p-2 text-slate-300"
             onClick={() => setNavOpen(!navOpen)}
             aria-label="منو"
           >
@@ -230,94 +240,96 @@ export default function LandingShopClient() {
           </button>
         </div>
         {navOpen && (
-          <div className="md:hidden border-t border-slate-100 bg-white px-4 py-3 flex flex-col gap-2 text-sm">
-            <a href="#features" onClick={() => setNavOpen(false)}>ویژگی‌ها</a>
-            <a href="#screenshots" onClick={() => setNavOpen(false)}>دمو</a>
+          <div className="md:hidden border-t border-white/10 bg-[#0b0f1a] px-4 py-3 flex flex-col gap-2 text-sm text-slate-300">
+            <a href="#features" onClick={() => setNavOpen(false)}>امکانات</a>
+            <a href="#screenshots" onClick={() => setNavOpen(false)}>گالری</a>
+            <a href="#pricing" onClick={() => setNavOpen(false)}>تعرفه</a>
             <a href="#faq" onClick={() => setNavOpen(false)}>سوالات</a>
             <Link href={LOGIN_URL}>ورود</Link>
-            <Link href={REGISTER_URL} className="text-blue-600 font-semibold">
-              شروع رایگان
-            </Link>
+            <Link href={REGISTER_URL} className="text-fuchsia-400 font-semibold">شروع رایگان</Link>
           </div>
         )}
       </header>
 
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-white via-blue-50/50 to-slate-50 pt-12 pb-20 md:pt-16 md:pb-28">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-blue-400/15 blur-3xl rounded-full pointer-events-none" />
-        <div className="absolute bottom-0 right-0 w-[400px] h-[200px] bg-emerald-400/8 blur-3xl rounded-full pointer-events-none" />
+      <section className="relative overflow-hidden pt-12 pb-20 md:pt-16 md:pb-28">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(139,92,246,0.25),_transparent_50%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(6,182,212,0.15),_transparent_45%)]" />
+        <div className="absolute top-20 left-1/4 w-72 h-72 bg-fuchsia-600/20 blur-[100px] rounded-full" />
+        <div className="absolute bottom-10 right-1/4 w-64 h-64 bg-cyan-500/15 blur-[90px] rounded-full" />
+
         <div className="max-w-6xl mx-auto px-4 grid lg:grid-cols-2 gap-12 items-center relative">
           <motion.div {...fadeUp(0)} className="text-center lg:text-right">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-medium mb-4 border border-blue-200/60">
-              <CheckCircle2 size={14} /> ۳۰ روز تست رایگان — بدون نصب پیچیده
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-cyan-300 text-xs font-medium mb-4">
+              <Sparkles size={14} /> ۳۰ روز تست رایگان — فروش، حسابداری، فروشگاه آنلاین
             </span>
-            <h1 className="text-3xl sm:text-4xl lg:text-[2.35rem] font-bold leading-tight text-slate-900">
-              مدیریت کامل فروشگاه، فروش، انبار و اقساط در یک نرم‌افزار ساده
+            <h1 className="text-3xl sm:text-4xl lg:text-[1.8rem] font-bold leading-tight">
+              <span className="bg-gradient-to-l from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">
+                مدیریت کامل فروشگاه
+              </span>
+              </h1>
+              <br />
+              <h1 className="text-3xl sm:text-4xl lg:text-[2.5rem] font-bold leading-tight">
+              <span className="bg-gradient-to-l from-cyan-400 via-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
+                در یک نرم‌افزار مدرن
+              </span>
             </h1>
-            <p className="mt-4 text-slate-600 text-base md:text-lg leading-relaxed max-w-xl mx-auto lg:mx-0 lg:mr-0">
-              نرم‌افزار حسابداری فروشگاهی تحت وب با قابلیت نصب روی موبایل و ویندوز، اتصال کارتخوان،
-              مدیریت مشتریان، انبار و گزارش سود.
+            <p className="mt-4 text-slate-400 text-base md:text-lg leading-relaxed max-w-xl mx-auto lg:mx-0">
+              فروش، انبار، حسابداری، اقساط، باشگاه مشتریان و سفارشات آنلاین —
+              قابل نصب روی موبایل و ویندوز.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 mt-8 justify-center lg:justify-start">
               <button
                 type="button"
                 onClick={startFree}
-                className="px-8 py-3.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition shadow-lg shadow-blue-600/25"
+                className="px-8 py-3.5 rounded-xl bg-gradient-to-l from-violet-600 via-fuchsia-600 to-pink-600 text-white font-semibold hover:opacity-90 transition shadow-xl shadow-fuchsia-900/40"
               >
                 شروع رایگان ۳۰ روزه
               </button>
               <a
                 href="#screenshots"
-                className="px-8 py-3.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-medium hover:border-blue-300 hover:bg-blue-50/50 transition text-center"
+                className="px-8 py-3.5 rounded-xl border border-white/15 bg-white/5 text-slate-200 font-medium hover:bg-white/10 transition text-center"
               >
-                مشاهده دمو
+                مشاهده گالری
               </a>
             </div>
-            <ul className="mt-8 flex flex-wrap gap-x-5 gap-y-2 justify-center lg:justify-start text-sm text-slate-500">
-              {["۲۰ پیامک رایگان", "پشتیبانی آنلاین", "نصب موبایل و ویندوز", "مناسب فروشگاه متوسط"].map(
-                (t) => (
-                  <li key={t} className="flex items-center gap-1.5">
-                    <CheckCircle2 size={14} className="text-blue-500 shrink-0" />
-                    {t}
-                  </li>
-                ),
-              )}
-            </ul>
+            <div className="mt-8 flex flex-wrap gap-2 justify-center lg:justify-start">
+              {HIGHLIGHTS.map((h) => (
+                <span
+                  key={h.label}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-slate-300"
+                >
+                  <h.icon size={13} className="text-cyan-400 shrink-0" />
+                  {h.label}
+                </span>
+              ))}
+            </div>
           </motion.div>
 
           <motion.div {...fadeUp(0.1)} className="relative">
-            <div className="rounded-2xl bg-white border border-slate-200 shadow-2xl shadow-slate-200/60 p-4 md:p-5">
-              <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-                <span className="text-sm font-semibold text-slate-800">داشبورد فروشگاه</span>
-                <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">آنلاین</span>
-              </div>
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                <div className="rounded-xl bg-blue-50 border border-blue-100 p-3">
-                  <div className="text-[10px] text-blue-700">فروش امروز</div>
-                  <div className="text-lg font-bold text-blue-800 mt-1">۸,۲۴۰,۰۰۰</div>
-                </div>
-                <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3">
-                  <div className="text-[10px] text-emerald-700">سود امروز</div>
-                  <div className="text-lg font-bold text-emerald-800 mt-1">۱,۹۵۰,۰۰۰</div>
-                </div>
-              </div>
-              <div className="rounded-xl bg-slate-50 border border-slate-100 p-2 mb-3 space-y-1.5">
-                <div className="text-[10px] text-slate-400 px-1">لیست کالا — ثبت فروش سریع</div>
-                {[
-                  { n: "کتانی نایک", p: "۱,۲۰۰,۰۰۰" },
-                  { n: "شلوار جین", p: "۸۵۰,۰۰۰" },
-                ].map((row) => (
-                  <div
-                    key={row.n}
-                    className="flex justify-between text-xs bg-white rounded-lg px-2 py-1.5 border border-slate-100"
-                  >
-                    <span>{row.n}</span>
-                    <span className="text-blue-600 font-medium">{row.p}</span>
+            <div className="rounded-2xl overflow-hidden border border-white/10 shadow-2xl shadow-violet-900/30 bg-white/5 backdrop-blur-sm">
+              <div className="relative aspect-[4/3] w-full bg-white/5">
+                {/* unoptimized: فایل‌های static داخل public بدون خطای optimizer */}
+                <Image
+                  src={HERO_IMAGE}
+                  alt="نمای نرم‌افزار وبینو"
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 560px"
+                  className="object-cover"
+                  priority
+                  unoptimized
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0b0f1a] via-transparent to-transparent" />
+                <div className="absolute bottom-4 right-4 left-4 flex gap-2">
+                  <div className="flex-1 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 p-3">
+                    <div className="text-[10px] text-cyan-300">فروش امروز</div>
+                    <div className="text-lg font-bold text-white">۸,۲۴۰,۰۰۰</div>
                   </div>
-                ))}
-              </div>
-              <div className="h-16 rounded-xl bg-gradient-to-l from-blue-500/15 via-emerald-500/10 to-transparent border border-blue-100 flex items-center justify-center text-xs text-slate-500">
-                گزارش فروش ۱۰ روز اخیر
+                  <div className="flex-1 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 p-3">
+                    <div className="text-[10px] text-fuchsia-300">سود امروز</div>
+                    <div className="text-lg font-bold text-white">۱,۹۵۰,۰۰۰</div>
+                  </div>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -325,45 +337,54 @@ export default function LandingShopClient() {
       </section>
 
       {/* Benefits */}
-      <section className="py-16 md:py-20 bg-white">
+      <section className="py-16 md:py-20 border-y border-white/5 bg-white/[0.02]">
         <div className="max-w-6xl mx-auto px-4">
           <motion.h2 {...fadeUp()} className="text-2xl md:text-3xl font-bold text-center mb-10">
-            چرا فروشگاه‌داران وبینو را انتخاب می‌کنند؟
+            چرا فروشگاه‌داران <span className="text-cyan-400">وبینو</span> را انتخاب می‌کنند؟
           </motion.h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {BENEFITS.map((b, i) => (
               <motion.div
                 key={b.title}
                 {...fadeUp(i * 0.05)}
-                className="p-6 rounded-2xl border border-slate-100 bg-slate-50/50 hover:border-blue-200 hover:shadow-md transition"
+                className="p-6 rounded-2xl border border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.06] transition group"
               >
-                <div className="w-11 h-11 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center mb-4">
+                <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${b.color} text-white flex items-center justify-center mb-4 shadow-lg group-hover:scale-105 transition`}>
                   <b.icon size={22} />
                 </div>
-                <h3 className="font-bold text-slate-900">{b.title}</h3>
-                <p className="text-sm text-slate-600 mt-2 leading-relaxed">{b.desc}</p>
+                <h3 className="font-bold text-white">{b.title}</h3>
+                <p className="text-sm text-slate-400 mt-2 leading-relaxed">{b.desc}</p>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Features grid */}
-      <section id="features" className="py-16 md:py-20 bg-slate-50">
+      {/* Features by category */}
+      <section id="features" className="py-16 md:py-24">
         <div className="max-w-6xl mx-auto px-4">
-          <motion.div {...fadeUp()} className="text-center mb-10">
-            <h2 className="text-2xl md:text-3xl font-bold">ویژگی‌های مهم نرم‌افزار</h2>
-            <p className="text-slate-600 mt-2 text-sm md:text-base">همه‌چیز برای فروشگاه، بدون شلوغی</p>
+          <motion.div {...fadeUp()} className="text-center mb-12">
+            <h2 className="text-2xl md:text-3xl font-bold">امکانات کامل نرم‌افزار</h2>
+            <p className="text-slate-400 mt-2">فروش · حسابداری · فروشگاه آنلاین</p>
           </motion.div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {FEATURES.map((f, i) => (
+          <div className="grid lg:grid-cols-3 gap-6">
+            {FEATURE_CATEGORIES.map((cat, i) => (
               <motion.div
-                key={f.label}
-                {...fadeUp(i * 0.03)}
-                className="flex items-center gap-3 p-4 rounded-xl bg-white border border-slate-100 shadow-sm"
+                key={cat.id}
+                {...fadeUp(i * 0.08)}
+                className="rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden hover:border-white/20 transition"
               >
-                <f.icon size={20} className="text-blue-600 shrink-0" />
-                <span className="text-sm font-medium text-slate-800">{f.label}</span>
+                <div className={`px-5 py-4 bg-gradient-to-l ${cat.gradient}`}>
+                  <h3 className="font-bold text-lg text-white">{cat.title}</h3>
+                </div>
+                <ul className="p-5 space-y-2.5">
+                  {cat.items.map((item) => (
+                    <li key={item} className="flex items-start gap-2 text-sm text-slate-300">
+                      <CheckCircle2 size={15} className="text-cyan-400 shrink-0 mt-0.5" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
               </motion.div>
             ))}
           </div>
@@ -371,48 +392,56 @@ export default function LandingShopClient() {
       </section>
 
       {/* Steps */}
-      <section id="steps" className="py-16 md:py-20 bg-white">
+      <section id="steps" className="py-16 md:py-20 border-y border-white/5 bg-white/[0.02]">
         <div className="max-w-6xl mx-auto px-4 text-center">
           <motion.h2 {...fadeUp()} className="text-2xl md:text-3xl font-bold mb-12">
             در ۳ مرحله شروع کنید
           </motion.h2>
-          <div className="grid md:grid-cols-3 gap-8 relative">
+          <div className="grid md:grid-cols-3 gap-8">
             {STEPS.map((s, i) => (
-              <motion.div key={s.n} {...fadeUp(i * 0.08)} className="relative">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-600 to-emerald-600 text-white flex items-center justify-center text-lg font-bold mx-auto mb-4">
+              <motion.div key={s.n} {...fadeUp(i * 0.08)}>
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500 to-fuchsia-600 text-white flex items-center justify-center text-lg font-bold mx-auto mb-4 shadow-lg shadow-fuchsia-900/30">
                   {s.n}
                 </div>
-                <h3 className="font-bold text-lg">{s.title}</h3>
-                <p className="text-slate-600 text-sm mt-2">{s.desc}</p>
+                <h3 className="font-bold text-lg text-white">{s.title}</h3>
+                <p className="text-slate-400 text-sm mt-2">{s.desc}</p>
               </motion.div>
             ))}
           </div>
-          <p className="mt-10 text-blue-700 font-semibold text-lg">
-            در کمتر از ۵ دقیقه فروشگاهت را دیجیتال کن
-          </p>
         </div>
       </section>
 
-      {/* Screenshots carousel */}
-      <section id="screenshots" className="py-16 md:py-20 bg-slate-50">
+      {/* Gallery */}
+      <section id="screenshots" className="py-16 md:py-24">
         <div className="max-w-6xl mx-auto px-4">
-          <motion.h2 {...fadeUp()} className="text-2xl md:text-3xl font-bold text-center mb-8">
-            نمای نرم‌افزار
-          </motion.h2>
-          <div className="relative max-w-lg mx-auto">
-            <div className={`rounded-2xl bg-gradient-to-br ${SCREENSHOTS[slide].gradient} border border-slate-200 p-1 shadow-xl`}>
-              <div className="bg-white rounded-xl overflow-hidden min-h-[200px]">
-                <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center">
-                  <span className="font-semibold text-sm">{SCREENSHOTS[slide].title}</span>
-                  <span className="text-xs text-slate-400">{SCREENSHOTS[slide].desc}</span>
+          <motion.div {...fadeUp()} className="text-center mb-10">
+            <h2 className="text-2xl md:text-3xl font-bold">نمای نرم‌افزار</h2>
+            <p className="text-slate-400 mt-2 text-sm">نمای پنل فروش و حسابداری وبینو</p>
+          </motion.div>
+
+          {/* Carousel — mobile / featured */}
+          <div className="relative max-w-2xl mx-auto mb-10">
+            <div
+              className="rounded-2xl overflow-hidden border border-white/10 shadow-2xl cursor-pointer group"
+              onClick={() => setLightbox(slide + 1)}
+            >
+              <div className="relative aspect-video w-full bg-white/5">
+                <Image
+                  src={GALLERY[slide].src}
+                  alt={GALLERY[slide].title}
+                  fill
+                  className="object-cover group-hover:scale-[1.02] transition duration-300"
+                />
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4">
+                  <span className="font-semibold text-white">{GALLERY[slide].title}</span>
+                  <span className="text-slate-400 text-xs mr-2">({slide + 1} / 10)</span>
                 </div>
-                {SCREENSHOTS[slide].content}
               </div>
             </div>
             <button
               type="button"
               onClick={prevSlide}
-              className="absolute right-full top-1/2 -translate-y-1/2 mr-2 md:mr-4 w-10 h-10 rounded-full bg-white border border-slate-200 shadow flex items-center justify-center hover:bg-blue-50"
+              className="absolute right-full top-1/2 -translate-y-1/2 mr-2 w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center hover:bg-white/20 transition"
               aria-label="قبلی"
             >
               <ChevronRight size={20} />
@@ -420,61 +449,173 @@ export default function LandingShopClient() {
             <button
               type="button"
               onClick={nextSlide}
-              className="absolute left-full top-1/2 -translate-y-1/2 ml-2 md:ml-4 w-10 h-10 rounded-full bg-white border border-slate-200 shadow flex items-center justify-center hover:bg-blue-50"
+              className="absolute left-full top-1/2 -translate-y-1/2 ml-2 w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center hover:bg-white/20 transition"
               aria-label="بعدی"
             >
               <ChevronLeft size={20} />
             </button>
-            <div className="flex justify-center gap-2 mt-4">
-              {SCREENSHOTS.map((_, i) => (
+            <div className="flex justify-center gap-1.5 mt-4 flex-wrap">
+              {GALLERY.map((_, i) => (
                 <button
                   key={i}
                   type="button"
                   onClick={() => setSlide(i)}
-                  className={`w-2 h-2 rounded-full transition ${i === slide ? "bg-blue-600 w-6" : "bg-slate-300"}`}
+                  className={`h-1.5 rounded-full transition-all ${i === slide ? "bg-fuchsia-500 w-6" : "bg-white/20 w-1.5"}`}
                   aria-label={`اسلاید ${i + 1}`}
                 />
               ))}
             </div>
           </div>
+
+          {/* Grid thumbnails */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+            {GALLERY.map((img) => (
+              <button
+                key={img.id}
+                type="button"
+                onClick={() => {
+                  setSlide(img.id - 1);
+                  setLightbox(img.id);
+                }}
+                className={`relative aspect-[4/3] rounded-xl overflow-hidden border transition ${
+                  slide === img.id - 1
+                    ? "border-fuchsia-500 ring-2 ring-fuchsia-500/30"
+                    : "border-white/10 hover:border-white/25"
+                }`}
+              >
+                <Image src={img.src} alt={img.title} fill className="object-cover" />
+                <div className="absolute inset-x-0 bottom-0 bg-black/60 px-2 py-1">
+                  <span className="text-[10px] text-white truncate block">{img.title}</span>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* Offer */}
+      {/* Lightbox */}
+      {lightbox !== null && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setLightbox(null)}
+        >
+          <div className="relative max-w-5xl w-full" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setLightbox(null)}
+              className="absolute -top-12 left-0 text-white/70 hover:text-white text-sm"
+            >
+              بستن ✕
+            </button>
+            <div className="relative aspect-video rounded-2xl overflow-hidden border border-white/20">
+              <Image
+                src={`/landing/${lightbox}.jpg`}
+                alt={GALLERY[lightbox - 1]?.title ?? ""}
+                fill
+                className="object-contain bg-black"
+              />
+            </div>
+            <p className="text-center text-slate-300 mt-3">{GALLERY[lightbox - 1]?.title}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Pricing */}
+      <section id="pricing" className="py-16 md:py-24 border-y border-white/5 bg-white/[0.02]">
+        <div className="max-w-4xl mx-auto px-4">
+          <motion.div {...fadeUp()} className="text-center mb-12">
+            <h2 className="text-2xl md:text-3xl font-bold">تعرفه اشتراک سالانه</h2>
+            <p className="text-slate-400 mt-2">پلن مناسب فروشگاه خود را انتخاب کنید</p>
+          </motion.div>
+          <div className="grid md:grid-cols-2 gap-6">
+            {PLANS.map((plan, i) => (
+              <motion.div
+                key={plan.name}
+                {...fadeUp(i * 0.1)}
+                className={`relative rounded-2xl p-7 border transition hover:scale-[1.02] ${
+                  plan.popular
+                    ? "border-fuchsia-500/50 bg-gradient-to-b from-fuchsia-950/40 to-violet-950/20 shadow-xl shadow-fuchsia-900/20"
+                    : "border-white/10 bg-white/[0.03]"
+                }`}
+              >
+                {plan.popular && (
+                  <span className="absolute top-4 left-4 text-xs bg-gradient-to-l from-fuchsia-600 to-violet-600 text-white px-3 py-1 rounded-full">
+                    پیشنهادی
+                  </span>
+                )}
+                <h3 className="text-xl font-bold text-white">{plan.name}</h3>
+                <p className="text-slate-400 text-sm mt-1">{plan.description}</p>
+                <div className="mt-5 mb-6">
+                  <span className="text-3xl md:text-4xl font-bold bg-gradient-to-l from-cyan-400 to-fuchsia-400 bg-clip-text text-transparent">
+                    {plan.price}
+                  </span>
+                  <span className="text-slate-400 text-sm mr-2">{plan.unit}</span>
+                </div>
+                <ul className="space-y-2.5 mb-8">
+                  {plan.features.map((f) => (
+                    <li key={f} className="flex items-center gap-2 text-sm text-slate-300">
+                      <CheckCircle2 size={15} className="text-cyan-400 shrink-0" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href={REGISTER_URL}
+                  className={`block text-center py-3.5 rounded-xl font-semibold transition ${
+                    plan.popular
+                      ? "bg-gradient-to-l from-violet-600 to-fuchsia-600 text-white hover:opacity-90 shadow-lg shadow-fuchsia-900/30"
+                      : "bg-white/10 text-white hover:bg-white/15 border border-white/10"
+                  }`}
+                >
+                  شروع کنید
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+          <p className="text-center text-slate-500 text-sm mt-8">
+            ۳۰ روز تست رایگان · ۲۰ پیامک هدیه · بدون نیاز به نصب پیچیده
+          </p>
+        </div>
+      </section>
+
+      {/* Offer CTA */}
       <section className="py-16 md:py-20">
         <div className="max-w-4xl mx-auto px-4">
           <motion.div
             {...fadeUp()}
-            className="rounded-3xl bg-gradient-to-br from-blue-600 via-blue-700 to-emerald-600 text-white p-8 md:p-12 text-center shadow-xl shadow-blue-900/20"
+            className="rounded-3xl bg-gradient-to-br from-violet-700 via-fuchsia-700 to-cyan-700 text-white p-8 md:p-12 text-center shadow-2xl shadow-fuchsia-900/30 relative overflow-hidden"
           >
-            <h2 className="text-2xl md:text-3xl font-bold">پیشنهاد ویژه شروع</h2>
-            <ul className="mt-6 space-y-2 text-blue-50 text-base md:text-lg">
-              <li>۳۰ روز استفاده رایگان</li>
-              <li>۲۰ پیامک هدیه</li>
-              <li>پشتیبانی رایگان راه‌اندازی</li>
-            </ul>
-            <button
-              type="button"
-              onClick={startFree}
-              className="mt-8 px-10 py-4 rounded-xl bg-white text-blue-700 font-bold hover:bg-blue-50 transition shadow-lg"
-            >
-              همین حالا رایگان شروع کن
-            </button>
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.15),_transparent_60%)]" />
+            <div className="relative">
+              <h2 className="text-2xl md:text-3xl font-bold">پیشنهاد ویژه شروع</h2>
+              <ul className="mt-6 space-y-2 text-violet-100 text-base md:text-lg">
+                <li>۳۰ روز استفاده رایگان</li>
+                <li>۲۰ پیامک هدیه</li>
+                <li>پشتیبانی رایگان راه‌اندازی</li>
+              </ul>
+              <button
+                type="button"
+                onClick={startFree}
+                className="mt-8 px-10 py-4 rounded-xl bg-white text-violet-800 font-bold hover:bg-violet-50 transition shadow-lg"
+              >
+                همین حالا رایگان شروع کن
+              </button>
+            </div>
           </motion.div>
         </div>
       </section>
 
       {/* Short signup */}
-      <section id="signup" className="py-16 bg-white border-y border-slate-100">
+      <section id="signup" className="py-16 border-y border-white/5 bg-white/[0.02]">
         <div className="max-w-md mx-auto px-4">
-          <h2 className="text-xl font-bold text-center mb-6">ثبت‌نام سریع</h2>
+          <h2 className="text-xl font-bold text-center mb-6 text-white">ثبت‌نام سریع</h2>
           <div className="space-y-3">
             <input
               type="text"
               placeholder="نام فروشگاه"
               value={shopName}
               onChange={(e) => setShopName(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none"
+              className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder:text-slate-500 focus:border-fuchsia-500 focus:ring-2 focus:ring-fuchsia-500/20 outline-none"
             />
             <input
               type="tel"
@@ -482,12 +623,12 @@ export default function LandingShopClient() {
               value={phone}
               onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 11))}
               dir="ltr"
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none text-left"
+              className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder:text-slate-500 focus:border-fuchsia-500 focus:ring-2 focus:ring-fuchsia-500/20 outline-none text-left"
             />
             <button
               type="button"
               onClick={startFree}
-              className="w-full py-3.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition"
+              className="w-full py-3.5 rounded-xl bg-gradient-to-l from-violet-600 to-fuchsia-600 text-white font-semibold hover:opacity-90 transition"
             >
               شروع رایگان ۳۰ روزه
             </button>
@@ -496,25 +637,25 @@ export default function LandingShopClient() {
       </section>
 
       {/* FAQ */}
-      <section id="faq" className="py-16 md:py-20 bg-slate-50">
+      <section id="faq" className="py-16 md:py-20">
         <div className="max-w-2xl mx-auto px-4">
           <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">سوالات متداول</h2>
           <div className="space-y-2">
             {FAQS.map((item, i) => (
-              <div key={i} className="rounded-xl bg-white border border-slate-100 overflow-hidden">
+              <div key={i} className="rounded-xl border border-white/10 bg-white/[0.03] overflow-hidden">
                 <button
                   type="button"
                   onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full flex items-center justify-between px-4 py-4 text-right font-medium text-slate-800 hover:bg-slate-50"
+                  className="w-full flex items-center justify-between px-4 py-4 text-right font-medium text-slate-200 hover:bg-white/[0.04]"
                 >
                   {item.q}
                   <ChevronDown
                     size={18}
-                    className={`shrink-0 transition ${openFaq === i ? "rotate-180" : ""}`}
+                    className={`shrink-0 transition text-slate-400 ${openFaq === i ? "rotate-180" : ""}`}
                   />
                 </button>
                 {openFaq === i && (
-                  <p className="px-4 pb-4 text-sm text-slate-600 leading-relaxed border-t border-slate-50">
+                  <p className="px-4 pb-4 text-sm text-slate-400 leading-relaxed border-t border-white/5">
                     {item.a}
                   </p>
                 )}
@@ -525,24 +666,24 @@ export default function LandingShopClient() {
       </section>
 
       {/* Support */}
-      <section className="py-16 bg-white">
+      <section className="py-16 border-t border-white/5 bg-white/[0.02]">
         <div className="max-w-6xl mx-auto px-4 text-center">
-          <Headphones className="mx-auto text-blue-600 mb-4" size={40} />
-          <h2 className="text-2xl font-bold">در تمام مراحل راه‌اندازی کنار شما هستیم</h2>
-          <p className="text-slate-600 mt-2 mb-8">پشتیبانی آنلاین — پاسخگویی سریع</p>
+          <Headphones className="mx-auto text-cyan-400 mb-4" size={40} />
+          <h2 className="text-2xl font-bold text-white">در تمام مراحل راه‌اندازی کنار شما هستیم</h2>
+          <p className="text-slate-400 mt-2 mb-8">پشتیبانی آنلاین — پاسخگویی سریع</p>
           <div className="flex flex-wrap justify-center gap-4">
             <a
               href={SUPPORT_TEL}
-              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-slate-200 hover:border-blue-300 bg-slate-50 transition"
+              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-white/10 bg-white/5 hover:border-cyan-500/50 transition text-slate-200"
             >
-              <Phone size={18} className="text-blue-600" />
+              <Phone size={18} className="text-cyan-400" />
               <span dir="ltr">{SUPPORT_PHONE}</span>
             </a>
             <a
               href={LINK_BALE}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-5 py-3 rounded-xl border border-slate-200 hover:bg-blue-50 transition text-sm"
+              className="px-5 py-3 rounded-xl border border-white/10 bg-white/5 hover:border-fuchsia-500/50 transition text-sm text-slate-200"
             >
               بله
             </a>
@@ -550,7 +691,7 @@ export default function LandingShopClient() {
               href={LINK_RUBIKA}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-5 py-3 rounded-xl border border-slate-200 hover:bg-blue-50 transition text-sm"
+              className="px-5 py-3 rounded-xl border border-white/10 bg-white/5 hover:border-fuchsia-500/50 transition text-sm text-slate-200"
             >
               روبیکا
             </a>
@@ -559,45 +700,36 @@ export default function LandingShopClient() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-slate-900 text-slate-400 py-12">
+      <footer className="bg-[#070a12] text-slate-500 py-12 border-t border-white/5">
         <div className="max-w-6xl mx-auto px-4 grid md:grid-cols-3 gap-8 text-sm">
           <div>
             <div className="text-white font-bold text-lg mb-2">وبینو</div>
-            <p>نرم‌افزار حسابداری و مدیریت فروشگاه تحت وب</p>
+            <p>نرم‌افزار حسابداری، فروش و فروشگاه آنلاین</p>
           </div>
           <div>
             <div className="text-white font-medium mb-3">دسترسی سریع</div>
             <ul className="space-y-2">
-              <li>
-                <Link href={REGISTER_URL} className="hover:text-blue-400">
-                  ثبت‌نام رایگان
-                </Link>
-              </li>
-              <li>
-                <Link href={LOGIN_URL} className="hover:text-blue-400">
-                  ورود
-                </Link>
-              </li>
+              <li><Link href={REGISTER_URL} className="hover:text-cyan-400">ثبت‌نام رایگان</Link></li>
+              <li><Link href={LOGIN_URL} className="hover:text-cyan-400">ورود</Link></li>
+              <li><a href="#pricing" className="hover:text-cyan-400">تعرفه</a></li>
             </ul>
           </div>
           <div>
             <div className="text-white font-medium mb-3">تماس</div>
-            <a href={SUPPORT_TEL} className="hover:text-blue-400" dir="ltr">
-              {SUPPORT_PHONE}
-            </a>
+            <a href={SUPPORT_TEL} className="hover:text-cyan-400" dir="ltr">{SUPPORT_PHONE}</a>
           </div>
         </div>
-        <div className="max-w-6xl mx-auto px-4 mt-8 pt-8 border-t border-slate-800 text-center text-xs">
+        <div className="max-w-6xl mx-auto px-4 mt-8 pt-8 border-t border-white/5 text-center text-xs">
           © {new Date().getFullYear()} وبینو — تمامی حقوق محفوظ است
         </div>
       </footer>
 
       {/* Mobile sticky CTA */}
-      <div className="md:hidden fixed bottom-0 inset-x-0 z-40 p-3 bg-white/95 backdrop-blur border-t border-slate-200 safe-area-pb">
+      <div className="md:hidden fixed bottom-0 inset-x-0 z-40 p-3 bg-[#0b0f1a]/95 backdrop-blur border-t border-white/10">
         <button
           type="button"
           onClick={startFree}
-          className="w-full py-3.5 rounded-xl bg-blue-600 text-white font-semibold shadow-lg"
+          className="w-full py-3.5 rounded-xl bg-gradient-to-l from-violet-600 to-fuchsia-600 text-white font-semibold shadow-lg"
         >
           شروع رایگان ۳۰ روزه
         </button>

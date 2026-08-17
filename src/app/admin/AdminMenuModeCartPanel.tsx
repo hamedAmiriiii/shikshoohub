@@ -15,11 +15,11 @@ import {
   Radio,
 } from "@mui/material";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import RemoveIcon from "@mui/icons-material/Remove";
-import AddIcon from "@mui/icons-material/Add";
 import PhoneNumberInput from "@/app/coponent/PhoneNumberInput/PhoneNumberInput";
 import type { PaymentType } from "@/app/lib/paymentTypes";
 import MultiCartToolbar from "@/app/admin/MultiCartToolbar";
+import CartQuantityControl from "@/app/admin/CartQuantityControl";
+import { getPriceUnitLabel } from "@/app/lib/productUnits";
 import {
   ADMIN_MENU_CART_WIDTH,
   ADMIN_MENU_CART_WIDTH_VAR,
@@ -53,6 +53,9 @@ type MenuCartItem = {
   name?: string;
   sale_price?: number | string;
   quantity: number;
+  unit_type?: string;
+  unit_label?: string;
+  price_unit_label?: string;
 };
 
 export type AdminMenuModeCartPanelProps = {
@@ -60,6 +63,8 @@ export type AdminMenuModeCartPanelProps = {
   total: number;
   formatNumber: (num: number) => string;
   onUpdateQuantity: (itemId: number | string, increment: number) => void;
+  onSetQuantity: (itemId: number | string, quantity: number) => void;
+  kgSalesEnabled?: boolean;
   onRemoveItem: (itemId: number | string) => void;
   onClearCart: () => void;
   cartCount: number;
@@ -106,6 +111,8 @@ export default function AdminMenuModeCartPanel({
   total,
   formatNumber,
   onUpdateQuantity,
+  onSetQuantity,
+  kgSalesEnabled = false,
   onRemoveItem,
   onClearCart,
   cartCount,
@@ -247,39 +254,23 @@ export default function AdminMenuModeCartPanel({
                 <DeleteOutlineIcon sx={{ fontSize: 13, color: "#e57373" }} />
               </IconButton>
             </Box>
-            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mt: 0.25 }}>
-              <Typography sx={{ fontSize: "9px", color: "var(--admin-accent)", fontWeight: 700 }}>
-                {formatNumber(Number(item.sale_price) * item.quantity)}
-              </Typography>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.25 }}>
-                <IconButton
-                  size="small"
-                  onClick={() => onUpdateQuantity(item.id, -1)}
-                  sx={{
-                    p: 0.15,
-                    bgcolor: "var(--admin-surface-alt)",
-                    width: 18,
-                    height: 18,
-                  }}
-                >
-                  <RemoveIcon sx={{ fontSize: 12 }} />
-                </IconButton>
-                <Typography sx={{ fontSize: "9px", minWidth: 14, textAlign: "center" }}>
-                  {item.quantity}
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mt: 0.25, gap: 0.25 }}>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography sx={{ fontSize: "9px", color: "var(--admin-accent)", fontWeight: 700 }}>
+                  {formatNumber(Number(item.sale_price) * item.quantity)}
                 </Typography>
-                <IconButton
-                  size="small"
-                  onClick={() => onUpdateQuantity(item.id, 1)}
-                  sx={{
-                    p: 0.15,
-                    bgcolor: "var(--admin-surface-alt)",
-                    width: 18,
-                    height: 18,
-                  }}
-                >
-                  <AddIcon sx={{ fontSize: 12 }} />
-                </IconButton>
+                {kgSalesEnabled && (
+                  <Typography sx={{ fontSize: "8px", color: "var(--admin-text-muted)" }}>
+                    {getPriceUnitLabel(item)}
+                  </Typography>
+                )}
               </Box>
+              <CartQuantityControl
+                item={item}
+                kgSalesEnabled={kgSalesEnabled}
+                onChange={onSetQuantity}
+                compact
+              />
             </Box>
           </Box>
         ))}

@@ -27,6 +27,14 @@ import LabelCustom from "@/app/coponent/labelCustom";
 import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
 import { Chip, Divider, TextField } from "@mui/material";
 import { useRouter, useSearchParams } from "next/navigation";
+import {
+  formatProductQuantity,
+  getMinQuantity,
+  getUnitLabel,
+  getPriceUnitLabel,
+  isKgProduct,
+  parseQuantityInput,
+} from "@/app/lib/productUnits";
 
 const formatNumber = (num: number | string) => {
   const numValue = typeof num === 'string' ? parseFloat(num.replace(/,/g, '')) : num;
@@ -128,7 +136,8 @@ export default function purchas(props: any) {
 
   const handleOpenDeleteDialog = (item: any) => {
     setSelectedItem(item);
-    setReturnQuantity(1);
+    const isKg = isKgProduct(item.product ?? item);
+    setReturnQuantity(isKg ? 0.5 : 1);
     setDeleteDialogOpen(true);
   };
 
@@ -141,8 +150,14 @@ export default function purchas(props: any) {
 
   const getItemQuantity = (item: any) => {
     const qty = adjustedQuantities[item.id] ?? item.quantity;
-    return Math.max(1, Number(qty) || 1);
+    const productRef = item.product ?? item;
+    const min = getMinQuantity(productRef);
+    return Math.max(min, Number(qty) || min);
   };
+
+  const isSelectedKg = selectedItem
+    ? isKgProduct(selectedItem.product ?? selectedItem)
+    : false;
 
   const handleOpenPayInstallmentDialog = (installment: any) => {
     setSelectedInstallment(installment);
@@ -209,7 +224,11 @@ export default function purchas(props: any) {
     if (!selectedItem || !data?.id) return;
 
     const maxQty = getItemQuantity(selectedItem);
-    const qtyToReturn = Math.min(Math.max(1, returnQuantity), maxQty);
+    const minQty = getMinQuantity(selectedItem.product ?? selectedItem);
+    const qtyToReturn = Math.min(
+      Math.max(minQty, Number(returnQuantity) || minQty),
+      maxQty,
+    );
 
     setDeleting(true);
     try {
@@ -383,20 +402,15 @@ export default function purchas(props: any) {
                       <LabelCustom 
                         title={"کالا"} 
                         name="" 
-                        text={item.product?.name + " " + item.product_id + " " + "-----" + " " +"عدد" + " " + getItemQuantity(item)} 
+                        text={`${item.product?.name} — ${formatProductQuantity(getItemQuantity(item), item.product ?? item)} ${getUnitLabel(item.product ?? item)}`}
                       />
-                      {/* <LabelCustom 
-                        title={"تعداد"} 
-                        name="" 
-                        text={ || 0} 
-                      /> */}
                       <LabelCustom 
                         title={"قیمت "} 
                         name="" 
                         text={
                           item.product.has_discount 
-                            ? `${formatNumber(item.product.sale_price || 0)} تومان (تخفیف: ${formatNumber(item.product.discount_percent || 0)}%)`
-                            : formatNumber(item.product.sale_price || 0) + " تومان"
+                            ? `${formatNumber(item.product.sale_price || 0)} تومان (${getPriceUnitLabel(item.product ?? item)} · تخفیف: ${formatNumber(item.product.discount_percent || 0)}%)`
+                            : `${formatNumber(item.product.sale_price || 0)} تومان (${getPriceUnitLabel(item.product ?? item)})`
                         } 
                       />
                     </Box>
@@ -495,14 +509,25 @@ export default function purchas(props: any) {
                 color: "var(--admin-text)"
               }}>
                 <Typography variant="body2" sx={{ marginBottom: "12px" }}>
-                  {selectedItem.product?.name} - {getItemQuantity(selectedItem)} عدد در خرید
+                  {selectedItem.product?.name} — {formatProductQuantity(getItemQuantity(selectedItem), selectedItem.product ?? selectedItem)}{" "}
+                  {getUnitLabel(selectedItem.product ?? selectedItem)} در خرید
                 </Typography>
                 <TextField
                   fullWidth
                   type="number"
-                  label="تعداد برگشت"
+                  label={`مقدار برگشت (${getUnitLabel(selectedItem.product ?? selectedItem)})`}
                   value={returnQuantity}
                   onChange={(e) => {
+                    const productRef = selectedItem.product ?? selectedItem;
+                    if (isKgProduct(productRef)) {
+                      const parsed = parseQuantityInput(e.target.value, productRef);
+                      if (parsed !== null) {
+                        setReturnQuantity(Math.min(Math.max(getMinQuantity(productRef), parsed), getItemQuantity(selectedItem)));
+                      } else if (e.target.value === "") {
+                        setReturnQuantity(getMinQuantity(productRef));
+                      }
+                      return;
+                    }
                     const val = parseInt(e.target.value, 10);
                     if (!isNaN(val)) {
                       setReturnQuantity(Math.min(Math.max(1, val), getItemQuantity(selectedItem)));
@@ -511,9 +536,9 @@ export default function purchas(props: any) {
                     }
                   }}
                   inputProps={{
-                    min: 1,
+                    min: getMinQuantity(selectedItem.product ?? selectedItem),
                     max: getItemQuantity(selectedItem),
-                    step: 1,
+                    step: isSelectedKg ? 0.001 : 1,
                   }}
                   sx={{
                     "& .MuiOutlinedInput-root": {

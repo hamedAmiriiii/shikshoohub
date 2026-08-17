@@ -45,6 +45,9 @@ import TextInput from "@/app/coponent/TextInput/TextInput";
 import { useRouter } from "next/navigation";
 import 'react-toastify/dist/ReactToastify.css';
 import { appendProductLabelPrintParams } from "@/app/lib/productLabelPrint";
+import { readAdminPosSettings } from "@/app/lib/adminPosSettings";
+import type { ProductUnitType } from "@/app/lib/productUnits";
+import { ToggleButton, ToggleButtonGroup, FormControl, FormLabel } from "@mui/material";
 
 /** استخراج آرایه از پاسخ‌های مختلف API */
 function extractApiList(res: unknown, listKeys: string[] = []): any[] {
@@ -104,6 +107,12 @@ export default function Page() {
     quantity: string | number;
   } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [kgSalesEnabled, setKgSalesEnabled] = useState(false);
+  const [unitType, setUnitType] = useState<ProductUnitType>("piece");
+
+  useEffect(() => {
+    setKgSalesEnabled(readAdminPosSettings().kgSalesEnabled);
+  }, []);
 
   const applyScannedBarcode = useCallback((code: string) => {
     const trimmed = code.trim().slice(0, 255);
@@ -421,6 +430,7 @@ export default function Page() {
     setImages([]);
     setCategoryIds([]);
     setManufacturerId("");
+    setUnitType("piece");
   };
 
   const handlePrintBarcode = () => {
@@ -465,13 +475,27 @@ export default function Page() {
         return;
       }
 
+      const qtyNum =
+        unitType === "kg" && kgSalesEnabled
+          ? parseFloat(String(quantity).replace(/,/g, ""))
+          : parseInt(String(quantity).replace(/,/g, ""), 10);
+
+      if (Number.isNaN(qtyNum) || qtyNum < 0) {
+        toast.error(unitType === "kg" && kgSalesEnabled ? "موجودی باید عدد معتبر باشد" : "موجودی باید عدد صحیح باشد");
+        return;
+      }
+
       let data: any = {
         "name": full_name,
         "purchase_price": purchase_price,
         "sale_price": sale_price,
-        "quantity": quantity,
+        "quantity": qtyNum,
         "discount_percent": isNaN(discountValue) ? 0 : discountValue,
       };
+
+      if (kgSalesEnabled) {
+        data.unit_type = unitType;
+      }
 
       if (trimmedBarcode.length > 0) {
         data.barcode = trimmedBarcode;
@@ -823,13 +847,46 @@ export default function Page() {
               <Box sx={fieldWrapSx}>
                 <TextInput
                   value={sale_price}
-                  label="قیمت فروش"
+                  label={kgSalesEnabled && unitType === "kg" ? "قیمت فروش (هر کیلو)" : "قیمت فروش"}
                   onChange={(e) => setPale_price(e)}
                   name="sale_price"
                   type="number"
                 />
               </Box>
             </Grid>
+
+            {kgSalesEnabled && (
+              <Grid item xs={12} sm={6} md={4} sx={{ display: "flex", alignItems: "center" }}>
+                <FormControl component="fieldset" sx={{ width: "100%" }}>
+                  <FormLabel sx={{ color: "var(--admin-text-secondary)", fontSize: "12px", mb: 0.5 }}>
+                    واحد کالا
+                  </FormLabel>
+                  <ToggleButtonGroup
+                    exclusive
+                    value={unitType}
+                    onChange={(_, val: ProductUnitType | null) => {
+                      if (val) setUnitType(val);
+                    }}
+                    size="small"
+                    fullWidth
+                    sx={{
+                      "& .MuiToggleButton-root": {
+                        color: "var(--admin-text)",
+                        borderColor: "var(--admin-border)",
+                        "&.Mui-selected": {
+                          bgcolor: "var(--admin-accent)",
+                          color: "#fff",
+                          "&:hover": { bgcolor: "var(--admin-accent-hover)" },
+                        },
+                      },
+                    }}
+                  >
+                    <ToggleButton value="piece">عدد</ToggleButton>
+                    <ToggleButton value="kg">کیلوگرم</ToggleButton>
+                  </ToggleButtonGroup>
+                </FormControl>
+              </Grid>
+            )}
 
             <Grid item xs={12} sm={6} md={4} sx={{ display: "flex" }}>
               <Box sx={fieldWrapSx}>
@@ -846,7 +903,11 @@ export default function Page() {
               <Box sx={fieldWrapSx}>
                 <TextInput
                   value={quantity}
-                  label="موجودی"
+                  label={
+                    kgSalesEnabled && unitType === "kg"
+                      ? "موجودی (کیلو)"
+                      : "موجودی (عدد)"
+                  }
                   onChange={(e) => setQuantity(e)}
                   name="quantity"
                   type="number"

@@ -8,6 +8,9 @@ export type CachedProduct = {
   original_sale_price?: number | string;
   has_discount?: boolean;
   quantity?: number;
+  unit_type?: "kg" | "piece" | string;
+  unit_label?: string;
+  price_unit_label?: string;
   category_id?: number | string;
   category_name?: string;
   category_ids?: Array<number | string>;

@@ -22,6 +22,7 @@ import PercentIcon from "@mui/icons-material/Percent";
 import PaymentsIcon from "@mui/icons-material/Payments";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import PrintIcon from "@mui/icons-material/Print";
+import ScaleIcon from "@mui/icons-material/Scale";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { apiRequestError } from "@/app/lib/apiRequestError/client";
@@ -148,6 +149,7 @@ export default function SettingsPage() {
   const [menuMode, setMenuMode] = useState(false);
   const [installmentPaymentEnabled, setInstallmentPaymentEnabled] = useState(true);
   const [debtPaymentEnabled, setDebtPaymentEnabled] = useState(false);
+  const [kgSalesEnabled, setKgSalesEnabled] = useState(false);
   const [directPrintEnabled, setDirectPrintEnabled] = useState(false);
 
   useEffect(() => {
@@ -156,6 +158,7 @@ export default function SettingsPage() {
     setMenuMode(settings.menuMode);
     setInstallmentPaymentEnabled(settings.installmentPaymentEnabled);
     setDebtPaymentEnabled(settings.debtPaymentEnabled);
+    setKgSalesEnabled(settings.kgSalesEnabled);
     setDirectPrintEnabled(readSaleReceiptPrintSettings().autoPrint);
   }, []);
 
@@ -191,6 +194,17 @@ export default function SettingsPage() {
       enabled
         ? "گزینه‌های نقدی و اقساطی در صفحه فروش نمایش داده می‌شوند"
         : "گزینه‌های نقدی و اقساطی از صفحه فروش پنهان شدند",
+    );
+  };
+
+  const handleToggleKgSales = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setKgSalesEnabled(enabled);
+    writeAdminPosSettings({ kgSalesEnabled: enabled });
+    toast.success(
+      enabled
+        ? "فروش محصولات کیلویی فعال شد — هنگام ثبت کالا می‌توانید واحد کیلو انتخاب کنید"
+        : "فروش محصولات کیلویی غیرفعال شد",
     );
   };
 
@@ -483,6 +497,20 @@ export default function SettingsPage() {
             size="small"
             checked={debtPaymentEnabled}
             onChange={handleToggleDebtPayment}
+            sx={switchSx}
+          />
+        }
+      />
+
+      <SettingsSectionCard
+        icon={<ScaleIcon sx={{ fontSize: 22 }} />}
+        title="فروش محصولات کیلویی"
+        hint="ثبت و فروش کالا با واحد کیلوگرم و مقدار اعشاری (مثل ۱.۳۵۰)"
+        action={
+          <Switch
+            size="small"
+            checked={kgSalesEnabled}
+            onChange={handleToggleKgSales}
             sx={switchSx}
           />
         }

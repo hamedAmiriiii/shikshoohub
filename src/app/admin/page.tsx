@@ -73,7 +73,9 @@ import {
 import type { PaymentType } from '@/app/lib/paymentTypes';
 import SaleProductListPanel from '@/app/admin/SaleProductListPanel';
 import AdminMenuModeView from '@/app/admin/AdminMenuModeView';
+import CartQuantityControl from '@/app/admin/CartQuantityControl';
 import MultiCartToolbar, { MAX_MULTI_CARTS } from '@/app/admin/MultiCartToolbar';
+import { getPriceUnitLabel, getDefaultCartQuantity, getQuantityIncrement, normalizeQuantityValue } from '@/app/lib/productUnits';
 import { createEmptyCartSlot, type CartSlotSnapshot } from '@/app/admin/multiCartState';
 import { publishAdminSaleCartSnapshot } from '@/app/admin/onboarding/adminSaleCartCheck';
 import CategoryIcon from '@mui/icons-material/Category';
@@ -171,6 +173,7 @@ export default function ShoppingPage() {
   const [menuMode, setMenuMode] = useState(false);
   const [installmentPaymentEnabled, setInstallmentPaymentEnabled] = useState(true);
   const [debtPaymentEnabled, setDebtPaymentEnabled] = useState(false);
+  const [kgSalesEnabled, setKgSalesEnabled] = useState(false);
   const [saleSuccessOpen, setSaleSuccessOpen] = useState(false);
   const [lastSaleReceipt, setLastSaleReceipt] = useState<SaleReceiptData | null>(null);
   const [skipPrintPreview, setSkipPrintPreview] = useState(false);
@@ -830,6 +833,7 @@ export default function ShoppingPage() {
       setMenuMode(settings.menuMode);
       setInstallmentPaymentEnabled(settings.installmentPaymentEnabled);
       setDebtPaymentEnabled(settings.debtPaymentEnabled);
+      setKgSalesEnabled(settings.kgSalesEnabled);
       void savePosSettingsCache(settings);
     };
     applyPosSettings();
@@ -861,11 +865,17 @@ export default function ShoppingPage() {
     setCart((prevCart) => {
       const newCart = [...prevCart];
       const existingItemIndex = newCart.findIndex((i) => i.id === item.id);
+      const addQty = kgSalesEnabled && item.unit_type === "kg"
+        ? getDefaultCartQuantity(item)
+        : 1;
 
       if (existingItemIndex === -1) {
-        newCart.push({ ...item, quantity: 1 });
+        newCart.push({ ...item, quantity: addQty });
       } else {
-        newCart[existingItemIndex].quantity += 1;
+        newCart[existingItemIndex].quantity = normalizeQuantityValue(
+          newCart[existingItemIndex].quantity + addQty,
+          kgSalesEnabled ? item : { unit_type: "piece" },
+        );
       }
 
       let newTotal = 0;
@@ -883,7 +893,7 @@ export default function ShoppingPage() {
     if (navigator.vibrate) {
       navigator.vibrate(70);
     }
-  }, []);
+  }, [kgSalesEnabled]);
 
   const addProductByBarcode = useCallback((barcode: string) => {
     if (!barcode || barcode.length < 3) return;
@@ -1451,31 +1461,7 @@ export default function ShoppingPage() {
       setScannedCode(result);
       const item = items?.find((item) => item.barcode === result);
       if (item) {
-        setCart((prevCart) => {
-          const newCart = [...prevCart];
-          const existingItemIndex = newCart.findIndex((i) => i.id === item.id);
-
-          if (existingItemIndex === -1) {
-            newCart.push({ ...item, quantity: 1 });
-          } else {
-            newCart[existingItemIndex].quantity += 1;
-          }
-
-          let newTotal = 0;
-          newCart.forEach((item) => {
-            newTotal += Number(item.sale_price) * item.quantity; 
-          });
-
-          setTotal(newTotal);
-          return newCart;
-        });
-
-        const beep = new Audio("/sound/008.mp3"); 
-        beep.play();
-
-        if (navigator.vibrate) {
-          navigator.vibrate(70);
-        }
+        addProductToCart(item);
       }
       setOpenModal(false)
       setManualCode("")
@@ -1521,12 +1507,16 @@ export default function ShoppingPage() {
     });
   };
 
-  // تغییر تعداد کالا (افزایش یا کاهش)
+  // تغییر تعداد کالا (افزایش یا کاهش — برای عددی)
   const updateQuantity = (itemId, increment) => {
     setCart((prevCart) => {
       const newCart = prevCart.map((item) => {
         if (item.id === itemId) {
-          const newQuantity = item.quantity + increment;
+          const step = kgSalesEnabled ? getQuantityIncrement(item) : 1;
+          const newQuantity = normalizeQuantityValue(
+            item.quantity + increment * step,
+            kgSalesEnabled ? item : { unit_type: "piece" },
+          );
 
           if (newQuantity > 0) {
             return { ...item, quantity: newQuantity };
@@ -1535,12 +1525,34 @@ export default function ShoppingPage() {
         return item;
       });
 
-      // محاسبه قیمت کل جدید بعد از تغییرات
       let newTotal = 0;
       newCart.forEach((item) => {
         newTotal += Number(item.sale_price) * item.quantity;
       });
-      setTotal(newTotal); // بروزرسانی قیمت کل
+      setTotal(newTotal);
+      return newCart;
+    });
+  };
+
+  const setCartItemQuantity = (itemId: number | string, quantity: number) => {
+    setCart((prevCart) => {
+      const newCart = prevCart
+        .map((item) => {
+          if (item.id !== itemId) return item;
+          const normalized = normalizeQuantityValue(
+            quantity,
+            kgSalesEnabled ? item : { unit_type: "piece" },
+          );
+          if (normalized <= 0) return null;
+          return { ...item, quantity: normalized };
+        })
+        .filter(Boolean);
+
+      let newTotal = 0;
+      newCart.forEach((item) => {
+        newTotal += Number(item.sale_price) * item.quantity;
+      });
+      setTotal(newTotal);
       return newCart;
     });
   };
@@ -1696,6 +1708,8 @@ export default function ShoppingPage() {
               total,
               formatNumber,
               onUpdateQuantity: updateQuantity,
+              onSetQuantity: setCartItemQuantity,
+              kgSalesEnabled,
               onRemoveItem: removeItemFromCart,
               onClearCart: clearMenuCart,
               cartCount,
@@ -1891,6 +1905,11 @@ export default function ShoppingPage() {
                             <Box sx={{ display: "flex", alignItems: "center", gap: "6px" }}>
                               <Typography sx={{ color: "var(--admin-accent)", fontSize: { xs: "12px", md: "16px" }, fontWeight: "600" }}>
                                 {formatNumber(Number(item.sale_price))} تومان
+                                {kgSalesEnabled && (
+                                  <Typography component="span" sx={{ fontSize: "10px", color: "var(--admin-text-muted)", mr: 0.5 }}>
+                                    {" "}({getPriceUnitLabel(item)})
+                                  </Typography>
+                                )}
                               </Typography>
                               <Typography sx={{ 
                                 color: "#ff9100", 
@@ -1907,46 +1926,20 @@ export default function ShoppingPage() {
                         ) : (
                           <Typography sx={{ color: "var(--admin-accent)", fontWeight: "600", fontSize: { xs: "14px", md: "19px" } }}>
                             {formatNumber(Number(item.sale_price))} تومان
+                            {kgSalesEnabled && (
+                              <Typography component="span" sx={{ fontSize: "10px", color: "var(--admin-text-muted)", mr: 0.5 }}>
+                                {" "}({getPriceUnitLabel(item)})
+                              </Typography>
+                            )}
                           </Typography>
                         )}
                       </StyledTableCell>
                       <StyledTableCell align="right" sx={{ color: "var(--admin-text)", padding: { xs: "8px 12px", md: "16px 24px" } }}>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: { xs: "6px", md: "12px" }, justifyContent: "flex-end" }}>
-                          <IconButton 
-                            onClick={() => updateQuantity(item.id, -1)}
-                            sx={{ 
-                              color: "var(--admin-text)", 
-                              backgroundColor: "var(--admin-surface-alt)",
-                              width: { xs: "24px", md: "32px" },
-                              height: { xs: "24px", md: "32px" },
-                              fontSize: { xs: "16px", md: "20px" },
-                              "&:hover": { backgroundColor: "var(--admin-accent)" }
-                            }}
-                          >
-                            -
-                          </IconButton>
-                          <Typography sx={{ 
-                            color: "var(--admin-text)", 
-                            minWidth: { xs: "24px", md: "40px" }, 
-                            textAlign: "center", 
-                            fontSize: { xs: "12px", md: "16px" } 
-                          }}>
-                            {item.quantity}
-                          </Typography>
-                          <IconButton 
-                            onClick={() => updateQuantity(item.id, 1)}
-                            sx={{ 
-                              color: "var(--admin-text)", 
-                              backgroundColor: "var(--admin-surface-alt)",
-                              width: { xs: "24px", md: "32px" },
-                              height: { xs: "24px", md: "32px" },
-                              fontSize: { xs: "16px", md: "20px" },
-                              "&:hover": { backgroundColor: "var(--admin-accent)" }
-                            }}
-                          >
-                            +
-                          </IconButton>
-                        </Box>
+                        <CartQuantityControl
+                          item={item}
+                          kgSalesEnabled={kgSalesEnabled}
+                          onChange={setCartItemQuantity}
+                        />
                       </StyledTableCell>
                       <StyledTableCell align="right" sx={{ padding: { xs: "8px 12px", md: "16px 24px" } }}>
                         <IconButton 

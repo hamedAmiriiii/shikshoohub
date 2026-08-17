@@ -6,6 +6,8 @@ export type AdminPosSettings = {
   menuMode: boolean;
   installmentPaymentEnabled: boolean;
   debtPaymentEnabled: boolean;
+  /** فروش محصولات با واحد کیلوگرم */
+  kgSalesEnabled: boolean;
 };
 
 const DEFAULT_SETTINGS: AdminPosSettings = {
@@ -13,6 +15,7 @@ const DEFAULT_SETTINGS: AdminPosSettings = {
   menuMode: false,
   installmentPaymentEnabled: true,
   debtPaymentEnabled: false,
+  kgSalesEnabled: false,
 };
 
 export function readAdminPosSettings(): AdminPosSettings {
