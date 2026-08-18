@@ -118,7 +118,7 @@ const GALLERY = Array.from({ length: 10 }, (_, i) => ({
 const PLANS = [
   {
     name: "پلن اولیه",
-    price: "۴,۳۰۰,۰۰۰",
+    price: "6,3۰۰,۰۰۰",
     unit: "تومان / سال",
     description: "همه امکانات اصلی فروش و حسابداری",
     popular: false,
@@ -133,7 +133,7 @@ const PLANS = [
   },
   {
     name: "پلن باشگاه مشتریان",
-    price: "۵,۵۰۰,۰۰۰",
+    price: "10,5۰۰,۰۰۰",
     unit: "تومان / سال",
     description: "پلن اولیه + باشگاه مشتریان و امکانات وفاداری",
     popular: true,
