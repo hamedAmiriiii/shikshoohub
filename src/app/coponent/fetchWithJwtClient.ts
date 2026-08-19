@@ -48,6 +48,7 @@ export async function FetchWithJwtClient(
   try {
     const token = resolveToken(session);
     const { body, options: resolvedOptions } = resolveBody(method, session, options);
+    const resolvedBody = body ?? resolvedOptions.body;
 
     const headers = new Headers(resolvedOptions.headers || {});
 
@@ -57,7 +58,7 @@ export async function FetchWithJwtClient(
     if (!headers.has('Accept')) {
       headers.set('Accept', 'application/json');
     }
-    if (body !== undefined && !headers.has('Content-Type')) {
+    if (resolvedBody !== undefined && !headers.has('Content-Type')) {
       headers.set('Content-Type', 'application/json');
     }
 
@@ -72,7 +73,7 @@ export async function FetchWithJwtClient(
       ...resolvedOptions,
       method,
       headers,
-      ...(body !== undefined ? { body } : {}),
+      ...(resolvedBody !== undefined ? { body: resolvedBody } : {}),
     });
 
     if (!response.ok) {

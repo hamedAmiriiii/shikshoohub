@@ -6,6 +6,29 @@ export type Employee = {
   id: number;
   name: string;
   phone?: string;
+  base_salary?: number;
+  base_work_hours?: number;
+  hourly_wage?: number;
+};
+
+export type PayrollSalaryBreakdown = {
+  base_salary?: number;
+  base_work_hours?: number;
+  overtime_hours?: number;
+  overtime_amount?: number;
+};
+
+export type PayrollStatus = "pending" | "partial" | "paid" | string;
+
+export type PayrollPaymentType = "salary" | "advance" | "other" | string;
+
+export type PayrollPayment = {
+  id: number;
+  amount: number | string;
+  payment_type?: PayrollPaymentType;
+  title?: string | null;
+  note?: string | null;
+  created_at?: string;
 };
 
 export type Payroll = {
@@ -20,8 +43,12 @@ export type Payroll = {
   payroll_month?: number;
   hours_worked: number;
   hourly_wage?: number;
-  salary_amount?: number;
-  status?: string;
+  salary_amount?: number | string;
+  salary_breakdown?: PayrollSalaryBreakdown;
+  total_paid?: number | string;
+  remaining?: number | string;
+  payments?: PayrollPayment[];
+  status?: PayrollStatus;
   paid_at?: string | null;
 };
 
@@ -29,6 +56,12 @@ export type PayrollSettings = {
   salary_hourly_wage: number;
   salary_monthly_work_hours: number;
 };
+
+export const PAYMENT_TYPE_OPTIONS = [
+  { value: "salary", label: "پرداخت حقوق" },
+  { value: "advance", label: "مساعده" },
+  { value: "other", label: "سایر" },
+] as const;
 
 export const PERSIAN_MONTHS = [
   "فروردین",
@@ -47,6 +80,24 @@ export const PERSIAN_MONTHS = [
 
 export const formatNumber = (n: number) =>
   new Intl.NumberFormat("fa-IR").format(Math.floor(n || 0));
+
+export function parseAmount(value: string | number | null | undefined): number {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  const cleaned = String(value ?? "")
+    .replace(/,/g, "")
+    .replace(/٬/g, "")
+    .replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)))
+    .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)))
+    .replace(/\s/g, "");
+  const num = parseFloat(cleaned);
+  return Number.isFinite(num) ? num : 0;
+}
+
+export function formatInputWithSeparator(value: string): string {
+  const digitsOnly = String(value ?? "").replace(/[^\d۰-۹٠-٩]/g, "");
+  if (!digitsOnly) return "";
+  return formatNumber(parseAmount(digitsOnly));
+}
 
 export function getCurrentJalaliYearMonth(): { year: number; month: number } {
   const d = new DateObject({ calendar: persian, locale: persian_fa });
@@ -128,8 +179,75 @@ export function getPayrollMonth(p: Payroll): number {
   return Number(p.month ?? p.payroll_month) || 0;
 }
 
+export function getPayrollPayments(p: Payroll): PayrollPayment[] {
+  return Array.isArray(p.payments) ? p.payments : [];
+}
+
+export function getPayrollSalary(p: Payroll, fallbackHourlyWage = 0): number {
+  if (p.salary_amount != null && String(p.salary_amount) !== "") {
+    return parseAmount(p.salary_amount);
+  }
+  return Number(p.hours_worked || 0) * Number(p.hourly_wage || fallbackHourlyWage || 0);
+}
+
+export function getPayrollTotalPaid(p: Payroll): number {
+  if (p.total_paid != null && p.total_paid !== "") {
+    return parseAmount(p.total_paid);
+  }
+  const fromPayments = getPayrollPayments(p).reduce(
+    (sum, payment) => sum + parseAmount(payment.amount),
+    0,
+  );
+  if (fromPayments > 0) return fromPayments;
+  if (p.status === "paid") return getPayrollSalary(p);
+  return 0;
+}
+
+export function getPayrollRemaining(p: Payroll): number {
+  if (p.remaining != null && p.remaining !== "") {
+    return parseAmount(p.remaining);
+  }
+  return Math.max(0, getPayrollSalary(p) - getPayrollTotalPaid(p));
+}
+
+export function getPayrollStatus(p: Payroll): PayrollStatus {
+  if (p.status) return p.status;
+  const remaining = getPayrollRemaining(p);
+  const paid = getPayrollTotalPaid(p);
+  if (paid > 0 && remaining > 0) return "partial";
+  if (remaining <= 0 && getPayrollSalary(p) > 0) return "paid";
+  return "pending";
+}
+
 export function isPayrollPaid(p: Payroll): boolean {
-  return p.status === "paid";
+  return getPayrollStatus(p) === "paid";
+}
+
+export function payrollStatusLabel(status: PayrollStatus): string {
+  if (status === "paid") return "تسویه";
+  if (status === "partial") return "پرداخت ناقص";
+  return "در انتظار";
+}
+
+export function payrollStatusColor(status: PayrollStatus): "success" | "info" | "warning" {
+  if (status === "paid") return "success";
+  if (status === "partial") return "info";
+  return "warning";
+}
+
+export function paymentTypeLabel(type?: PayrollPaymentType): string {
+  if (type === "advance") return "مساعده";
+  if (type === "other") return "سایر";
+  return "پرداخت حقوق";
+}
+
+export function estimateSalaryFromEmployee(employee: Employee | undefined, hoursWorked: number): number {
+  if (!employee) return 0;
+  const baseSalary = Number(employee.base_salary) || 0;
+  const baseHours = Number(employee.base_work_hours) || 0;
+  const hourly = Number(employee.hourly_wage) || 0;
+  const overtime = Math.max(0, hoursWorked - baseHours);
+  return baseSalary + overtime * hourly;
 }
 
 export function buildPayrollBody(
@@ -144,11 +262,6 @@ export function buildPayrollBody(
     payroll_month: month,
     hours_worked: hours,
   };
-}
-
-export function getPayrollSalary(p: Payroll, hourlyWage: number): number {
-  if (typeof p.salary_amount === "number") return p.salary_amount;
-  return Number(p.hours_worked || 0) * Number(p.hourly_wage || hourlyWage || 0);
 }
 
 export function buildPayrollUrl(year: number | "all", month: number | "all"): string {

@@ -34,6 +34,7 @@ import StorefrontIcon from "@mui/icons-material/Storefront";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import ShoppingCartCheckoutIcon from "@mui/icons-material/ShoppingCartCheckout";
 import BadgeIcon from "@mui/icons-material/Badge";
+import PaymentsIcon from "@mui/icons-material/Payments";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import LogoutIcon from "@mui/icons-material/Logout";
 import AddBoxIcon from "@mui/icons-material/AddBox";
@@ -137,6 +138,12 @@ export default function AdminHamburgerSidebar({
         icon: <AccountBalanceIcon />,
       },
       { id: "profit", label: "سود و ضرر", href: "/admin/profit-loss", icon: <TrendingUpIcon /> },
+    ],
+    [],
+  );
+
+  const payrollChildren: NavLeaf[] = useMemo(
+    () => [
       { id: "payroll", label: "لیست حقوق", href: "/admin/payroll", icon: <BadgeIcon /> },
       {
         id: "payroll-employees",
@@ -270,6 +277,12 @@ export default function AdminHamburgerSidebar({
         children: financialChildren,
       },
       {
+        id: "payroll",
+        label: "حقوق دستمزد",
+        icon: <PaymentsIcon />,
+        children: payrollChildren,
+      },
+      {
         id: "products",
         label: "مدیریت کالا",
         icon: <InventoryIcon />,
@@ -291,7 +304,7 @@ export default function AdminHamburgerSidebar({
       });
     }
     return base;
-  }, [adminChildren, financialChildren, isSuperAdmin, productChildren, smsChildren]);
+  }, [adminChildren, financialChildren, isSuperAdmin, payrollChildren, productChildren, smsChildren]);
 
   const initiallyOpen = useMemo(() => {
     const open: Record<string, boolean> = {};

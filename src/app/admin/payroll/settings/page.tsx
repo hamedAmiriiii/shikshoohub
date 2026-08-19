@@ -115,7 +115,7 @@ export default function PayrollSettingsPage() {
           ) : (
             <>
               <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 13, mb: 2 }}>
-                حقوق پایه ساعتی و ساعات کاری ماهانه برای محاسبه حقوق کارمندان
+                این مقادیر فقط پیش‌فرض فرم ثبت کارمند جدید هستند. حقوق هر فرد از پایه حقوق و ساعات همان کارمند محاسبه می‌شود.
               </Typography>
               <Grid container spacing={1.5}>
                 <Grid item xs={12} sm={6}>

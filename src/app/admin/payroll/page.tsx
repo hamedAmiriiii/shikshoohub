@@ -45,27 +45,36 @@ import { adminPageSx } from "@/app/admin/theme/adminTheme";
 import JalaliMonthPickerField from "./JalaliMonthPickerField";
 import PayrollConfirmDialog from "./PayrollConfirmDialog";
 import {
+  PAYMENT_TYPE_OPTIONS,
   PERSIAN_MONTHS,
   buildPayrollBody,
   buildJalaliYearOptions,
   buildPayrollUrl,
   createJalaliDateObject,
+  estimateSalaryFromEmployee,
   extractList,
-  extractSettings,
   formatJalaliYearMonth,
   formatNumber,
   getCurrentJalaliYearMonth,
   getPayrollEmployeeId,
   getPayrollMonth,
+  getPayrollPayments,
+  getPayrollRemaining,
   getPayrollSalary,
+  getPayrollStatus,
+  getPayrollTotalPaid,
   getPayrollYear,
   isPayrollPaid,
   normalizePhoneDigits,
   normalizeSearchText,
+  parseAmount,
   parseJalaliMonthPicker,
+  paymentTypeLabel,
+  payrollStatusColor,
+  payrollStatusLabel,
   type Employee,
   type Payroll,
-  type PayrollSettings,
+  type PayrollPayment,
 } from "@/app/lib/payroll";
 
 const fieldSx = {
@@ -80,8 +89,8 @@ const fieldSx = {
 } as const;
 
 type PayrollConfirmState =
-  | { kind: "pay"; payroll: Payroll }
-  | { kind: "delete"; payroll: Payroll };
+  | { kind: "delete"; payroll: Payroll }
+  | { kind: "delete-payment"; payment: PayrollPayment };
 
 export default function PayrollPage() {
   const router = useRouter();
@@ -91,10 +100,6 @@ export default function PayrollPage() {
   const [payrollsLoading, setPayrollsLoading] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [payrolls, setPayrolls] = useState<Payroll[]>([]);
-  const [settings, setSettings] = useState<PayrollSettings>({
-    salary_hourly_wage: 0,
-    salary_monthly_work_hours: 0,
-  });
 
   const [filterYear, setFilterYear] = useState<number | "all">(currentJalali.year);
   const [filterMonth, setFilterMonth] = useState<number | "all">(currentJalali.month);
@@ -110,11 +115,36 @@ export default function PayrollPage() {
   const [saving, setSaving] = useState(false);
   const [confirmState, setConfirmState] = useState<PayrollConfirmState | null>(null);
 
+  const [paymentsPayroll, setPaymentsPayroll] = useState<Payroll | null>(null);
+  const [payments, setPayments] = useState<PayrollPayment[]>([]);
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentType, setPaymentType] = useState("salary");
+  const [paymentTitle, setPaymentTitle] = useState("");
+  const [paymentNote, setPaymentNote] = useState("");
+
   const employeeMap = useMemo(() => {
     const map = new Map<number, Employee>();
     employees.forEach((e) => map.set(e.id, e));
     return map;
   }, [employees]);
+
+  const selectedEmployee = useMemo(() => {
+    if (!payrollEmployeeId) return undefined;
+    return employeeMap.get(Number(payrollEmployeeId));
+  }, [employeeMap, payrollEmployeeId]);
+
+  const estimatedSalary = useMemo(() => {
+    const hours = Number(hoursWorked) || 0;
+    if (!selectedEmployee || hours <= 0) return 0;
+    return estimateSalaryFromEmployee(selectedEmployee, hours);
+  }, [hoursWorked, selectedEmployee]);
+
+  const estimatedOvertime = useMemo(() => {
+    const hours = Number(hoursWorked) || 0;
+    const baseHours = Number(selectedEmployee?.base_work_hours) || 0;
+    return Math.max(0, hours - baseHours);
+  }, [hoursWorked, selectedEmployee]);
 
   const matchesSearch = useCallback(
     (employee?: Employee | null, fallbackName?: string) => {
@@ -141,17 +171,19 @@ export default function PayrollPage() {
   const filteredSummary = useMemo(() => {
     let totalSalary = 0;
     let totalPaid = 0;
+    let totalRemaining = 0;
     filteredPayrolls.forEach((p) => {
-      const salary = getPayrollSalary(p, settings.salary_hourly_wage);
-      totalSalary += salary;
-      if (isPayrollPaid(p)) totalPaid += salary;
+      totalSalary += getPayrollSalary(p);
+      totalPaid += getPayrollTotalPaid(p);
+      totalRemaining += getPayrollRemaining(p);
     });
     return {
       count: filteredPayrolls.length,
       totalSalary,
       totalPaid,
+      totalRemaining,
     };
-  }, [filteredPayrolls, settings.salary_hourly_wage]);
+  }, [filteredPayrolls]);
 
   const yearOptions = useMemo(
     () => buildJalaliYearOptions(payrolls.map((p) => getPayrollYear(p))),
@@ -169,7 +201,9 @@ export default function PayrollPage() {
         toast.error(getApiErrorMessage(payrollRes, "خطا در دریافت حقوق"));
         return;
       }
-      setPayrolls(extractList<Payroll>(payrollRes));
+      const list = extractList<Payroll>(payrollRes);
+      setPayrolls(list);
+      return list;
     } finally {
       setPayrollsLoading(false);
     }
@@ -183,21 +217,11 @@ export default function PayrollPage() {
     }
     setLoading(true);
     try {
-      const [empRes, settingsRes] = await Promise.all([
-        FetchWithJwtClient("GET", "/api/shop-employees", token),
-        FetchWithJwtClient("GET", "/api/settings/payroll", token),
-      ]);
-
+      const empRes = await FetchWithJwtClient("GET", "/api/shop-employees", token);
       if (!empRes?.hasError) {
         setEmployees(extractList<Employee>(empRes));
-      }
-      if (!settingsRes?.hasError) {
-        setSettings(extractSettings(settingsRes));
-      }
-
-      if (empRes?.hasError) toast.error(getApiErrorMessage(empRes, "خطا در دریافت کارمندها"));
-      if (settingsRes?.hasError) {
-        toast.error(getApiErrorMessage(settingsRes, "خطا در دریافت تنظیمات حقوق"));
+      } else {
+        toast.error(getApiErrorMessage(empRes, "خطا در دریافت کارمندها"));
       }
     } finally {
       setLoading(false);
@@ -229,8 +253,8 @@ export default function PayrollPage() {
   };
 
   const openEditPayroll = (item: Payroll) => {
-    if (isPayrollPaid(item)) {
-      toast.error("رکورد پرداخت‌شده قابل ویرایش نیست");
+    if (isPayrollPaid(item) || getPayrollTotalPaid(item) > 0) {
+      toast.error("رکوردی که پرداخت دارد قابل ویرایش نیست");
       return;
     }
     setEditingPayroll(item);
@@ -261,6 +285,11 @@ export default function PayrollPage() {
     const hours = Number(hoursWorked);
     if (!hours || hours <= 0) {
       toast.error("ساعت کارکرد معتبر نیست");
+      return;
+    }
+    const employee = employeeMap.get(Number(payrollEmployeeId));
+    if (!employee?.base_salary) {
+      toast.error("برای این کارمند پایه حقوق ثبت نشده است");
       return;
     }
     setSaving(true);
@@ -297,8 +326,8 @@ export default function PayrollPage() {
   };
 
   const requestDeletePayroll = (item: Payroll) => {
-    if (isPayrollPaid(item)) {
-      toast.error("رکورد پرداخت‌شده قابل حذف نیست");
+    if (getPayrollTotalPaid(item) > 0) {
+      toast.error("رکوردی که پرداخت دارد قابل حذف نیست");
       return;
     }
     setConfirmState({ kind: "delete", payroll: item });
@@ -321,22 +350,115 @@ export default function PayrollPage() {
     }
   };
 
-  const requestPayPayroll = (item: Payroll) => {
-    setConfirmState({ kind: "pay", payroll: item });
+  const applyPayrollToPaymentsDialog = (item: Payroll) => {
+    setPaymentsPayroll(item);
+    setPayments(getPayrollPayments(item));
   };
 
-  const executePayPayroll = async (item: Payroll) => {
+  const loadPayments = async (payroll: Payroll) => {
+    const nested = getPayrollPayments(payroll);
+    if (nested.length > 0 || payroll.payments) {
+      setPayments(nested);
+      return;
+    }
+    setPaymentsLoading(true);
+    try {
+      const token = tokenCode();
+      const res = await FetchWithJwtClient(
+        "GET",
+        `/api/employee-payrolls/${payroll.id}/payments`,
+        token,
+      );
+      if (res?.hasError) {
+        toast.error(getApiErrorMessage(res, "خطا در دریافت پرداخت‌ها"));
+        setPayments([]);
+        return;
+      }
+      setPayments(extractList<PayrollPayment>(res));
+    } finally {
+      setPaymentsLoading(false);
+    }
+  };
+
+  const openPaymentsDialog = async (item: Payroll) => {
+    setPaymentAmount("");
+    setPaymentType("salary");
+    setPaymentTitle("");
+    setPaymentNote("");
+    applyPayrollToPaymentsDialog(item);
+    await loadPayments(item);
+  };
+
+  const closePaymentsDialog = () => {
+    if (saving) return;
+    setPaymentsPayroll(null);
+    setPayments([]);
+    setConfirmState(null);
+  };
+
+  const savePayment = async () => {
+    if (!paymentsPayroll) return;
+    const remaining = getPayrollRemaining(paymentsPayroll);
+    const amount = parseAmount(paymentAmount);
+    if (amount <= 0) {
+      toast.error("مبلغ پرداخت را وارد کنید");
+      return;
+    }
+    if (amount > remaining) {
+      toast.error("مبلغ از مانده حقوق بیشتر است");
+      return;
+    }
     setSaving(true);
     try {
       const token = tokenCode();
-      const res = await FetchWithJwtClient("POST", `/api/employee-payrolls/${item.id}/pay`, token);
+      const body: Record<string, unknown> = {
+        amount,
+        payment_type: paymentType,
+      };
+      if (paymentTitle.trim()) body.title = paymentTitle.trim();
+      if (paymentNote.trim()) body.note = paymentNote.trim();
+      const res = await FetchWithJwtClient(
+        "POST",
+        `/api/employee-payrolls/${paymentsPayroll.id}/payments`,
+        token,
+        {},
+        { body: JSON.stringify(body) },
+      );
       if (res?.hasError) {
-        toast.error(getApiErrorMessage(res, "خطا در پرداخت حقوق"));
+        toast.error(getApiErrorMessage(res, "خطا در ثبت پرداخت"));
         return;
       }
-      toast.success("حقوق پرداخت شد و هزینه ثبت گردید");
+      toast.success("پرداخت ثبت شد");
+      setPaymentAmount("");
+      setPaymentTitle("");
+      setPaymentNote("");
+      const list = (await loadPayrolls(filterYear, filterMonth)) || [];
+      const updated = list.find((p) => p.id === paymentsPayroll.id);
+      if (updated) applyPayrollToPaymentsDialog(updated);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const executeDeletePayment = async (payment: PayrollPayment) => {
+    if (!paymentsPayroll) return;
+    setSaving(true);
+    try {
+      const token = tokenCode();
+      const res = await FetchWithJwtClient(
+        "DELETE",
+        `/api/employee-payrolls/${paymentsPayroll.id}/payments/${payment.id}`,
+        token,
+      );
+      if (res?.hasError) {
+        toast.error(getApiErrorMessage(res, "خطا در حذف پرداخت"));
+        return;
+      }
+      toast.success("پرداخت حذف شد");
       setConfirmState(null);
-      await loadPayrolls(filterYear, filterMonth);
+      const list = (await loadPayrolls(filterYear, filterMonth)) || [];
+      const updated = list.find((p) => p.id === paymentsPayroll.id);
+      if (updated) applyPayrollToPaymentsDialog(updated);
     } finally {
       setSaving(false);
     }
@@ -347,25 +469,25 @@ export default function PayrollPage() {
     if (confirmState.kind === "delete") {
       await executeDeletePayroll(confirmState.payroll);
     } else {
-      await executePayPayroll(confirmState.payroll);
+      await executeDeletePayment(confirmState.payment);
     }
   };
 
   const confirmDialogProps = useMemo(() => {
     if (!confirmState) return null;
-    const payroll = confirmState.payroll;
-    const employeeName = getEmployeeName(payroll);
-    const monthLabel = formatJalaliYearMonth(getPayrollYear(payroll), getPayrollMonth(payroll));
 
-    if (confirmState.kind === "pay") {
+    if (confirmState.kind === "delete-payment") {
       return {
-        title: "پرداخت حقوق",
-        message: `حقوق «${employeeName}» برای ${monthLabel} پرداخت شود؟ با تأیید، هزینه در بخش هزینه‌ها ثبت می‌شود.`,
-        confirmLabel: "پرداخت",
-        confirmColor: "success" as const,
+        title: "حذف پرداخت",
+        message: `پرداخت ${formatNumber(Number(confirmState.payment.amount))} تومان حذف شود؟`,
+        confirmLabel: "حذف",
+        confirmColor: "error" as const,
       };
     }
 
+    const payroll = confirmState.payroll;
+    const employeeName = getEmployeeName(payroll);
+    const monthLabel = formatJalaliYearMonth(getPayrollYear(payroll), getPayrollMonth(payroll));
     return {
       title: "حذف رکورد حقوق",
       message: `رکورد حقوق «${employeeName}» (${monthLabel}) حذف شود؟`,
@@ -373,6 +495,8 @@ export default function PayrollPage() {
       confirmColor: "error" as const,
     };
   }, [confirmState, employeeMap]);
+
+  const paymentsRemaining = paymentsPayroll ? getPayrollRemaining(paymentsPayroll) : 0;
 
   return (
     <Box sx={{ ...adminPageSx, p: 2, pb: 12 }}>
@@ -481,7 +605,7 @@ export default function PayrollPage() {
       </Card>
 
       <Grid container spacing={1.5} sx={{ mb: 2 }}>
-        <Grid item xs={12} sm={4}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card sx={{ border: "1px solid var(--admin-border)" }}>
             <CardContent>
               <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>تعداد رکورد</Typography>
@@ -491,7 +615,7 @@ export default function PayrollPage() {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={4}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card sx={{ border: "1px solid var(--admin-border)" }}>
             <CardContent>
               <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>جمع حقوق</Typography>
@@ -501,12 +625,22 @@ export default function PayrollPage() {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={4}>
+        <Grid item xs={12} sm={6} md={3}>
           <Card sx={{ border: "1px solid var(--admin-border)" }}>
             <CardContent>
               <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>جمع پرداخت‌شده</Typography>
               <Typography sx={{ color: "var(--admin-accent)", fontWeight: 700, fontSize: 20 }}>
                 {formatNumber(filteredSummary.totalPaid)} تومان
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card sx={{ border: "1px solid var(--admin-border)" }}>
+            <CardContent>
+              <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>مانده</Typography>
+              <Typography sx={{ color: "var(--admin-accent)", fontWeight: 700, fontSize: 20 }}>
+                {formatNumber(filteredSummary.totalRemaining)} تومان
               </Typography>
             </CardContent>
           </Card>
@@ -539,6 +673,8 @@ export default function PayrollPage() {
                     <TableCell align="center">ماه شمسی</TableCell>
                     <TableCell align="center">کارکرد</TableCell>
                     <TableCell align="center">حقوق</TableCell>
+                    <TableCell align="center">پرداخت‌شده</TableCell>
+                    <TableCell align="center">مانده</TableCell>
                     <TableCell align="center">وضعیت</TableCell>
                     <TableCell align="center">عملیات</TableCell>
                   </TableRow>
@@ -547,8 +683,11 @@ export default function PayrollPage() {
                   {filteredPayrolls.map((p) => {
                     const employeeName = getEmployeeName(p);
                     const employeePhone = getEmployeePhone(p);
+                    const salary = getPayrollSalary(p);
+                    const paidAmount = getPayrollTotalPaid(p);
+                    const remaining = getPayrollRemaining(p);
+                    const status = getPayrollStatus(p);
                     const paid = isPayrollPaid(p);
-                    const salary = getPayrollSalary(p, settings.salary_hourly_wage);
                     const payrollYear = getPayrollYear(p);
                     const payrollMonth = getPayrollMonth(p);
                     return (
@@ -560,16 +699,18 @@ export default function PayrollPage() {
                           {formatNumber(Number(p.hours_worked || 0))} ساعت
                         </TableCell>
                         <TableCell align="center">{formatNumber(salary)} تومان</TableCell>
+                        <TableCell align="center">{formatNumber(paidAmount)} تومان</TableCell>
+                        <TableCell align="center">{formatNumber(remaining)} تومان</TableCell>
                         <TableCell align="center">
                           <Chip
                             size="small"
-                            color={paid ? "success" : "warning"}
-                            label={paid ? "پرداخت‌شده" : "در انتظار"}
+                            color={payrollStatusColor(status)}
+                            label={payrollStatusLabel(status)}
                           />
                         </TableCell>
                         <TableCell align="center">
                           <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.25, flexWrap: "wrap", justifyContent: "center" }}>
-                            {!paid ? (
+                            {!paid && paidAmount === 0 ? (
                               <>
                                 <IconButton
                                   size="small"
@@ -587,19 +728,17 @@ export default function PayrollPage() {
                                 >
                                   <DeleteOutlineIcon fontSize="small" />
                                 </IconButton>
-                                <Button
-                                  size="small"
-                                  variant="contained"
-                                  startIcon={<PaidIcon />}
-                                  onClick={() => requestPayPayroll(p)}
-                                  disabled={saving}
-                                >
-                                  پرداخت
-                                </Button>
                               </>
-                            ) : (
-                              "—"
-                            )}
+                            ) : null}
+                            <Button
+                              size="small"
+                              variant={paid ? "outlined" : "contained"}
+                              startIcon={<PaidIcon />}
+                              onClick={() => openPaymentsDialog(p)}
+                              disabled={saving}
+                            >
+                              {paid ? "پرداخت‌ها" : "پرداخت"}
+                            </Button>
                           </Box>
                         </TableCell>
                       </TableRow>
@@ -648,6 +787,15 @@ export default function PayrollPage() {
                 ))
               )}
             </TextField>
+            {selectedEmployee ? (
+              <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>
+                پایه {formatNumber(Number(selectedEmployee.base_salary || 0))} تومان برای{" "}
+                {formatNumber(Number(selectedEmployee.base_work_hours || 0))} ساعت
+                {selectedEmployee.hourly_wage
+                  ? ` — اضافه‌کار ${formatNumber(Number(selectedEmployee.hourly_wage))} تومان`
+                  : ""}
+              </Typography>
+            ) : null}
             <JalaliMonthPickerField
               label="سال و ماه شمسی"
               value={payrollMonthValue}
@@ -661,6 +809,14 @@ export default function PayrollPage() {
               onChange={(e) => setHoursWorked(e.target.value)}
               sx={fieldSx}
             />
+            {estimatedSalary > 0 ? (
+              <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: 13 }}>
+                برآورد حقوق: {formatNumber(estimatedSalary)} تومان
+                {estimatedOvertime > 0
+                  ? ` (اضافه‌کار ${formatNumber(estimatedOvertime)} ساعت)`
+                  : ""}
+              </Typography>
+            ) : null}
           </Box>
         </DialogContent>
         <DialogActions>
@@ -675,6 +831,133 @@ export default function PayrollPage() {
           </Button>
           <Button variant="contained" onClick={savePayroll} disabled={saving || employees.length === 0}>
             {editingPayroll ? "ذخیره" : "ثبت"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(paymentsPayroll)}
+        onClose={closePaymentsDialog}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>
+          پرداخت‌ها
+          {paymentsPayroll ? ` — ${getEmployeeName(paymentsPayroll)}` : ""}
+        </DialogTitle>
+        <DialogContent>
+          {paymentsPayroll ? (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, pt: 1 }}>
+              <Typography sx={{ fontSize: 13, color: "var(--admin-text-secondary)" }}>
+                حقوق {formatNumber(getPayrollSalary(paymentsPayroll))} تومان — پرداخت‌شده{" "}
+                {formatNumber(getPayrollTotalPaid(paymentsPayroll))} — مانده{" "}
+                {formatNumber(paymentsRemaining)} تومان
+              </Typography>
+              {paymentsPayroll.salary_breakdown ? (
+                <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)" }}>
+                  پایه {formatNumber(Number(paymentsPayroll.salary_breakdown.base_salary || 0))}
+                  {paymentsPayroll.salary_breakdown.overtime_hours
+                    ? ` + اضافه‌کار ${formatNumber(Number(paymentsPayroll.salary_breakdown.overtime_hours))} ساعت (${formatNumber(Number(paymentsPayroll.salary_breakdown.overtime_amount || 0))} تومان)`
+                    : ""}
+                </Typography>
+              ) : null}
+
+              {paymentsRemaining > 0 ? (
+                <>
+                  <TextField
+                    select
+                    size="small"
+                    label="نوع پرداخت"
+                    value={paymentType}
+                    onChange={(e) => setPaymentType(e.target.value)}
+                    sx={fieldSx}
+                  >
+                    {PAYMENT_TYPE_OPTIONS.map((opt) => (
+                      <MenuItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                  {(paymentType === "advance" || paymentType === "other") ? (
+                    <TextField
+                      size="small"
+                      label={paymentType === "advance" ? "عنوان مساعده" : "عنوان"}
+                      value={paymentTitle}
+                      onChange={(e) => setPaymentTitle(e.target.value)}
+                      sx={fieldSx}
+                    />
+                  ) : null}
+                  <TextField
+                    size="small"
+                    type="number"
+                    label="مبلغ (تومان)"
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    sx={fieldSx}
+                  />
+                  <TextField
+                    size="small"
+                    label="توضیح (اختیاری)"
+                    value={paymentNote}
+                    onChange={(e) => setPaymentNote(e.target.value)}
+                    sx={fieldSx}
+                  />
+                  <Button variant="contained" onClick={savePayment} disabled={saving}>
+                    ثبت پرداخت
+                  </Button>
+                </>
+              ) : (
+                <Typography sx={{ fontSize: 13, color: "var(--admin-text-muted)" }}>
+                  این حقوق کاملاً تسویه شده است
+                </Typography>
+              )}
+
+              {paymentsLoading ? (
+                <Box sx={{ py: 2, display: "flex", justifyContent: "center" }}>
+                  <CircularProgress size={22} />
+                </Box>
+              ) : payments.length === 0 ? (
+                <Typography sx={{ fontSize: 13, color: "var(--admin-text-muted)" }}>
+                  هنوز پرداختی ثبت نشده
+                </Typography>
+              ) : (
+                <TableContainer>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>نوع</TableCell>
+                        <TableCell>عنوان</TableCell>
+                        <TableCell align="center">مبلغ</TableCell>
+                        <TableCell align="center">حذف</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {payments.map((pay) => (
+                        <TableRow key={pay.id}>
+                          <TableCell>{paymentTypeLabel(pay.payment_type)}</TableCell>
+                          <TableCell>{pay.title || pay.note || "—"}</TableCell>
+                          <TableCell align="center">{formatNumber(parseAmount(pay.amount))} تومان</TableCell>
+                          <TableCell align="center">
+                            <IconButton
+                              size="small"
+                              onClick={() => setConfirmState({ kind: "delete-payment", payment: pay })}
+                              disabled={saving}
+                            >
+                              <DeleteOutlineIcon fontSize="small" />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </Box>
+          ) : null}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closePaymentsDialog} disabled={saving}>
+            بستن
           </Button>
         </DialogActions>
       </Dialog>

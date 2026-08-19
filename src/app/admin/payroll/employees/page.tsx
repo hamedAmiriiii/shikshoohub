@@ -38,8 +38,12 @@ import { adminPageSx } from "@/app/admin/theme/adminTheme";
 import PayrollConfirmDialog from "../PayrollConfirmDialog";
 import {
   extractList,
+  extractSettings,
+  formatInputWithSeparator,
+  formatNumber,
   normalizePhoneDigits,
   normalizeSearchText,
+  parseAmount,
   type Employee,
 } from "@/app/lib/payroll";
 
@@ -64,7 +68,12 @@ export default function PayrollEmployeesPage() {
   const [editing, setEditing] = useState<Employee | null>(null);
   const [employeeName, setEmployeeName] = useState("");
   const [employeePhone, setEmployeePhone] = useState("");
+  const [baseSalary, setBaseSalary] = useState("");
+  const [baseWorkHours, setBaseWorkHours] = useState("");
+  const [hourlyWage, setHourlyWage] = useState("");
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
+  const [defaultHours, setDefaultHours] = useState("");
+  const [defaultHourly, setDefaultHourly] = useState("");
 
   const loadEmployees = useCallback(async () => {
     const token = tokenCode();
@@ -79,7 +88,16 @@ export default function PayrollEmployeesPage() {
         toast.error(getApiErrorMessage(res, "خطا در دریافت کارمندها"));
         return;
       }
-      setEmployees(extractList<Employee>(res));
+      const list = extractList<Employee>(res);
+      console.log("[shop-employees] GET response", res);
+      console.log("[shop-employees] GET first item keys", list[0] ? Object.keys(list[0] as object) : [], list[0]);
+      setEmployees(list);
+      const settingsRes = await FetchWithJwtClient("GET", "/api/settings/payroll", token);
+      if (!settingsRes?.hasError) {
+        const settings = extractSettings(settingsRes);
+        setDefaultHours(settings.salary_monthly_work_hours ? String(settings.salary_monthly_work_hours) : "");
+        setDefaultHourly(settings.salary_hourly_wage ? String(settings.salary_hourly_wage) : "");
+      }
     } finally {
       setLoading(false);
     }
@@ -107,6 +125,9 @@ export default function PayrollEmployeesPage() {
     setEditing(null);
     setEmployeeName("");
     setEmployeePhone("");
+    setBaseSalary("");
+    setBaseWorkHours(defaultHours ? formatNumber(parseAmount(defaultHours)) : "");
+    setHourlyWage(defaultHourly ? formatNumber(parseAmount(defaultHourly)) : "");
     setDialogOpen(true);
   };
 
@@ -114,6 +135,9 @@ export default function PayrollEmployeesPage() {
     setEditing(employee);
     setEmployeeName(employee.name || "");
     setEmployeePhone(employee.phone || "");
+    setBaseSalary(employee.base_salary != null ? formatNumber(Number(employee.base_salary)) : "");
+    setBaseWorkHours(employee.base_work_hours != null ? formatNumber(Number(employee.base_work_hours)) : "");
+    setHourlyWage(employee.hourly_wage != null ? formatNumber(Number(employee.hourly_wage)) : "");
     setDialogOpen(true);
   };
 
@@ -122,25 +146,42 @@ export default function PayrollEmployeesPage() {
       toast.error("نام کارمند الزامی است");
       return;
     }
+    const salary = parseAmount(baseSalary);
+    const hours = parseAmount(baseWorkHours);
+    const wage = parseAmount(hourlyWage);
+    if (salary <= 0) {
+      toast.error("پایه حقوق را وارد کنید");
+      return;
+    }
+    if (hours <= 0) {
+      toast.error("ساعات کارکرد برای دریافت پایه حقوق را وارد کنید");
+      return;
+    }
+    if (wage <= 0) {
+      toast.error("دستمزد ساعتی اضافه‌کار را وارد کنید");
+      return;
+    }
     setSaving(true);
     try {
       const token = tokenCode();
-      const body = { name: employeeName.trim(), phone: employeePhone.trim() || null };
-      const res = editing
-        ? await FetchWithJwtClient(
-            "PUT",
-            `/api/shop-employees/${editing.id}`,
-            token,
-            {},
-            { body: JSON.stringify(body) },
-          )
-        : await FetchWithJwtClient(
-            "POST",
-            "/api/shop-employees",
-            token,
-            {},
-            { body: JSON.stringify(body) },
-          );
+      const body = {
+        name: employeeName.trim(),
+        phone: employeePhone.trim() || null,
+        base_salary: salary,
+        base_work_hours: hours,
+        hourly_wage: wage,
+      };
+      const method = editing ? "PUT" : "POST";
+      const url = editing ? `/api/shop-employees/${editing.id}` : "/api/shop-employees";
+      console.log("[shop-employees] request", method, url, body);
+      const res = await FetchWithJwtClient(
+        method,
+        url,
+        token,
+        {},
+        { body: JSON.stringify(body) },
+      );
+      console.log("[shop-employees] response", res);
       if (res?.hasError) {
         toast.error(getApiErrorMessage(res, "خطا در ذخیره کارمند"));
         return;
@@ -245,6 +286,9 @@ export default function PayrollEmployeesPage() {
                   <TableRow>
                     <TableCell>نام</TableCell>
                     <TableCell>تلفن</TableCell>
+                    <TableCell align="center">پایه حقوق</TableCell>
+                    <TableCell align="center">ساعات پایه</TableCell>
+                    <TableCell align="center">دستمزد ساعتی</TableCell>
                     <TableCell align="center">عملیات</TableCell>
                   </TableRow>
                 </TableHead>
@@ -253,6 +297,15 @@ export default function PayrollEmployeesPage() {
                     <TableRow key={e.id}>
                       <TableCell>{e.name}</TableCell>
                       <TableCell sx={{ direction: "ltr" }}>{e.phone || "—"}</TableCell>
+                      <TableCell align="center">
+                        {e.base_salary ? `${formatNumber(Number(e.base_salary))} تومان` : "—"}
+                      </TableCell>
+                      <TableCell align="center">
+                        {e.base_work_hours ? `${formatNumber(Number(e.base_work_hours))} ساعت` : "—"}
+                      </TableCell>
+                      <TableCell align="center">
+                        {e.hourly_wage ? `${formatNumber(Number(e.hourly_wage))} تومان` : "—"}
+                      </TableCell>
                       <TableCell align="center">
                         <IconButton size="small" onClick={() => openEdit(e)}>
                           <EditIcon fontSize="small" />
@@ -287,6 +340,30 @@ export default function PayrollEmployeesPage() {
               value={employeePhone}
               onChange={(e) => setEmployeePhone(e.target.value)}
               sx={fieldSx}
+            />
+            <TextField
+              size="small"
+              label="پایه حقوق (تومان)"
+              value={baseSalary}
+              onChange={(e) => setBaseSalary(formatInputWithSeparator(e.target.value))}
+              sx={fieldSx}
+              inputProps={{ inputMode: "numeric", style: { direction: "ltr", textAlign: "right" } }}
+            />
+            <TextField
+              size="small"
+              label="ساعات کارکرد برای دریافت پایه"
+              value={baseWorkHours}
+              onChange={(e) => setBaseWorkHours(formatInputWithSeparator(e.target.value))}
+              sx={fieldSx}
+              inputProps={{ inputMode: "numeric", style: { direction: "ltr", textAlign: "right" } }}
+            />
+            <TextField
+              size="small"
+              label="دستمزد ساعتی اضافه‌کار (تومان)"
+              value={hourlyWage}
+              onChange={(e) => setHourlyWage(formatInputWithSeparator(e.target.value))}
+              sx={fieldSx}
+              inputProps={{ inputMode: "numeric", style: { direction: "ltr", textAlign: "right" } }}
             />
           </Box>
         </DialogContent>
