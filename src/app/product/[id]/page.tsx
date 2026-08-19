@@ -40,6 +40,7 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { addToCart, isProductInCart, getCartItemQuantity, updateCartItemQuantity, removeFromCart } from '../../liberari/cart';
 import { findColorByName, isLightColor } from '../../liberari/colors';
+import { resolveCategoryImageUrl } from '../../lib/shopCategories';
 
 interface ProductImage {
   id: number;
@@ -55,6 +56,8 @@ interface Category {
   id: number;
   name: string;
   parent_id: number | null;
+  image?: string | null;
+  image_url?: string | null;
 }
 
 interface Product {
@@ -378,7 +381,17 @@ export default function ProductDetailPage() {
                     '&:hover': { textDecoration: 'underline' },
                   }}
                 >
-                  {product.categories[0].name}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {resolveCategoryImageUrl(product.categories[0]) && (
+                      <Box
+                        component="img"
+                        src={resolveCategoryImageUrl(product.categories[0]) || ''}
+                        alt={product.categories[0].name}
+                        sx={{ width: 20, height: 20, borderRadius: '4px', objectFit: 'cover' }}
+                      />
+                    )}
+                    {product.categories[0].name}
+                  </Box>
                 </Link>
               )}
               <Typography sx={{ color: '#a855f7', fontWeight: '600', fontSize: '14px' }}>

@@ -46,12 +46,27 @@ export function getActiveRootCategories(categories: ShopCategory[]): ShopCategor
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 }
 
-export function getCategoryImageUrl(category: ShopCategory): string {
+type CategoryImageSource = {
+  image?: string | null;
+  image_url?: string | null;
+  banner_url?: string | null;
+};
+
+export function resolveCategoryImageUrl(
+  category: CategoryImageSource,
+): string | null {
   const raw = category.image_url || category.banner_url || category.image;
-  if (!raw) return "/pic/noImageShop.jpg";
-  if (raw.startsWith("http")) return raw;
-  if (raw.startsWith("/storage/")) return `${API_BASE}${raw}`;
-  return raw;
+  if (!raw || typeof raw !== "string") return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith("http") || trimmed.startsWith("data:")) return trimmed;
+  if (trimmed.startsWith("/storage/")) return `${API_BASE}${trimmed}`;
+  if (trimmed.startsWith("/")) return `${API_BASE}${trimmed}`;
+  return `${API_BASE}/storage/${trimmed}`;
+}
+
+export function getCategoryImageUrl(category: ShopCategory): string {
+  return resolveCategoryImageUrl(category) || "/pic/noImageShop.jpg";
 }
 
 export function getCategoryBackgroundColor(

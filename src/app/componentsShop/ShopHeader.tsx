@@ -42,6 +42,7 @@ import {
   getCustomerToken,
   getShopCodeFromPathname,
 } from '../lib/shopStorefront';
+import { resolveCategoryImageUrl } from '../lib/shopCategories';
 
 interface Category {
   id: number;
@@ -50,6 +51,8 @@ interface Category {
   description?: string;
   order?: number;
   is_active?: boolean;
+  image?: string | null;
+  image_url?: string | null;
   children?: Category[];
 }
 
@@ -706,9 +709,21 @@ export default function ShopHeader({ searchQuery = '', onSearchChange }: ShopHea
                       },
                     }}
                   >
-                    <Typography sx={{ fontWeight: '600', fontSize: '14px', color: '#333' }}>
-                      {category.name}
-                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      {(() => {
+                        const categoryImage = resolveCategoryImageUrl(category);
+                        return categoryImage ? (
+                          <Avatar
+                            src={categoryImage}
+                            alt={category.name}
+                            sx={{ width: 32, height: 32 }}
+                          />
+                        ) : null;
+                      })()}
+                      <Typography sx={{ fontWeight: '600', fontSize: '14px', color: '#333' }}>
+                        {category.name}
+                      </Typography>
+                    </Box>
                   </AccordionSummary>
                   {category.children && category.children.length > 0 && (
                     <AccordionDetails sx={{ padding: '0 12px 12px 12px' }}>
@@ -726,6 +741,13 @@ export default function ShopHeader({ searchQuery = '', onSearchChange }: ShopHea
                                 },
                               }}
                             >
+                              {resolveCategoryImageUrl(subCategory) && (
+                                <Avatar
+                                  src={resolveCategoryImageUrl(subCategory) || undefined}
+                                  alt={subCategory.name}
+                                  sx={{ width: 28, height: 28, marginLeft: '10px' }}
+                                />
+                              )}
                               <ListItemText
                                 primary={subCategory.name}
                                 primaryTypographyProps={{ 

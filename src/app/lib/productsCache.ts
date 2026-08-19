@@ -14,7 +14,7 @@ export type CachedProduct = {
   category_id?: number | string;
   category_name?: string;
   category_ids?: Array<number | string>;
-  categories?: Array<{ id?: number | string; name?: string } | number | string>;
+  categories?: Array<{ id?: number | string; name?: string; image?: string | null; image_url?: string | null } | number | string>;
   images?: Array<string | { image_url?: string }>;
 };
 

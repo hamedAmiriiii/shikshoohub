@@ -34,7 +34,8 @@
     "react-multi-date-picker": "^4.5.2",
     "react-player": "^2.16.0",
     "react-qr-barcode-scanner": "^2.0.0",
-    "react-toastify": "^10.0.5"
+    "react-toastify": "^10.0.5",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/node": "^20",

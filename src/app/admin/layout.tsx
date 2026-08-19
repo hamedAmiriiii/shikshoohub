@@ -27,6 +27,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/purchas': 'فروش ها',
     '/admin/product': 'لیست محصولات',
     '/admin/product/create': 'ثبت کالای جدید',
+    '/admin/product/import': 'ایمپورت اکسل',
     '/admin/pending-purchases': 'عملیات معلق',
     '/admin/broadcast-sms': 'ارسال پیامک',
     '/admin/orders': 'سفارشات اینترنتی',

@@ -14,6 +14,8 @@ type LabelPriceBlockProps = {
   hasDiscount?: boolean;
   fontSize?: number;
   className?: string;
+  showPrice?: boolean;
+  showDiscount?: boolean;
 };
 
 export default function LabelPriceBlock({
@@ -23,6 +25,8 @@ export default function LabelPriceBlock({
   hasDiscount: hasDiscountProp,
   fontSize = 16,
   className = "price",
+  showPrice = true,
+  showDiscount = true,
 }: LabelPriceBlockProps) {
   const meta = getProductDiscountPrintMeta({
     has_discount: hasDiscountProp,
@@ -31,7 +35,10 @@ export default function LabelPriceBlock({
     sale_price: salePrice,
   });
 
-  if (!meta.hasDiscount) {
+  const showDiscountBits = showDiscount && meta.hasDiscount;
+  if (!showPrice && !showDiscountBits) return null;
+
+  if (!showDiscountBits) {
     return (
       <div className={className} style={{ fontWeight: "bold", fontSize, color: "#333" }}>
         {formatNumberEnglish(salePrice)}
@@ -56,12 +63,14 @@ export default function LabelPriceBlock({
           {formatNumberEnglish(meta.originalPrice)}
         </div>
       ) : null}
-      <div
-        className={`${className}-sale`}
-        style={{ fontWeight: "bold", fontSize, color: "#000" }}
-      >
-        {formatNumberEnglish(salePrice)}
-      </div>
+      {showPrice ? (
+        <div
+          className={`${className}-sale`}
+          style={{ fontWeight: "bold", fontSize, color: "#000" }}
+        >
+          {formatNumberEnglish(salePrice)}
+        </div>
+      ) : null}
       {meta.discountPercent ? (
         <div
           className={`${className}-pct`}

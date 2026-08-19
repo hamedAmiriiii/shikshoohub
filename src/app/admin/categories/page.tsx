@@ -21,10 +21,12 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import { apiRequestError } from '@/app/lib/apiRequestError/client';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import tokenCode from '@/app/coponent/tokenCode';
+import { resolveCategoryImageUrl } from '@/app/lib/shopCategories';
 
 interface Category {
   id: number;
@@ -33,6 +35,8 @@ interface Category {
   description?: string;
   order?: number;
   is_active?: boolean;
+  image?: string | null;
+  image_url?: string | null;
   children?: Category[];
   level?: number;
 }
@@ -50,6 +54,9 @@ export default function CategoriesPage() {
     is_active: true,
   });
   const [parentCategories, setParentCategories] = useState<Category[]>([]);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
+  const [imageRemoved, setImageRemoved] = useState(false);
 
   useEffect(() => {
     fetchCategories();
@@ -92,6 +99,12 @@ export default function CategoriesPage() {
   };
 
 
+  const resetImageState = () => {
+    setImagePreview(null);
+    setImageBase64(null);
+    setImageRemoved(false);
+  };
+
   const handleOpenDialog = (category?: Category) => {
     if (category) {
       setEditingCategory(category);
@@ -102,6 +115,9 @@ export default function CategoriesPage() {
         order: category.order || 1,
         is_active: category.is_active !== undefined ? category.is_active : true,
       });
+      setImagePreview(resolveCategoryImageUrl(category));
+      setImageBase64(null);
+      setImageRemoved(false);
     } else {
       setEditingCategory(null);
       setFormData({
@@ -111,6 +127,7 @@ export default function CategoriesPage() {
         order: 1,
         is_active: true,
       });
+      resetImageState();
     }
     setOpenDialog(true);
   };
@@ -125,6 +142,45 @@ export default function CategoriesPage() {
       order: 1,
       is_active: true,
     });
+    resetImageState();
+  };
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('فقط فایل‌های تصویری مجاز هستند');
+      event.target.value = '';
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('حجم فایل باید کمتر از ۵ مگابایت باشد');
+      event.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64String = e.target?.result as string;
+      if (base64String) {
+        setImagePreview(base64String);
+        setImageBase64(base64String);
+        setImageRemoved(false);
+      }
+    };
+    reader.onerror = () => {
+      toast.error('خطا در خواندن فایل');
+    };
+    reader.readAsDataURL(file);
+    event.target.value = '';
+  };
+
+  const handleRemoveImage = () => {
+    setImagePreview(null);
+    setImageBase64(null);
+    setImageRemoved(true);
   };
 
   const handleSubmit = async () => {
@@ -140,16 +196,24 @@ export default function CategoriesPage() {
         : `/api/category`;
       const method = editingCategory ? "Put" : "Post";
 
+      const payload: Record<string, unknown> = {
+        name: formData.name,
+        parent_id: formData.parent_id || null,
+        description: formData.description || '',
+        order: formData.order || 1,
+        is_active: formData.is_active,
+      };
+
+      if (imageBase64) {
+        payload.image = imageBase64;
+      } else if (editingCategory && imageRemoved) {
+        payload.image = "";
+      }
+
       const res = await apiRequestError(
         method,
         {},
-        {
-          name: formData.name,
-          parent_id: formData.parent_id || null,
-          description: formData.description || '',
-          order: formData.order || 1,
-          is_active: formData.is_active,
-        },
+        payload,
         url,
         true,
         true,
@@ -200,6 +264,7 @@ export default function CategoriesPage() {
 
   const renderCategoryTree = (category: Category, level: number = 0): React.ReactNode => {
     const indent = level * 24;
+    const categoryImageUrl = resolveCategoryImageUrl(category);
     
     return (
       <Box key={category.id} sx={{ marginBottom: '8px' }}>
@@ -214,6 +279,22 @@ export default function CategoriesPage() {
           <CardContent sx={{ padding: '12px 16px !important' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+                {categoryImageUrl ? (
+                  <Box
+                    component="img"
+                    src={categoryImageUrl}
+                    alt={category.name}
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: '10px',
+                      objectFit: 'cover',
+                      border: '1px solid rgba(120, 181, 104, 0.25)',
+                      backgroundColor: 'var(--admin-surface-nested)',
+                      flexShrink: 0,
+                    }}
+                  />
+                ) : null}
                 {category.children && category.children.length > 0 && (
                   <Chip
                     label={category.children.length}
@@ -487,6 +568,67 @@ export default function CategoriesPage() {
                 },
               }}
             />
+            <Box sx={{ marginBottom: '16px' }}>
+              <Typography sx={{ color: 'var(--admin-text)', fontSize: '14px', fontWeight: 600, marginBottom: '8px' }}>
+                عکس دسته‌بندی (اختیاری)
+              </Typography>
+              <input
+                accept="image/*"
+                style={{ display: 'none' }}
+                id="category-image-upload"
+                type="file"
+                onChange={handleImageUpload}
+              />
+              <label htmlFor="category-image-upload">
+                <Button
+                  component="span"
+                  variant="outlined"
+                  startIcon={<AddPhotoAlternateIcon />}
+                  sx={{
+                    borderColor: 'var(--admin-accent)',
+                    color: 'var(--admin-accent)',
+                    width: '100%',
+                    marginBottom: imagePreview ? '12px' : 0,
+                    '&:hover': {
+                      borderColor: 'var(--admin-accent)',
+                      backgroundColor: 'var(--admin-menu-hover)',
+                    },
+                  }}
+                >
+                  {imagePreview ? 'تغییر عکس' : 'افزودن عکس'}
+                </Button>
+              </label>
+              {imagePreview && (
+                <Box sx={{ position: 'relative', width: 140, height: 140 }}>
+                  <Box
+                    component="img"
+                    src={imagePreview}
+                    alt="پیش‌نمایش عکس دسته"
+                    sx={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      borderRadius: '12px',
+                      border: '1px solid var(--admin-divider)',
+                    }}
+                  />
+                  <IconButton
+                    onClick={handleRemoveImage}
+                    size="small"
+                    sx={{
+                      position: 'absolute',
+                      top: 6,
+                      right: 6,
+                      backgroundColor: 'rgba(0,0,0,0.55)',
+                      color: '#fff',
+                      '&:hover': { backgroundColor: 'rgba(244,67,54,0.9)' },
+                    }}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              )}
+            </Box>
             <FormControlLabel
               control={
                 <Switch

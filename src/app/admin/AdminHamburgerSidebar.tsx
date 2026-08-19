@@ -39,6 +39,7 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import AddBoxIcon from "@mui/icons-material/AddBox";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
+import FileUploadIcon from "@mui/icons-material/FileUpload";
 import AdminThemeMenuItem from "@/app/admin/theme/AdminThemeMenuItem";
 
 export const ADMIN_SIDEBAR_WIDTH = 200;
@@ -174,6 +175,12 @@ export default function AdminHamburgerSidebar({
         label: "تخفیف دسته جمعی",
         href: "/admin/bulk-discount",
         icon: <LocalOfferIcon />,
+      },
+      {
+        id: "import-products",
+        label: "ایمپورت اکسل",
+        href: "/admin/product/import",
+        icon: <FileUploadIcon />,
       },
     ],
     [],

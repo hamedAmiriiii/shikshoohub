@@ -44,6 +44,7 @@ import { addToCart, getCartItemCount, isProductInCart, getCartItemQuantity, upda
 import { useShopContext, useShopStorefront } from '../../context/ShopContext';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
+import { getCategoryImageUrl, resolveCategoryImageUrl } from '../../lib/shopCategories';
 
 interface ProductImage {
   id: number;
@@ -75,6 +76,8 @@ interface Category {
   description?: string;
   order?: number;
   is_active?: boolean;
+  image?: string | null;
+  image_url?: string | null;
   children?: Category[];
 }
 
@@ -89,6 +92,7 @@ export default function CategoryProductsPage() {
   const [categoryName, setCategoryName] = useState('');
   const [categoryInfo, setCategoryInfo] = useState<Category | null>(null);
   const [parentCategory, setParentCategory] = useState<Category | null>(null);
+  const [childCategories, setChildCategories] = useState<Category[]>([]);
   const [total, setTotal] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [perPage, setPerPage] = useState(20);
@@ -108,6 +112,7 @@ export default function CategoryProductsPage() {
 
   const fetchCategoryInfo = async () => {
     try {
+      setChildCategories([]);
       const res = await apiRequestError(
         "Get",
         {},
@@ -122,6 +127,27 @@ export default function CategoryProductsPage() {
       if (!res.hasError && res) {
         setCategoryInfo(res);
         setCategoryName(res.name || '');
+
+        let children: Category[] = Array.isArray(res.children) ? res.children : [];
+        if (children.length === 0) {
+          const childrenRes = await apiRequestError(
+            "Get",
+            {},
+            {},
+            shopApi(`/api/category/${categoryId}/children`),
+            false,
+            false,
+            "",
+          );
+          if (!childrenRes?.hasError) {
+            if (Array.isArray(childrenRes)) {
+              children = childrenRes;
+            } else if (Array.isArray(childrenRes?.data)) {
+              children = childrenRes.data;
+            }
+          }
+        }
+        setChildCategories(children.filter((cat) => cat.is_active !== false));
         
         if (res.parent_id) {
           const parentRes = await apiRequestError(
@@ -255,6 +281,8 @@ console.log("res2222 : ",res);
     );
   }
 
+  const categoryHeaderImage = resolveCategoryImageUrl(categoryInfo || {});
+
   return (
     <Container maxWidth="lg" sx={{ padding: { xs: '16px', md: '24px' } }}>
         {/* Category Header */}
@@ -273,6 +301,23 @@ console.log("res2222 : ",res);
           }}
         >
           {/* Breadcrumb */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+            {categoryHeaderImage && (
+              <Box
+                component="img"
+                src={categoryHeaderImage}
+                alt={categoryName}
+                sx={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: '12px',
+                  objectFit: 'cover',
+                  border: '2px solid rgba(255,255,255,0.35)',
+                  flexShrink: 0,
+                  backgroundColor: 'rgba(255,255,255,0.15)',
+                }}
+              />
+            )}
           <Breadcrumbs
             separator={<NavigateNextIcon fontSize="small" sx={{ color: 'rgba(255,255,255,0.5)' }} />}
           >
@@ -314,6 +359,7 @@ console.log("res2222 : ",res);
               {categoryName}
             </Typography>
           </Breadcrumbs>
+          </Box>
 
           {/* Product Count */}
           <Box
@@ -334,6 +380,54 @@ console.log("res2222 : ",res);
             </Typography>
           </Box>
         </Box>
+
+        {childCategories.length > 0 && (
+          <Grid container spacing={2} sx={{ marginBottom: '24px' }}>
+            {childCategories.map((child) => (
+              <Grid item xs={4} sm={3} md={2} key={child.id}>
+                <Card
+                  onClick={() => router.push(shopPath(`/category/${child.id}`))}
+                  sx={{
+                    borderRadius: '16px',
+                    overflow: 'hidden',
+                    cursor: 'pointer',
+                    backgroundColor: '#fff',
+                    border: '1px solid #eee',
+                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    '&:hover': {
+                      transform: 'translateY(-3px)',
+                      boxShadow: '0 8px 20px rgba(0,0,0,0.1)',
+                    },
+                  }}
+                >
+                  <Box sx={{ position: 'relative', width: '100%', paddingTop: '100%', backgroundColor: '#f5f5f5' }}>
+                    <Image
+                      src={getCategoryImageUrl(child)}
+                      alt={child.name}
+                      fill
+                      style={{ objectFit: 'cover' }}
+                    />
+                  </Box>
+                  <CardContent sx={{ padding: '8px 10px !important' }}>
+                    <Typography
+                      sx={{
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        color: '#333',
+                        textAlign: 'center',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {child.name}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        )}
 
         {products.length === 0 ? (
           <Box

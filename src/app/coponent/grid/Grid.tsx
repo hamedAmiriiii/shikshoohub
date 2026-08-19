@@ -586,7 +586,10 @@ const List: React.FC<Props> = ({
         justifyContent: "flex-start",
         alignItems: isDesktop ? "stretch" : "center",
         minHeight: "100vh",
+        width: "100%",
         maxWidth: "100%",
+        boxSizing: "border-box",
+        overflowX: "hidden",
         p: isDesktop ? 0 : 2,
       }}
     >
@@ -660,12 +663,13 @@ const List: React.FC<Props> = ({
                     <TableContainer 
                       component={Paper} 
                       sx={{ 
-                        width: "100%", 
+                        width: "100%",
+                        maxWidth: "100%",
                         mt: 2,
                         backgroundColor: 'var(--admin-surface)',
                         borderRadius: '16px',
                         border: '1px solid var(--admin-border)',
-                        overflowX: 'auto'
+                        overflowX: 'auto',
                       }}
                     >
                       <Table sx={{ minWidth: 650, direction: "rtl" }} aria-label="simple table">

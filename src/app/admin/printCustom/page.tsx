@@ -44,7 +44,7 @@ function PrintLabelContent() {
 
   // تنظیمات کاستوم پرینت
   const [printSettings, setPrintSettings] = useState({
-    columns: 2, // تعداد ستون‌ها: 2, 3, 4
+    columns: 2, // تعداد ستون‌ها: 1, 2, 3, 4
     pageWidth: 86, // عرض صفحه به mm
     pageHeight: 30, // ارتفاع صفحه به mm
     marginTop: 0, // فاصله از بالا به mm
@@ -53,8 +53,16 @@ function PrintLabelContent() {
     marginRight: 0, // فاصله از راست به mm
     fontSize: 16, // اندازه فونت قیمت
     productNameFontSize: 9, // اندازه فونت نام محصول
+    barcodeNumberFontSize: 11, // اندازه فونت عدد بارکد
     barcodeHeight: 32, // ارتفاع بارکد
-    barcodeWidthMm: 40 // عرض کل بارکد به میلی‌متر
+    barcodeWidthMm: 40, // عرض کل بارکد به میلی‌متر
+    labelWidth: 43, // عرض هر لیبل به mm
+    labelAlign: "right" as "right" | "left",
+    showBarcodeImage: true,
+    showBarcodeNumber: true,
+    showProductName: true,
+    showProductPrice: true,
+    showDiscount: true,
   });
 
   // تنظیمات پیش‌فرض
@@ -68,8 +76,16 @@ function PrintLabelContent() {
     marginRight: 0,
     fontSize: 16,
     productNameFontSize: 9,
+    barcodeNumberFontSize: 11,
     barcodeHeight: 32,
-    barcodeWidthMm: 40
+    barcodeWidthMm: 40,
+    labelWidth: 43,
+    labelAlign: "right" as "right" | "left",
+    showBarcodeImage: true,
+    showBarcodeNumber: true,
+    showProductName: true,
+    showProductPrice: true,
+    showDiscount: true,
   };
 
   const saveSettings = useCallback((newSettings: typeof printSettings) => {
@@ -88,7 +104,21 @@ function PrintLabelContent() {
           const parsed = JSON.parse(savedSettings);
           // Merge با تنظیمات پیش‌فرض برای سازگاری با نسخه‌های قدیمی
           const mergedSettings = { ...defaultSettings, ...parsed };
+          const barcodeNumberFontSize = Number(parsed?.barcodeNumberFontSize);
+          mergedSettings.barcodeNumberFontSize =
+            Number.isFinite(barcodeNumberFontSize) && barcodeNumberFontSize > 0
+              ? barcodeNumberFontSize
+              : 11;
+          const savedLabelWidth = Number(parsed?.labelWidth);
+          mergedSettings.labelWidth =
+            Number.isFinite(savedLabelWidth) && savedLabelWidth > 0
+              ? savedLabelWidth
+              : Math.max(1, Number(mergedSettings.pageWidth) / Number(mergedSettings.columns || 1));
+          mergedSettings.labelAlign = parsed?.labelAlign === "left" ? "left" : "right";
           setPrintSettings(mergedSettings);
+          if (parsed?.barcodeNumberFontSize == null || parsed?.labelWidth == null || parsed?.labelAlign == null) {
+            localStorage.setItem("printSettings", JSON.stringify(mergedSettings));
+          }
         } catch (error) {
           console.error('خطا در بارگذاری تنظیمات پرینت:', error);
         }
@@ -165,20 +195,26 @@ function PrintLabelContent() {
           lineColor: "#000",
           width: 2,
           height: printSettings.barcodeHeight,
-          displayValue: true,
-          fontSize: 11,
+          displayValue: printSettings.showBarcodeNumber,
+          fontSize: printSettings.barcodeNumberFontSize ?? 11,
           margin: 0
         });
       } catch (error) {
         console.error("خطا در ساخت بارکد:", error);
       }
     }
-  }, [productData.barcode, printSettings.barcodeHeight, printSettings.barcodeWidthMm]);
+  }, [productData.barcode, printSettings.barcodeHeight, printSettings.barcodeWidthMm, printSettings.showBarcodeNumber, printSettings.barcodeNumberFontSize]);
 
   // محاسبه تعداد ردیف‌ها بر اساس تعداد ستون‌ها
   const rows = Math.ceil(quantity / printSettings.columns);
   const labels = Array.from({ length: quantity }, (_, i) => i);
-  const barcodeContainerWidth = Math.min(printSettings.barcodeWidthMm, printSettings.pageWidth / printSettings.columns - 2);
+  const columnSlotWidth = printSettings.pageWidth / printSettings.columns;
+  const effectiveLabelWidth = Math.min(
+    Math.max(Number(printSettings.labelWidth) || columnSlotWidth, 1),
+    printSettings.pageWidth,
+  );
+  const barcodeContainerWidth = Math.min(printSettings.barcodeWidthMm, Math.max(effectiveLabelWidth - 2, 1));
+  const rowJustify = printSettings.labelAlign === "left" ? "flex-start" : "flex-end";
 
   if (loading) {
     return (
@@ -212,6 +248,7 @@ function PrintLabelContent() {
                 value={printSettings.columns} 
                 onChange={(e) => saveSettings({...printSettings, columns: parseInt(e.target.value)})}
               >
+              <option value={1}>1</option>
               <option value={2}>2</option>
               <option value={3}>3</option>
               <option value={4}>4</option>
@@ -222,11 +259,33 @@ function PrintLabelContent() {
             <label>عرض صفحه (mm):</label>
             <input 
               type="number" 
-              min="50" 
+              min="8" 
               max="200"
               value={printSettings.pageWidth} 
               onChange={(e) => saveSettings({...printSettings, pageWidth: parseInt(e.target.value) || 86})}
             />
+          </div>
+
+          <div className="setting-group">
+            <label>عرض لیبل (mm):</label>
+            <input 
+              type="number" 
+              min="4" 
+              max="200"
+              value={printSettings.labelWidth} 
+              onChange={(e) => saveSettings({...printSettings, labelWidth: parseFloat(e.target.value) || effectiveLabelWidth})}
+            />
+          </div>
+
+          <div className="setting-group">
+            <label>تراز لیبل:</label>
+            <select
+              value={printSettings.labelAlign}
+              onChange={(e) => saveSettings({...printSettings, labelAlign: e.target.value === "left" ? "left" : "right"})}
+            >
+              <option value="right">راست‌چین</option>
+              <option value="left">چپ‌چین</option>
+            </select>
           </div>
           
           <div className="setting-group">
@@ -294,6 +353,16 @@ function PrintLabelContent() {
               onChange={(e) => saveSettings({...printSettings, productNameFontSize: parseInt(e.target.value) || 9})}
             />
           </div>
+          <div className="setting-group">
+            <label>اندازه فونت عدد بارکد:</label>
+            <input 
+              type="number" 
+              min="6" 
+              max="24"
+              value={printSettings.barcodeNumberFontSize ?? 11} 
+              onChange={(e) => saveSettings({...printSettings, barcodeNumberFontSize: parseInt(e.target.value) || 11})}
+            />
+          </div>
           
           <div className="setting-group">
             <label>ارتفاع بارکد:</label>
@@ -314,6 +383,27 @@ function PrintLabelContent() {
               value={printSettings.barcodeWidthMm} 
               onChange={(e) => saveSettings({...printSettings, barcodeWidthMm: parseInt(e.target.value) || 40})}
             />
+          </div>
+        </div>
+        <div className="print-items-section">
+          <h4>موارد روی لیبل</h4>
+          <div className="print-items-grid">
+            {([
+              ["showBarcodeImage", "عکس بارکد"],
+              ["showBarcodeNumber", "عدد بارکد"],
+              ["showProductName", "نام محصول"],
+              ["showProductPrice", "قیمت محصول"],
+              ["showDiscount", "تخفیف"],
+            ] as const).map(([key, label]) => (
+              <label key={key} className="setting-checkbox">
+                <input
+                  type="checkbox"
+                  checked={printSettings[key]}
+                  onChange={(e) => saveSettings({ ...printSettings, [key]: e.target.checked })}
+                />
+                {label}
+              </label>
+            ))}
           </div>
         </div>
         <div className="settings-actions">
@@ -378,15 +468,22 @@ function PrintLabelContent() {
               
               return (
                 <div key={colIndex} className={`label label-col-${colIndex}`}>
-                  <svg ref={barcodeRef} className="barcode"></svg>
-                  <div className="product-name">{productData.name}</div>
+                  {printSettings.showBarcodeImage ? (
+                    <svg ref={barcodeRef} className="barcode"></svg>
+                  ) : printSettings.showBarcodeNumber ? (
+                    <div className="barcode-number">{productData.barcode}</div>
+                  ) : null}
+                  {printSettings.showProductName ? (
+                    <div className="product-name">{productData.name}</div>
+                  ) : null}
                   <LabelPriceBlock
                     salePrice={productData.sale_price}
                     originalSalePrice={productData.original_sale_price}
-                    // discountPercent={productData.discount_percent}
                     hasDiscount={productData.has_discount}
                     fontSize={printSettings.fontSize}
                     className="price"
+                    showPrice={printSettings.showProductPrice}
+                    showDiscount={printSettings.showDiscount}
                   />
                 </div>
               );
@@ -447,6 +544,50 @@ function PrintLabelContent() {
             border-radius: 4px;
             font-size: 14px;
             font-family: Tahoma, Arial, sans-serif;
+          }
+
+          .print-items-section {
+            margin-top: 18px;
+            padding-top: 16px;
+            border-top: 1px solid #ddd;
+          }
+
+          .print-items-section h4 {
+            margin: 0 0 12px 0;
+            color: #333;
+            font-size: 15px;
+          }
+
+          .print-items-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+          }
+
+          .setting-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #333;
+            cursor: pointer;
+            user-select: none;
+          }
+
+          .setting-checkbox input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin: 0;
+            padding: 0;
+            accent-color: var(--admin-accent, #78b568);
+            cursor: pointer;
+          }
+
+          .barcode-number {
+            font-size: ${printSettings.barcodeNumberFontSize}px;
+            letter-spacing: 0.5px;
+            color: #000;
+            margin-top: 2px;
           }
 
           .settings-actions {
@@ -548,6 +689,8 @@ function PrintLabelContent() {
           .label-row {
             display: flex;
             gap: 0;
+            direction: ltr;
+            justify-content: ${rowJustify};
           }
 
           .label {
@@ -579,7 +722,7 @@ function PrintLabelContent() {
           }
 
           .label {
-            width: ${printSettings.pageWidth / printSettings.columns}mm;
+            width: ${effectiveLabelWidth}mm;
             height: ${printSettings.pageHeight}mm;
           }
           .barcode {
@@ -610,13 +753,15 @@ function PrintLabelContent() {
             .label-row {
               width: ${printSettings.pageWidth}mm;
               height: ${printSettings.pageHeight}mm;
+              direction: ltr;
+              justify-content: ${rowJustify};
             }
             .label {
-              width: ${printSettings.pageWidth / printSettings.columns}mm;
+              width: ${effectiveLabelWidth}mm;
               height: ${printSettings.pageHeight}mm;
             }
             .barcode {
-              max-width: ${printSettings.pageWidth / printSettings.columns - 2}mm;
+              max-width: ${Math.max(effectiveLabelWidth - 2, 1)}mm;
             }
           }
         `
@@ -699,6 +844,50 @@ function PrintLabelContent() {
           border-radius: 4px;
           font-size: 14px;
           font-family: Tahoma, Arial, sans-serif;
+        }
+
+        .print-items-section {
+          margin-top: 18px;
+          padding-top: 16px;
+          border-top: 1px solid #ddd;
+        }
+
+        .print-items-section h4 {
+          margin: 0 0 12px 0;
+          color: #333;
+          font-size: 15px;
+        }
+
+        .print-items-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 10px;
+        }
+
+        .setting-checkbox {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 14px;
+          color: #333;
+          cursor: pointer;
+          user-select: none;
+        }
+
+        .setting-checkbox input[type="checkbox"] {
+          width: 18px;
+          height: 18px;
+          margin: 0;
+          padding: 0;
+          accent-color: var(--admin-accent, #78b568);
+          cursor: pointer;
+        }
+
+        .barcode-number {
+          font-size: ${printSettings.barcodeNumberFontSize}px;
+          letter-spacing: 0.5px;
+          color: #000;
+          margin-top: 2px;
         }
 
         .setting-group input:focus, .setting-group select:focus {
@@ -800,10 +989,12 @@ function PrintLabelContent() {
         .label-row {
           display: flex;
           gap: 0;
+          direction: ltr;
+          justify-content: ${rowJustify};
         }
 
         .label {
-          width: ${printSettings.pageWidth / printSettings.columns}mm;
+          width: ${effectiveLabelWidth}mm;
           height: ${printSettings.pageHeight}mm;
           border: 1px dashed #ccc;
           display: flex;
@@ -819,6 +1010,13 @@ function PrintLabelContent() {
           width: ${barcodeContainerWidth}mm;
           max-width: ${barcodeContainerWidth}mm;
           margin-top: 4mm;
+        }
+
+        .barcode-number {
+          font-size: ${printSettings.barcodeNumberFontSize}px;
+          letter-spacing: 0.5px;
+          color: #000;
+          margin-top: 2px;
         }
 
         .product-name {
@@ -911,7 +1109,8 @@ function PrintLabelContent() {
             padding: 0 !important;
             background: white !important;
             flex-direction: row !important;
-            justify-content: flex-start !important;
+            direction: ltr !important;
+            justify-content: ${rowJustify} !important;
             align-items: flex-start !important;
           }
 
@@ -920,7 +1119,7 @@ function PrintLabelContent() {
           }
 
           .label {
-            width: ${printSettings.pageWidth / printSettings.columns}mm !important;
+            width: ${effectiveLabelWidth}mm !important;
             height: ${printSettings.pageHeight}mm !important;
             border: none !important;
             padding: 1mm !important;
@@ -938,6 +1137,10 @@ function PrintLabelContent() {
             margin-top: 4mm !important;
             margin-bottom: 0 !important;
             display: block !important;
+          }
+
+          .barcode-number {
+            font-size: ${printSettings.barcodeNumberFontSize}px !important;
           }
 
           .product-name {

@@ -24,7 +24,7 @@ export function getProductDiscountPrintMeta(product: ProductLabelDiscountSource)
   return {
     hasDiscount,
     originalPrice: hasDiscount && original > sale ? String(original) : "",
-    
+    discountPercent,
   };
 }
 

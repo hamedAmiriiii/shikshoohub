@@ -7,6 +7,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import AddIcon from '@mui/icons-material/Add';
 import PrintIcon from '@mui/icons-material/Print';
+import FileUploadIcon from '@mui/icons-material/FileUpload';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -817,9 +818,9 @@ export default function ListData() {
   
     return (
       <Suspense fallback={<div>در حال بارگذاری...</div>}>
-        <Box sx={{ minHeight: "100vh", width: { xs:"100%", md:"130%" , }, padding: { xs: "16px", md: "24px" }, paddingBottom: "100px", direction: "rtl", background: "var(--admin-bg-gradient)" }}>
+        <Box sx={{ minHeight: "100vh", width: "100%", maxWidth: "100%", boxSizing: "border-box", overflowX: "hidden", padding: { xs: "16px", md: "24px" }, paddingBottom: "100px", direction: "rtl", background: "var(--admin-bg-gradient)" }}>
           {/* Header with Back Button and Action Buttons */}
-          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "-30px", padding: "4px" ,paddingRight:"100px" }}>
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "-30px", padding: "4px" }}>
          
           
           
@@ -899,6 +900,24 @@ export default function ListData() {
             onManufacturerItem={handleManufacturerProduct}
             onDeleteItem={handleDeleteProduct}
             customActions={
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Button
+                  size="small"
+                  startIcon={<FileUploadIcon />}
+                  onClick={() => router.push("/admin/product/import")}
+                  sx={{
+                    height: "40px",
+                    borderRadius: "12px",
+                    color: "var(--admin-text)",
+                    border: "1px solid var(--admin-border)",
+                    backgroundColor: "var(--admin-surface)",
+                    fontSize: "12px",
+                    whiteSpace: "nowrap",
+                    "&:hover": { backgroundColor: "var(--admin-menu-hover)" },
+                  }}
+                >
+                  ایمپورت اکسل
+                </Button>
               <FormControl size="small" sx={{ minWidth: { xs: 140, sm: 180 } }}>
                 <Select
                   value={productSort}
@@ -928,6 +947,7 @@ export default function ListData() {
                   ))}
                 </Select>
               </FormControl>
+              </Box>
             }
           />
         </div>
