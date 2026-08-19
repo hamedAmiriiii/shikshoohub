@@ -4,7 +4,7 @@ import { Box } from "@mui/material";
 import { usePathname } from "next/navigation";
 import ShopHeader from "./componentsShop/ShopHeader";
 import { ShopProvider, useShopContext } from "./context/ShopContext";
-import { isCustomerAuthPath } from "./lib/shopStorefront";
+import { isCustomerAuthPath, isTableReservPath } from "./lib/shopStorefront";
 
 function AppShellContent({ children }: { children: React.ReactNode }) {
   const { searchQuery, setSearchQuery } = useShopContext();
@@ -14,8 +14,9 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
   const isLandingPage = pathname?.startsWith("/landing");
   const isCustomerAuth = isCustomerAuthPath(pathname);
   const isReferralPage = pathname?.startsWith("/referrals");
+  const isTableReserv = isTableReservPath(pathname);
 
-  if (isAdminPage || isLandingPage || isCustomerAuth || isReferralPage) {
+  if (isAdminPage || isLandingPage || isCustomerAuth || isReferralPage || isTableReserv) {
     return <>{children}</>;
   }
 

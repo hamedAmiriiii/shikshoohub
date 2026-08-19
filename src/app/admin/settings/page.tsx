@@ -14,6 +14,7 @@ import {
 } from "@mui/material";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
+import TableRestaurantIcon from "@mui/icons-material/TableRestaurant";
 import LoyaltyIcon from "@mui/icons-material/Loyalty";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
@@ -25,6 +26,7 @@ import PrintIcon from "@mui/icons-material/Print";
 import ScaleIcon from "@mui/icons-material/Scale";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { useRouter } from "next/navigation";
 import { apiRequestError } from "@/app/lib/apiRequestError/client";
 import tokenCode from "@/app/coponent/tokenCode";
 import ShopSmsQuotaCard from "@/app/coponent/ShopSmsQuotaCard";
@@ -138,6 +140,7 @@ function SettingsSectionCard({
 }
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [loyaltyCreditEnabled, setLoyaltyCreditEnabled] = useState(true);
   const [creditExpiryDays, setCreditExpiryDays] = useState<number>(60);
   const [installmentInterestRate, setInstallmentInterestRate] = useState<number>(0);
@@ -436,6 +439,31 @@ export default function SettingsPage() {
               </Typography>
               <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "12px" }}>
                 آموزش گام‌به‌گام پنل
+              </Typography>
+            </Box>
+            <ChevronRightIcon sx={{ color: "var(--admin-text-muted)", fontSize: 20 }} />
+          </Box>
+        </CardContent>
+      </Card>
+
+      <Card
+        sx={{
+          ...settingsCardSx,
+          cursor: "pointer",
+          transition: "background-color 0.2s ease",
+          "&:hover": { bgcolor: "var(--admin-menu-hover)" },
+        }}
+        onClick={() => router.push("/admin/shop-tables")}
+      >
+        <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <TableRestaurantIcon sx={{ color: "var(--admin-accent)", fontSize: 22 }} />
+            <Box sx={{ flex: 1 }}>
+              <Typography sx={{ color: "var(--admin-text)", fontSize: "14px", fontWeight: 700 }}>
+                میزها و سفارش پای میز
+              </Typography>
+              <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "12px" }}>
+                تعریف میز، لینک QR و سفارش‌های منتظر پرداخت
               </Typography>
             </Box>
             <ChevronRightIcon sx={{ color: "var(--admin-text-muted)", fontSize: 20 }} />

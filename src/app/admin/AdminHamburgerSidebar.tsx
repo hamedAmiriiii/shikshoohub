@@ -25,6 +25,7 @@ import SmsIcon from "@mui/icons-material/Sms";
 import SettingsIcon from "@mui/icons-material/Settings";
 import CategoryIcon from "@mui/icons-material/Category";
 import ShoppingBagIcon from "@mui/icons-material/ShoppingBag";
+import TableRestaurantIcon from "@mui/icons-material/TableRestaurant";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import FactoryIcon from "@mui/icons-material/Factory";
 import CreditCardIcon from "@mui/icons-material/CreditCard";
@@ -263,6 +264,18 @@ export default function AdminHamburgerSidebar({
         label: "سفارشات اینترنتی",
         href: "/admin/orders",
         icon: <ShoppingBagIcon />,
+      },
+      {
+        id: "table-orders",
+        label: "سفارش حضوری",
+        href: "/admin/table-orders",
+        icon: <TableRestaurantIcon />,
+      },
+      {
+        id: "shop-tables",
+        label: "میزهای فروشگاه",
+        href: "/admin/shop-tables",
+        icon: <TableRestaurantIcon />,
       },
     ],
     [],

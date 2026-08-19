@@ -31,6 +31,8 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/pending-purchases': 'عملیات معلق',
     '/admin/broadcast-sms': 'ارسال پیامک',
     '/admin/orders': 'سفارشات اینترنتی',
+    '/admin/table-orders': 'سفارش حضوری',
+    '/admin/shop-tables': 'میزهای فروشگاه',
     '/admin/best-selling': 'محصولات پرفروش',
     '/admin/invoices': 'فاکتورها',
     '/admin/manufacturers': 'تولیدکنندگان',
