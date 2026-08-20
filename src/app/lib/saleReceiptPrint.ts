@@ -27,6 +27,7 @@ export type SaleReceiptData = {
   createdAt: string;
   shopName?: string;
   phone?: string;
+  tableLabel?: string;
   items: SaleReceiptItem[];
   subtotal: number;
   discount: number;
@@ -41,6 +42,7 @@ export type SaleReceiptData = {
   installmentCount?: number;
   installmentAmount?: number;
   footerNote?: string;
+  customerNote?: string;
 };
 
 export type SaleReceiptPrintSettings = {

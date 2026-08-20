@@ -4,6 +4,7 @@ import Header from '../componentsShop/Header';
 import ShopAccessWatcher from '../componentsShop/ShopAccessWatcher';
 import AdminThemeProvider from './theme/AdminThemeProvider';
 import AdminOnboardingProvider from './onboarding/AdminOnboardingProvider';
+import TableOrdersPendingProvider from './table-orders/TableOrdersPendingProvider';
 import './theme/admin-theme.css';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -118,6 +119,7 @@ export default function ShikshooLayout({
   return (
     <AdminThemeProvider>
       <AdminOnboardingProvider>
+        <TableOrdersPendingProvider>
         <Box
           className="admin-app"
           sx={{
@@ -151,6 +153,7 @@ export default function ShikshooLayout({
           </>
         )}
         </Box>
+        </TableOrdersPendingProvider>
       </AdminOnboardingProvider>
     </AdminThemeProvider>
   );

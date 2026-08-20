@@ -148,25 +148,43 @@ function ReceiptPreview({
 
 
 
-      {settings.showPurchaseId && receipt.purchaseId != null && (
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 1, mb: 0.5 }}>
 
-        <Typography sx={{ fontSize: `${settings.fontSize - 1}px`, mb: 0.5 }}>
+        <Box sx={{ minWidth: 0 }}>
 
-          شماره فاکتور: {receipt.purchaseId}
+          {settings.showPurchaseId && receipt.purchaseId != null && (
 
-        </Typography>
+            <Typography sx={{ fontSize: `${settings.fontSize - 1}px`, mb: 0.5 }}>
 
-      )}
+              شماره فاکتور: {receipt.purchaseId}
 
-      {settings.showCustomerPhone && receipt.phone && (
+            </Typography>
 
-        <Typography sx={{ fontSize: `${settings.fontSize - 1}px`, mb: 0.5 }}>
+          )}
 
-          مشتری: {receipt.phone}
+          {settings.showCustomerPhone && receipt.phone && (
 
-        </Typography>
+            <Typography sx={{ fontSize: `${settings.fontSize - 1}px`, mb: 0.5 }}>
 
-      )}
+              مشتری: {receipt.phone}
+
+            </Typography>
+
+          )}
+
+        </Box>
+
+        {receipt.tableLabel ? (
+
+          <Typography sx={{ fontWeight: 800, fontSize: `${settings.fontSize}px`, flexShrink: 0 }}>
+
+            {receipt.tableLabel}
+
+          </Typography>
+
+        ) : null}
+
+      </Box>
 
 
 
@@ -287,6 +305,26 @@ function ReceiptPreview({
             روش پرداخت: {getPaymentTypeLabel(receipt)}
 
           </Typography>
+
+          {receipt.footerNote ? (
+
+            <Typography sx={{ fontSize: `${settings.fontSize - 1}px`, mb: 0.5 }}>
+
+              {receipt.footerNote}
+
+            </Typography>
+
+          ) : null}
+
+          {receipt.customerNote ? (
+
+            <Typography sx={{ fontSize: `${settings.fontSize - 1}px`, mb: 0.5, whiteSpace: "pre-wrap" }}>
+
+              توضیحات: {receipt.customerNote}
+
+            </Typography>
+
+          ) : null}
 
           {receipt.settlementMode === "split" && (
 

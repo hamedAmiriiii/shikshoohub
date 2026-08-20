@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Box, Typography, IconButton, Container, Button, Drawer } from "@mui/material";
+import { Badge, Box, Typography, IconButton, Container, Button, Drawer } from "@mui/material";
+import { useTableOrdersPending } from "@/app/admin/table-orders/TableOrdersPendingProvider";
 import MenuIcon from "@mui/icons-material/Menu";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import PersonIcon from "@mui/icons-material/Person";
@@ -42,6 +43,7 @@ export default function Header({
   const router = useRouter();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { count: pendingTableOrders } = useTableOrdersPending();
   const [user, setUser] = useState<any>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [shopAccessExpired, setShopAccessExpired] = useState(false);
@@ -398,7 +400,15 @@ export default function Header({
                 flexShrink: 0,
               }}
             >
-              <MenuIcon sx={{ fontSize: { xs: "24px", md: "28px" } }} />
+              <Badge
+                badgeContent={pendingTableOrders}
+                color="error"
+                max={99}
+                invisible={pendingTableOrders <= 0}
+                sx={{ "& .MuiBadge-badge": { fontSize: "0.65rem", minWidth: 16, height: 16 } }}
+              >
+                <MenuIcon sx={{ fontSize: { xs: "24px", md: "28px" } }} />
+              </Badge>
             </IconButton>
 
             {showBack && (

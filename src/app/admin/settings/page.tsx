@@ -24,6 +24,7 @@ import PaymentsIcon from "@mui/icons-material/Payments";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import PrintIcon from "@mui/icons-material/Print";
 import ScaleIcon from "@mui/icons-material/Scale";
+import CreditCardIcon from "@mui/icons-material/CreditCard";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useRouter } from "next/navigation";
@@ -153,7 +154,12 @@ export default function SettingsPage() {
   const [installmentPaymentEnabled, setInstallmentPaymentEnabled] = useState(true);
   const [debtPaymentEnabled, setDebtPaymentEnabled] = useState(false);
   const [kgSalesEnabled, setKgSalesEnabled] = useState(false);
+  const [restaurantCafeEnabled, setRestaurantCafeEnabled] = useState(false);
   const [directPrintEnabled, setDirectPrintEnabled] = useState(false);
+  const [shopCardNumber, setShopCardNumber] = useState("");
+  const [shopCardHolder, setShopCardHolder] = useState("");
+  const [shopBankName, setShopBankName] = useState("");
+  const [isSavingShopCard, setIsSavingShopCard] = useState(false);
 
   useEffect(() => {
     const settings = readAdminPosSettings();
@@ -162,6 +168,7 @@ export default function SettingsPage() {
     setInstallmentPaymentEnabled(settings.installmentPaymentEnabled);
     setDebtPaymentEnabled(settings.debtPaymentEnabled);
     setKgSalesEnabled(settings.kgSalesEnabled);
+    setRestaurantCafeEnabled(settings.restaurantCafeEnabled);
     setDirectPrintEnabled(readSaleReceiptPrintSettings().autoPrint);
   }, []);
 
@@ -200,6 +207,17 @@ export default function SettingsPage() {
     );
   };
 
+  const handleToggleRestaurantCafe = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setRestaurantCafeEnabled(enabled);
+    writeAdminPosSettings({ restaurantCafeEnabled: enabled });
+    toast.success(
+      enabled
+        ? "حالت رستوران و کافه فعال شد — میز و سفارش حضوری در منو دیده می‌شود"
+        : "حالت رستوران و کافه غیرفعال شد",
+    );
+  };
+
   const handleToggleKgSales = (event: React.ChangeEvent<HTMLInputElement>) => {
     const enabled = event.target.checked;
     setKgSalesEnabled(enabled);
@@ -231,6 +249,39 @@ export default function SettingsPage() {
         ? "حالت چاپ مستقیم فعال شد؛ پیش‌نمایش چاپ نمایش داده نمی‌شود"
         : "حالت پیش‌نمایش چاپ فعال شد",
     );
+  };
+
+  const handleSaveShopCard = async () => {
+    const token = tokenCode();
+    if (!token) return;
+    setIsSavingShopCard(true);
+    try {
+      const entries = [
+        ["shop_card_number", shopCardNumber.trim()],
+        ["shop_card_holder", shopCardHolder.trim()],
+        ["shop_bank_name", shopBankName.trim()],
+      ] as const;
+      for (const [key, value] of entries) {
+        const res = await apiRequestError(
+          "Put",
+          {},
+          { value: value || " " },
+          `/api/settings/${key}`,
+          true,
+          true,
+          token,
+        );
+        if (res?.hasError) {
+          toast.error(typeof res.message === "string" ? res.message : "ذخیره کارت فروشگاه ناموفق بود");
+          return;
+        }
+      }
+      toast.success("مشخصات کارت فروشگاه ذخیره شد");
+    } catch {
+      toast.error("خطا در ذخیره کارت فروشگاه");
+    } finally {
+      setIsSavingShopCard(false);
+    }
   };
 
   useEffect(() => {
@@ -295,9 +346,21 @@ export default function SettingsPage() {
             setInstallmentInterestRate(parseFloat(interestRateRes.value));
           }
         }
-      } catch (error) {
-        console.error("Error fetching settings:", error);
-        toast.error("خطا در دریافت تنظیمات");
+        const allSettings = await apiRequestError(
+          "Get",
+          {},
+          {},
+          `/api/settings`,
+          true,
+          true,
+          token,
+        );
+        if (!allSettings?.hasError && allSettings && typeof allSettings === "object") {
+          const rows = allSettings as Record<string, unknown>;
+          if (typeof rows.shop_card_number === "string") setShopCardNumber(rows.shop_card_number);
+          if (typeof rows.shop_card_holder === "string") setShopCardHolder(rows.shop_card_holder);
+          if (typeof rows.shop_bank_name === "string") setShopBankName(rows.shop_bank_name);
+        }
       } finally {
         setLoading(false);
       }
@@ -446,6 +509,21 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      <SettingsSectionCard
+        icon={<TableRestaurantIcon sx={{ fontSize: 22 }} />}
+        title="رستوران و کافه"
+        hint="نمایش میزها و سفارش حضوری در منو، و بررسی سفارش‌های جدید هر ۳۰ ثانیه"
+        action={
+          <Switch
+            size="small"
+            checked={restaurantCafeEnabled}
+            onChange={handleToggleRestaurantCafe}
+            sx={switchSx}
+          />
+        }
+      />
+
+      {restaurantCafeEnabled ? (
       <Card
         sx={{
           ...settingsCardSx,
@@ -470,6 +548,7 @@ export default function SettingsPage() {
           </Box>
         </CardContent>
       </Card>
+      ) : null}
 
    
 
@@ -558,7 +637,66 @@ export default function SettingsPage() {
         }
       />
 
-
+      <SettingsSectionCard
+        icon={<CreditCardIcon sx={{ fontSize: 22 }} />}
+        title="کارت فروشگاه"
+        hint="برای پرداخت کارت‌به‌کارت در سفارش پای میز"
+      >
+        <Box sx={{ mt: 1.5, display: "flex", flexDirection: "column", gap: 1.2 }}>
+          <TextField
+            size="small"
+            label="شماره کارت"
+            value={shopCardNumber}
+            onChange={(e) => setShopCardNumber(e.target.value)}
+            inputProps={{ inputMode: "numeric" }}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                backgroundColor: "var(--admin-surface-alt)",
+                color: "var(--admin-text)",
+                "& fieldset": { borderColor: "var(--admin-border)" },
+              },
+              "& .MuiInputLabel-root": { color: "var(--admin-text-muted)" },
+            }}
+          />
+          <TextField
+            size="small"
+            label="به نام"
+            value={shopCardHolder}
+            onChange={(e) => setShopCardHolder(e.target.value)}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                backgroundColor: "var(--admin-surface-alt)",
+                color: "var(--admin-text)",
+                "& fieldset": { borderColor: "var(--admin-border)" },
+              },
+              "& .MuiInputLabel-root": { color: "var(--admin-text-muted)" },
+            }}
+          />
+          <TextField
+            size="small"
+            label="نام بانک"
+            value={shopBankName}
+            onChange={(e) => setShopBankName(e.target.value)}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                backgroundColor: "var(--admin-surface-alt)",
+                color: "var(--admin-text)",
+                "& fieldset": { borderColor: "var(--admin-border)" },
+              },
+              "& .MuiInputLabel-root": { color: "var(--admin-text-muted)" },
+            }}
+          />
+          <Button
+            size="small"
+            variant="contained"
+            disabled={isSavingShopCard}
+            onClick={handleSaveShopCard}
+            sx={{ ...saveBtnSx, alignSelf: "flex-end" }}
+          >
+            {isSavingShopCard ? "…" : "ذخیره"}
+          </Button>
+        </Box>
+      </SettingsSectionCard>
 
 <SettingsSectionCard
         icon={<LoyaltyIcon sx={{ fontSize: 22 }} />}

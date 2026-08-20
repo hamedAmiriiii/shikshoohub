@@ -8,6 +8,8 @@ export type AdminPosSettings = {
   debtPaymentEnabled: boolean;
   /** فروش محصولات با واحد کیلوگرم */
   kgSalesEnabled: boolean;
+  /** میز، سفارش حضوری و پولینگ رسیدگی‌نشده */
+  restaurantCafeEnabled: boolean;
 };
 
 const DEFAULT_SETTINGS: AdminPosSettings = {
@@ -16,6 +18,7 @@ const DEFAULT_SETTINGS: AdminPosSettings = {
   installmentPaymentEnabled: true,
   debtPaymentEnabled: false,
   kgSalesEnabled: false,
+  restaurantCafeEnabled: false,
 };
 
 export function readAdminPosSettings(): AdminPosSettings {

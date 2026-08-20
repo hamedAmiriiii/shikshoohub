@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useEffect, type ReactNode } from "react";
 import {
+  Badge,
   Box,
   Collapse,
   Divider,
@@ -11,6 +12,7 @@ import {
   ListItemText,
   Typography,
 } from "@mui/material";
+import { useTableOrdersPending } from "./table-orders/TableOrdersPendingProvider";
 import HomeIcon from "@mui/icons-material/Home";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
@@ -43,6 +45,10 @@ import ListAltIcon from "@mui/icons-material/ListAlt";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import FileUploadIcon from "@mui/icons-material/FileUpload";
 import AdminThemeMenuItem from "@/app/admin/theme/AdminThemeMenuItem";
+import {
+  ADMIN_POS_SETTINGS_CHANGED_EVENT,
+  readAdminPosSettings,
+} from "@/app/lib/adminPosSettings";
 
 export const ADMIN_SIDEBAR_WIDTH = 200;
 
@@ -102,6 +108,15 @@ export default function AdminHamburgerSidebar({
   onLogout,
   accessBanner,
 }: AdminHamburgerSidebarProps) {
+  const { count: pendingTableOrders } = useTableOrdersPending();
+  const [restaurantCafeEnabled, setRestaurantCafeEnabled] = useState(false);
+
+  useEffect(() => {
+    const sync = () => setRestaurantCafeEnabled(readAdminPosSettings().restaurantCafeEnabled);
+    sync();
+    window.addEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, sync);
+    return () => window.removeEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, sync);
+  }, []);
   const financialChildren: NavLeaf[] = useMemo(
     () => [
       { id: "reports", label: "گزارشات", href: "/admin/reports", icon: <AssessmentIcon /> },
@@ -422,7 +437,20 @@ export default function AdminHamburgerSidebar({
     >
       <Box className="nav-label-cluster">
         <ListItemText primary={leaf.label} />
-        <ListItemIcon>{leaf.icon}</ListItemIcon>
+        <ListItemIcon>
+          {leaf.href === "/admin/table-orders" && pendingTableOrders > 0 ? (
+            <Badge
+              badgeContent={pendingTableOrders}
+              color="error"
+              max={99}
+              sx={{ "& .MuiBadge-badge": { fontSize: "0.65rem", minWidth: 16, height: 16 } }}
+            >
+              {leaf.icon}
+            </Badge>
+          ) : (
+            leaf.icon
+          )}
+        </ListItemIcon>
       </Box>
     </ListItemButton>
   );
@@ -535,7 +563,9 @@ export default function AdminHamburgerSidebar({
           renderLeaf(link, isPathActive(pathname, link.href)),
         )}
         {groups.filter((g) => g.id === "financial").map(renderGroup)}
-        {topLinks.slice(4).map((link) =>
+        {topLinks.slice(4).filter((link) =>
+          restaurantCafeEnabled || (link.id !== "table-orders" && link.id !== "shop-tables"),
+        ).map((link) =>
           renderLeaf(link, isPathActive(pathname, link.href)),
         )}
         {groups.filter((g) => g.id !== "financial").map(renderGroup)}
