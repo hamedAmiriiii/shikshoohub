@@ -24,6 +24,7 @@ import {
 import AdminMenuModeCartPanel, {
   type AdminMenuModeCartPanelProps,
 } from "@/app/admin/AdminMenuModeCartPanel";
+import AdminMenuTableOrdersPopup from "@/app/admin/table-orders/AdminMenuTableOrdersPopup";
 
 function normalizeSearchText(value: string): string {
   const persianDigits = "۰۱۲۳۴۵۶۷۸۹";
@@ -66,6 +67,7 @@ export default function AdminMenuModeView({
 
   return (
     <Box sx={{ position: "relative" }}>
+      <AdminMenuTableOrdersPopup />
       <AdminMenuModeCartPanel {...cartPanel} />
 
       <Box>

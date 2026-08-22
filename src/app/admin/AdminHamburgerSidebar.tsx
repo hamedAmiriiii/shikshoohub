@@ -5,7 +5,6 @@ import {
   Badge,
   Box,
   Collapse,
-  Divider,
   List,
   ListItemButton,
   ListItemIcon,
@@ -39,12 +38,10 @@ import ShoppingCartCheckoutIcon from "@mui/icons-material/ShoppingCartCheckout";
 import BadgeIcon from "@mui/icons-material/Badge";
 import PaymentsIcon from "@mui/icons-material/Payments";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import LogoutIcon from "@mui/icons-material/Logout";
 import AddBoxIcon from "@mui/icons-material/AddBox";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import FileUploadIcon from "@mui/icons-material/FileUpload";
-import AdminThemeMenuItem from "@/app/admin/theme/AdminThemeMenuItem";
 import {
   ADMIN_POS_SETTINGS_CHANGED_EVENT,
   readAdminPosSettings,
@@ -96,7 +93,6 @@ type AdminHamburgerSidebarProps = {
   shopName?: string;
   isSuperAdmin?: boolean;
   onNavigate: (path: string) => void;
-  onLogout: () => void;
   accessBanner?: ReactNode;
 };
 
@@ -105,7 +101,6 @@ export default function AdminHamburgerSidebar({
   shopName = "فروشگاه",
   isSuperAdmin = false,
   onNavigate,
-  onLogout,
   accessBanner,
 }: AdminHamburgerSidebarProps) {
   const { count: pendingTableOrders } = useTableOrdersPending();
@@ -589,29 +584,6 @@ export default function AdminHamburgerSidebar({
               <ListItemText primary="تنظیمات" />
               <ListItemIcon>
                 <SettingsIcon />
-              </ListItemIcon>
-            </Box>
-          </ListItemButton>
-        </List>
-        <AdminThemeMenuItem />
-        <Divider sx={{ backgroundColor: "var(--admin-divider)", my: 0.5 }} />
-        <List dense disablePadding>
-          <ListItemButton
-            onClick={onLogout}
-            sx={{
-              ...itemSx(false),
-              color: "#e57373",
-              "& .MuiListItemIcon-root": {
-                minWidth: 28,
-                color: "#e57373",
-                "& .MuiSvgIcon-root": { fontSize: 18 },
-              },
-            }}
-          >
-            <Box className="nav-label-cluster">
-              <ListItemText primary="خروج" />
-              <ListItemIcon>
-                <LogoutIcon />
               </ListItemIcon>
             </Box>
           </ListItemButton>

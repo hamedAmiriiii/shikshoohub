@@ -6,6 +6,8 @@ import MenuIcon from "@mui/icons-material/Menu";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import PersonIcon from "@mui/icons-material/Person";
 import LogoutIcon from "@mui/icons-material/Logout";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
+import LightModeIcon from "@mui/icons-material/LightMode";
 import ShareIcon from "@mui/icons-material/Share";
 import { useRouter, usePathname } from "next/navigation";
 import { isSuperAdminUser, getUserPhoneFromRecord } from "@/app/lib/superAdmin";
@@ -26,6 +28,7 @@ import AdminHamburgerSidebar, {
   ADMIN_SIDEBAR_WIDTH,
 } from "@/app/admin/AdminHamburgerSidebar";
 import { ADMIN_MENU_CART_WIDTH_VAR } from "@/app/admin/adminMenuCartLayout";
+import { useAdminTheme } from "@/app/admin/theme/useAdminTheme";
 
 interface HeaderProps {
   title?: string;
@@ -42,6 +45,7 @@ export default function Header({
 }: HeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { mode, setMode } = useAdminTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const { count: pendingTableOrders } = useTableOrdersPending();
   const [user, setUser] = useState<any>(null);
@@ -151,10 +155,6 @@ export default function Header({
       shopName={shopDisplayName}
       isSuperAdmin={isSuperAdmin}
       onNavigate={handleMenuClick}
-      onLogout={() => {
-        handleMenuClose();
-        handleLogout();
-      }}
       accessBanner={
         shopAccessExpired && !isSuperAdmin ? (
           <Box>
@@ -561,6 +561,25 @@ export default function Header({
                     )}
                   </Box>
                 </Box>
+                <IconButton
+                  onClick={() => setMode(mode === "light" ? "dark" : "light")}
+                  aria-label={mode === "light" ? "حالت تیره" : "حالت روشن"}
+                  sx={{
+                    color: "var(--admin-accent)",
+                    backgroundColor: "var(--admin-icon-bg)",
+                    padding: { xs: "6px", md: "8px" },
+                    flexShrink: 0,
+                    "&:hover": {
+                      backgroundColor: "var(--admin-icon-bg-hover)",
+                    },
+                  }}
+                >
+                  {mode === "light" ? (
+                    <DarkModeIcon sx={{ fontSize: { xs: "18px", md: "24px" } }} />
+                  ) : (
+                    <LightModeIcon sx={{ fontSize: { xs: "18px", md: "24px" } }} />
+                  )}
+                </IconButton>
                 <IconButton
                   onClick={handleLogout}
                   sx={{

@@ -15,6 +15,7 @@ import {
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 import TableRestaurantIcon from "@mui/icons-material/TableRestaurant";
+import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import LoyaltyIcon from "@mui/icons-material/Loyalty";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
@@ -155,6 +156,7 @@ export default function SettingsPage() {
   const [debtPaymentEnabled, setDebtPaymentEnabled] = useState(false);
   const [kgSalesEnabled, setKgSalesEnabled] = useState(false);
   const [restaurantCafeEnabled, setRestaurantCafeEnabled] = useState(false);
+  const [menuTableOrdersPopupEnabled, setMenuTableOrdersPopupEnabled] = useState(false);
   const [directPrintEnabled, setDirectPrintEnabled] = useState(false);
   const [shopCardNumber, setShopCardNumber] = useState("");
   const [shopCardHolder, setShopCardHolder] = useState("");
@@ -169,6 +171,7 @@ export default function SettingsPage() {
     setDebtPaymentEnabled(settings.debtPaymentEnabled);
     setKgSalesEnabled(settings.kgSalesEnabled);
     setRestaurantCafeEnabled(settings.restaurantCafeEnabled);
+    setMenuTableOrdersPopupEnabled(settings.menuTableOrdersPopupEnabled);
     setDirectPrintEnabled(readSaleReceiptPrintSettings().autoPrint);
   }, []);
 
@@ -215,6 +218,17 @@ export default function SettingsPage() {
       enabled
         ? "حالت رستوران و کافه فعال شد — میز و سفارش حضوری در منو دیده می‌شود"
         : "حالت رستوران و کافه غیرفعال شد",
+    );
+  };
+
+  const handleToggleMenuTableOrdersPopup = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setMenuTableOrdersPopupEnabled(enabled);
+    writeAdminPosSettings({ menuTableOrdersPopupEnabled: enabled });
+    toast.success(
+      enabled
+        ? "پاپ‌آپ سفارش حضوری در حالت منو فعال شد"
+        : "پاپ‌آپ سفارش حضوری در حالت منو غیرفعال شد",
     );
   };
 
@@ -522,6 +536,22 @@ export default function SettingsPage() {
           />
         }
       />
+
+      {restaurantCafeEnabled ? (
+      <SettingsSectionCard
+        icon={<NotificationsActiveIcon sx={{ fontSize: 22 }} />}
+        title="پاپ‌آپ سفارش حضوری در حالت منو"
+        hint="وقتی سفارش جدید رسید، در صفحه فروش منو با همان کارت‌ها باز شود تا رسیدگی کنید"
+        action={
+          <Switch
+            size="small"
+            checked={menuTableOrdersPopupEnabled}
+            onChange={handleToggleMenuTableOrdersPopup}
+            sx={switchSx}
+          />
+        }
+      />
+      ) : null}
 
       {restaurantCafeEnabled ? (
       <Card

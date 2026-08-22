@@ -10,6 +10,8 @@ export type AdminPosSettings = {
   kgSalesEnabled: boolean;
   /** میز، سفارش حضوری و پولینگ رسیدگی‌نشده */
   restaurantCafeEnabled: boolean;
+  /** پاپ‌آپ سفارش حضوری وقتی در حالت منو سفارش جدید می‌رسد */
+  menuTableOrdersPopupEnabled: boolean;
 };
 
 const DEFAULT_SETTINGS: AdminPosSettings = {
@@ -19,6 +21,7 @@ const DEFAULT_SETTINGS: AdminPosSettings = {
   debtPaymentEnabled: false,
   kgSalesEnabled: false,
   restaurantCafeEnabled: false,
+  menuTableOrdersPopupEnabled: false,
 };
 
 export function readAdminPosSettings(): AdminPosSettings {

@@ -27,13 +27,22 @@ import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import SearchIcon from "@mui/icons-material/Search";
 import TableRestaurantIcon from "@mui/icons-material/TableRestaurant";
 import HistoryIcon from "@mui/icons-material/History";
+import RoomServiceIcon from "@mui/icons-material/RoomService";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
+import LightModeIcon from "@mui/icons-material/LightMode";
 import PhoneIphoneIcon from "@mui/icons-material/PhoneIphone";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
 import { useParams } from "next/navigation";
+import { Noto_Nastaliq_Urdu } from "next/font/google";
 import { apiRequestError } from "@/app/lib/apiRequestError";
 import { useShopStorefront } from "@/app/context/ShopContext";
 import { extractShopTableInfo, extractPaymentMethods, DEFAULT_TABLE_PAYMENT_METHODS, extractTableOrders, getTableOrderAmount, getTableOrderProducts, tablePaymentMethodLabel, type ShopTableInfo, type TablePaymentMethod, type TableOrder } from "@/app/lib/shopTables";
+import {
+  parseCategoriesFromApi,
+  resolveCategoryImageUrl,
+  type ShopCategory,
+} from "@/app/lib/shopCategories";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -50,7 +59,13 @@ type Product = {
   images?: ProductImage[];
   category_id?: number;
   category_name?: string;
-  categories?: Array<{ id?: number; name?: string }>;
+  categories?: Array<{
+    id?: number;
+    name?: string;
+    image?: string | null;
+    image_url?: string | null;
+    banner_url?: string | null;
+  }>;
 };
 
 type CartLine = {
@@ -84,15 +99,48 @@ type GuestOrder = {
   items?: GuestOrderItem[];
 };
 
+const nastaliq = Noto_Nastaliq_Urdu({
+  subsets: ["arabic"],
+  weight: "400",
+  display: "swap",
+});
+
 const ACCENT = "#d4af37";
 const ACCENT_DARK = "#b8942a";
-const BG = "#0c0c0c";
-const SURFACE = "#161616";
-const SURFACE_ALT = "#1f1f1f";
-const TEXT = "#f4efe4";
-const MUTED = "#9a9488";
-const COVER_HEIGHT = 200;
+const COVER_HEIGHT = 220;
 const HEADER_IMAGE = "/reserv/reserv2.png";
+const RESERV_THEME_KEY = "reserv_table_theme";
+
+type ReservThemeMode = "dark" | "light";
+
+const THEMES = {
+  dark: {
+    BG: "#0c0c0c",
+    SURFACE: "#161616",
+    SURFACE_ALT: "#1f1f1f",
+    TEXT: "#f4efe4",
+    MUTED: "#9a9488",
+    ALL_TILE_BG: "#ffffff",
+    HEADER_BTN_BG: "rgba(0,0,0,0.35)",
+    HEADER_BTN_HOVER: "rgba(0,0,0,0.5)",
+    HEADER_BTN_BORDER: "rgba(255,255,255,0.16)",
+    COVER_GRADIENT:
+      "linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.08) 42%, rgba(0,0,0,0.78) 100%)",
+  },
+  light: {
+    BG: "#f3eee6",
+    SURFACE: "#ffffff",
+    SURFACE_ALT: "#ebe4d8",
+    TEXT: "#1a1408",
+    MUTED: "#6e675c",
+    ALL_TILE_BG: "#1a1408",
+    HEADER_BTN_BG: "rgba(255,255,255,0.55)",
+    HEADER_BTN_HOVER: "rgba(255,255,255,0.75)",
+    HEADER_BTN_BORDER: "rgba(0,0,0,0.12)",
+    COVER_GRADIENT:
+      "linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.06) 42%, rgba(0,0,0,0.62) 100%)",
+  },
+} as const;
 
 function formatNumber(num: number) {
   return new Intl.NumberFormat("fa-IR").format(num);
@@ -227,10 +275,25 @@ function resolveMediaUrl(url?: string | null): string | null {
   return url;
 }
 
-function productImage(product: Product): string {
-  if (product.image) return resolveMediaUrl(product.image) || product.image;
-  const first = product.images?.[0];
-  return resolveMediaUrl(first?.image_url) || "/landing/2.png";
+function productImage(product: Product, categoryImageById?: Map<string, string>): string {
+  const ownRaw = product.image?.trim() || product.images?.[0]?.image_url || "";
+  const ownIsPlaceholder =
+    !ownRaw ||
+    /noimageshop/i.test(ownRaw) ||
+    /\/landing\/2\.png/i.test(ownRaw);
+  const own = ownIsPlaceholder ? null : resolveMediaUrl(ownRaw) || ownRaw;
+  if (own) return own;
+  if (Array.isArray(product.categories)) {
+    for (const cat of product.categories) {
+      const url = resolveCategoryImageUrl(cat);
+      if (url) return url;
+    }
+  }
+  if (product.category_id != null) {
+    const fromMap = categoryImageById?.get(String(product.category_id));
+    if (fromMap) return fromMap;
+  }
+  return "/pic/noImageShop.jpg";
 }
 
 function cartStorageKey(shopCode: string, tableNumber: number) {
@@ -348,6 +411,14 @@ async function compressReceiptImage(file: File, maxBytes = RECEIPT_IMAGE_MAX_BYT
   return blobToDataUrl(blob);
 }
 
+function collectCategoryImages(categories: ShopCategory[], map: Map<string, string>) {
+  for (const cat of categories) {
+    const url = resolveCategoryImageUrl(cat);
+    if (url && cat.id != null) map.set(String(cat.id), url);
+    if (cat.children?.length) collectCategoryImages(cat.children, map);
+  }
+}
+
 export default function TableReservPage() {
   const params = useParams();
   const { shopCode, shopApi, shop } = useShopStorefront();
@@ -361,6 +432,7 @@ export default function TableReservPage() {
   const [hasMore, setHasMore] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [shopCategories, setShopCategories] = useState<ShopCategory[]>([]);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [note, setNote] = useState("");
@@ -395,6 +467,39 @@ export default function TableReservPage() {
   const receiptInputRef = useRef<HTMLInputElement | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [themeMode, setThemeMode] = useState<ReservThemeMode>(() => {
+    if (typeof window === "undefined") return "dark";
+    try {
+      const stored = localStorage.getItem(RESERV_THEME_KEY);
+      return stored === "light" ? "light" : "dark";
+    } catch {
+      return "dark";
+    }
+  });
+  const {
+    BG,
+    SURFACE,
+    SURFACE_ALT,
+    TEXT,
+    MUTED,
+    ALL_TILE_BG,
+    HEADER_BTN_BG,
+    HEADER_BTN_HOVER,
+    HEADER_BTN_BORDER,
+    COVER_GRADIENT,
+  } = THEMES[themeMode];
+
+  const toggleTheme = () => {
+    setThemeMode((prev) => {
+      const next = prev === "dark" ? "light" : "dark";
+      try {
+        localStorage.setItem(RESERV_THEME_KEY, next);
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  };
 
   const validTable = Number.isInteger(tableNumber) && tableNumber > 0;
 
@@ -547,20 +652,70 @@ export default function TableReservPage() {
     loadProducts(1, true, debouncedSearch);
   }, [loadProducts, debouncedSearch]);
 
-  const categories = useMemo(() => {
+  useEffect(() => {
+    if (!shopCode) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiRequestError(
+          "Get",
+          {},
+          {},
+          shopApi("/api/category?tree=true"),
+          false,
+          false,
+          "",
+        );
+        if (!cancelled) setShopCategories(parseCategoriesFromApi(res));
+      } catch {
+        if (!cancelled) setShopCategories([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [shopApi, shopCode]);
+
+  const categoryImageById = useMemo(() => {
     const map = new Map<string, string>();
+    collectCategoryImages(shopCategories, map);
+    return map;
+  }, [shopCategories]);
+
+  const categories = useMemo(() => {
+    const map = new Map<string, { name: string; image: string | null }>();
+    const upsert = (id: string, name?: string, image?: string | null) => {
+      const prev = map.get(id);
+      map.set(id, {
+        name: (name && name.trim()) || prev?.name || "دسته",
+        image: image || prev?.image || null,
+      });
+    };
     for (const product of products) {
       if (Array.isArray(product.categories)) {
         for (const cat of product.categories) {
-          if (cat?.id != null) map.set(String(cat.id), cat.name || "دسته");
+          if (cat?.id == null) continue;
+          upsert(String(cat.id), cat.name, resolveCategoryImageUrl(cat));
         }
       }
       if (product.category_id != null) {
-        map.set(String(product.category_id), product.category_name || "دسته");
+        upsert(
+          String(product.category_id),
+          product.category_name,
+          categoryImageById.get(String(product.category_id)) || null,
+        );
       }
     }
-    return [{ id: "all", name: "همه" }, ...Array.from(map.entries()).map(([id, name]) => ({ id, name }))];
-  }, [products]);
+    for (const [id, image] of categoryImageById) {
+      const prev = map.get(id);
+      if (prev && !prev.image) map.set(id, { ...prev, image });
+    }
+    return [
+      { id: "all", name: "همه", image: null as string | null },
+      ...Array.from(map.entries()).map(([id, value]) => ({ id, ...value })),
+    ];
+  }, [categoryImageById, products]);
+  const hasImageCategories = categories.some((c) => Boolean(c.image));
 
   const visibleProducts = useMemo(() => {
     if (selectedCategory === "all") return products;
@@ -587,7 +742,7 @@ export default function TableReservPage() {
                 name: product.name,
                 sale_price: Number(product.sale_price) || 0,
                 quantity,
-                image: productImage(product),
+                image: productImage(product, categoryImageById),
               },
             ],
     );
@@ -940,7 +1095,7 @@ export default function TableReservPage() {
             </Button>
           </DialogActions>
         </Dialog>
-        <ToastContainer position="bottom-center" autoClose={3000} theme="dark" />
+        <ToastContainer position="bottom-center" autoClose={3000} theme={themeMode} />
       </Box>
     );
   }
@@ -969,21 +1124,21 @@ export default function TableReservPage() {
           sx={{
             position: "absolute",
             inset: 0,
-            background: "linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.08) 42%, rgba(0,0,0,0.72) 100%)",
+            background: COVER_GRADIENT,
           }}
         />
         <Typography
+          className={nastaliq.className}
           sx={{
             position: "absolute",
-            top: "max(10px, env(safe-area-inset-top))",
-            left: 16,
             right: 16,
-            color: TEXT,
-            fontWeight: 800,
-            fontSize: 20,
-            lineHeight: 1.3,
-            textAlign: "center",
-            textShadow: "0 2px 12px rgba(0,0,0,0.55)",
+            bottom: 56,
+            maxWidth: "72%",
+            color: "#f8f1e4",
+            fontSize: 28,
+            lineHeight: 1.9,
+            textAlign: "right",
+            textShadow: "0 2px 14px rgba(0,0,0,0.65)",
           }}
         >
           {shopTitle}
@@ -1007,17 +1162,36 @@ export default function TableReservPage() {
               px: 1.2,
               py: 0.35,
               borderRadius: "999px",
-              color: TEXT,
+              color: "#f4efe4",
               fontWeight: 700,
               fontSize: 12,
-              bgcolor: "rgba(0,0,0,0.35)",
+              bgcolor: HEADER_BTN_BG,
               backdropFilter: "blur(8px)",
-              border: "1px solid rgba(255,255,255,0.16)",
-              "&:hover": { bgcolor: "rgba(0,0,0,0.5)" },
+              border: `1px solid ${HEADER_BTN_BORDER}`,
+              "&:hover": { bgcolor: HEADER_BTN_HOVER },
             }}
           >
             {guestIdentified ? normalizedPhone.slice(-4) : "ورود"}
           </Button>
+          <IconButton
+            onClick={toggleTheme}
+            aria-label={themeMode === "dark" ? "حالت روشن" : "حالت تیره"}
+            sx={{
+              width: 34,
+              height: 34,
+              color: "#f4efe4",
+              bgcolor: HEADER_BTN_BG,
+              backdropFilter: "blur(8px)",
+              border: `1px solid ${HEADER_BTN_BORDER}`,
+              "&:hover": { bgcolor: HEADER_BTN_HOVER },
+            }}
+          >
+            {themeMode === "dark" ? (
+              <LightModeIcon sx={{ fontSize: 18 }} />
+            ) : (
+              <DarkModeIcon sx={{ fontSize: 18 }} />
+            )}
+          </IconButton>
           <Box
             sx={{
               display: "inline-flex",
@@ -1035,46 +1209,39 @@ export default function TableReservPage() {
             <TableRestaurantIcon sx={{ fontSize: 16 }} />
             <Typography sx={{ fontSize: 12, fontWeight: 700 }}>{tableLabel}</Typography>
           </Box>
-          <Button
+          <IconButton
             onClick={openCurrentOrders}
-            startIcon={
-              <Badge
-                badgeContent={currentOrders.filter((order) => order.status !== "cancelled").length}
-                color="error"
-                max={9}
-                sx={{ "& .MuiBadge-badge": { fontSize: "0.55rem", minWidth: 14, height: 14 } }}
-              >
-                <TableRestaurantIcon sx={{ fontSize: 16 }} />
-              </Badge>
-            }
+            aria-label="سفارش جاری"
             sx={{
-              minWidth: 0,
-              px: 1.1,
-              py: 0.35,
-              borderRadius: "999px",
-              color: TEXT,
-              fontWeight: 700,
-              fontSize: 12,
-              bgcolor: "rgba(0,0,0,0.35)",
+              width: 34,
+              height: 34,
+              color: "#f4efe4",
+              bgcolor: HEADER_BTN_BG,
               backdropFilter: "blur(8px)",
-              border: "1px solid rgba(255,255,255,0.16)",
-              "&:hover": { bgcolor: "rgba(0,0,0,0.5)" },
-              "& .MuiButton-startIcon": { ml: 0, mr: 0.5 },
+              border: `1px solid ${HEADER_BTN_BORDER}`,
+              "&:hover": { bgcolor: HEADER_BTN_HOVER },
             }}
           >
-            جاری
-          </Button>
+            <Badge
+              badgeContent={currentOrders.filter((order) => order.status !== "cancelled").length}
+              color="error"
+              max={9}
+              sx={{ "& .MuiBadge-badge": { fontSize: "0.55rem", minWidth: 14, height: 14 } }}
+            >
+              <RoomServiceIcon sx={{ fontSize: 18 }} />
+            </Badge>
+          </IconButton>
           <IconButton
             onClick={openOrders}
             aria-label="سفارش‌های قبلی"
             sx={{
               width: 34,
               height: 34,
-              color: TEXT,
-              bgcolor: "rgba(0,0,0,0.35)",
+              color: "#f4efe4",
+              bgcolor: HEADER_BTN_BG,
               backdropFilter: "blur(8px)",
-              border: "1px solid rgba(255,255,255,0.16)",
-              "&:hover": { bgcolor: "rgba(0,0,0,0.5)" },
+              border: `1px solid ${HEADER_BTN_BORDER}`,
+              "&:hover": { bgcolor: HEADER_BTN_HOVER },
             }}
           >
             <HistoryIcon sx={{ fontSize: 18 }} />
@@ -1122,6 +1289,7 @@ export default function TableReservPage() {
         <Box
           sx={{
             display: "flex",
+            alignItems: "flex-start",
             gap: 0.8,
             overflowX: "auto",
             mt: 1.25,
@@ -1133,6 +1301,68 @@ export default function TableReservPage() {
         >
           {categories.map((cat) => {
             const active = selectedCategory === cat.id;
+            const chipColSx = {
+              flexShrink: 0,
+              width: 58,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 0.4,
+              cursor: "pointer",
+            } as const;
+            const chipLabelSx = {
+              fontSize: 10,
+              fontWeight: 700,
+              lineHeight: 1.25,
+              color: active ? ACCENT : TEXT,
+              textAlign: "center" as const,
+              maxWidth: 58,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            };
+            const chipFrameSx = (extra?: object) => ({
+              width: 52,
+              height: 52,
+              borderRadius: "16px",
+              border: active ? "2px solid" : "1px solid rgba(212,175,55,0.16)",
+              borderColor: active ? ACCENT : undefined,
+              boxShadow: active ? "0 6px 16px rgba(212,175,55,0.28)" : "none",
+              ...extra,
+            });
+            if (cat.image) {
+              return (
+                <Box
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  sx={chipColSx}
+                >
+                  <Box
+                    component="img"
+                    src={cat.image}
+                    alt={cat.name}
+                    sx={chipFrameSx({ objectFit: "cover", bgcolor: SURFACE })}
+                  />
+                  <Box sx={chipLabelSx}>{cat.name}</Box>
+                </Box>
+              );
+            }
+            if (hasImageCategories && cat.id === "all") {
+              return (
+                <Box
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  sx={chipColSx}
+                >
+                  <Box
+                    sx={chipFrameSx({
+                      bgcolor: ALL_TILE_BG,
+                    })}
+                  />
+                  <Box sx={chipLabelSx}>{cat.name}</Box>
+                </Box>
+              );
+            }
             return (
               <Box
                 key={cat.id}
@@ -1182,7 +1412,7 @@ export default function TableReservPage() {
               >
                 <Box
                   component="img"
-                  src={productImage(product)}
+                  src={productImage(product, categoryImageById)}
                   alt={product.name}
                   sx={{
                     width: 92,
@@ -1204,11 +1434,38 @@ export default function TableReservPage() {
                     </Box>
                   </Typography>
                 </Box>
-                {qty === 0 ? (
+                <Box
+                  sx={{
+                    width: 36,
+                    flexShrink: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    alignSelf: "stretch",
+                  }}
+                >
+                  {qty > 0 ? (
+                    <IconButton
+                      size="small"
+                      onClick={() => setQty(product, qty - 1)}
+                      sx={{ bgcolor: SURFACE_ALT, color: TEXT, width: 30, height: 30 }}
+                    >
+                      <RemoveIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  ) : (
+                    <Box sx={{ width: 30, height: 30 }} />
+                  )}
+                  {qty > 0 ? (
+                    <Typography sx={{ minWidth: 18, textAlign: "center", fontWeight: 800, fontSize: 13, color: TEXT }}>
+                      {formatNumber(qty)}
+                    </Typography>
+                  ) : (
+                    <Box />
+                  )}
                   <IconButton
-                    onClick={() => setQty(product, 1)}
+                    onClick={() => setQty(product, qty + 1)}
                     sx={{
-                      alignSelf: "flex-end",
                       bgcolor: ACCENT,
                       color: "#1a1408",
                       width: 36,
@@ -1218,27 +1475,7 @@ export default function TableReservPage() {
                   >
                     <AddIcon sx={{ fontSize: 20 }} />
                   </IconButton>
-                ) : (
-                  <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", gap: 0.4 }}>
-                    <IconButton
-                      size="small"
-                      onClick={() => setQty(product, qty + 1)}
-                      sx={{ bgcolor: ACCENT, color: "#1a1408", width: 30, height: 30, "&:hover": { bgcolor: ACCENT_DARK, color: "#1a1408" } }}
-                    >
-                      <AddIcon sx={{ fontSize: 16 }} />
-                    </IconButton>
-                    <Typography sx={{ minWidth: 18, textAlign: "center", fontWeight: 800, fontSize: 13, color: TEXT }}>
-                      {formatNumber(qty)}
-                    </Typography>
-                    <IconButton
-                      size="small"
-                      onClick={() => setQty(product, qty - 1)}
-                      sx={{ bgcolor: SURFACE_ALT, color: TEXT, width: 30, height: 30 }}
-                    >
-                      <RemoveIcon sx={{ fontSize: 16 }} />
-                    </IconButton>
-                  </Box>
-                )}
+                </Box>
               </Box>
             );
           })}
@@ -1937,7 +2174,7 @@ export default function TableReservPage() {
         hidden
         onChange={(e) => pickReceiptFile(e.target.files?.[0] || null, false)}
       />
-      <ToastContainer position="bottom-center" autoClose={3000} theme="dark" />
+      <ToastContainer position="bottom-center" autoClose={3000} theme={themeMode} />
     </Box>
     </Box>
   );

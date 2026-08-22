@@ -541,8 +541,8 @@ export default function TableOrdersPage() {
           <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: 14, lineHeight: 1.8 }}>
             {payOrder
               ? invoiceReady
-                ? `فاکتور ${payOrder.table_label || "میز"} به مبلغ ${formatNumber(getTableOrderAmount(payOrder))} تومان ثبت شد. می‌توانید چاپ بگیرید.`
-                : `روش مشتری: ${tablePaymentMethodLabel(payOrder)}. مبلغ ${formatNumber(getTableOrderAmount(payOrder))} تومان به‌صورت کارت روی فاکتور می‌نشیند.`
+                ? `فاکتور ${payOrder.table_label || "میز"} به مبلغ ${formatNumber(getTableOrderAmount(payOrder))} تومان ثبت شد. `
+                : `روش مشتری: ${tablePaymentMethodLabel(payOrder)}. مبلغ ${formatNumber(getTableOrderAmount(payOrder))} تومان `
               : ""}
           </Typography>
           {payOrder?.has_receipt && payOrder.receipt_url ? (

@@ -51,6 +51,21 @@ export default function TableOrdersPendingProvider({ children }: { children: Rea
   const seenLatest = useRef<number | null>(null);
   const seenCount = useRef(0);
   const seenInitialized = useRef(false);
+  const soundRef = useRef<HTMLAudioElement | null>(null);
+
+  const playNewOrderSound = useCallback(() => {
+    try {
+      if (!soundRef.current) {
+        soundRef.current = new Audio("/reserv/1.mp3");
+      }
+      soundRef.current.currentTime = 0;
+      void soundRef.current.play().catch(() => {
+        /* مرورگر ممکن است پخش خودکار را تا تعامل کاربر مسدود کند */
+      });
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const refresh = useCallback(async () => {
     if (!readAdminPosSettings().restaurantCafeEnabled) return;
@@ -67,6 +82,7 @@ export default function TableOrdersPendingProvider({ children }: { children: Rea
       setWithReceipt(nextReceipt);
       setLatestId(Number.isFinite(nextLatest as number) ? nextLatest : null);
       if (seenInitialized.current && nextCount > prevCount) {
+        playNewOrderSound();
         window.dispatchEvent(
           new CustomEvent(TABLE_ORDERS_NEW_EVENT, {
             detail: { count: nextCount, latestId: nextLatest, prevCount },
@@ -83,7 +99,7 @@ export default function TableOrdersPendingProvider({ children }: { children: Rea
     } catch {
       /* ignore poll errors */
     }
-  }, []);
+  }, [playNewOrderSound]);
 
   useEffect(() => {
     const sync = () => setEnabled(readAdminPosSettings().restaurantCafeEnabled);
