@@ -1079,11 +1079,20 @@ export default function ShoppingPage() {
 
     setIsSubmitting(true);
     const loadData: any = {
-      products: cart.map(item => ({
-        product_id: Number(item.id),
-        quantity: item.quantity,
-        purchase_price: Number(item.purchase_price)
-      }))
+      products: cart.map(item => {
+        if (item.item_type === "produced_good" && item.produced_good_id) {
+          return {
+            produced_good_id: Number(item.produced_good_id),
+            quantity: item.quantity,
+            purchase_price: Number(item.purchase_price),
+          };
+        }
+        return {
+          product_id: Number(item.id),
+          quantity: item.quantity,
+          purchase_price: Number(item.purchase_price),
+        };
+      })
     };
     if (discounttype> 0) {
       loadData.discount_amount = discounttype;

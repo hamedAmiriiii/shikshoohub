@@ -398,22 +398,22 @@ export default function purchas(props: any) {
                   border:"1px solid rgb(212, 87, 37)"
                 }}>
                   <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <Box sx={{ flex: 1 }}>
+                    
                       <LabelCustom 
                         title={"کالا"} 
                         name="" 
-                        text={`${item.product?.name} — ${formatProductQuantity(getItemQuantity(item), item.product ?? item)} ${getUnitLabel(item.product ?? item)}`}
+                        text={`${item?.item_name} — ${formatProductQuantity(getItemQuantity(item), item.product ?? item)} ${getUnitLabel(item.product ?? item)}`}
                       />
                       <LabelCustom 
                         title={"قیمت "} 
                         name="" 
                         text={
-                          item.product.has_discount 
-                            ? `${formatNumber(item.product.sale_price || 0)} تومان (${getPriceUnitLabel(item.product ?? item)} · تخفیف: ${formatNumber(item.product.discount_percent || 0)}%)`
-                            : `${formatNumber(item.product.sale_price || 0)} تومان (${getPriceUnitLabel(item.product ?? item)})`
+                          item?.product?.has_discount 
+                            ? `${formatNumber(item?.sale_price || 0)} تومان (${getPriceUnitLabel(item.product ?? item)} · تخفیف: ${formatNumber(item.product.discount_percent || 0)}%)`
+                            : `${formatNumber(item?.sale_price || 0)} تومان (${getPriceUnitLabel(item.product ?? item)})`
                         } 
                       />
-                    </Box>
+                   
                     {/* دکمه برگشت فقط برای خریدهای غیراقساطی */}
                     {!isInstallment && (
                       <IconButton

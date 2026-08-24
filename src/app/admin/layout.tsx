@@ -51,6 +51,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/payroll': 'حقوق',
     '/admin/payroll/employees': 'کارمندها',
     '/admin/payroll/settings': 'تنظیمات حقوق',
+    '/admin/production': 'قیمت تمام‌شده تولید',
   };
   
   return titleMap[pathname];

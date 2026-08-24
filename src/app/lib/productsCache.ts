@@ -2,9 +2,13 @@ export const PRODUCTS_CACHE_KEY = "products_cache";
 
 export type CachedProduct = {
   id: number | string;
+  item_type?: string;
+  produced_good_id?: number | string | null;
+  product_id?: number | string | null;
   name?: string;
   barcode?: string;
   sale_price?: number | string;
+  purchase_price?: number | string;
   original_sale_price?: number | string;
   has_discount?: boolean;
   quantity?: number;

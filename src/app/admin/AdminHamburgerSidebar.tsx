@@ -42,6 +42,7 @@ import AddBoxIcon from "@mui/icons-material/AddBox";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import FileUploadIcon from "@mui/icons-material/FileUpload";
+import KitchenIcon from "@mui/icons-material/Kitchen";
 import {
   ADMIN_POS_SETTINGS_CHANGED_EVENT,
   readAdminPosSettings,
@@ -199,6 +200,12 @@ export default function AdminHamburgerSidebar({
         label: "ایمپورت اکسل",
         href: "/admin/product/import",
         icon: <FileUploadIcon />,
+      },
+      {
+        id: "production",
+        label: "کالاهای تولیدی",
+        href: "/admin/production",
+        icon: <KitchenIcon />,
       },
     ],
     [],
