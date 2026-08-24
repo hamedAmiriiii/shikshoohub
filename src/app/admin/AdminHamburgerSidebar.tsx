@@ -197,7 +197,7 @@ export default function AdminHamburgerSidebar({
       },
       {
         id: "import-products",
-        label: "ایمپورت اکسل",
+        label: "ایمپورت  اکسل",
         href: "/admin/product/import",
         icon: <FileUploadIcon />,
       },
