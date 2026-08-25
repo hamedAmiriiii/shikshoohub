@@ -52,6 +52,7 @@ type MenuCartItem = {
   id: number | string;
   name?: string;
   sale_price?: number | string;
+  default_sale_price?: number | string;
   quantity: number;
   unit_type?: string;
   unit_label?: string;
@@ -117,6 +118,8 @@ export type AdminMenuModeCartPanelProps = {
   }>;
   loadingAvailableCheques?: boolean;
   salePayableAmount: number;
+  salePriceEditEnabled?: boolean;
+  onSalePriceChange?: (itemId: number | string, value: string) => void;
 };
 
 export default function AdminMenuModeCartPanel({
@@ -171,6 +174,8 @@ export default function AdminMenuModeCartPanel({
   matchingCheques,
   loadingAvailableCheques = false,
   salePayableAmount,
+  salePriceEditEnabled = false,
+  onSalePriceChange,
 }: AdminMenuModeCartPanelProps) {
   const finalTotal = Math.max(0, total - useCreditAmount - discounttype);
   const showPaymentTypeSelector =
@@ -278,10 +283,26 @@ export default function AdminMenuModeCartPanel({
               </IconButton>
             </Box>
             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mt: 0.25, gap: 0.25 }}>
-              <Box sx={{ minWidth: 0 }}>
-                <Typography sx={{ fontSize: "9px", color: "var(--admin-accent)", fontWeight: 700 }}>
-                  {formatNumber(Number(item.sale_price) * item.quantity)}
-                </Typography>
+              <Box sx={{ minWidth: 0, flex: 1 }}>
+                {salePriceEditEnabled && onSalePriceChange ? (
+                  <TextField
+                    size="small"
+                    placeholder="قیمت"
+                    value={String(item.sale_price ?? "")}
+                    onChange={(e) => onSalePriceChange(item.id, e.target.value)}
+                    inputProps={{ inputMode: "numeric", style: { textAlign: "right", direction: "ltr" } }}
+                    sx={{ ...tinyFieldSx, mb: 0.25 }}
+                  />
+                ) : (
+                  <Typography sx={{ fontSize: "9px", color: "var(--admin-accent)", fontWeight: 700 }}>
+                    {formatNumber(Number(item.sale_price) * item.quantity)}
+                  </Typography>
+                )}
+                {salePriceEditEnabled && onSalePriceChange ? (
+                  <Typography sx={{ fontSize: "8px", color: "var(--admin-text-muted)" }}>
+                    جمع: {formatNumber(Number(item.sale_price) * item.quantity)}
+                  </Typography>
+                ) : null}
                 {kgSalesEnabled && (
                   <Typography sx={{ fontSize: "8px", color: "var(--admin-text-muted)" }}>
                     {getPriceUnitLabel(item)}

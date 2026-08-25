@@ -16,6 +16,8 @@ export type AdminPosSettings = {
   restaurantCafeEnabled: boolean;
   /** پاپ‌آپ سفارش حضوری وقتی در حالت منو سفارش جدید می‌رسد */
   menuTableOrdersPopupEnabled: boolean;
+  /** امکان تغییر قیمت فروش هنگام ثبت خرید */
+  salePriceEditEnabled: boolean;
 };
 
 const DEFAULT_SETTINGS: AdminPosSettings = {
@@ -28,6 +30,7 @@ const DEFAULT_SETTINGS: AdminPosSettings = {
   kgSalesEnabled: false,
   restaurantCafeEnabled: false,
   menuTableOrdersPopupEnabled: false,
+  salePriceEditEnabled: false,
 };
 
 export function readAdminPosSettings(): AdminPosSettings {

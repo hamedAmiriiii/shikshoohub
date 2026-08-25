@@ -28,6 +28,7 @@ import ScaleIcon from "@mui/icons-material/Scale";
 import CreditCardIcon from "@mui/icons-material/CreditCard";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import KitchenIcon from "@mui/icons-material/Kitchen";
+import PriceChangeIcon from "@mui/icons-material/PriceChange";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useRouter } from "next/navigation";
@@ -159,6 +160,7 @@ export default function SettingsPage() {
   const [chequePaymentEnabled, setChequePaymentEnabled] = useState(false);
   const [producedGoodsMenuEnabled, setProducedGoodsMenuEnabled] = useState(false);
   const [kgSalesEnabled, setKgSalesEnabled] = useState(false);
+  const [salePriceEditEnabled, setSalePriceEditEnabled] = useState(false);
   const [restaurantCafeEnabled, setRestaurantCafeEnabled] = useState(false);
   const [menuTableOrdersPopupEnabled, setMenuTableOrdersPopupEnabled] = useState(false);
   const [directPrintEnabled, setDirectPrintEnabled] = useState(false);
@@ -176,6 +178,7 @@ export default function SettingsPage() {
     setChequePaymentEnabled(settings.chequePaymentEnabled);
     setProducedGoodsMenuEnabled(settings.producedGoodsMenuEnabled);
     setKgSalesEnabled(settings.kgSalesEnabled);
+    setSalePriceEditEnabled(settings.salePriceEditEnabled);
     setRestaurantCafeEnabled(settings.restaurantCafeEnabled);
     setMenuTableOrdersPopupEnabled(settings.menuTableOrdersPopupEnabled);
     setDirectPrintEnabled(readSaleReceiptPrintSettings().autoPrint);
@@ -246,6 +249,17 @@ export default function SettingsPage() {
       enabled
         ? "فروش محصولات کیلویی فعال شد — هنگام ثبت کالا می‌توانید واحد کیلو انتخاب کنید"
         : "فروش محصولات کیلویی غیرفعال شد",
+    );
+  };
+
+  const handleToggleSalePriceEdit = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setSalePriceEditEnabled(enabled);
+    writeAdminPosSettings({ salePriceEditEnabled: enabled });
+    toast.success(
+      enabled
+        ? "تغییر قیمت هنگام خرید فعال شد"
+        : "تغییر قیمت هنگام خرید غیرفعال شد",
     );
   };
 
@@ -704,6 +718,20 @@ export default function SettingsPage() {
             size="small"
             checked={kgSalesEnabled}
             onChange={handleToggleKgSales}
+            sx={switchSx}
+          />
+        }
+      />
+
+      <SettingsSectionCard
+        icon={<PriceChangeIcon sx={{ fontSize: 22 }} />}
+        title="تغییر قیمت در هنگام خرید"
+        hint="نمایش قیمت فروش در سبد و امکان تغییر قبل از ثبت فروش"
+        action={
+          <Switch
+            size="small"
+            checked={salePriceEditEnabled}
+            onChange={handleToggleSalePriceEdit}
             sx={switchSx}
           />
         }

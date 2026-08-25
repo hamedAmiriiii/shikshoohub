@@ -185,6 +185,7 @@ export default function ShoppingPage() {
   const [availableCheques, setAvailableCheques] = useState<Cheque[]>([]);
   const [loadingAvailableCheques, setLoadingAvailableCheques] = useState(false);
   const [kgSalesEnabled, setKgSalesEnabled] = useState(false);
+  const [salePriceEditEnabled, setSalePriceEditEnabled] = useState(false);
   const [saleSuccessOpen, setSaleSuccessOpen] = useState(false);
   const [lastSaleReceipt, setLastSaleReceipt] = useState<SaleReceiptData | null>(null);
   const [skipPrintPreview, setSkipPrintPreview] = useState(false);
@@ -864,6 +865,7 @@ export default function ShoppingPage() {
       setDebtPaymentEnabled(settings.debtPaymentEnabled);
       setChequePaymentEnabled(settings.chequePaymentEnabled);
       setKgSalesEnabled(settings.kgSalesEnabled);
+      setSalePriceEditEnabled(settings.salePriceEditEnabled);
       void savePosSettingsCache(settings);
     };
     applyPosSettings();
@@ -956,7 +958,11 @@ export default function ShoppingPage() {
         : 1;
 
       if (existingItemIndex === -1) {
-        newCart.push({ ...item, quantity: addQty });
+        const line = { ...item, quantity: addQty };
+        if (salePriceEditEnabled) {
+          line.default_sale_price = Number(item.sale_price);
+        }
+        newCart.push(line);
       } else {
         newCart[existingItemIndex].quantity = normalizeQuantityValue(
           newCart[existingItemIndex].quantity + addQty,
@@ -979,7 +985,7 @@ export default function ShoppingPage() {
     if (navigator.vibrate) {
       navigator.vibrate(70);
     }
-  }, [kgSalesEnabled]);
+  }, [kgSalesEnabled, salePriceEditEnabled]);
 
   const addProductByBarcode = useCallback((barcode: string) => {
     if (!barcode || barcode.length < 3) return;
@@ -1135,6 +1141,41 @@ export default function ShoppingPage() {
     [buildSaleReceiptFromCurrentSale, cart, total, phone, resetCartAfterQueuedSale],
   );
 
+  const buildPurchaseProductLine = useCallback(
+    (item: any) => {
+      if (item.item_type === "produced_good" && item.produced_good_id) {
+        const payload: Record<string, unknown> = {
+          produced_good_id: Number(item.produced_good_id),
+          quantity: item.quantity,
+          purchase_price: Number(item.purchase_price),
+        };
+        if (salePriceEditEnabled) {
+          const defaultPrice = Number(item.default_sale_price ?? item.sale_price);
+          const currentPrice = Number(item.sale_price);
+          if (currentPrice !== defaultPrice) {
+            payload.sale_price = currentPrice;
+          }
+        }
+        return payload;
+      }
+
+      const payload: Record<string, unknown> = {
+        product_id: Number(item.id),
+        quantity: item.quantity,
+        purchase_price: Number(item.purchase_price),
+      };
+      if (salePriceEditEnabled) {
+        const defaultPrice = Number(item.default_sale_price ?? item.sale_price);
+        const currentPrice = Number(item.sale_price);
+        if (currentPrice !== defaultPrice) {
+          payload.sale_price = currentPrice;
+        }
+      }
+      return payload;
+    },
+    [salePriceEditEnabled],
+  );
+
   const confirm = useCallback(() => {
     // اعتبارسنجی تخفیف قبل از ارسال
     if (discounttype > 0) {
@@ -1193,20 +1234,7 @@ export default function ShoppingPage() {
 
     setIsSubmitting(true);
     const loadData: any = {
-      products: cart.map(item => {
-        if (item.item_type === "produced_good" && item.produced_good_id) {
-          return {
-            produced_good_id: Number(item.produced_good_id),
-            quantity: item.quantity,
-            purchase_price: Number(item.purchase_price),
-          };
-        }
-        return {
-          product_id: Number(item.id),
-          quantity: item.quantity,
-          purchase_price: Number(item.purchase_price),
-        };
-      })
+      products: cart.map((item) => buildPurchaseProductLine(item)),
     };
     if (discounttype> 0) {
       loadData.discount_amount = discounttype;
@@ -1349,7 +1377,7 @@ export default function ShoppingPage() {
         "warn",
       );
     });
-  }, [cart, phone, useCreditAmount, effectiveOnline, discounttype, total, formatNumber, paymentType, installmentCount, payableNow, paymentFieldsValid, settlementMode, appendPaymentSettlement, resetPaymentSettlement, installmentCalculation, calculatingInstallments, installmentCreditError, finalizeSuccessfulSale, queueCurrentPurchase, withTimeout, selectedChequeId, matchingCheques, loadingAvailableCheques]);
+  }, [cart, phone, useCreditAmount, effectiveOnline, discounttype, total, formatNumber, paymentType, installmentCount, payableNow, paymentFieldsValid, settlementMode, appendPaymentSettlement, resetPaymentSettlement, installmentCalculation, calculatingInstallments, installmentCreditError, finalizeSuccessfulSale, queueCurrentPurchase, withTimeout, selectedChequeId, matchingCheques, loadingAvailableCheques, buildPurchaseProductLine]);
 
   // بررسی اعتبارسنجی تخفیف هنگام تغییر total
   useEffect(() => {
@@ -1687,6 +1715,22 @@ export default function ShoppingPage() {
     });
   };
 
+  const setCartItemSalePrice = useCallback((itemId: number | string, value: string) => {
+    const parsed = parseAmountInput(value);
+    if (parsed <= 0) return;
+    setCart((prevCart) => {
+      const newCart = prevCart.map((item) =>
+        item.id === itemId ? { ...item, sale_price: parsed } : item,
+      );
+      const newTotal = newCart.reduce(
+        (sum, item) => sum + Number(item.sale_price) * item.quantity,
+        0,
+      );
+      setTotal(newTotal);
+      return newCart;
+    });
+  }, [parseAmountInput]);
+
 
 
   return (
@@ -1937,6 +1981,8 @@ export default function ShoppingPage() {
               matchingCheques,
               loadingAvailableCheques,
               salePayableAmount,
+              salePriceEditEnabled,
+              onSalePriceChange: setCartItemSalePrice,
             }}
           />
         )}
@@ -2037,7 +2083,42 @@ export default function ShoppingPage() {
                       <StyledTableCell align="right" sx={{ 
                         padding: { xs: "8px 12px", md: "16px 24px" }
                       }}>
-                        {item.has_discount ? (
+                        {salePriceEditEnabled ? (
+                          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, alignItems: "flex-end", minWidth: 120 }}>
+                            <TextField
+                              size="small"
+                              value={String(item.sale_price ?? "")}
+                              onChange={(e) => setCartItemSalePrice(item.id, e.target.value)}
+                              inputProps={{ inputMode: "numeric", style: { textAlign: "right", direction: "ltr" } }}
+                              sx={{
+                                width: { xs: 110, md: 140 },
+                                "& .MuiOutlinedInput-root": {
+                                  backgroundColor: "var(--admin-surface-alt)",
+                                  color: "var(--admin-accent)",
+                                  fontWeight: 600,
+                                  "& fieldset": { borderColor: "var(--admin-border)" },
+                                  "&:hover fieldset": { borderColor: "var(--admin-accent)" },
+                                  "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
+                                },
+                                "& .MuiInputBase-input": {
+                                  fontSize: { xs: "12px", md: "14px" },
+                                  py: 0.75,
+                                },
+                              }}
+                            />
+                            {item.default_sale_price != null &&
+                              Number(item.sale_price) !== Number(item.default_sale_price) && (
+                              <Typography sx={{ fontSize: "10px", color: "#ff9800" }}>
+                                پیش‌فرض: {formatNumber(Number(item.default_sale_price))}
+                              </Typography>
+                            )}
+                            {kgSalesEnabled && (
+                              <Typography sx={{ fontSize: "10px", color: "var(--admin-text-muted)" }}>
+                                {getPriceUnitLabel(item)}
+                              </Typography>
+                            )}
+                          </Box>
+                        ) : item.has_discount ? (
                           <Box sx={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-end" }}>
                             <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "11px", textDecoration: "line-through" }}>
                               {formatNumber(Number(item.original_sale_price))} تومان
