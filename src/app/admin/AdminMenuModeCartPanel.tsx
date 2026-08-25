@@ -104,6 +104,19 @@ export type AdminMenuModeCartPanelProps = {
   installmentCalculation: any;
   installmentPaymentEnabled?: boolean;
   debtPaymentEnabled?: boolean;
+  chequePaymentEnabled?: boolean;
+  selectedChequeId: number | null;
+  onSelectedChequeChange: (id: number | null) => void;
+  matchingCheques: Array<{
+    id: number;
+    cheque_number?: string;
+    bank_name?: string;
+    payee?: string;
+    due_date_jalali?: string | null;
+    amount?: number | string;
+  }>;
+  loadingAvailableCheques?: boolean;
+  salePayableAmount: number;
 };
 
 export default function AdminMenuModeCartPanel({
@@ -152,9 +165,16 @@ export default function AdminMenuModeCartPanel({
   installmentCalculation,
   installmentPaymentEnabled = true,
   debtPaymentEnabled = false,
+  chequePaymentEnabled = false,
+  selectedChequeId,
+  onSelectedChequeChange,
+  matchingCheques,
+  loadingAvailableCheques = false,
+  salePayableAmount,
 }: AdminMenuModeCartPanelProps) {
   const finalTotal = Math.max(0, total - useCreditAmount - discounttype);
-  const showPaymentTypeSelector = installmentPaymentEnabled || debtPaymentEnabled;
+  const showPaymentTypeSelector =
+    installmentPaymentEnabled || debtPaymentEnabled || chequePaymentEnabled;
 
   useEffect(() => {
     const root = document.documentElement;
@@ -167,7 +187,7 @@ export default function AdminMenuModeCartPanel({
   const submitDisabled =
     !total ||
     isSubmitting ||
-    (paymentType !== "debt" && payableNow > 0 && !paymentFieldsValid) ||
+    (paymentType !== "debt" && paymentType !== "cheque" && payableNow > 0 && !paymentFieldsValid) ||
     (paymentType === "debt" && (!phone || phone.trim() === "")) ||
     (installmentPaymentEnabled &&
       paymentType === "installment" &&
@@ -176,7 +196,10 @@ export default function AdminMenuModeCartPanel({
         !!installmentCreditError ||
         (installmentCalculation && installmentCalculation.has_enough_credit === false) ||
         !installmentCalculation?.installment_amount ||
-        calculatingInstallments));
+        calculatingInstallments)) ||
+    (chequePaymentEnabled &&
+      paymentType === "cheque" &&
+      (loadingAvailableCheques || !selectedChequeId || matchingCheques.length === 0));
 
   return (
     <Box
@@ -367,6 +390,13 @@ export default function AdminMenuModeCartPanel({
                   label={<Typography sx={{ fontSize: "9px" }}>نسیه</Typography>}
                 />
               )}
+              {chequePaymentEnabled && (
+                <FormControlLabel
+                  value="cheque"
+                  control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 14 } }} />}
+                  label={<Typography sx={{ fontSize: "9px" }}>چک</Typography>}
+                />
+              )}
             </RadioGroup>
           </FormControl>
         )}
@@ -375,6 +405,51 @@ export default function AdminMenuModeCartPanel({
           <Typography sx={{ fontSize: "8px", color: "#ff9800", lineHeight: 1.3 }}>
             ثبت قرضی — مبلغ به بدهی مشتری اضافه می‌شود
           </Typography>
+        )}
+
+        {chequePaymentEnabled && paymentType === "cheque" && (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.35 }}>
+            <Typography sx={{ fontSize: "8px", color: "var(--admin-text-muted)" }}>
+              مبلغ قابل پرداخت: {formatNumber(salePayableAmount)} تومان
+            </Typography>
+            {loadingAvailableCheques ? (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                <CircularProgress size={10} />
+                <Typography sx={{ fontSize: "8px" }}>بارگذاری چک‌ها...</Typography>
+              </Box>
+            ) : matchingCheques.length === 0 ? (
+              <Typography sx={{ fontSize: "8px", color: "#e57373", lineHeight: 1.3 }}>
+                چک دریافتی pending با این مبلغ یافت نشد
+              </Typography>
+            ) : (
+              <TextField
+                select
+                size="small"
+                value={selectedChequeId ?? ""}
+                onChange={(e) =>
+                  onSelectedChequeChange(e.target.value ? Number(e.target.value) : null)
+                }
+                SelectProps={{ native: true }}
+                sx={tinyFieldSx}
+              >
+                <option value="">انتخاب چک</option>
+                {matchingCheques.map((cheque) => (
+                  <option key={cheque.id} value={cheque.id}>
+                    {[
+                      cheque.cheque_number ? `چک ${cheque.cheque_number}` : `#${cheque.id}`,
+                      cheque.bank_name,
+                      cheque.due_date_jalali ? `سررسید ${cheque.due_date_jalali}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" — ")}
+                  </option>
+                ))}
+              </TextField>
+            )}
+            <Typography sx={{ fontSize: "8px", color: "#2196f3", lineHeight: 1.3 }}>
+              تا وصول چک، در open_cheques منظور می‌شود
+            </Typography>
+          </Box>
         )}
 
         {installmentPaymentEnabled && paymentType === "installment" && (

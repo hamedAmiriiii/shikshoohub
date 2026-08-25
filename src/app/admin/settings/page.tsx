@@ -26,6 +26,8 @@ import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import PrintIcon from "@mui/icons-material/Print";
 import ScaleIcon from "@mui/icons-material/Scale";
 import CreditCardIcon from "@mui/icons-material/CreditCard";
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import KitchenIcon from "@mui/icons-material/Kitchen";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useRouter } from "next/navigation";
@@ -154,6 +156,8 @@ export default function SettingsPage() {
   const [menuMode, setMenuMode] = useState(false);
   const [installmentPaymentEnabled, setInstallmentPaymentEnabled] = useState(true);
   const [debtPaymentEnabled, setDebtPaymentEnabled] = useState(false);
+  const [chequePaymentEnabled, setChequePaymentEnabled] = useState(false);
+  const [producedGoodsMenuEnabled, setProducedGoodsMenuEnabled] = useState(false);
   const [kgSalesEnabled, setKgSalesEnabled] = useState(false);
   const [restaurantCafeEnabled, setRestaurantCafeEnabled] = useState(false);
   const [menuTableOrdersPopupEnabled, setMenuTableOrdersPopupEnabled] = useState(false);
@@ -169,6 +173,8 @@ export default function SettingsPage() {
     setMenuMode(settings.menuMode);
     setInstallmentPaymentEnabled(settings.installmentPaymentEnabled);
     setDebtPaymentEnabled(settings.debtPaymentEnabled);
+    setChequePaymentEnabled(settings.chequePaymentEnabled);
+    setProducedGoodsMenuEnabled(settings.producedGoodsMenuEnabled);
     setKgSalesEnabled(settings.kgSalesEnabled);
     setRestaurantCafeEnabled(settings.restaurantCafeEnabled);
     setMenuTableOrdersPopupEnabled(settings.menuTableOrdersPopupEnabled);
@@ -251,6 +257,28 @@ export default function SettingsPage() {
       enabled
         ? "گزینه پرداخت نسیه در صفحه فروش فعال شد"
         : "گزینه پرداخت نسیه از صفحه فروش پنهان شد",
+    );
+  };
+
+  const handleToggleChequePayment = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setChequePaymentEnabled(enabled);
+    writeAdminPosSettings({ chequePaymentEnabled: enabled });
+    toast.success(
+      enabled
+        ? "گزینه فروش چکی در صفحه فروش فعال شد"
+        : "گزینه فروش چکی از صفحه فروش پنهان شد",
+    );
+  };
+
+  const handleToggleProducedGoodsMenu = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setProducedGoodsMenuEnabled(enabled);
+    writeAdminPosSettings({ producedGoodsMenuEnabled: enabled });
+    toast.success(
+      enabled
+        ? "«کالاهای تولیدی» در منوی مدیریت کالا نمایش داده می‌شود"
+        : "«کالاهای تولیدی» از منوی مدیریت کالا پنهان شد",
     );
   };
 
@@ -634,6 +662,34 @@ export default function SettingsPage() {
             size="small"
             checked={debtPaymentEnabled}
             onChange={handleToggleDebtPayment}
+            sx={switchSx}
+          />
+        }
+      />
+
+      <SettingsSectionCard
+        icon={<ReceiptLongIcon sx={{ fontSize: 22 }} />}
+        title="فروش چکی"
+        hint="نمایش گزینه پرداخت چکی هنگام ثبت فروش"
+        action={
+          <Switch
+            size="small"
+            checked={chequePaymentEnabled}
+            onChange={handleToggleChequePayment}
+            sx={switchSx}
+          />
+        }
+      />
+
+      <SettingsSectionCard
+        icon={<KitchenIcon sx={{ fontSize: 22 }} />}
+        title="کالای تولیدی"
+        hint="نمایش «کالاهای تولیدی» در منوی مدیریت کالا"
+        action={
+          <Switch
+            size="small"
+            checked={producedGoodsMenuEnabled}
+            onChange={handleToggleProducedGoodsMenu}
             sx={switchSx}
           />
         }

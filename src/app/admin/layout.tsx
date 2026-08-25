@@ -18,6 +18,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
   
   const titleMap: { [key: string]: string } = {
     '/admin/expenses': 'هزینه‌ها',
+    '/admin/cheques': 'چک',
     '/admin/inventory': 'موجودی انبار',
     '/admin/reports': 'گزارشات',
     '/admin/customers': 'خریداران',

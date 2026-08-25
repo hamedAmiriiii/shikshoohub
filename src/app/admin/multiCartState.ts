@@ -20,6 +20,7 @@ export type CartSlotSnapshot = {
   cardAmountInput: string;
   cashAmountInput: string;
   paymentSplitError: string;
+  selectedChequeId: number | null;
 };
 
 export function createEmptyCartSlot(): CartSlotSnapshot {
@@ -41,5 +42,6 @@ export function createEmptyCartSlot(): CartSlotSnapshot {
     cardAmountInput: "",
     cashAmountInput: "",
     paymentSplitError: "",
+    selectedChequeId: null,
   };
 }

@@ -6,6 +6,10 @@ export type AdminPosSettings = {
   menuMode: boolean;
   installmentPaymentEnabled: boolean;
   debtPaymentEnabled: boolean;
+  /** فروش با چک دریافتی ثبت‌شده */
+  chequePaymentEnabled: boolean;
+  /** نمایش «کالاهای تولیدی» در منوی مدیریت کالا */
+  producedGoodsMenuEnabled: boolean;
   /** فروش محصولات با واحد کیلوگرم */
   kgSalesEnabled: boolean;
   /** میز، سفارش حضوری و پولینگ رسیدگی‌نشده */
@@ -19,6 +23,8 @@ const DEFAULT_SETTINGS: AdminPosSettings = {
   menuMode: false,
   installmentPaymentEnabled: true,
   debtPaymentEnabled: false,
+  chequePaymentEnabled: false,
+  producedGoodsMenuEnabled: false,
   kgSalesEnabled: false,
   restaurantCafeEnabled: false,
   menuTableOrdersPopupEnabled: false,

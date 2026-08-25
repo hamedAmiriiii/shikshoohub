@@ -17,6 +17,7 @@ import {
 } from "@mui/material";
 import ReplayIcon from '@mui/icons-material/Replay';
 import InstallmentIcon from '@mui/icons-material/AccountBalance';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import CloseIcon from '@mui/icons-material/Close';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -35,6 +36,7 @@ import {
   isKgProduct,
   parseQuantityInput,
 } from "@/app/lib/productUnits";
+import { paymentTypeLabel } from "@/app/lib/paymentTypes";
 
 const formatNumber = (num: number | string) => {
   const numValue = typeof num === 'string' ? parseFloat(num.replace(/,/g, '')) : num;
@@ -133,6 +135,7 @@ export default function purchas(props: any) {
   const data = props?.props?.data;
   const onRefresh = props?.props?.onRefresh || props?.props?.refreshGrid;
   const isInstallment = data?.payment_type === 'installment';
+  const isCheque = data?.payment_type === 'cheque';
 
   const handleOpenDeleteDialog = (item: any) => {
     setSelectedItem(item);
@@ -327,6 +330,24 @@ export default function purchas(props: any) {
               }}
             />
           )}
+          {isCheque && (
+            <Chip
+              icon={<ReceiptLongIcon />}
+              label={data?.payment_type_label || "چکی"}
+              size="small"
+              sx={{
+                backgroundColor: data?.is_cheque_settled ? "var(--admin-accent)" : "#2196f3",
+                color: "var(--admin-text)",
+                fontWeight: "600",
+                fontSize: "11px",
+                height: "24px",
+                "& .MuiChip-icon": {
+                  color: "var(--admin-text)",
+                  fontSize: "16px"
+                }
+              }}
+            />
+          )}
           <span className="  rounded-xl aligan-center">
             {date || "تاریخ نامشخص"}
           </span>
@@ -351,6 +372,45 @@ export default function purchas(props: any) {
               <PurchaseInfoRow label="مجموع مبلغ" value={`${formatNumber(data.total_amount)} تومان`} />
             )}
             {data?.phone && <PurchaseInfoRow label="شماره تلفن" value={data.phone} />}
+
+            {(data?.payment_type_label || data?.payment_type) && (
+              <PurchaseInfoRow
+                label="نوع پرداخت"
+                value={data.payment_type_label || paymentTypeLabel(data.payment_type)}
+              />
+            )}
+
+            {isCheque && data?.cheque && (
+              <>
+                <PurchaseInfoRow
+                  label="شماره چک"
+                  value={data.cheque.cheque_number || "—"}
+                />
+                {data.cheque.bank_name ? (
+                  <PurchaseInfoRow label="بانک" value={data.cheque.bank_name} />
+                ) : null}
+                {data.cheque.payee ? (
+                  <PurchaseInfoRow label="پرداخت‌کننده" value={data.cheque.payee} />
+                ) : null}
+                {(data.cheque.due_date_jalali || data.cheque.due_date) ? (
+                  <PurchaseInfoRow
+                    label="سررسید چک"
+                    value={data.cheque.due_date_jalali || data.cheque.due_date}
+                  />
+                ) : null}
+              </>
+            )}
+
+            {isCheque && (
+              <PurchaseInfoRow
+                label="وضعیت وصول"
+                value={
+                  data?.is_cheque_settled
+                    ? "وصول‌شده"
+                    : `در انتظار وصول${data?.outstanding_cheque_amount ? ` — ${formatNumber(data.outstanding_cheque_amount)} تومان` : ""}`
+                }
+              />
+            )}
 
             
 

@@ -35,12 +35,14 @@ export type SaleReceiptData = {
   backPrice: number;
   finalTotal: number;
   payableNow: number;
-  paymentType?: "cash" | "installment" | "debt" | "online";
+  paymentType?: "cash" | "installment" | "debt" | "cheque" | "online";
   settlementMode?: "split" | "card_all" | "cash_all";
   cardAmount?: number;
   cashAmount?: number;
   installmentCount?: number;
   installmentAmount?: number;
+  chequeId?: number;
+  chequeNumber?: string;
   footerNote?: string;
   customerNote?: string;
 };
@@ -201,6 +203,9 @@ export function getPaymentTypeLabel(receipt: SaleReceiptData): string {
       : "اقساطی";
   }
   if (receipt.paymentType === "debt") return "نسیه";
+  if (receipt.paymentType === "cheque") {
+    return receipt.chequeNumber ? `چکی (${receipt.chequeNumber})` : "چکی";
+  }
   if (receipt.paymentType === "online") return "آنلاین";
   if (receipt.settlementMode === "card_all") return "کارت";
   if (receipt.settlementMode === "cash_all") return "نقد";

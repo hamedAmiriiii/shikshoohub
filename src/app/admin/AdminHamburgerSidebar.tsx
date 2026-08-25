@@ -106,9 +106,14 @@ export default function AdminHamburgerSidebar({
 }: AdminHamburgerSidebarProps) {
   const { count: pendingTableOrders } = useTableOrdersPending();
   const [restaurantCafeEnabled, setRestaurantCafeEnabled] = useState(false);
+  const [producedGoodsMenuEnabled, setProducedGoodsMenuEnabled] = useState(false);
 
   useEffect(() => {
-    const sync = () => setRestaurantCafeEnabled(readAdminPosSettings().restaurantCafeEnabled);
+    const sync = () => {
+      const settings = readAdminPosSettings();
+      setRestaurantCafeEnabled(settings.restaurantCafeEnabled);
+      setProducedGoodsMenuEnabled(settings.producedGoodsMenuEnabled);
+    };
     sync();
     window.addEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, sync);
     return () => window.removeEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, sync);
@@ -123,6 +128,12 @@ export default function AdminHamburgerSidebar({
         label: "گزارش هزینه‌ها",
         href: "/admin/expenses-statistics",
         icon: <ReceiptIcon />,
+      },
+      {
+        id: "cheques",
+        label: "چک",
+        href: "/admin/cheques",
+        icon: <ReceiptLongIcon />,
       },
       { id: "installments", label: "لیست اقساط", href: "/admin/installments", icon: <CreditCardIcon /> },
       {
@@ -174,7 +185,8 @@ export default function AdminHamburgerSidebar({
   );
 
   const productChildren: NavLeaf[] = useMemo(
-    () => [
+    () => {
+      const items: NavLeaf[] = [
       {
         id: "best-selling",
         label: "محصولات پرفروش",
@@ -201,14 +213,18 @@ export default function AdminHamburgerSidebar({
         href: "/admin/product/import",
         icon: <FileUploadIcon />,
       },
-      {
-        id: "production",
-        label: "کالاهای تولیدی",
-        href: "/admin/production",
-        icon: <KitchenIcon />,
-      },
-    ],
-    [],
+      ];
+      if (producedGoodsMenuEnabled) {
+        items.push({
+          id: "production",
+          label: "کالاهای تولیدی",
+          href: "/admin/production",
+          icon: <KitchenIcon />,
+        });
+      }
+      return items;
+    },
+    [producedGoodsMenuEnabled],
   );
 
   const smsChildren: NavLeaf[] = useMemo(

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { Button, Modal, Dialog, DialogTitle, DialogContent, DialogActions, Box, Typography, Table, TableBody, TableContainer, TableHead, TableRow, Paper, IconButton, Input, Card, CardContent, Grid, Container, CircularProgress, TextField, FormControl, FormLabel, RadioGroup, FormControlLabel, Radio, Tooltip } from '@mui/material';
+import { Button, Modal, Dialog, DialogTitle, DialogContent, DialogActions, Box, Typography, Table, TableBody, TableContainer, TableHead, TableRow, Paper, IconButton, Input, Card, CardContent, Grid, Container, CircularProgress, TextField, FormControl, FormLabel, RadioGroup, FormControlLabel, Radio, Tooltip, MenuItem, Select, InputLabel } from '@mui/material';
 import SafeBarcodeScanner from "@/app/coponent/SafeBarcodeScanner";
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
@@ -85,6 +85,13 @@ import {
   openSaleReceiptPrintPage,
   readSaleReceiptPrintSettings,
 } from '@/app/lib/saleReceiptPrint';
+import {
+  buildAvailableChequesForSaleUrl,
+  extractChequeList,
+  filterChequesMatchingAmount,
+  formatChequeOptionLabel,
+  type Cheque,
+} from '@/app/lib/cheques';
 
 
 
@@ -173,6 +180,10 @@ export default function ShoppingPage() {
   const [menuMode, setMenuMode] = useState(false);
   const [installmentPaymentEnabled, setInstallmentPaymentEnabled] = useState(true);
   const [debtPaymentEnabled, setDebtPaymentEnabled] = useState(false);
+  const [chequePaymentEnabled, setChequePaymentEnabled] = useState(false);
+  const [selectedChequeId, setSelectedChequeId] = useState<number | null>(null);
+  const [availableCheques, setAvailableCheques] = useState<Cheque[]>([]);
+  const [loadingAvailableCheques, setLoadingAvailableCheques] = useState(false);
   const [kgSalesEnabled, setKgSalesEnabled] = useState(false);
   const [saleSuccessOpen, setSaleSuccessOpen] = useState(false);
   const [lastSaleReceipt, setLastSaleReceipt] = useState<SaleReceiptData | null>(null);
@@ -218,7 +229,7 @@ export default function ShoppingPage() {
   }, []);
 
   const payableNow = useMemo(() => {
-    if (paymentType === "debt") return 0;
+    if (paymentType === "debt" || paymentType === "cheque") return 0;
     if (paymentType === "installment") {
       const calc = installmentCalculation;
       const first = calc?.installment_details?.[0];
@@ -229,6 +240,21 @@ export default function ShoppingPage() {
     }
     return Math.max(0, total - useCreditAmount - discounttype);
   }, [paymentType, total, useCreditAmount, discounttype, installmentCalculation]);
+
+  const salePayableAmount = useMemo(
+    () => Math.max(0, total - useCreditAmount - discounttype - backPrice),
+    [total, useCreditAmount, discounttype, backPrice],
+  );
+
+  const matchingCheques = useMemo(
+    () => filterChequesMatchingAmount(availableCheques, salePayableAmount),
+    [availableCheques, salePayableAmount],
+  );
+
+  const selectedCheque = useMemo(
+    () => matchingCheques.find((c) => c.id === selectedChequeId) ?? null,
+    [matchingCheques, selectedChequeId],
+  );
 
   const sanitizeAmountInput = useCallback(
     (value: string) => value.replace(/[^\d۰-۹٠-٩,]/g, ""),
@@ -292,6 +318,7 @@ export default function ShoppingPage() {
     cardAmountInput,
     cashAmountInput,
     paymentSplitError,
+    selectedChequeId,
   }), [
     cart,
     total,
@@ -310,6 +337,7 @@ export default function ShoppingPage() {
     cardAmountInput,
     cashAmountInput,
     paymentSplitError,
+    selectedChequeId,
   ]);
 
   const applyCartSlot = useCallback((slot: CartSlotSnapshot) => {
@@ -331,6 +359,7 @@ export default function ShoppingPage() {
     setCardAmountInput(slot.cardAmountInput ?? "");
     setCashAmountInput(slot.cashAmountInput ?? "");
     setPaymentSplitError(slot.paymentSplitError ?? "");
+    setSelectedChequeId(slot.selectedChequeId ?? null);
     setIsDiscountFocused(false);
   }, []);
 
@@ -833,6 +862,7 @@ export default function ShoppingPage() {
       setMenuMode(settings.menuMode);
       setInstallmentPaymentEnabled(settings.installmentPaymentEnabled);
       setDebtPaymentEnabled(settings.debtPaymentEnabled);
+      setChequePaymentEnabled(settings.chequePaymentEnabled);
       setKgSalesEnabled(settings.kgSalesEnabled);
       void savePosSettingsCache(settings);
     };
@@ -856,6 +886,62 @@ export default function ShoppingPage() {
       setPaymentType("cash");
     }
   }, [debtPaymentEnabled, paymentType]);
+
+  useEffect(() => {
+    if (!chequePaymentEnabled && paymentType === "cheque") {
+      setPaymentType("cash");
+      setSelectedChequeId(null);
+    }
+  }, [chequePaymentEnabled, paymentType]);
+
+  useEffect(() => {
+    if (paymentType !== "cheque" || !chequePaymentEnabled) {
+      return;
+    }
+    if (
+      selectedChequeId &&
+      !matchingCheques.some((cheque) => cheque.id === selectedChequeId)
+    ) {
+      setSelectedChequeId(null);
+    }
+  }, [paymentType, chequePaymentEnabled, matchingCheques, selectedChequeId]);
+
+  useEffect(() => {
+    if (paymentType !== "cheque" || !chequePaymentEnabled) {
+      setAvailableCheques([]);
+      return;
+    }
+
+    let cancelled = false;
+    const loadAvailableCheques = async () => {
+      setLoadingAvailableCheques(true);
+      try {
+        const token = tokenCode();
+        if (!token) {
+          if (!cancelled) setAvailableCheques([]);
+          return;
+        }
+        const res = await FetchWithJwtClient(
+          "GET",
+          buildAvailableChequesForSaleUrl(),
+          token,
+        );
+        if (cancelled) return;
+        if (res?.hasError) {
+          setAvailableCheques([]);
+          return;
+        }
+        setAvailableCheques(extractChequeList(res));
+      } finally {
+        if (!cancelled) setLoadingAvailableCheques(false);
+      }
+    };
+
+    void loadAvailableCheques();
+    return () => {
+      cancelled = true;
+    };
+  }, [paymentType, chequePaymentEnabled, salePayableAmount]);
 
   const clearMenuCart = useCallback(() => {
     clearOrRemoveActiveCart();
@@ -960,6 +1046,8 @@ export default function ShoppingPage() {
         cashAmount: parseAmountInput(cashAmountInput),
         installmentCount: paymentType === "installment" ? installmentCount : undefined,
         installmentAmount: calc?.installment_amount,
+        chequeId: paymentType === "cheque" ? selectedChequeId ?? undefined : undefined,
+        chequeNumber: paymentType === "cheque" ? selectedCheque?.cheque_number ?? undefined : undefined,
       };
     },
     [
@@ -976,6 +1064,8 @@ export default function ShoppingPage() {
       cashAmountInput,
       installmentCount,
       installmentCalculation,
+      selectedChequeId,
+      selectedCheque,
       getShopNameFromUser,
       parseAmountInput,
     ],
@@ -1063,6 +1153,30 @@ export default function ShoppingPage() {
       return;
     }
 
+    // اعتبارسنجی: فروش چکی
+    if (paymentType === 'cheque') {
+      if (!effectiveOnline) {
+        toast.error("فروش چکی فقط در حالت آنلاین امکان‌پذیر است");
+        setIsSubmitting(false);
+        return;
+      }
+      if (loadingAvailableCheques) {
+        toast.error("در حال بارگذاری چک‌های قابل انتخاب، لطفاً صبر کنید");
+        setIsSubmitting(false);
+        return;
+      }
+      if (!selectedChequeId) {
+        toast.error("چک دریافتی را انتخاب کنید");
+        setIsSubmitting(false);
+        return;
+      }
+      if (!matchingCheques.some((cheque) => cheque.id === selectedChequeId)) {
+        toast.error("مبلغ چک باید برابر مبلغ قابل پرداخت فروش باشد");
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
     // اعتبارسنجی: برای خرید اقساطی باید شماره تلفن وارد شود
     if (paymentType === 'installment' && !phone) {
       toast.error("برای خرید اقساطی باید شماره تلفن مشتری را وارد کنید");
@@ -1112,8 +1226,11 @@ export default function ShoppingPage() {
       loadData.installment_count = installmentCount;
       // installment_amount در response برمی‌گردد و نیازی به ارسال نیست
     }
+    if (paymentType === 'cheque') {
+      loadData.cheque_id = selectedChequeId;
+    }
 
-    if (paymentType !== 'debt' && payableNow > 0) {
+    if (paymentType !== 'debt' && paymentType !== 'cheque' && payableNow > 0) {
       if (!paymentFieldsValid) {
         const msg =
           settlementMode === "split"
@@ -1214,6 +1331,10 @@ export default function ShoppingPage() {
         const paidCount = res.installments.filter((inst: any) => inst.is_paid).length;
         const totalCount = res.installments.length;
         successMessage = `خرید اقساطی ثبت شد. ${totalCount} قسط ایجاد شد (${paidCount} قسط پرداخت شده)`;
+      } else if (paymentType === "cheque") {
+        successMessage = res?.is_cheque_settled
+          ? "فروش چکی ثبت و تسویه شد"
+          : "فروش چکی ثبت شد — پس از وصول چک، درآمد ثبت می‌شود";
       }
       finalizeSuccessfulSale(res, successMessage);
     }).catch((error) => {
@@ -1228,7 +1349,7 @@ export default function ShoppingPage() {
         "warn",
       );
     });
-  }, [cart, phone, useCreditAmount, effectiveOnline, discounttype, total, formatNumber, paymentType, installmentCount, payableNow, paymentFieldsValid, settlementMode, appendPaymentSettlement, resetPaymentSettlement, installmentCalculation, calculatingInstallments, installmentCreditError, finalizeSuccessfulSale, queueCurrentPurchase, withTimeout]);
+  }, [cart, phone, useCreditAmount, effectiveOnline, discounttype, total, formatNumber, paymentType, installmentCount, payableNow, paymentFieldsValid, settlementMode, appendPaymentSettlement, resetPaymentSettlement, installmentCalculation, calculatingInstallments, installmentCreditError, finalizeSuccessfulSale, queueCurrentPurchase, withTimeout, selectedChequeId, matchingCheques, loadingAvailableCheques]);
 
   // بررسی اعتبارسنجی تخفیف هنگام تغییر total
   useEffect(() => {
@@ -1775,10 +1896,14 @@ export default function ShoppingPage() {
                   setInstallmentCalculation(null);
                   installmentCalculationRef.current = null;
                   setInstallmentCreditError("");
+                  setSelectedChequeId(null);
                 } else if (type === "installment") {
                   setDiscounttype(0);
                   setDiscountDisplay("");
                   setDiscountError("");
+                  setSelectedChequeId(null);
+                } else if (type === "cheque") {
+                  setSelectedChequeId(null);
                 }
               },
               installmentCount,
@@ -1806,6 +1931,12 @@ export default function ShoppingPage() {
               installmentCalculation,
               installmentPaymentEnabled,
               debtPaymentEnabled,
+              chequePaymentEnabled,
+              selectedChequeId,
+              onSelectedChequeChange: setSelectedChequeId,
+              matchingCheques,
+              loadingAvailableCheques,
+              salePayableAmount,
             }}
           />
         )}
@@ -2563,7 +2694,7 @@ export default function ShoppingPage() {
                     </CardContent>
                   )}
                   <CardContent sx={{ padding: { xs: "12px", md: "20px" }, paddingTop: 0 }}>
-                    {(installmentPaymentEnabled || debtPaymentEnabled) && (
+                    {(installmentPaymentEnabled || debtPaymentEnabled || chequePaymentEnabled) && (
                     <Box sx={{
                       display: "flex",
                       alignItems: "center",
@@ -2591,10 +2722,14 @@ export default function ShoppingPage() {
                             setInstallmentCalculation(null);
                             installmentCalculationRef.current = null;
                             setInstallmentCreditError('');
+                            setSelectedChequeId(null);
                           } else if (next === 'installment') {
                             setDiscounttype(0);
                             setDiscountDisplay('');
                             setDiscountError('');
+                            setSelectedChequeId(null);
+                          } else if (next === 'cheque') {
+                            setSelectedChequeId(null);
                           }
                         }}
                         sx={{
@@ -2668,6 +2803,28 @@ export default function ShoppingPage() {
                           sx={{ mr: 0, ml: 0 }}
                         />
                         )}
+                        {chequePaymentEnabled && (
+                        <FormControlLabel
+                          value="cheque"
+                          control={
+                            <Radio
+                              size="small"
+                              sx={{
+                                color: "var(--admin-text-secondary)",
+                                "&.Mui-checked": {
+                                  color: "var(--admin-accent)"
+                                }
+                              }}
+                            />
+                          }
+                          label={
+                            <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "14px" } }}>
+                              چکی
+                            </Typography>
+                          }
+                          sx={{ mr: 0, ml: 0 }}
+                        />
+                        )}
                       </RadioGroup>
                     </FormControl>
                     </Box>
@@ -2682,6 +2839,58 @@ export default function ShoppingPage() {
                             شماره تلفن مشتری الزامی است
                           </Typography>
                         )}
+                      </Box>
+                    )}
+                    {chequePaymentEnabled && paymentType === 'cheque' && (
+                      <Box sx={{ mt: { xs: "8px", md: "12px" } }}>
+                        <Typography sx={{
+                          color: "var(--admin-text-muted)",
+                          fontSize: { xs: "11px", md: "13px" },
+                          mb: 1,
+                        }}>
+                          مبلغ قابل پرداخت: {formatNumber(salePayableAmount)} تومان — چک باید دقیقاً همین مبلغ باشد
+                        </Typography>
+                        {loadingAvailableCheques ? (
+                          <Box sx={{ display: "flex", alignItems: "center", gap: 1, py: 1 }}>
+                            <CircularProgress size={18} sx={{ color: "var(--admin-accent)" }} />
+                            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: { xs: "11px", md: "13px" } }}>
+                              در حال بارگذاری چک‌های قابل انتخاب...
+                            </Typography>
+                          </Box>
+                        ) : matchingCheques.length === 0 ? (
+                          <Box sx={{ p: { xs: "8px", md: "12px" }, bgcolor: "var(--admin-surface-alt)", borderRadius: "8px" }}>
+                            <Typography sx={{ color: "#e57373", fontSize: { xs: "11px", md: "13px" } }}>
+                              چک دریافتی pending با این مبلغ یافت نشد. ابتدا از بخش مالی → چک، چک دریافتی ثبت کنید.
+                            </Typography>
+                          </Box>
+                        ) : (
+                          <FormControl fullWidth size="small" sx={darkFieldSx}>
+                            <InputLabel sx={{ color: "var(--admin-text-muted)" }}>انتخاب چک دریافتی</InputLabel>
+                            <Select
+                              value={selectedChequeId ?? ""}
+                              label="انتخاب چک دریافتی"
+                              onChange={(e) =>
+                                setSelectedChequeId(e.target.value ? Number(e.target.value) : null)
+                              }
+                              sx={{
+                                color: "var(--admin-text)",
+                                "& .MuiOutlinedInput-notchedOutline": { borderColor: "var(--admin-border)" },
+                              }}
+                            >
+                              <MenuItem value="">
+                                <em>انتخاب کنید</em>
+                              </MenuItem>
+                              {matchingCheques.map((cheque) => (
+                                <MenuItem key={cheque.id} value={cheque.id}>
+                                  {formatChequeOptionLabel(cheque)}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        )}
+                        <Typography sx={{ color: "#2196f3", fontSize: { xs: "11px", md: "12px" }, mt: 1 }}>
+                          تا وصول چک، مبلغ در open_cheques از موجودی حساب کسر می‌شود.
+                        </Typography>
                       </Box>
                     )}
                     {installmentPaymentEnabled && paymentType === 'installment' && (
@@ -3147,7 +3356,7 @@ export default function ShoppingPage() {
                   disabled={
                     !total || 
                     isSubmitting || 
-                    (payableNow > 0 && !paymentFieldsValid) ||
+                    (paymentType !== 'debt' && paymentType !== 'cheque' && payableNow > 0 && !paymentFieldsValid) ||
                     (installmentPaymentEnabled && paymentType === 'installment' && (
                       !phone || 
                       phone.trim() === '' || 
@@ -3156,7 +3365,12 @@ export default function ShoppingPage() {
                       !installmentCalculation?.installment_amount ||
                       calculatingInstallments
                     )) ||
-                    (paymentType === 'debt' && (!phone || phone.trim() === ''))
+                    (paymentType === 'debt' && (!phone || phone.trim() === '')) ||
+                    (chequePaymentEnabled && paymentType === 'cheque' && (
+                      loadingAvailableCheques ||
+                      !selectedChequeId ||
+                      matchingCheques.length === 0
+                    ))
                   }
                   onClick={(e) => {
                     e.preventDefault();
