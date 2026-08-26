@@ -3,7 +3,6 @@ import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { Button, Modal, Dialog, DialogTitle, DialogContent, DialogActions, Box, Typography, Table, TableBody, TableContainer, TableHead, TableRow, Paper, IconButton, Input, Card, CardContent, Grid, Container, CircularProgress, TextField, FormControl, FormLabel, RadioGroup, FormControlLabel, Radio, Tooltip, MenuItem, Select, InputLabel } from '@mui/material';
 import SafeBarcodeScanner from "@/app/coponent/SafeBarcodeScanner";
 import DeleteIcon from '@mui/icons-material/Delete';
-import AddIcon from '@mui/icons-material/Add';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import FlashlightOnIcon from '@mui/icons-material/FlashlightOn';
 import FlashlightOffIcon from '@mui/icons-material/FlashlightOff';
@@ -18,6 +17,7 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import Inventory2Icon from '@mui/icons-material/Inventory2';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import AddIcon from '@mui/icons-material/Add';
 import PhoneIcon from '@mui/icons-material/Phone';
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import PrintIcon from '@mui/icons-material/Print';
@@ -73,6 +73,8 @@ import {
 import type { PaymentType } from '@/app/lib/paymentTypes';
 import SaleProductListPanel from '@/app/admin/SaleProductListPanel';
 import AdminMenuModeView from '@/app/admin/AdminMenuModeView';
+import AdminClassicPosView from '@/app/admin/AdminClassicPosView';
+import type { AdminMenuModeCartPanelProps } from '@/app/admin/AdminMenuModeCartPanel';
 import CartQuantityControl from '@/app/admin/CartQuantityControl';
 import MultiCartToolbar, { MAX_MULTI_CARTS } from '@/app/admin/MultiCartToolbar';
 import { getPriceUnitLabel, getDefaultCartQuantity, getQuantityIncrement, normalizeQuantityValue } from '@/app/lib/productUnits';
@@ -88,10 +90,12 @@ import {
 import {
   buildAvailableChequesForSaleUrl,
   extractChequeList,
-  filterChequesMatchingAmount,
+  filterChequesForSale,
   formatChequeOptionLabel,
+  parseAmount,
   type Cheque,
 } from '@/app/lib/cheques';
+import ChequeFormSheet from '@/app/admin/cheques/ChequeFormSheet';
 
 
 
@@ -178,12 +182,14 @@ export default function ShoppingPage() {
   const [productsCount, setProductsCount] = useState(0);
   const [showProductListOnMainPage, setShowProductListOnMainPage] = useState(false);
   const [menuMode, setMenuMode] = useState(false);
+  const [classicPosMode, setClassicPosMode] = useState(false);
   const [installmentPaymentEnabled, setInstallmentPaymentEnabled] = useState(true);
   const [debtPaymentEnabled, setDebtPaymentEnabled] = useState(false);
   const [chequePaymentEnabled, setChequePaymentEnabled] = useState(false);
   const [selectedChequeId, setSelectedChequeId] = useState<number | null>(null);
   const [availableCheques, setAvailableCheques] = useState<Cheque[]>([]);
   const [loadingAvailableCheques, setLoadingAvailableCheques] = useState(false);
+  const [chequeCreateOpen, setChequeCreateOpen] = useState(false);
   const [kgSalesEnabled, setKgSalesEnabled] = useState(false);
   const [salePriceEditEnabled, setSalePriceEditEnabled] = useState(false);
   const [saleSuccessOpen, setSaleSuccessOpen] = useState(false);
@@ -248,7 +254,7 @@ export default function ShoppingPage() {
   );
 
   const matchingCheques = useMemo(
-    () => filterChequesMatchingAmount(availableCheques, salePayableAmount),
+    () => filterChequesForSale(availableCheques, salePayableAmount),
     [availableCheques, salePayableAmount],
   );
 
@@ -256,6 +262,13 @@ export default function ShoppingPage() {
     () => matchingCheques.find((c) => c.id === selectedChequeId) ?? null,
     [matchingCheques, selectedChequeId],
   );
+
+  const selectedChequeAmount = selectedCheque ? parseAmount(selectedCheque.amount) : 0;
+  const chequeRemainder =
+    paymentType === "cheque" && selectedCheque
+      ? Math.max(0, salePayableAmount - selectedChequeAmount)
+      : 0;
+  const settlementTarget = paymentType === "cheque" ? chequeRemainder : payableNow;
 
   const sanitizeAmountInput = useCallback(
     (value: string) => value.replace(/[^\d۰-۹٠-٩,]/g, ""),
@@ -268,14 +281,14 @@ export default function ShoppingPage() {
       setPaymentSplitError("");
       if (sanitized === "") {
         setCardAmountInput("");
-        setCashAmountInput(String(payableNow));
+        setCashAmountInput(String(settlementTarget));
         return;
       }
-      const card = Math.min(parseAmountInput(sanitized), payableNow);
+      const card = Math.min(parseAmountInput(sanitized), settlementTarget);
       setCardAmountInput(String(card));
-      setCashAmountInput(String(Math.max(0, payableNow - card)));
+      setCashAmountInput(String(Math.max(0, settlementTarget - card)));
     },
-    [sanitizeAmountInput, parseAmountInput, payableNow],
+    [sanitizeAmountInput, parseAmountInput, settlementTarget],
   );
 
   const handleCashAmountChange = useCallback(
@@ -284,14 +297,14 @@ export default function ShoppingPage() {
       setPaymentSplitError("");
       if (sanitized === "") {
         setCashAmountInput("");
-        setCardAmountInput(String(payableNow));
+        setCardAmountInput(String(settlementTarget));
         return;
       }
-      const cash = Math.min(parseAmountInput(sanitized), payableNow);
+      const cash = Math.min(parseAmountInput(sanitized), settlementTarget);
       setCashAmountInput(String(cash));
-      setCardAmountInput(String(Math.max(0, payableNow - cash)));
+      setCardAmountInput(String(Math.max(0, settlementTarget - cash)));
     },
-    [sanitizeAmountInput, parseAmountInput, payableNow],
+    [sanitizeAmountInput, parseAmountInput, settlementTarget],
   );
 
   const resetPaymentSettlement = useCallback(() => {
@@ -415,33 +428,40 @@ export default function ShoppingPage() {
   );
 
   const paymentFieldsValid = useMemo(() => {
-    if (payableNow <= 0) return true;
+    if (settlementTarget <= 0) return true;
     if (settlementMode === "card_all" || settlementMode === "cash_all") return true;
     const card = parseAmountInput(cardAmountInput);
     const cash = parseAmountInput(cashAmountInput);
-    return card + cash === payableNow;
-  }, [payableNow, settlementMode, cardAmountInput, cashAmountInput, parseAmountInput]);
+    return card + cash === settlementTarget;
+  }, [settlementTarget, settlementMode, cardAmountInput, cashAmountInput, parseAmountInput]);
 
   useEffect(() => {
-    if (payableNow <= 0) {
-      setCardAmountInput("");
-      setCashAmountInput("");
+    if (settlementTarget <= 0) {
+      setCardAmountInput(paymentType === "cheque" ? "0" : "");
+      setCashAmountInput(paymentType === "cheque" ? "0" : "");
       setPaymentSplitError("");
       return;
     }
     if (settlementMode === "card_all") {
-      setCardAmountInput(String(payableNow));
+      setCardAmountInput(String(settlementTarget));
       setCashAmountInput("0");
       setPaymentSplitError("");
     } else if (settlementMode === "cash_all") {
       setCardAmountInput("0");
-      setCashAmountInput(String(payableNow));
+      setCashAmountInput(String(settlementTarget));
       setPaymentSplitError("");
     } else if (settlementMode === "split") {
-      const card = Math.min(parseAmountInput(cardAmountInput), payableNow);
-      setCashAmountInput(String(Math.max(0, payableNow - card)));
+      const existingCard = parseAmountInput(cardAmountInput);
+      if (!cardAmountInput || cardAmountInput === "") {
+        setCardAmountInput(String(settlementTarget));
+        setCashAmountInput("0");
+      } else {
+        const card = Math.min(existingCard, settlementTarget);
+        setCardAmountInput(String(card));
+        setCashAmountInput(String(Math.max(0, settlementTarget - card)));
+      }
     }
-  }, [payableNow, settlementMode, cardAmountInput, parseAmountInput]);
+  }, [settlementTarget, settlementMode, cardAmountInput, parseAmountInput, paymentType]);
 
   const appendPaymentSettlement = useCallback(
     (loadData: Record<string, unknown>): string | null => {
@@ -861,6 +881,7 @@ export default function ShoppingPage() {
       const settings = readAdminPosSettings();
       setShowProductListOnMainPage(settings.showProductListOnMainPage);
       setMenuMode(settings.menuMode);
+      setClassicPosMode(settings.classicPosMode);
       setInstallmentPaymentEnabled(settings.installmentPaymentEnabled);
       setDebtPaymentEnabled(settings.debtPaymentEnabled);
       setChequePaymentEnabled(settings.chequePaymentEnabled);
@@ -908,6 +929,29 @@ export default function ShoppingPage() {
     }
   }, [paymentType, chequePaymentEnabled, matchingCheques, selectedChequeId]);
 
+  const loadAvailableCheques = useCallback(async () => {
+    setLoadingAvailableCheques(true);
+    try {
+      const token = tokenCode();
+      if (!token) {
+        setAvailableCheques([]);
+        return;
+      }
+      const res = await FetchWithJwtClient(
+        "GET",
+        buildAvailableChequesForSaleUrl(),
+        token,
+      );
+      if (res?.hasError) {
+        setAvailableCheques([]);
+        return;
+      }
+      setAvailableCheques(extractChequeList(res));
+    } finally {
+      setLoadingAvailableCheques(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (paymentType !== "cheque" || !chequePaymentEnabled) {
       setAvailableCheques([]);
@@ -915,7 +959,7 @@ export default function ShoppingPage() {
     }
 
     let cancelled = false;
-    const loadAvailableCheques = async () => {
+    const load = async () => {
       setLoadingAvailableCheques(true);
       try {
         const token = tokenCode();
@@ -939,11 +983,11 @@ export default function ShoppingPage() {
       }
     };
 
-    void loadAvailableCheques();
+    void load();
     return () => {
       cancelled = true;
     };
-  }, [paymentType, chequePaymentEnabled, salePayableAmount]);
+  }, [paymentType, chequePaymentEnabled]);
 
   const clearMenuCart = useCallback(() => {
     clearOrRemoveActiveCart();
@@ -1206,13 +1250,13 @@ export default function ShoppingPage() {
         setIsSubmitting(false);
         return;
       }
-      if (!selectedChequeId) {
+      if (!selectedChequeId || !selectedCheque) {
         toast.error("چک دریافتی را انتخاب کنید");
         setIsSubmitting(false);
         return;
       }
-      if (!matchingCheques.some((cheque) => cheque.id === selectedChequeId)) {
-        toast.error("مبلغ چک باید برابر مبلغ قابل پرداخت فروش باشد");
+      if (selectedChequeAmount <= 0 || selectedChequeAmount > salePayableAmount) {
+        toast.error("مبلغ چک باید کمتر یا برابر مبلغ قابل پرداخت باشد");
         setIsSubmitting(false);
         return;
       }
@@ -1256,6 +1300,35 @@ export default function ShoppingPage() {
     }
     if (paymentType === 'cheque') {
       loadData.cheque_id = selectedChequeId;
+      let cash = 0;
+      let card = 0;
+      if (chequeRemainder > 0) {
+        if (settlementMode === "card_all") {
+          card = chequeRemainder;
+        } else if (settlementMode === "cash_all") {
+          cash = chequeRemainder;
+        } else {
+          if (!paymentFieldsValid) {
+            const msg = `جمع نقد و کارت باید برابر باقی‌مانده ${formatNumber(chequeRemainder)} تومان باشد`;
+            setPaymentSplitError(msg);
+            toast.error(msg);
+            setIsSubmitting(false);
+            return;
+          }
+          card = parseAmountInput(cardAmountInput);
+          cash = parseAmountInput(cashAmountInput);
+        }
+      }
+      if (cash + card + selectedChequeAmount !== salePayableAmount) {
+        const msg = "نقد + کارت + مبلغ چک باید برابر مبلغ قابل پرداخت باشد";
+        setPaymentSplitError(msg);
+        toast.error(msg);
+        setIsSubmitting(false);
+        return;
+      }
+      loadData.cash_amount = cash;
+      loadData.card_amount = card;
+      setPaymentSplitError("");
     }
 
     if (paymentType !== 'debt' && paymentType !== 'cheque' && payableNow > 0) {
@@ -1360,9 +1433,12 @@ export default function ShoppingPage() {
         const totalCount = res.installments.length;
         successMessage = `خرید اقساطی ثبت شد. ${totalCount} قسط ایجاد شد (${paidCount} قسط پرداخت شده)`;
       } else if (paymentType === "cheque") {
-        successMessage = res?.is_cheque_settled
-          ? "فروش چکی ثبت و تسویه شد"
-          : "فروش چکی ثبت شد — پس از وصول چک، درآمد ثبت می‌شود";
+        successMessage =
+          chequeRemainder > 0
+            ? "فروش ترکیبی چک و نقد/کارت ثبت شد"
+            : res?.is_cheque_settled
+              ? "فروش چکی ثبت و تسویه شد"
+              : "فروش چکی ثبت شد — پس از وصول چک، درآمد ثبت می‌شود";
       }
       finalizeSuccessfulSale(res, successMessage);
     }).catch((error) => {
@@ -1377,7 +1453,7 @@ export default function ShoppingPage() {
         "warn",
       );
     });
-  }, [cart, phone, useCreditAmount, effectiveOnline, discounttype, total, formatNumber, paymentType, installmentCount, payableNow, paymentFieldsValid, settlementMode, appendPaymentSettlement, resetPaymentSettlement, installmentCalculation, calculatingInstallments, installmentCreditError, finalizeSuccessfulSale, queueCurrentPurchase, withTimeout, selectedChequeId, matchingCheques, loadingAvailableCheques, buildPurchaseProductLine]);
+  }, [cart, phone, useCreditAmount, effectiveOnline, discounttype, total, formatNumber, paymentType, installmentCount, payableNow, paymentFieldsValid, settlementMode, appendPaymentSettlement, resetPaymentSettlement, installmentCalculation, calculatingInstallments, installmentCreditError, finalizeSuccessfulSale, queueCurrentPurchase, withTimeout, selectedChequeId, selectedCheque, selectedChequeAmount, chequeRemainder, salePayableAmount, loadingAvailableCheques, buildPurchaseProductLine, parseAmountInput, cardAmountInput, cashAmountInput]);
 
   // بررسی اعتبارسنجی تخفیف هنگام تغییر total
   useEffect(() => {
@@ -1733,6 +1809,164 @@ export default function ShoppingPage() {
 
 
 
+  const posCartPanel = useMemo((): AdminMenuModeCartPanelProps => ({
+    cart,
+    total,
+    formatNumber,
+    onUpdateQuantity: updateQuantity,
+    onSetQuantity: setCartItemQuantity,
+    kgSalesEnabled,
+    onRemoveItem: removeItemFromCart,
+    onClearCart: clearMenuCart,
+    cartCount,
+    activeCartIndex,
+    onSwitchCart: switchCart,
+    onAddCart: addCartSlot,
+    phone,
+    phoneInputKey: `pos-phone-${activeCartIndex}`,
+    onChangePhone,
+    checkingCredit,
+    credit,
+    useCreditAmount,
+    discounttype,
+    discountDisplay,
+    discountError,
+    isDiscountFocused,
+    onDiscountFocus: () => setIsDiscountFocused(true),
+    onDiscountChange: (value: string) => {
+      const cleaned = value.replace(/,/g, "");
+      if (cleaned === "" || /^\d+$/.test(cleaned)) {
+        const numValue = cleaned === "" ? 0 : Number(cleaned);
+        const maxDiscount = Math.floor(total * 0.15);
+        if (numValue > maxDiscount) {
+          setDiscountError(`حداکثر ${formatNumber(maxDiscount)} تومان`);
+          setDiscounttype(0);
+          setDiscountDisplay("");
+        } else {
+          setDiscountError("");
+          setDiscounttype(numValue);
+          setDiscountDisplay(cleaned === "" ? "" : cleaned);
+        }
+      }
+    },
+    onDiscountBlur: (value: string) => {
+      setIsDiscountFocused(false);
+      const cleaned = value.replace(/,/g, "");
+      if (cleaned === "" || cleaned === "0" || Number(cleaned) === 0) {
+        setDiscountDisplay("");
+        setDiscounttype(0);
+        setDiscountError("");
+      } else {
+        setDiscountDisplay(new Intl.NumberFormat("fa-IR").format(Number(cleaned)));
+      }
+    },
+    paymentType,
+    onPaymentTypeChange: (type) => {
+      setPaymentType(type);
+      if (type === "cash") {
+        setInstallmentCount(2);
+        setInstallmentCalculation(null);
+        installmentCalculationRef.current = null;
+        setInstallmentCreditError("");
+        setSelectedChequeId(null);
+      } else if (type === "installment") {
+        setDiscounttype(0);
+        setDiscountDisplay("");
+        setDiscountError("");
+        setSelectedChequeId(null);
+      } else if (type === "cheque") {
+        setSelectedChequeId(null);
+        setSettlementMode("cash_all");
+      }
+    },
+    installmentCount,
+    onInstallmentCountChange: setInstallmentCount,
+    payableNow,
+    settlementMode,
+    onSettlementModeChange: (mode) => {
+      setSettlementMode(mode);
+      setPaymentSplitError("");
+      if (mode === "split") {
+        setCardAmountInput(String(settlementTarget));
+        setCashAmountInput("0");
+      }
+    },
+    cardAmountInput,
+    cashAmountInput,
+    onCardAmountChange: handleCardAmountChange,
+    onCashAmountChange: handleCashAmountChange,
+    paymentSplitError,
+    paymentFieldsValid,
+    isSubmitting,
+    onConfirm: confirm,
+    calculatingInstallments,
+    installmentCreditError,
+    installmentCalculation,
+    installmentPaymentEnabled,
+    debtPaymentEnabled,
+    chequePaymentEnabled,
+    selectedChequeId,
+    onSelectedChequeChange: setSelectedChequeId,
+    matchingCheques,
+    loadingAvailableCheques,
+    salePayableAmount,
+    chequeRemainder,
+    selectedChequeAmount,
+    onOpenCreateCheque: () => setChequeCreateOpen(true),
+    salePriceEditEnabled,
+    onSalePriceChange: setCartItemSalePrice,
+  }), [
+    cart,
+    total,
+    updateQuantity,
+    setCartItemQuantity,
+    kgSalesEnabled,
+    removeItemFromCart,
+    clearMenuCart,
+    cartCount,
+    activeCartIndex,
+    switchCart,
+    addCartSlot,
+    phone,
+    onChangePhone,
+    checkingCredit,
+    credit,
+    useCreditAmount,
+    discounttype,
+    discountDisplay,
+    discountError,
+    isDiscountFocused,
+    paymentType,
+    installmentCount,
+    payableNow,
+    settlementMode,
+    cardAmountInput,
+    cashAmountInput,
+    handleCardAmountChange,
+    handleCashAmountChange,
+    paymentSplitError,
+    paymentFieldsValid,
+    isSubmitting,
+    confirm,
+    calculatingInstallments,
+    installmentCreditError,
+    installmentCalculation,
+    installmentPaymentEnabled,
+    debtPaymentEnabled,
+    chequePaymentEnabled,
+    selectedChequeId,
+    matchingCheques,
+    loadingAvailableCheques,
+    salePayableAmount,
+    chequeRemainder,
+    selectedChequeAmount,
+    salePriceEditEnabled,
+    setCartItemSalePrice,
+    formatNumber,
+  ]);
+
+
+
   return (
     <Box sx={{ position: 'relative', minHeight: '100vh', direction: "rtl", background: "var(--admin-bg-gradient)" }}>
       <Container maxWidth="xl" sx={{ padding: { xs: '12px', md: '24px' }, paddingBottom: { xs: '140px', md: '56px' } }}>
@@ -1877,117 +2111,18 @@ export default function ShoppingPage() {
             products={items}
             onAddProduct={addProductToCart}
             formatNumber={formatNumber}
-            cartPanel={{
-              cart,
-              total,
-              formatNumber,
-              onUpdateQuantity: updateQuantity,
-              onSetQuantity: setCartItemQuantity,
-              kgSalesEnabled,
-              onRemoveItem: removeItemFromCart,
-              onClearCart: clearMenuCart,
-              cartCount,
-              activeCartIndex,
-              onSwitchCart: switchCart,
-              onAddCart: addCartSlot,
-              phone,
-              phoneInputKey: `menu-phone-${activeCartIndex}`,
-              onChangePhone,
-              checkingCredit,
-              credit,
-              useCreditAmount,
-              discounttype,
-              discountDisplay,
-              discountError,
-              isDiscountFocused,
-              onDiscountFocus: () => setIsDiscountFocused(true),
-              onDiscountChange: (value: string) => {
-                const cleaned = value.replace(/,/g, "");
-                if (cleaned === "" || /^\d+$/.test(cleaned)) {
-                  const numValue = cleaned === "" ? 0 : Number(cleaned);
-                  const maxDiscount = Math.floor(total * 0.15);
-                  if (numValue > maxDiscount) {
-                    setDiscountError(
-                      `حداکثر ${formatNumber(maxDiscount)} تومان`,
-                    );
-                    setDiscounttype(0);
-                    setDiscountDisplay("");
-                  } else {
-                    setDiscountError("");
-                    setDiscounttype(numValue);
-                    setDiscountDisplay(cleaned === "" ? "" : cleaned);
-                  }
-                }
-              },
-              onDiscountBlur: (value: string) => {
-                setIsDiscountFocused(false);
-                const cleaned = value.replace(/,/g, "");
-                if (cleaned === "" || cleaned === "0" || Number(cleaned) === 0) {
-                  setDiscountDisplay("");
-                  setDiscounttype(0);
-                  setDiscountError("");
-                } else {
-                  setDiscountDisplay(
-                    new Intl.NumberFormat("fa-IR").format(Number(cleaned)),
-                  );
-                }
-              },
-              paymentType,
-              onPaymentTypeChange: (type) => {
-                setPaymentType(type);
-                if (type === "cash") {
-                  setInstallmentCount(2);
-                  setInstallmentCalculation(null);
-                  installmentCalculationRef.current = null;
-                  setInstallmentCreditError("");
-                  setSelectedChequeId(null);
-                } else if (type === "installment") {
-                  setDiscounttype(0);
-                  setDiscountDisplay("");
-                  setDiscountError("");
-                  setSelectedChequeId(null);
-                } else if (type === "cheque") {
-                  setSelectedChequeId(null);
-                }
-              },
-              installmentCount,
-              onInstallmentCountChange: setInstallmentCount,
-              payableNow,
-              settlementMode,
-              onSettlementModeChange: (mode) => {
-                setSettlementMode(mode);
-                setPaymentSplitError("");
-                if (mode === "split") {
-                  setCardAmountInput(String(payableNow));
-                  setCashAmountInput("0");
-                }
-              },
-              cardAmountInput,
-              cashAmountInput,
-              onCardAmountChange: handleCardAmountChange,
-              onCashAmountChange: handleCashAmountChange,
-              paymentSplitError,
-              paymentFieldsValid,
-              isSubmitting,
-              onConfirm: confirm,
-              calculatingInstallments,
-              installmentCreditError,
-              installmentCalculation,
-              installmentPaymentEnabled,
-              debtPaymentEnabled,
-              chequePaymentEnabled,
-              selectedChequeId,
-              onSelectedChequeChange: setSelectedChequeId,
-              matchingCheques,
-              loadingAvailableCheques,
-              salePayableAmount,
-              salePriceEditEnabled,
-              onSalePriceChange: setCartItemSalePrice,
-            }}
+            cartPanel={posCartPanel}
+            classicPosMode={classicPosMode}
           />
         )}
 
-        {!menuMode && (
+        {classicPosMode && !menuMode && (
+          <AdminClassicPosView
+            cartPanel={posCartPanel}
+          />
+        )}
+
+        {!menuMode && !classicPosMode && (
         <Grid container spacing={3} sx={{ maxWidth: { md: "1400px" }, margin: { md: "0 auto" } }}>
           {/* Cart Items */}
           <Grid item xs={12} md={(cart.length > 0 || cartCount > 1) ? 8 : 12}>
@@ -2811,6 +2946,7 @@ export default function ShoppingPage() {
                             setSelectedChequeId(null);
                           } else if (next === 'cheque') {
                             setSelectedChequeId(null);
+                            setSettlementMode("cash_all");
                           }
                         }}
                         sx={{
@@ -2900,7 +3036,7 @@ export default function ShoppingPage() {
                           }
                           label={
                             <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "14px" } }}>
-                              چکی
+                              چک + نقد/کارت
                             </Typography>
                           }
                           sx={{ mr: 0, ml: 0 }}
@@ -2925,27 +3061,25 @@ export default function ShoppingPage() {
                     {chequePaymentEnabled && paymentType === 'cheque' && (
                       <Box sx={{ mt: { xs: "8px", md: "12px" } }}>
                         <Typography sx={{
+                          color: "var(--admin-text)",
+                          fontSize: { xs: "12px", md: "14px" },
+                          fontWeight: 600,
+                          mb: 0.5,
+                        }}>
+                          فروش ترکیبی: چک + نقد/کارت
+                        </Typography>
+                        <Typography sx={{
                           color: "var(--admin-text-muted)",
                           fontSize: { xs: "11px", md: "13px" },
                           mb: 1,
                         }}>
-                          مبلغ قابل پرداخت: {formatNumber(salePayableAmount)} تومان — چک باید دقیقاً همین مبلغ باشد
+                          مبلغ فاکتور: {formatNumber(salePayableAmount)} تومان
+                          {selectedCheque
+                            ? ` — چک: ${formatNumber(selectedChequeAmount)} — باقی‌مانده نقد/کارت: ${formatNumber(chequeRemainder)}`
+                            : " — چک را انتخاب کنید؛ باقی‌مانده با نقد یا کارت تسویه می‌شود"}
                         </Typography>
-                        {loadingAvailableCheques ? (
-                          <Box sx={{ display: "flex", alignItems: "center", gap: 1, py: 1 }}>
-                            <CircularProgress size={18} sx={{ color: "var(--admin-accent)" }} />
-                            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: { xs: "11px", md: "13px" } }}>
-                              در حال بارگذاری چک‌های قابل انتخاب...
-                            </Typography>
-                          </Box>
-                        ) : matchingCheques.length === 0 ? (
-                          <Box sx={{ p: { xs: "8px", md: "12px" }, bgcolor: "var(--admin-surface-alt)", borderRadius: "8px" }}>
-                            <Typography sx={{ color: "#e57373", fontSize: { xs: "11px", md: "13px" } }}>
-                              چک دریافتی pending با این مبلغ یافت نشد. ابتدا از بخش مالی → چک، چک دریافتی ثبت کنید.
-                            </Typography>
-                          </Box>
-                        ) : (
-                          <FormControl fullWidth size="small" sx={darkFieldSx}>
+                        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                          <FormControl fullWidth size="small" sx={darkFieldSx} disabled={loadingAvailableCheques}>
                             <InputLabel sx={{ color: "var(--admin-text-muted)" }}>انتخاب چک دریافتی</InputLabel>
                             <Select
                               value={selectedChequeId ?? ""}
@@ -2968,10 +3102,139 @@ export default function ShoppingPage() {
                               ))}
                             </Select>
                           </FormControl>
-                        )}
-                        <Typography sx={{ color: "#2196f3", fontSize: { xs: "11px", md: "12px" }, mt: 1 }}>
-                          تا وصول چک، مبلغ در open_cheques از موجودی حساب کسر می‌شود.
-                        </Typography>
+                          <IconButton
+                            onClick={() => setChequeCreateOpen(true)}
+                            aria-label="ثبت چک جدید"
+                            sx={{
+                              bgcolor: "var(--admin-icon-bg)",
+                              border: "1px solid var(--admin-border)",
+                              borderRadius: "10px",
+                              color: "var(--admin-accent)",
+                              flexShrink: 0,
+                            }}
+                          >
+                            <AddIcon />
+                          </IconButton>
+                        </Box>
+                        {loadingAvailableCheques ? (
+                          <Box sx={{ display: "flex", alignItems: "center", gap: 1, py: 1 }}>
+                            <CircularProgress size={18} sx={{ color: "var(--admin-accent)" }} />
+                            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: { xs: "11px", md: "13px" } }}>
+                              در حال بارگذاری چک‌های قابل انتخاب...
+                            </Typography>
+                          </Box>
+                        ) : matchingCheques.length === 0 ? (
+                          <Typography sx={{ color: "#e57373", fontSize: { xs: "11px", md: "13px" }, mt: 1 }}>
+                            چک مناسب یافت نشد — با + چک دریافتی ثبت کنید (مبلغ می‌تواند کمتر از فاکتور باشد).
+                          </Typography>
+                        ) : null}
+
+                        <Box
+                          sx={{
+                            mt: 1.5,
+                            p: { xs: "8px", md: "12px" },
+                            bgcolor: "var(--admin-surface-alt)",
+                            borderRadius: "8px",
+                            border: "1px solid rgba(33, 150, 243, 0.25)",
+                            opacity: selectedCheque ? 1 : 0.7,
+                          }}
+                        >
+                          <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "11px", md: "13px" }, fontWeight: 600, mb: 1 }}>
+                            {chequeRemainder > 0
+                              ? `باقی‌مانده را با نقد یا کارت بپردازید: ${formatNumber(chequeRemainder)} تومان`
+                              : selectedCheque
+                                ? "چک کل مبلغ را پوشش می‌دهد — نقد/کارت صفر ارسال می‌شود"
+                                : "پس از انتخاب چک، باقی‌مانده نقد/کارت اینجا مشخص می‌شود"}
+                          </Typography>
+                          <RadioGroup
+                            row
+                            value={settlementMode}
+                            onChange={(e) => {
+                              const mode = e.target.value as SettlementMode;
+                              setSettlementMode(mode);
+                              setPaymentSplitError("");
+                              if (mode === "split") {
+                                setCardAmountInput(String(Math.max(0, chequeRemainder)));
+                                setCashAmountInput("0");
+                              }
+                            }}
+                            sx={{
+                              display: "flex",
+                              gap: { xs: 0, md: 0.5 },
+                              "& .MuiFormControlLabel-root": { mr: 0, ml: 0 },
+                            }}
+                          >
+                            <FormControlLabel
+                              value="card_all"
+                              disabled={!selectedCheque || chequeRemainder <= 0}
+                              control={<Radio size="small" sx={{ color: "var(--admin-text-secondary)", "&.Mui-checked": { color: "var(--admin-accent)" } }} />}
+                              label={<Typography sx={{ fontSize: { xs: "11px", md: "13px" } }}>کارت</Typography>}
+                            />
+                            <FormControlLabel
+                              value="cash_all"
+                              disabled={!selectedCheque || chequeRemainder <= 0}
+                              control={<Radio size="small" sx={{ color: "var(--admin-text-secondary)", "&.Mui-checked": { color: "var(--admin-accent)" } }} />}
+                              label={<Typography sx={{ fontSize: { xs: "11px", md: "13px" } }}>نقد</Typography>}
+                            />
+                            <FormControlLabel
+                              value="split"
+                              disabled={!selectedCheque || chequeRemainder <= 0}
+                              control={<Radio size="small" sx={{ color: "var(--admin-text-secondary)", "&.Mui-checked": { color: "var(--admin-accent)" } }} />}
+                              label={<Typography sx={{ fontSize: { xs: "11px", md: "13px" } }}>نقد + کارت</Typography>}
+                            />
+                          </RadioGroup>
+                          {selectedCheque && chequeRemainder > 0 && settlementMode === "split" && (
+                            <Box sx={{ mt: 1, display: "flex", flexDirection: "column", gap: 1 }}>
+                              <TextField
+                                label="کارت خوان"
+                                value={cardAmountInput}
+                                onChange={(e) => handleCardAmountChange(e.target.value)}
+                                size="small"
+                                fullWidth
+                                InputLabelProps={{ sx: { color: "var(--admin-text-muted)" } }}
+                                sx={darkFieldSx}
+                              />
+                              <TextField
+                                label="نقدی"
+                                value={cashAmountInput}
+                                onChange={(e) => handleCashAmountChange(e.target.value)}
+                                size="small"
+                                fullWidth
+                                InputLabelProps={{ sx: { color: "var(--admin-text-muted)" } }}
+                                sx={darkFieldSx}
+                              />
+                            </Box>
+                          )}
+                          {selectedCheque && (
+                            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: { xs: "10px", md: "12px" }, mt: 1 }}>
+                              ارسال: چک {formatNumber(selectedChequeAmount)}
+                              {" + "}نقد {formatNumber(
+                                chequeRemainder <= 0
+                                  ? 0
+                                  : settlementMode === "cash_all"
+                                    ? chequeRemainder
+                                    : settlementMode === "split"
+                                      ? parseAmountInput(cashAmountInput)
+                                      : 0,
+                              )}
+                              {" + "}کارت {formatNumber(
+                                chequeRemainder <= 0
+                                  ? 0
+                                  : settlementMode === "card_all"
+                                    ? chequeRemainder
+                                    : settlementMode === "split"
+                                      ? parseAmountInput(cardAmountInput)
+                                      : 0,
+                              )}
+                              {" = "}{formatNumber(salePayableAmount)}
+                            </Typography>
+                          )}
+                          {paymentSplitError && (
+                            <Typography sx={{ color: "#ff4444", fontSize: { xs: "11px", md: "12px" }, mt: 1 }}>
+                              {paymentSplitError}
+                            </Typography>
+                          )}
+                        </Box>
                       </Box>
                     )}
                     {installmentPaymentEnabled && paymentType === 'installment' && (
@@ -3151,7 +3414,7 @@ export default function ShoppingPage() {
                                 setSettlementMode(mode);
                                 setPaymentSplitError("");
                                 if (mode === "split") {
-                                  setCardAmountInput(String(payableNow));
+                                  setCardAmountInput(String(settlementTarget));
                                   setCashAmountInput("0");
                                 }
                               }}
@@ -3221,7 +3484,8 @@ export default function ShoppingPage() {
                         {settlementMode === "split" && (
                           <Box sx={{ marginTop: { xs: "8px", md: "10px" }, display: "flex", flexDirection: "column", gap: { xs: "8px", md: "10px" } }}>
                             <TextField
-                              label="مبلغ کارتخوان (تومان)"
+                              label="کارت خوان"
+                              placeholder="کارت خوان"
                               value={cardAmountInput}
                               onChange={(e) => handleCardAmountChange(e.target.value)}
                               size="small"
@@ -3230,7 +3494,8 @@ export default function ShoppingPage() {
                               sx={darkFieldSx}
                             />
                             <TextField
-                              label="مبلغ نقد / دستی (تومان)"
+                              label="نقدی"
+                              placeholder="نقدی"
                               value={cashAmountInput}
                               onChange={(e) => handleCashAmountChange(e.target.value)}
                               size="small"
@@ -3450,7 +3715,7 @@ export default function ShoppingPage() {
                     (chequePaymentEnabled && paymentType === 'cheque' && (
                       loadingAvailableCheques ||
                       !selectedChequeId ||
-                      matchingCheques.length === 0
+                      (chequeRemainder > 0 && !paymentFieldsValid)
                     ))
                   }
                   onClick={(e) => {
@@ -3513,27 +3778,30 @@ export default function ShoppingPage() {
       )}
 
       {/* Floating Action Button */}
-      {!menuMode && (
+      {(!menuMode || classicPosMode) && (
       <Button
         data-admin-tour="scan-product"
         onClick={handleOpenModal}
         sx={{
           position: 'fixed',
           bottom: { xs: '295px', md: '80px' },
-          right: { xs: '20px', md: '220px' },
+          right: { xs: '20px', md: classicPosMode ? '24px' : '220px' },
           borderRadius: '50%',
           width: { xs: '56px', md: '72px' },
           height: { xs: '56px', md: '72px' },
+          minWidth: { xs: '56px', md: '72px' },
           background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
           color: 'white',
-          fontSize: '28px',
+          fontSize: { xs: '28px', md: '36px' },
+          fontWeight: 300,
+          lineHeight: 1,
           transition: "all 0.3s ease",
           "&:hover": {
             transform: "scale(1.15)",
           }
         }}
       >
-        <AddIcon sx={{ fontSize: { xs: "32px", md: "40px" } }} />
+        +
       </Button>
       )}
 
@@ -3713,6 +3981,29 @@ export default function ShoppingPage() {
           </Box>
         </Box>
       </Modal>
+
+      <ChequeFormSheet
+        open={chequeCreateOpen}
+        onClose={() => setChequeCreateOpen(false)}
+        defaultType="received"
+        lockType
+        defaultAmount={salePayableAmount}
+        defaultPayee={phone}
+        onSaved={(cheque) => {
+          const amount = parseAmount(cheque.amount);
+          setAvailableCheques((prev) => {
+            if (prev.some((c) => c.id === cheque.id)) return prev;
+            return [cheque, ...prev];
+          });
+          setChequeCreateOpen(false);
+          if (amount > 0 && amount <= salePayableAmount) {
+            setSelectedChequeId(cheque.id);
+          } else if (amount > salePayableAmount) {
+            toast.warn("مبلغ چک بیشتر از مبلغ فاکتور است و قابل انتخاب نیست");
+          }
+          void loadAvailableCheques();
+        }}
+      />
 
       <Dialog
         open={networkWarningOpen}

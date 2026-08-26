@@ -126,6 +126,21 @@ export function extractChequeList(res: unknown): Cheque[] {
   return [];
 }
 
+export function extractCheque(res: unknown): Cheque | null {
+  if (!res || typeof res !== "object") return null;
+  const obj = res as Record<string, unknown>;
+  const candidates = [obj, obj.data, obj.cheque];
+  for (const candidate of candidates) {
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) continue;
+    const id = (candidate as Cheque).id;
+    const numericId = typeof id === "number" ? id : Number(id);
+    if (Number.isFinite(numericId) && numericId > 0) {
+      return { ...(candidate as Cheque), id: numericId };
+    }
+  }
+  return null;
+}
+
 export function buildChequesUrl(opts: {
   type: ChequeType | "all";
   status: string;
@@ -158,6 +173,15 @@ export function buildAvailableChequesForSaleUrl(): string {
 export function filterChequesMatchingAmount(cheques: Cheque[], amount: number): Cheque[] {
   if (amount <= 0) return [];
   return cheques.filter((c) => parseAmount(c.amount) === amount);
+}
+
+/** چک‌های دریافتی که مبلغ‌شان کمتر یا برابر مبلغ قابل پرداخت است (برای فروش ترکیبی چک + نقد/کارت) */
+export function filterChequesForSale(cheques: Cheque[], payableAmount: number): Cheque[] {
+  if (payableAmount <= 0) return [];
+  return cheques.filter((c) => {
+    const amt = parseAmount(c.amount);
+    return amt > 0 && amt <= payableAmount;
+  });
 }
 
 export function formatChequeOptionLabel(cheque: Cheque): string {

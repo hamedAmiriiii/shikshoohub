@@ -15,6 +15,7 @@ import {
   Radio,
 } from "@mui/material";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import AddIcon from "@mui/icons-material/Add";
 import PhoneNumberInput from "@/app/coponent/PhoneNumberInput/PhoneNumberInput";
 import type { PaymentType } from "@/app/lib/paymentTypes";
 import MultiCartToolbar from "@/app/admin/MultiCartToolbar";
@@ -118,6 +119,9 @@ export type AdminMenuModeCartPanelProps = {
   }>;
   loadingAvailableCheques?: boolean;
   salePayableAmount: number;
+  chequeRemainder?: number;
+  selectedChequeAmount?: number;
+  onOpenCreateCheque?: () => void;
   salePriceEditEnabled?: boolean;
   onSalePriceChange?: (itemId: number | string, value: string) => void;
 };
@@ -174,6 +178,9 @@ export default function AdminMenuModeCartPanel({
   matchingCheques,
   loadingAvailableCheques = false,
   salePayableAmount,
+  chequeRemainder = 0,
+  selectedChequeAmount = 0,
+  onOpenCreateCheque,
   salePriceEditEnabled = false,
   onSalePriceChange,
 }: AdminMenuModeCartPanelProps) {
@@ -204,7 +211,9 @@ export default function AdminMenuModeCartPanel({
         calculatingInstallments)) ||
     (chequePaymentEnabled &&
       paymentType === "cheque" &&
-      (loadingAvailableCheques || !selectedChequeId || matchingCheques.length === 0));
+      (loadingAvailableCheques ||
+        !selectedChequeId ||
+        (chequeRemainder > 0 && !paymentFieldsValid)));
 
   return (
     <Box
@@ -415,7 +424,7 @@ export default function AdminMenuModeCartPanel({
                 <FormControlLabel
                   value="cheque"
                   control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 14 } }} />}
-                  label={<Typography sx={{ fontSize: "9px" }}>چک</Typography>}
+                  label={<Typography sx={{ fontSize: "9px" }}>چک+نقد</Typography>}
                 />
               )}
             </RadioGroup>
@@ -430,19 +439,16 @@ export default function AdminMenuModeCartPanel({
 
         {chequePaymentEnabled && paymentType === "cheque" && (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 0.35 }}>
-            <Typography sx={{ fontSize: "8px", color: "var(--admin-text-muted)" }}>
-              مبلغ قابل پرداخت: {formatNumber(salePayableAmount)} تومان
+            <Typography sx={{ fontSize: "8px", fontWeight: 700, color: "var(--admin-text)" }}>
+              چک + نقد/کارت
             </Typography>
-            {loadingAvailableCheques ? (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                <CircularProgress size={10} />
-                <Typography sx={{ fontSize: "8px" }}>بارگذاری چک‌ها...</Typography>
-              </Box>
-            ) : matchingCheques.length === 0 ? (
-              <Typography sx={{ fontSize: "8px", color: "#e57373", lineHeight: 1.3 }}>
-                چک دریافتی pending با این مبلغ یافت نشد
-              </Typography>
-            ) : (
+            <Typography sx={{ fontSize: "8px", color: "var(--admin-text-muted)" }}>
+              فاکتور: {formatNumber(salePayableAmount)}
+              {selectedChequeId
+                ? ` · چک: ${formatNumber(selectedChequeAmount)} · باقی: ${formatNumber(chequeRemainder)}`
+                : ""}
+            </Typography>
+            <Box sx={{ display: "flex", gap: 0.35, alignItems: "center" }}>
               <TextField
                 select
                 size="small"
@@ -451,25 +457,53 @@ export default function AdminMenuModeCartPanel({
                   onSelectedChequeChange(e.target.value ? Number(e.target.value) : null)
                 }
                 SelectProps={{ native: true }}
-                sx={tinyFieldSx}
+                disabled={loadingAvailableCheques}
+                sx={{ ...tinyFieldSx, flex: 1 }}
               >
-                <option value="">انتخاب چک</option>
+                <option value="">{loadingAvailableCheques ? "بارگذاری..." : "انتخاب چک"}</option>
                 {matchingCheques.map((cheque) => (
                   <option key={cheque.id} value={cheque.id}>
                     {[
                       cheque.cheque_number ? `چک ${cheque.cheque_number}` : `#${cheque.id}`,
                       cheque.bank_name,
-                      cheque.due_date_jalali ? `سررسید ${cheque.due_date_jalali}` : null,
+                      cheque.amount != null ? formatNumber(Number(cheque.amount)) : null,
                     ]
                       .filter(Boolean)
                       .join(" — ")}
                   </option>
                 ))}
               </TextField>
+              {onOpenCreateCheque && (
+                <IconButton
+                  size="small"
+                  onClick={onOpenCreateCheque}
+                  aria-label="ثبت چک جدید"
+                  sx={{
+                    p: 0.35,
+                    border: "1px solid var(--admin-border)",
+                    borderRadius: "6px",
+                    color: "var(--admin-accent)",
+                  }}
+                >
+                  <AddIcon sx={{ fontSize: 16 }} />
+                </IconButton>
+              )}
+            </Box>
+            {!loadingAvailableCheques && matchingCheques.length === 0 && (
+              <Typography sx={{ fontSize: "8px", color: "#e57373", lineHeight: 1.3 }}>
+                چک مناسب نیست — با + ثبت کنید
+              </Typography>
             )}
-            <Typography sx={{ fontSize: "8px", color: "#2196f3", lineHeight: 1.3 }}>
-              تا وصول چک، در open_cheques منظور می‌شود
-            </Typography>
+            {selectedChequeId && chequeRemainder === 0 && (
+              <Typography sx={{ fontSize: "8px", color: "#2196f3", lineHeight: 1.3 }}>
+                چک کل مبلغ را پوشش می‌دهد
+              </Typography>
+            )}
+            {selectedChequeId && chequeRemainder > 0 && (
+              <Typography sx={{ fontSize: "8px", color: "var(--admin-accent)", lineHeight: 1.3 }}>
+                باقی‌مانده را پایین با نقد یا کارت بپردازید
+              </Typography>
+            )}
           </Box>
         )}
 
@@ -489,8 +523,14 @@ export default function AdminMenuModeCartPanel({
           />
         )}
 
-        {paymentType === "cash" && payableNow > 0 && (
+        {(paymentType === "cash" && payableNow > 0) ||
+        (paymentType === "cheque" && !!selectedChequeId && chequeRemainder > 0) ? (
           <FormControl component="fieldset" sx={{ minWidth: 0 }}>
+            {paymentType === "cheque" && (
+              <Typography sx={{ fontSize: "8px", color: "var(--admin-text-muted)", mb: 0.15 }}>
+                تسویه باقی‌مانده ({formatNumber(chequeRemainder)})
+              </Typography>
+            )}
             <RadioGroup
               row
               value={settlementMode}
@@ -514,24 +554,25 @@ export default function AdminMenuModeCartPanel({
               <FormControlLabel
                 value="split"
                 control={<Radio size="small" sx={{ p: 0.2, "& .MuiSvgIcon-root": { fontSize: 13 } }} />}
-                label={<Typography sx={{ fontSize: "8px" }}>ترکیب</Typography>}
+                label={<Typography sx={{ fontSize: "8px" }}>نقد+کارت</Typography>}
               />
             </RadioGroup>
           </FormControl>
-        )}
+        ) : null}
 
-        {paymentType === "cash" && settlementMode === "split" && payableNow > 0 && (
+        {((paymentType === "cash" && settlementMode === "split" && payableNow > 0) ||
+          (paymentType === "cheque" && settlementMode === "split" && chequeRemainder > 0)) && (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 0.35 }}>
             <TextField
               size="small"
-              placeholder="کارت"
+              placeholder="کارت خوان"
               value={cardAmountInput}
               onChange={(e) => onCardAmountChange(e.target.value)}
               sx={tinyFieldSx}
             />
             <TextField
               size="small"
-              placeholder="نقد"
+              placeholder="نقدی"
               value={cashAmountInput}
               onChange={(e) => onCashAmountChange(e.target.value)}
               sx={tinyFieldSx}

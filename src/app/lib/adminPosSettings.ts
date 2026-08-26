@@ -18,6 +18,8 @@ export type AdminPosSettings = {
   menuTableOrdersPopupEnabled: boolean;
   /** امکان تغییر قیمت فروش هنگام ثبت خرید */
   salePriceEditEnabled: boolean;
+  /** ظاهر کلاسیک فاکتور در صفحه فروش */
+  classicPosMode: boolean;
 };
 
 const DEFAULT_SETTINGS: AdminPosSettings = {
@@ -31,6 +33,7 @@ const DEFAULT_SETTINGS: AdminPosSettings = {
   restaurantCafeEnabled: false,
   menuTableOrdersPopupEnabled: false,
   salePriceEditEnabled: false,
+  classicPosMode: false,
 };
 
 export function readAdminPosSettings(): AdminPosSettings {

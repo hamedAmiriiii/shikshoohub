@@ -326,7 +326,7 @@ function ReceiptPreview({
 
           ) : null}
 
-          {receipt.settlementMode === "split" && (
+          {(receipt.settlementMode === "split" || receipt.paymentType === "cheque") && (
 
             <>
 

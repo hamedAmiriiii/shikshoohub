@@ -32,98 +32,26 @@ import tokenCode from "@/app/coponent/tokenCode";
 import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
 import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
 import { adminButtonStartIconSx, adminPageSx } from "@/app/admin/theme/adminTheme";
-import BottomSheet from "@/app/coponent/BottomSheet";
 import BottomSheetModal from "@/app/coponent/BottomSheetModal";
 import ChequeCard from "./ChequeCard";
+import ChequeFormSheet, {
+  CHEQUE_DATE_PICKER_Z,
+  chequeDatePickerBoxSx,
+  chequeFormFieldSx,
+} from "./ChequeFormSheet";
 import {
   CHEQUE_STATUS_OPTIONS,
   CHEQUE_TYPE_OPTIONS,
-  EXPENSE_TYPE_OPTIONS,
   TIME_FILTER_OPTIONS,
   buildChequesUrl,
   dateObjectToPayload,
   extractChequeList,
-  formatInputWithSeparator,
   formatNumber,
   parseAmount,
-  parseJalaliDateString,
   todayJalaliDateObject,
   type Cheque,
   type ChequeType,
-  type ExpenseType,
 } from "@/app/lib/cheques";
-
-const fieldSx = {
-  "& .MuiOutlinedInput-root": {
-    backgroundColor: "var(--admin-surface-alt)",
-    color: "var(--admin-text)",
-    "& fieldset": { borderColor: "var(--admin-border)" },
-    "&:hover fieldset": { borderColor: "var(--admin-accent)" },
-    "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
-  },
-  "& .MuiInputLabel-root": {
-    color: "var(--admin-text-muted)",
-    right: 14,
-    left: "auto",
-    transformOrigin: "top right",
-  },
-  "& .MuiInputLabel-shrink": {
-    transform: "translate(-14px, -9px) scale(0.75)",
-  },
-  "& .MuiInputBase-input": {
-    textAlign: "right",
-    direction: "rtl",
-  },
-} as const;
-
-const DATE_PICKER_Z = 1600;
-
-const datePickerBoxSx = {
-  width: "100%",
-  "& .rmdp-wrapper": { width: "100%" },
-  "& .rmdp-portal": { zIndex: `${DATE_PICKER_Z} !important` },
-  "& .rmdp-input": {
-    width: "100%",
-    height: "48px",
-    borderRadius: "12px",
-    backgroundColor: "var(--admin-surface-alt)",
-    border: "1px solid var(--admin-border)",
-    color: "var(--admin-text)",
-    fontSize: "14px",
-    padding: "8px 12px",
-    boxSizing: "border-box",
-  },
-  "& .rmdp-input:focus": {
-    borderColor: "var(--admin-accent)",
-    outline: "none",
-  },
-} as const;
-
-type FormState = {
-  type: ChequeType;
-  cheque_number: string;
-  bank_name: string;
-  payee: string;
-  amount: string;
-  title: string;
-  expense_type: ExpenseType;
-  note: string;
-  issue_date: DateObject | null;
-  due_date: DateObject | null;
-};
-
-const emptyForm = (): FormState => ({
-  type: "issued",
-  cheque_number: "",
-  bank_name: "",
-  payee: "",
-  amount: "",
-  title: "",
-  expense_type: "جاری",
-  note: "",
-  issue_date: todayJalaliDateObject(),
-  due_date: null,
-});
 
 export default function ChequesPage() {
   const [loading, setLoading] = useState(true);
@@ -138,8 +66,6 @@ export default function ChequesPage() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Cheque | null>(null);
-  const [form, setForm] = useState<FormState>(emptyForm);
-  const [saving, setSaving] = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState<Cheque | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -147,6 +73,9 @@ export default function ChequesPage() {
   const [clearTarget, setClearTarget] = useState<Cheque | null>(null);
   const [clearDate, setClearDate] = useState<DateObject | null>(todayJalaliDateObject());
   const [clearing, setClearing] = useState(false);
+
+  const [unclearTarget, setUnclearTarget] = useState<Cheque | null>(null);
+  const [unclearing, setUnclearing] = useState(false);
 
   const hasFilters = useMemo(() => {
     return (
@@ -203,99 +132,17 @@ export default function ChequesPage() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm(emptyForm());
     setFormOpen(true);
   };
 
   const openEdit = (cheque: Cheque) => {
     setEditing(cheque);
-    setForm({
-      type: (cheque.type as ChequeType) || "issued",
-      cheque_number: cheque.cheque_number || "",
-      bank_name: cheque.bank_name || "",
-      payee: cheque.payee || "",
-      amount: cheque.amount != null ? formatInputWithSeparator(String(cheque.amount)) : "",
-      title: cheque.title || "",
-      expense_type: (cheque.expense_type as ExpenseType) || "جاری",
-      note: cheque.note || "",
-      issue_date:
-        parseJalaliDateString(cheque.issue_date_jalali || cheque.issue_date) ||
-        todayJalaliDateObject(),
-      due_date: parseJalaliDateString(cheque.due_date_jalali || cheque.due_date),
-    });
     setFormOpen(true);
   };
 
   const closeForm = () => {
-    if (saving) return;
     setFormOpen(false);
     setEditing(null);
-    setForm(emptyForm());
-  };
-
-  const handleSubmit = async () => {
-    if (!form.cheque_number.trim()) {
-      toast.error("شماره چک را وارد کنید");
-      return;
-    }
-    if (!form.bank_name.trim()) {
-      toast.error("نام بانک را وارد کنید");
-      return;
-    }
-    if (!form.payee.trim()) {
-      toast.error(form.type === "issued" ? "در وجه را وارد کنید" : "پرداخت‌کننده را وارد کنید");
-      return;
-    }
-    const amountNum = parseAmount(form.amount);
-    if (amountNum <= 0) {
-      toast.error("مبلغ معتبر نیست");
-      return;
-    }
-    const due = dateObjectToPayload(form.due_date);
-    if (!due) {
-      toast.error("تاریخ سررسید را انتخاب کنید");
-      return;
-    }
-
-    const body: Record<string, unknown> = {
-      type: form.type,
-      cheque_number: form.cheque_number.trim(),
-      bank_name: form.bank_name.trim(),
-      payee: form.payee.trim(),
-      amount: amountNum,
-      due_date: due,
-    };
-
-    if (form.title.trim()) body.title = form.title.trim();
-    if (form.note.trim()) body.note = form.note.trim();
-
-    const issue = dateObjectToPayload(form.issue_date);
-    if (issue) body.issue_date = issue;
-
-    if (form.type === "issued") {
-      body.expense_type = form.expense_type;
-    }
-
-    setSaving(true);
-    try {
-      const token = tokenCode();
-      const res = editing
-        ? await FetchWithJwtClient("PUT", `/api/cheques/${editing.id}`, body)
-        : await FetchWithJwtClient("POST", "/api/cheques", body);
-
-      if (res?.hasError) {
-        toast.error(
-          getApiErrorMessage(res, editing ? "خطا در ویرایش چک" : "خطا در ثبت چک"),
-        );
-        return;
-      }
-
-      toast.success(editing ? "چک ویرایش شد" : "چک ثبت شد");
-      closeForm();
-      await loadCheques();
-    } finally {
-      setSaving(false);
-    }
   };
 
   const confirmDelete = async () => {
@@ -349,6 +196,31 @@ export default function ChequesPage() {
     }
   };
 
+  const confirmUnclear = async () => {
+    if (!unclearTarget?.id) return;
+    setUnclearing(true);
+    try {
+      const res = await FetchWithJwtClient(
+        "POST",
+        `/api/cheques/${unclearTarget.id}/unclear`,
+        {},
+      );
+      if (res?.hasError) {
+        toast.error(getApiErrorMessage(res, "خطا در برگشت وصول"));
+        return;
+      }
+      toast.success(
+        unclearTarget.type === "received"
+          ? "وصول برگشت خورد و درآمد مربوط حذف شد"
+          : "وصول برگشت خورد و هزینه مربوط حذف شد",
+      );
+      setUnclearTarget(null);
+      await loadCheques();
+    } finally {
+      setUnclearing(false);
+    }
+  };
+
   const totalAmount = useMemo(
     () => cheques.reduce((sum, c) => sum + parseAmount(c.amount), 0),
     [cheques],
@@ -387,7 +259,7 @@ export default function ChequesPage() {
           placeholder="جستجوی شماره چک"
           value={chequeNumberFilter}
           onChange={(e) => setChequeNumberFilter(e.target.value)}
-          sx={{ ...fieldSx, flex: 1, minWidth: 160 }}
+          sx={{ ...chequeFormFieldSx, flex: 1, minWidth: 160 }}
         />
         {hasFilters ? (
           <IconButton
@@ -448,15 +320,29 @@ export default function ChequesPage() {
           چکی یافت نشد
         </Box>
       ) : (
-        cheques.map((cheque) => (
-          <ChequeCard
-            key={cheque.id}
-            cheque={cheque}
-            onEdit={openEdit}
-            onDelete={setDeleteTarget}
-            onClear={openClear}
-          />
-        ))
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: {
+              xs: "1fr",
+              sm: "repeat(2, 1fr)",
+              md: "repeat(3, 1fr)",
+            },
+            gap: 1.5,
+            alignItems: "stretch",
+          }}
+        >
+          {cheques.map((cheque) => (
+            <ChequeCard
+              key={cheque.id}
+              cheque={cheque}
+              onEdit={openEdit}
+              onDelete={setDeleteTarget}
+              onClear={openClear}
+              onUnclear={setUnclearTarget}
+            />
+          ))}
+        </Box>
       )}
 
       <BottomSheetModal open={filterSheetOpen} onClose={() => setFilterSheetOpen(false)}>
@@ -542,7 +428,7 @@ export default function ChequesPage() {
               label="تعداد روز آینده"
               value={upcomingDays}
               onChange={(e) => setUpcomingDays(Math.max(1, Number(e.target.value) || 7))}
-              sx={{ ...fieldSx, mb: 2, mt: 1 }}
+              sx={{ ...chequeFormFieldSx, mb: 2, mt: 1 }}
             />
           ) : null}
 
@@ -565,173 +451,15 @@ export default function ChequesPage() {
         </Box>
       </BottomSheetModal>
 
-      <BottomSheet
+      <ChequeFormSheet
         open={formOpen}
         onClose={closeForm}
-        title={editing ? "ویرایش چک" : "ثبت چک"}
-      >
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2, p: 2, direction: "rtl", maxHeight: "70vh", overflowY: "auto" }}>
-          <Box>
-            <Typography sx={{ color: "var(--admin-text)", mb: 1, fontSize: 14 }}>نوع چک</Typography>
-            <RadioGroup
-              row
-              value={form.type}
-              onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as ChequeType }))}
-              sx={{ gap: 2 }}
-            >
-              {CHEQUE_TYPE_OPTIONS.map((o) => (
-                <FormControlLabel
-                  key={o.value}
-                  value={o.value}
-                  control={<Radio sx={{ color: "var(--admin-accent)", "&.Mui-checked": { color: "var(--admin-accent)" } }} />}
-                  label={o.label}
-                  sx={{ color: "var(--admin-text)" }}
-                  disabled={Boolean(editing)}
-                />
-              ))}
-            </RadioGroup>
-          </Box>
-
-          {form.type === "issued" ? (
-            <Box>
-              <Typography sx={{ color: "var(--admin-text)", mb: 1, fontSize: 14 }}>نوع هزینه</Typography>
-              <RadioGroup
-                row
-                value={form.expense_type}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, expense_type: e.target.value as ExpenseType }))
-                }
-                sx={{ gap: 2 }}
-              >
-                {EXPENSE_TYPE_OPTIONS.map((o) => (
-                  <FormControlLabel
-                    key={o.value}
-                    value={o.value}
-                    control={<Radio sx={{ color: "var(--admin-accent)", "&.Mui-checked": { color: "var(--admin-accent)" } }} />}
-                    label={o.label}
-                    sx={{ color: "var(--admin-text)" }}
-                  />
-                ))}
-              </RadioGroup>
-            </Box>
-          ) : null}
-
-          <TextField
-            label="شماره چک"
-            value={form.cheque_number}
-            onChange={(e) => setForm((f) => ({ ...f, cheque_number: e.target.value }))}
-            fullWidth
-            sx={fieldSx}
-          />
-          <TextField
-            label="نام بانک"
-            value={form.bank_name}
-            onChange={(e) => setForm((f) => ({ ...f, bank_name: e.target.value }))}
-            fullWidth
-            sx={fieldSx}
-          />
-          <TextField
-            label={form.type === "issued" ? "در وجه" : "پرداخت‌کننده / مشتری"}
-            value={form.payee}
-            onChange={(e) => setForm((f) => ({ ...f, payee: e.target.value }))}
-            fullWidth
-            sx={fieldSx}
-          />
-          <TextField
-            label="مبلغ (تومان)"
-            value={form.amount}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, amount: formatInputWithSeparator(e.target.value) }))
-            }
-            fullWidth
-            sx={fieldSx}
-          />
-          <TextField
-            label="عنوان (اختیاری)"
-            value={form.title}
-            onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-            fullWidth
-            sx={fieldSx}
-          />
-
-          <Box>
-            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, mb: 0.5 }}>
-              تاریخ صدور
-            </Typography>
-            <Box sx={datePickerBoxSx}>
-              <DatePicker
-                value={form.issue_date}
-                onChange={(d) =>
-                  setForm((f) => ({
-                    ...f,
-                    issue_date: d && !Array.isArray(d) ? (d as DateObject) : null,
-                  }))
-                }
-                calendar={persian}
-                locale={persian_fa}
-                calendarPosition="bottom-center"
-                zIndex={DATE_PICKER_Z}
-                portal
-                placeholder="تاریخ صدور"
-                className="rmdp-mobile"
-                containerStyle={{ width: "100%" }}
-                style={{ width: "100%", height: 48, borderRadius: 12 }}
-              />
-            </Box>
-          </Box>
-
-          <Box>
-            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, mb: 0.5 }}>
-              تاریخ سررسید
-            </Typography>
-            <Box sx={datePickerBoxSx}>
-              <DatePicker
-                value={form.due_date}
-                onChange={(d) =>
-                  setForm((f) => ({
-                    ...f,
-                    due_date: d && !Array.isArray(d) ? (d as DateObject) : null,
-                  }))
-                }
-                calendar={persian}
-                locale={persian_fa}
-                calendarPosition="bottom-center"
-                zIndex={DATE_PICKER_Z}
-                portal
-                placeholder="تاریخ سررسید"
-                className="rmdp-mobile"
-                containerStyle={{ width: "100%" }}
-                style={{ width: "100%", height: 48, borderRadius: 12 }}
-              />
-            </Box>
-          </Box>
-
-          <TextField
-            label="یادداشت (اختیاری)"
-            value={form.note}
-            onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
-            fullWidth
-            multiline
-            rows={2}
-            sx={fieldSx}
-          />
-
-          <Button
-            variant="contained"
-            onClick={handleSubmit}
-            disabled={saving}
-            sx={{
-              bgcolor: "var(--admin-accent)",
-              color: "#fff",
-              borderRadius: "12px",
-              py: 1.2,
-              "&:hover": { bgcolor: "var(--admin-accent-hover)" },
-            }}
-          >
-            {saving ? <CircularProgress size={22} color="inherit" /> : editing ? "ذخیره تغییرات" : "ثبت چک"}
-          </Button>
-        </Box>
-      </BottomSheet>
+        editing={editing}
+        onSaved={async () => {
+          closeForm();
+          await loadCheques();
+        }}
+      />
 
       <Dialog
         open={Boolean(deleteTarget)}
@@ -791,14 +519,14 @@ export default function ChequesPage() {
           <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, mb: 0.5 }}>
             تاریخ وصول (اختیاری — پیش‌فرض امروز)
           </Typography>
-          <Box sx={datePickerBoxSx}>
+          <Box sx={chequeDatePickerBoxSx}>
             <DatePicker
               value={clearDate}
               onChange={(d) => setClearDate(d && !Array.isArray(d) ? (d as DateObject) : null)}
               calendar={persian}
               locale={persian_fa}
               calendarPosition="bottom-center"
-              zIndex={DATE_PICKER_Z}
+              zIndex={CHEQUE_DATE_PICKER_Z}
               portal
               placeholder="تاریخ وصول"
               className="rmdp-mobile"
@@ -822,6 +550,55 @@ export default function ChequesPage() {
             startIcon={clearing ? <CircularProgress size={16} color="inherit" /> : undefined}
           >
             تایید وصول
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(unclearTarget)}
+        onClose={() => !unclearing && setUnclearTarget(null)}
+        PaperProps={{
+          sx: {
+            bgcolor: "var(--admin-surface)",
+            borderRadius: "16px",
+            direction: "rtl",
+            minWidth: { xs: "90%", sm: 400 },
+          },
+        }}
+      >
+        <DialogTitle sx={{ color: "var(--admin-text)", textAlign: "center" }}>
+          برگشت وصول
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ color: "var(--admin-text-muted)", textAlign: "center" }}>
+            وصول چک شماره {unclearTarget?.cheque_number} به مبلغ{" "}
+            {formatNumber(parseAmount(unclearTarget?.amount))} تومان برگشت داده شود؟
+            {" "}وضعیت دوباره «در انتظار» می‌شود
+            {unclearTarget?.type === "received"
+              ? " و درآمد مربوط حذف می‌گردد."
+              : " و هزینه مربوط حذف می‌گردد."}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: "center", gap: 1, pb: 2 }}>
+          <Button
+            onClick={() => setUnclearTarget(null)}
+            disabled={unclearing}
+            sx={{ color: "var(--admin-text)" }}
+          >
+            انصراف
+          </Button>
+          <Button
+            variant="contained"
+            onClick={confirmUnclear}
+            disabled={unclearing}
+            sx={{
+              bgcolor: "#ff9800",
+              color: "#fff",
+              "&:hover": { bgcolor: "#f57c00" },
+            }}
+            startIcon={unclearing ? <CircularProgress size={16} color="inherit" /> : undefined}
+          >
+            تایید برگشت
           </Button>
         </DialogActions>
       </Dialog>

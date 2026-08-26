@@ -204,7 +204,10 @@ export function getPaymentTypeLabel(receipt: SaleReceiptData): string {
   }
   if (receipt.paymentType === "debt") return "نسیه";
   if (receipt.paymentType === "cheque") {
-    return receipt.chequeNumber ? `چکی (${receipt.chequeNumber})` : "چکی";
+    const parts = [receipt.chequeNumber ? `چکی (${receipt.chequeNumber})` : "چکی"];
+    if (receipt.cashAmount) parts.push("نقد");
+    if (receipt.cardAmount) parts.push("کارت");
+    return parts.join(" + ");
   }
   if (receipt.paymentType === "online") return "آنلاین";
   if (receipt.settlementMode === "card_all") return "کارت";

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import {
@@ -19,8 +19,6 @@ import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import LoyaltyIcon from "@mui/icons-material/Loyalty";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
-import EventIcon from "@mui/icons-material/Event";
-import PercentIcon from "@mui/icons-material/Percent";
 import PaymentsIcon from "@mui/icons-material/Payments";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import PrintIcon from "@mui/icons-material/Print";
@@ -29,6 +27,7 @@ import CreditCardIcon from "@mui/icons-material/CreditCard";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import KitchenIcon from "@mui/icons-material/Kitchen";
 import PriceChangeIcon from "@mui/icons-material/PriceChange";
+import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useRouter } from "next/navigation";
@@ -49,14 +48,15 @@ import {
 
 const settingsCardSx = {
   backgroundColor: "var(--admin-surface)",
-  borderRadius: "16px",
+  borderRadius: "10px",
   border: "1px solid var(--admin-border)",
-  boxShadow: "0 2px 12px rgba(0, 0, 0, 0.06)",
-  mb: 1.5,
+  boxShadow: "none",
+  mb: 1,
   overflow: "hidden",
 };
 
 const switchSx = {
+  transform: "scale(0.85)",
   "& .MuiSwitch-switchBase.Mui-checked": { color: "var(--admin-accent)" },
   "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
     backgroundColor: "var(--admin-accent)",
@@ -64,23 +64,23 @@ const switchSx = {
 };
 
 const fieldSx = {
-  width: 88,
+  width: 72,
   "& .MuiOutlinedInput-root": {
     backgroundColor: "var(--admin-surface-alt)",
     color: "var(--admin-text)",
-    fontSize: "14px",
+    fontSize: "13px",
     "& fieldset": { borderColor: "var(--admin-border)" },
     "&:hover fieldset": { borderColor: "var(--admin-accent)" },
     "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
   },
-  "& .MuiInputBase-input": { py: 0.75, textAlign: "center" },
+  "& .MuiInputBase-input": { py: 0.5, textAlign: "center" },
 };
 
 const saveBtnSx = {
   ...adminButtonStartIconSx,
-  minWidth: 72,
-  py: 0.75,
-  fontSize: "13px",
+  minWidth: 64,
+  py: 0.5,
+  fontSize: "12px",
   bgcolor: "var(--admin-accent)",
   color: "#fff",
   "&:hover": { bgcolor: "var(--admin-accent-hover)", color: "#fff" },
@@ -107,24 +107,37 @@ function SettingsSectionCard({
 }) {
   return (
     <Card sx={settingsCardSx}>
-      <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
+      <CardContent sx={{ py: 1, px: 1.25, "&:last-child": { pb: 1 } }}>
         <Box
           sx={{
             display: "flex",
-            alignItems: "flex-start",
+            alignItems: "center",
             justifyContent: "space-between",
-            gap: 1,
-            mb: children ? 0 : 0,
+            gap: 0.75,
           }}
         >
-          <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1, minWidth: 0, flex: 1 }}>
-            <Box sx={{ color: "var(--admin-accent)", mt: 0.15, flexShrink: 0 }}>{icon}</Box>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, minWidth: 0, flex: 1 }}>
+            <Box sx={{ color: "var(--admin-accent)", flexShrink: 0, display: "flex" }}>{icon}</Box>
             <Box sx={{ minWidth: 0 }}>
-              <Typography sx={{ color: "var(--admin-text)", fontSize: "14px", fontWeight: 700 }}>
+              <Typography
+                sx={{
+                  color: "var(--admin-text)",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  lineHeight: 1.25,
+                }}
+              >
                 {title}
               </Typography>
               {hint && (
-                <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "12px", mt: 0.25 }}>
+                <Typography
+                  sx={{
+                    color: "var(--admin-text-secondary)",
+                    fontSize: "11px",
+                    lineHeight: 1.3,
+                    mt: 0.15,
+                  }}
+                >
                   {hint}
                 </Typography>
               )}
@@ -133,14 +146,75 @@ function SettingsSectionCard({
           {action}
         </Box>
         {loading ? (
-          <Box sx={{ py: 3, display: "flex", justifyContent: "center" }}>
-            <CircularProgress size={24} sx={{ color: "var(--admin-accent)" }} />
+          <Box sx={{ py: 1.5, display: "flex", justifyContent: "center" }}>
+            <CircularProgress size={18} sx={{ color: "var(--admin-accent)" }} />
           </Box>
         ) : (
           children
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function SettingsToggleRow({
+  icon,
+  title,
+  hint,
+  checked,
+  onChange,
+  disabled,
+  last = false,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  hint?: string;
+  checked: boolean;
+  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  disabled?: boolean;
+  last?: boolean;
+}) {
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 0.75,
+        py: 0.7,
+        borderBottom: last ? "none" : "1px solid var(--admin-divider)",
+      }}
+    >
+      <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, minWidth: 0, flex: 1 }}>
+        <Box sx={{ color: "var(--admin-accent)", flexShrink: 0, display: "flex" }}>{icon}</Box>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography
+            sx={{ color: "var(--admin-text)", fontSize: "13px", fontWeight: 600, lineHeight: 1.25 }}
+          >
+            {title}
+          </Typography>
+          {hint ? (
+            <Typography
+              sx={{
+                color: "var(--admin-text-secondary)",
+                fontSize: "11px",
+                lineHeight: 1.25,
+                mt: 0.1,
+              }}
+            >
+              {hint}
+            </Typography>
+          ) : null}
+        </Box>
+      </Box>
+      <Switch
+        size="small"
+        checked={checked}
+        onChange={onChange}
+        disabled={disabled}
+        sx={switchSx}
+      />
+    </Box>
   );
 }
 
@@ -161,6 +235,7 @@ export default function SettingsPage() {
   const [producedGoodsMenuEnabled, setProducedGoodsMenuEnabled] = useState(false);
   const [kgSalesEnabled, setKgSalesEnabled] = useState(false);
   const [salePriceEditEnabled, setSalePriceEditEnabled] = useState(false);
+  const [classicPosMode, setClassicPosMode] = useState(false);
   const [restaurantCafeEnabled, setRestaurantCafeEnabled] = useState(false);
   const [menuTableOrdersPopupEnabled, setMenuTableOrdersPopupEnabled] = useState(false);
   const [directPrintEnabled, setDirectPrintEnabled] = useState(false);
@@ -179,6 +254,7 @@ export default function SettingsPage() {
     setProducedGoodsMenuEnabled(settings.producedGoodsMenuEnabled);
     setKgSalesEnabled(settings.kgSalesEnabled);
     setSalePriceEditEnabled(settings.salePriceEditEnabled);
+    setClassicPosMode(settings.classicPosMode);
     setRestaurantCafeEnabled(settings.restaurantCafeEnabled);
     setMenuTableOrdersPopupEnabled(settings.menuTableOrdersPopupEnabled);
     setDirectPrintEnabled(readSaleReceiptPrintSettings().autoPrint);
@@ -205,6 +281,17 @@ export default function SettingsPage() {
       enabled
         ? "حالت منو فعال شد — صفحه فروش به نمای کارتی تغییر می‌کند"
         : "حالت منو غیرفعال شد",
+    );
+  };
+
+  const handleToggleClassicPosMode = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setClassicPosMode(enabled);
+    writeAdminPosSettings({ classicPosMode: enabled });
+    toast.success(
+      enabled
+        ? "تم کلاسیک فاکتور فعال شد — با حالت منو هم قابل ترکیب است"
+        : "تم کلاسیک فاکتور غیرفعال شد",
     );
   };
 
@@ -537,226 +624,163 @@ export default function SettingsPage() {
   };
 
   return (
-    <Box sx={{ ...adminPageSx, p: 2, pb: 12 }}>
+    <Box sx={{ ...adminPageSx, p: 1.5, pb: 12 }}>
       <ShopSmsQuotaCard compact />
 
       <Card
         sx={{
           ...settingsCardSx,
           cursor: "pointer",
-          transition: "background-color 0.2s ease",
+          transition: "background-color 0.15s ease",
           "&:hover": { bgcolor: "var(--admin-menu-hover)" },
         }}
         onClick={() => startAdminOnboarding()}
       >
-        <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <MenuBookIcon sx={{ color: "var(--admin-accent)", fontSize: 22 }} />
-            <Box sx={{ flex: 1 }}>
-              <Typography sx={{ color: "var(--admin-text)", fontSize: "14px", fontWeight: 700 }}>
+        <CardContent sx={{ py: 1, px: 1.25, "&:last-child": { pb: 1 } }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+            <MenuBookIcon sx={{ color: "var(--admin-accent)", fontSize: 18 }} />
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography sx={{ color: "var(--admin-text)", fontSize: "13px", fontWeight: 600 }}>
                 راهنمای شروع
               </Typography>
-              <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "12px" }}>
+              <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "11px" }}>
                 آموزش گام‌به‌گام پنل
               </Typography>
             </Box>
-            <ChevronRightIcon sx={{ color: "var(--admin-text-muted)", fontSize: 20 }} />
+            <ChevronRightIcon sx={{ color: "var(--admin-text-muted)", fontSize: 18 }} />
           </Box>
         </CardContent>
       </Card>
 
-      <SettingsSectionCard
-        icon={<TableRestaurantIcon sx={{ fontSize: 22 }} />}
-        title="رستوران و کافه"
-        hint="نمایش میزها و سفارش حضوری در منو، و بررسی سفارش‌های جدید هر ۳۰ ثانیه"
-        action={
-          <Switch
-            size="small"
+      <Card sx={settingsCardSx}>
+        <CardContent sx={{ py: 0.5, px: 1.25, "&:last-child": { pb: 0.5 } }}>
+          <SettingsToggleRow
+            icon={<TableRestaurantIcon sx={{ fontSize: 18 }} />}
+            title="رستوران و کافه"
+            hint="میز و سفارش حضوری در منو"
             checked={restaurantCafeEnabled}
             onChange={handleToggleRestaurantCafe}
-            sx={switchSx}
+            last={!restaurantCafeEnabled}
           />
-        }
-      />
-
-      {restaurantCafeEnabled ? (
-      <SettingsSectionCard
-        icon={<NotificationsActiveIcon sx={{ fontSize: 22 }} />}
-        title="پاپ‌آپ سفارش حضوری در حالت منو"
-        hint="وقتی سفارش جدید رسید، در صفحه فروش منو با همان کارت‌ها باز شود تا رسیدگی کنید"
-        action={
-          <Switch
-            size="small"
-            checked={menuTableOrdersPopupEnabled}
-            onChange={handleToggleMenuTableOrdersPopup}
-            sx={switchSx}
-          />
-        }
-      />
-      ) : null}
-
-      {restaurantCafeEnabled ? (
-      <Card
-        sx={{
-          ...settingsCardSx,
-          cursor: "pointer",
-          transition: "background-color 0.2s ease",
-          "&:hover": { bgcolor: "var(--admin-menu-hover)" },
-        }}
-        onClick={() => router.push("/admin/shop-tables")}
-      >
-        <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <TableRestaurantIcon sx={{ color: "var(--admin-accent)", fontSize: 22 }} />
-            <Box sx={{ flex: 1 }}>
-              <Typography sx={{ color: "var(--admin-text)", fontSize: "14px", fontWeight: 700 }}>
-                میزها و سفارش پای میز
-              </Typography>
-              <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "12px" }}>
-                تعریف میز، لینک QR و سفارش‌های منتظر پرداخت
-              </Typography>
+          {restaurantCafeEnabled ? (
+            <SettingsToggleRow
+              icon={<NotificationsActiveIcon sx={{ fontSize: 18 }} />}
+              title="پاپ‌آپ سفارش حضوری"
+              hint="در حالت منو وقتی سفارش جدید رسید"
+              checked={menuTableOrdersPopupEnabled}
+              onChange={handleToggleMenuTableOrdersPopup}
+            />
+          ) : null}
+          {restaurantCafeEnabled ? (
+            <Box
+              onClick={() => router.push("/admin/shop-tables")}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 0.75,
+                py: 0.7,
+                cursor: "pointer",
+                "&:hover": { opacity: 0.85 },
+              }}
+            >
+              <TableRestaurantIcon sx={{ color: "var(--admin-accent)", fontSize: 18 }} />
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography sx={{ color: "var(--admin-text)", fontSize: "13px", fontWeight: 600 }}>
+                  میزها و سفارش پای میز
+                </Typography>
+                <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "11px" }}>
+                  تعریف میز، لینک QR و سفارش‌ها
+                </Typography>
+              </Box>
+              <ChevronRightIcon sx={{ color: "var(--admin-text-muted)", fontSize: 18 }} />
             </Box>
-            <ChevronRightIcon sx={{ color: "var(--admin-text-muted)", fontSize: 20 }} />
-          </Box>
+          ) : null}
         </CardContent>
       </Card>
-      ) : null}
 
-   
-
-      <SettingsSectionCard
-        icon={<Inventory2Icon sx={{ fontSize: 22 }} />}
-        title="لیست کالا در صفحه فروش"
-        hint="جستجو و افزودن سریع به سبد از کش محلی"
-        action={
-          <Switch
-            size="small"
+      <Card sx={settingsCardSx}>
+        <CardContent sx={{ py: 0.5, px: 1.25, "&:last-child": { pb: 0.5 } }}>
+          <SettingsToggleRow
+            icon={<Inventory2Icon sx={{ fontSize: 18 }} />}
+            title="لیست کالا در صفحه فروش"
+            hint="جستجو و افزودن سریع از کش محلی"
             checked={showProductListOnMainPage}
             onChange={handleToggleProductListOnMainPage}
             disabled={menuMode}
-            sx={switchSx}
           />
-        }
-      />
-
-      <SettingsSectionCard
-        icon={<RestaurantMenuIcon sx={{ fontSize: 22 }} />}
-        title="حالت منو"
-        hint="نمایش کارتی کالاها با فیلتر دسته‌بندی؛ جایگزین صفحه فروش عادی"
-        action={
-          <Switch
-            size="small"
+          <SettingsToggleRow
+            icon={<RestaurantMenuIcon sx={{ fontSize: 18 }} />}
+            title="حالت منو"
+            hint="نمایش کارتی با فیلتر دسته"
             checked={menuMode}
             onChange={handleToggleMenuMode}
-            sx={switchSx}
           />
-        }
-      />
-
-      <SettingsSectionCard
-        icon={<PaymentsIcon sx={{ fontSize: 22 }} />}
-        title="نحوه پرداخت در فروش"
-        hint="نمایش گزینه نقدی و اقساطی هنگام ثبت فروش"
-        action={
-          <Switch
-            size="small"
+          <SettingsToggleRow
+            icon={<PointOfSaleIcon sx={{ fontSize: 18 }} />}
+            title="تم کلاسیک فاکتور"
+            hint="ظاهر فاکتور سنتی — با حالت منو هم کار می‌کند"
+            checked={classicPosMode}
+            onChange={handleToggleClassicPosMode}
+          />
+          <SettingsToggleRow
+            icon={<PaymentsIcon sx={{ fontSize: 18 }} />}
+            title="پرداخت نقدی و اقساطی"
+            hint="نمایش گزینه‌ها هنگام ثبت فروش"
             checked={installmentPaymentEnabled}
             onChange={handleToggleInstallmentPayment}
-            sx={switchSx}
           />
-        }
-      />
-
-      <SettingsSectionCard
-        icon={<AccountBalanceWalletIcon sx={{ fontSize: 22 }} />}
-        title="پرداخت نسیه (قرضی)"
-        hint="نمایش گزینه نسیه هنگام ثبت فروش؛ مشتری بدهکار می‌شود"
-        action={
-          <Switch
-            size="small"
+          <SettingsToggleRow
+            icon={<AccountBalanceWalletIcon sx={{ fontSize: 18 }} />}
+            title="پرداخت نسیه"
+            hint="مشتری بدهکار می‌شود"
             checked={debtPaymentEnabled}
             onChange={handleToggleDebtPayment}
-            sx={switchSx}
           />
-        }
-      />
-
-      <SettingsSectionCard
-        icon={<ReceiptLongIcon sx={{ fontSize: 22 }} />}
-        title="فروش چکی"
-        hint="نمایش گزینه پرداخت چکی هنگام ثبت فروش"
-        action={
-          <Switch
-            size="small"
+          <SettingsToggleRow
+            icon={<ReceiptLongIcon sx={{ fontSize: 18 }} />}
+            title="فروش چکی"
+            hint="پرداخت با چک دریافتی"
             checked={chequePaymentEnabled}
             onChange={handleToggleChequePayment}
-            sx={switchSx}
           />
-        }
-      />
-
-      <SettingsSectionCard
-        icon={<KitchenIcon sx={{ fontSize: 22 }} />}
-        title="کالای تولیدی"
-        hint="نمایش «کالاهای تولیدی» در منوی مدیریت کالا"
-        action={
-          <Switch
-            size="small"
+          <SettingsToggleRow
+            icon={<KitchenIcon sx={{ fontSize: 18 }} />}
+            title="کالای تولیدی"
+            hint="در منوی مدیریت کالا"
             checked={producedGoodsMenuEnabled}
             onChange={handleToggleProducedGoodsMenu}
-            sx={switchSx}
           />
-        }
-      />
-
-      <SettingsSectionCard
-        icon={<ScaleIcon sx={{ fontSize: 22 }} />}
-        title="فروش محصولات کیلویی"
-        hint="ثبت و فروش کالا با واحد کیلوگرم و مقدار اعشاری (مثل ۱.۳۵۰)"
-        action={
-          <Switch
-            size="small"
+          <SettingsToggleRow
+            icon={<ScaleIcon sx={{ fontSize: 18 }} />}
+            title="فروش کیلویی"
+            hint="واحد کیلو و مقدار اعشاری"
             checked={kgSalesEnabled}
             onChange={handleToggleKgSales}
-            sx={switchSx}
           />
-        }
-      />
-
-      <SettingsSectionCard
-        icon={<PriceChangeIcon sx={{ fontSize: 22 }} />}
-        title="تغییر قیمت در هنگام خرید"
-        hint="نمایش قیمت فروش در سبد و امکان تغییر قبل از ثبت فروش"
-        action={
-          <Switch
-            size="small"
+          <SettingsToggleRow
+            icon={<PriceChangeIcon sx={{ fontSize: 18 }} />}
+            title="تغییر قیمت هنگام خرید"
+            hint="ویرایش قیمت فروش در سبد"
             checked={salePriceEditEnabled}
             onChange={handleToggleSalePriceEdit}
-            sx={switchSx}
           />
-        }
-      />
-
-      <SettingsSectionCard
-        icon={<PrintIcon sx={{ fontSize: 22 }} />}
-        title="چاپ مستقیم فاکتور"
-        hint="با فعال‌سازی، پیش‌نمایش چاپ مخفی می‌شود و فاکتور مستقیم چاپ می‌گردد"
-        action={
-          <Switch
-            size="small"
+          <SettingsToggleRow
+            icon={<PrintIcon sx={{ fontSize: 18 }} />}
+            title="چاپ مستقیم فاکتور"
+            hint="بدون پیش‌نمایش چاپ"
             checked={directPrintEnabled}
             onChange={handleToggleDirectPrint}
-            sx={switchSx}
+            last
           />
-        }
-      />
+        </CardContent>
+      </Card>
 
       <SettingsSectionCard
-        icon={<CreditCardIcon sx={{ fontSize: 22 }} />}
+        icon={<CreditCardIcon sx={{ fontSize: 18 }} />}
         title="کارت فروشگاه"
-        hint="برای پرداخت کارت‌به‌کارت در سفارش پای میز"
+        hint="پرداخت کارت‌به‌کارت سفارش پای میز"
       >
-        <Box sx={{ mt: 1.5, display: "flex", flexDirection: "column", gap: 1.2 }}>
+        <Box sx={{ mt: 1, display: "flex", flexDirection: "column", gap: 1 }}>
           <TextField
             size="small"
             label="شماره کارت"
@@ -767,9 +791,11 @@ export default function SettingsPage() {
               "& .MuiOutlinedInput-root": {
                 backgroundColor: "var(--admin-surface-alt)",
                 color: "var(--admin-text)",
+                fontSize: "13px",
                 "& fieldset": { borderColor: "var(--admin-border)" },
               },
-              "& .MuiInputLabel-root": { color: "var(--admin-text-muted)" },
+              "& .MuiInputLabel-root": { color: "var(--admin-text-muted)", fontSize: "13px" },
+              "& .MuiInputBase-input": { py: 0.75 },
             }}
           />
           <TextField
@@ -781,9 +807,11 @@ export default function SettingsPage() {
               "& .MuiOutlinedInput-root": {
                 backgroundColor: "var(--admin-surface-alt)",
                 color: "var(--admin-text)",
+                fontSize: "13px",
                 "& fieldset": { borderColor: "var(--admin-border)" },
               },
-              "& .MuiInputLabel-root": { color: "var(--admin-text-muted)" },
+              "& .MuiInputLabel-root": { color: "var(--admin-text-muted)", fontSize: "13px" },
+              "& .MuiInputBase-input": { py: 0.75 },
             }}
           />
           <TextField
@@ -795,9 +823,11 @@ export default function SettingsPage() {
               "& .MuiOutlinedInput-root": {
                 backgroundColor: "var(--admin-surface-alt)",
                 color: "var(--admin-text)",
+                fontSize: "13px",
                 "& fieldset": { borderColor: "var(--admin-border)" },
               },
-              "& .MuiInputLabel-root": { color: "var(--admin-text-muted)" },
+              "& .MuiInputLabel-root": { color: "var(--admin-text-muted)", fontSize: "13px" },
+              "& .MuiInputBase-input": { py: 0.75 },
             }}
           />
           <Button
@@ -812,8 +842,8 @@ export default function SettingsPage() {
         </Box>
       </SettingsSectionCard>
 
-<SettingsSectionCard
-        icon={<LoyaltyIcon sx={{ fontSize: 22 }} />}
+      <SettingsSectionCard
+        icon={<LoyaltyIcon sx={{ fontSize: 18 }} />}
         title="باشگاه مشتریان"
         hint="اعتبار و امتیاز مشتری بر اساس مبلغ خرید"
         loading={loading}
@@ -829,103 +859,8 @@ export default function SettingsPage() {
           ) : undefined
         }
       >
-        <Divider sx={{ borderColor: "var(--admin-divider)", my: 1.5 }} />
         <LoyaltyCreditTiersSettings disabled={!loyaltyCreditEnabled} />
       </SettingsSectionCard>
-
-
-
-      {/* <SettingsSectionCard
-        icon={<EventIcon sx={{ fontSize: 22 }} />}
-        title="انقضای اعتبار"
-        hint="مدت اعتبار مشتری · ۱ تا ۳۶۵ روز"
-        loading={loading}
-      >
-        <Box
-          sx={{
-            mt: 1.5,
-            pt: 1.5,
-            borderTop: "1px solid var(--admin-divider)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-end",
-            gap: 1,
-          }}
-        >
-          <TextField
-            size="small"
-            type="number"
-            value={creditExpiryDays}
-            onChange={(e) => {
-              const value = parseInt(e.target.value, 10);
-              if (!isNaN(value) && value >= 1 && value <= 365) {
-                setCreditExpiryDays(value);
-              } else if (e.target.value === "") {
-                setCreditExpiryDays(0);
-              }
-            }}
-            inputProps={{ min: 1, max: 365 }}
-            sx={fieldSx}
-          />
-          <Button
-            size="small"
-            variant="contained"
-            disabled={isSavingExpiry || creditExpiryDays < 1 || creditExpiryDays > 365}
-            onClick={handleSaveExpiryDays}
-            sx={saveBtnSx}
-          >
-            {isSavingExpiry ? "…" : "ذخیره"}
-          </Button>
-        </Box>
-      </SettingsSectionCard> */}
-
-      {/* <SettingsSectionCard
-        icon={<PercentIcon sx={{ fontSize: 22 }} />}
-        title="نرخ سود اقساط"
-        hint="درصد ماهانه · ۰ تا ۱۰۰"
-        loading={loading}
-      >
-        <Box
-          sx={{
-            mt: 1.5,
-            pt: 1.5,
-            borderTop: "1px solid var(--admin-divider)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-end",
-            gap: 1,
-          }}
-        >
-          <TextField
-            size="small"
-            type="number"
-            value={installmentInterestRate}
-            onChange={(e) => {
-              const value = parseFloat(e.target.value);
-              if (!isNaN(value) && value >= 0 && value <= 100) {
-                setInstallmentInterestRate(value);
-              } else if (e.target.value === "") {
-                setInstallmentInterestRate(0);
-              }
-            }}
-            inputProps={{ min: 0, max: 100, step: 0.1 }}
-            sx={fieldSx}
-          />
-          <Button
-            size="small"
-            variant="contained"
-            disabled={
-              isSavingInterestRate ||
-              installmentInterestRate < 0 ||
-              installmentInterestRate > 100
-            }
-            onClick={handleSaveInterestRate}
-            sx={saveBtnSx}
-          >
-            {isSavingInterestRate ? "…" : "ذخیره"}
-          </Button>
-        </Box>
-      </SettingsSectionCard> */}
 
       <ToastContainer
         autoClose={3000}

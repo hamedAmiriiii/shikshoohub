@@ -10,6 +10,7 @@ import {
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import DoneAllIcon from "@mui/icons-material/DoneAll";
+import UndoIcon from "@mui/icons-material/Undo";
 import {
   chequeStatusLabel,
   chequeTypeLabel,
@@ -25,6 +26,7 @@ type ChequeCardProps = {
   onEdit: (cheque: Cheque) => void;
   onDelete: (cheque: Cheque) => void;
   onClear: (cheque: Cheque) => void;
+  onUnclear: (cheque: Cheque) => void;
 };
 
 export default function ChequeCard({
@@ -32,6 +34,7 @@ export default function ChequeCard({
   onEdit,
   onDelete,
   onClear,
+  onUnclear,
 }: ChequeCardProps) {
   const pending = isChequePending(cheque);
   const cleared = isChequeCleared(cheque);
@@ -45,7 +48,9 @@ export default function ChequeCard({
         borderRadius: "15px",
         border: "1px solid var(--admin-border)",
         p: 2,
-        mb: 1.5,
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
       }}
     >
       <Box
@@ -76,16 +81,6 @@ export default function ChequeCard({
               fontWeight: 600,
             }}
           />
-          {cheque.expense_type ? (
-            <Chip
-              label={cheque.expense_type}
-              size="small"
-              sx={{
-                bgcolor: "var(--admin-icon-bg)",
-                color: "var(--admin-text)",
-              }}
-            />
-          ) : null}
         </Box>
 
         <Box sx={{ display: "flex", gap: 0.5, flexShrink: 0 }}>
@@ -117,6 +112,20 @@ export default function ChequeCard({
               </IconButton>
             </>
           ) : null}
+          {cleared ? (
+            <IconButton
+              size="small"
+              onClick={() => onUnclear(cheque)}
+              title="برگشت وصول"
+              sx={{
+                color: "#ff9800",
+                bgcolor: "rgba(255, 152, 0, 0.15)",
+                "&:hover": { bgcolor: "rgba(255, 152, 0, 0.3)" },
+              }}
+            >
+              <UndoIcon fontSize="small" />
+            </IconButton>
+          ) : null}
           {!cleared ? (
             <IconButton
               size="small"
@@ -143,7 +152,7 @@ export default function ChequeCard({
         {formatNumber(amount)} تومان
       </Typography>
 
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 0.4 }}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 0.4, flex: 1 }}>
         <Row label="بانک" value={cheque.bank_name} />
         <Row label={isIssued ? "در وجه" : "پرداخت‌کننده"} value={cheque.payee} />
         <Row label="تاریخ صدور" value={cheque.issue_date_jalali || cheque.issue_date} />
@@ -171,6 +180,29 @@ export default function ChequeCard({
           }}
         >
           وصول چک
+        </Button>
+      ) : null}
+
+      {cleared ? (
+        <Button
+          fullWidth
+          variant="outlined"
+          startIcon={<UndoIcon />}
+          onClick={() => onUnclear(cheque)}
+          sx={{
+            mt: 1.5,
+            borderRadius: "10px",
+            borderColor: "#ff9800",
+            color: "#ff9800",
+            gap: "8px",
+            "& .MuiButton-startIcon": { m: 0 },
+            "&:hover": {
+              borderColor: "#f57c00",
+              bgcolor: "rgba(255, 152, 0, 0.08)",
+            },
+          }}
+        >
+          برگشت وصول
         </Button>
       ) : null}
     </Box>
