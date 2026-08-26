@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Badge,
   Box,
   Button,
   Checkbox,
@@ -19,32 +18,41 @@ import {
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
-import ShoppingBagIcon from "@mui/icons-material/ShoppingBag";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
-import SearchIcon from "@mui/icons-material/Search";
-import TableRestaurantIcon from "@mui/icons-material/TableRestaurant";
-import HistoryIcon from "@mui/icons-material/History";
-import RoomServiceIcon from "@mui/icons-material/RoomService";
-import DarkModeIcon from "@mui/icons-material/DarkMode";
-import LightModeIcon from "@mui/icons-material/LightMode";
 import PhoneIphoneIcon from "@mui/icons-material/PhoneIphone";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
 import { useParams } from "next/navigation";
-import { Noto_Nastaliq_Urdu } from "next/font/google";
 import { apiRequestError } from "@/app/lib/apiRequestError";
+import { APP_FONT_FAMILY } from "@/app/lib/appFont";
 import { useShopStorefront } from "@/app/context/ShopContext";
 import { extractShopTableInfo, extractPaymentMethods, DEFAULT_TABLE_PAYMENT_METHODS, extractTableOrders, getTableOrderAmount, getTableOrderProducts, tablePaymentMethodLabel, type ShopTableInfo, type TablePaymentMethod, type TableOrder } from "@/app/lib/shopTables";
 import {
+  getActiveRootCategories,
   parseCategoriesFromApi,
   resolveCategoryImageUrl,
   type ShopCategory,
 } from "@/app/lib/shopCategories";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import {
+  ACCENT,
+  ACCENT_DARK,
+  ReservCartBar,
+  ReservCategoryTabs,
+  ReservDesktopCartPanel,
+  ReservEmptyState,
+  ReservHeader,
+  ReservProductCard,
+  ReservProductSkeletonList,
+  ReservSearchBar,
+  THEMES,
+  formatNumber,
+  type ReservThemeMode,
+} from "./ReservOrderingParts";
 
 type ProductImage = { image_url?: string; image_path?: string };
 
@@ -55,6 +63,7 @@ type Product = {
   original_sale_price?: string | number;
   discount_percent?: number;
   has_discount?: boolean;
+  description?: string;
   image?: string;
   images?: ProductImage[];
   category_id?: number;
@@ -99,52 +108,7 @@ type GuestOrder = {
   items?: GuestOrderItem[];
 };
 
-const nastaliq = Noto_Nastaliq_Urdu({
-  subsets: ["arabic"],
-  weight: "400",
-  display: "swap",
-});
-
-const ACCENT = "#d4af37";
-const ACCENT_DARK = "#b8942a";
-const COVER_HEIGHT = 220;
-const HEADER_IMAGE = "/reserv/reserv2.png";
 const RESERV_THEME_KEY = "reserv_table_theme";
-
-type ReservThemeMode = "dark" | "light";
-
-const THEMES = {
-  dark: {
-    BG: "#0c0c0c",
-    SURFACE: "#161616",
-    SURFACE_ALT: "#1f1f1f",
-    TEXT: "#f4efe4",
-    MUTED: "#9a9488",
-    ALL_TILE_BG: "#ffffff",
-    HEADER_BTN_BG: "rgba(0,0,0,0.35)",
-    HEADER_BTN_HOVER: "rgba(0,0,0,0.5)",
-    HEADER_BTN_BORDER: "rgba(255,255,255,0.16)",
-    COVER_GRADIENT:
-      "linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.08) 42%, rgba(0,0,0,0.78) 100%)",
-  },
-  light: {
-    BG: "#f3eee6",
-    SURFACE: "#ffffff",
-    SURFACE_ALT: "#ebe4d8",
-    TEXT: "#1a1408",
-    MUTED: "#6e675c",
-    ALL_TILE_BG: "#1a1408",
-    HEADER_BTN_BG: "rgba(255,255,255,0.55)",
-    HEADER_BTN_HOVER: "rgba(255,255,255,0.75)",
-    HEADER_BTN_BORDER: "rgba(0,0,0,0.12)",
-    COVER_GRADIENT:
-      "linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.06) 42%, rgba(0,0,0,0.62) 100%)",
-  },
-} as const;
-
-function formatNumber(num: number) {
-  return new Intl.NumberFormat("fa-IR").format(num);
-}
 
 function toFaDigits(value: string) {
   return value.replace(/\d/g, (digit) => "۰۱۲۳۴۵۶۷۸۹"[Number(digit)] ?? digit);
@@ -427,6 +391,7 @@ export default function TableReservPage() {
   const [tableError, setTableError] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
+  const [productsError, setProductsError] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -435,6 +400,7 @@ export default function TableReservPage() {
   const [shopCategories, setShopCategories] = useState<ShopCategory[]>([]);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
+  const [detailProduct, setDetailProduct] = useState<Product | null>(null);
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -468,26 +434,17 @@ export default function TableReservPage() {
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [themeMode, setThemeMode] = useState<ReservThemeMode>(() => {
-    if (typeof window === "undefined") return "dark";
+    if (typeof window === "undefined") return "light";
     try {
       const stored = localStorage.getItem(RESERV_THEME_KEY);
-      return stored === "light" ? "light" : "dark";
+      if (stored === "dark" || stored === "light") return stored;
+      return "light";
     } catch {
-      return "dark";
+      return "light";
     }
   });
-  const {
-    BG,
-    SURFACE,
-    SURFACE_ALT,
-    TEXT,
-    MUTED,
-    ALL_TILE_BG,
-    HEADER_BTN_BG,
-    HEADER_BTN_HOVER,
-    HEADER_BTN_BORDER,
-    COVER_GRADIENT,
-  } = THEMES[themeMode];
+  const theme = THEMES[themeMode];
+  const { BG, SURFACE, SURFACE_ALT, TEXT, MUTED, BORDER } = theme;
 
   const toggleTheme = () => {
     setThemeMode((prev) => {
@@ -623,19 +580,32 @@ export default function TableReservPage() {
   const loadProducts = useCallback(
     async (pageNum: number, isInitial: boolean, searchTerm: string) => {
       if (!shopCode) return;
-      if (isInitial) setProductsLoading(true);
-      else setLoadingMore(true);
+      if (isInitial) {
+        setProductsLoading(true);
+        setProductsError(false);
+      } else setLoadingMore(true);
       try {
         let url = shopApi(`/api/product?page=${pageNum}&per_page=50`);
         if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
         const res = await apiRequestError("Get", {}, {}, url, false, true, "");
+        if (res?.hasError) {
+          if (isInitial) {
+            setProducts([]);
+            setProductsError(true);
+          }
+          return;
+        }
         const rows = Array.isArray(res?.data) ? (res.data as Product[]) : [];
         setProducts((prev) => (isInitial ? rows : [...prev, ...rows]));
+        setProductsError(false);
         if (res?.last_page) setHasMore(pageNum < res.last_page);
         else setHasMore(rows.length > 0);
         setPage(pageNum);
       } catch {
-        if (isInitial) setProducts([]);
+        if (isInitial) {
+          setProducts([]);
+          setProductsError(true);
+        }
       } finally {
         setProductsLoading(false);
         setLoadingMore(false);
@@ -683,6 +653,17 @@ export default function TableReservPage() {
   }, [shopCategories]);
 
   const categories = useMemo(() => {
+    const roots = getActiveRootCategories(shopCategories);
+    if (roots.length > 0) {
+      return [
+        { id: "all", name: "همه", image: null as string | null },
+        ...roots.map((cat) => ({
+          id: String(cat.id),
+          name: cat.name,
+          image: resolveCategoryImageUrl(cat),
+        })),
+      ];
+    }
     const map = new Map<string, { name: string; image: string | null }>();
     const upsert = (id: string, name?: string, image?: string | null) => {
       const prev = map.get(id);
@@ -714,8 +695,7 @@ export default function TableReservPage() {
       { id: "all", name: "همه", image: null as string | null },
       ...Array.from(map.entries()).map(([id, value]) => ({ id, ...value })),
     ];
-  }, [categoryImageById, products]);
-  const hasImageCategories = categories.some((c) => Boolean(c.image));
+  }, [categoryImageById, products, shopCategories]);
 
   const visibleProducts = useMemo(() => {
     if (selectedCategory === "all") return products;
@@ -745,6 +725,16 @@ export default function TableReservPage() {
                 image: productImage(product, categoryImageById),
               },
             ],
+    );
+  };
+
+  const adjustCartLine = (productId: number, quantity: number) => {
+    if (quantity <= 0) {
+      persistCart(cart.filter((line) => line.product_id !== productId));
+      return;
+    }
+    persistCart(
+      cart.map((line) => (line.product_id === productId ? { ...line, quantity } : line)),
     );
   };
 
@@ -1100,459 +1090,155 @@ export default function TableReservPage() {
     );
   }
 
+  const searchActive = Boolean(debouncedSearch);
+  const cartTotalLabel =
+    creditToApply > 0
+      ? `${formatNumber(payableAmount)} تومان`
+      : `${formatNumber(cartTotal)} تومان`;
+  const activeCurrentCount = currentOrders.filter((order) => order.status !== "cancelled").length;
+
   return (
-    <Box sx={{ minHeight: "100dvh", bgcolor: BG }}>
     <Box
       sx={{
         minHeight: "100dvh",
         bgcolor: BG,
         direction: "rtl",
-        pb: cartCount > 0 ? "108px" : "24px",
-        maxWidth: 520,
-        mx: "auto",
         color: TEXT,
+        fontFamily: APP_FONT_FAMILY,
       }}
     >
-      <Box sx={{ position: "relative", width: "100%", height: COVER_HEIGHT, overflow: "hidden", bgcolor: "#000" }}>
-        <Box
-          component="img"
-          src={HEADER_IMAGE}
-          alt={shopTitle}
-          sx={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", display: "block" }}
-        />
-        <Box
-          sx={{
-            position: "absolute",
-            inset: 0,
-            background: COVER_GRADIENT,
-          }}
-        />
-        <Typography
-          className={nastaliq.className}
-          sx={{
-            position: "absolute",
-            right: 16,
-            bottom: 56,
-            maxWidth: "72%",
-            color: "#f8f1e4",
-            fontSize: 28,
-            lineHeight: 1.9,
-            textAlign: "right",
-            textShadow: "0 2px 14px rgba(0,0,0,0.65)",
-          }}
-        >
-          {shopTitle}
-        </Typography>
-        <Box
-          sx={{
-            position: "absolute",
-            right: 12,
-            left: 12,
-            bottom: 12,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 0.8,
-          }}
-        >
-          <Button
-            onClick={() => setLoginOpen(true)}
-            sx={{
-              minWidth: 0,
-              px: 1.2,
-              py: 0.35,
-              borderRadius: "999px",
-              color: "#f4efe4",
-              fontWeight: 700,
-              fontSize: 12,
-              bgcolor: HEADER_BTN_BG,
-              backdropFilter: "blur(8px)",
-              border: `1px solid ${HEADER_BTN_BORDER}`,
-              "&:hover": { bgcolor: HEADER_BTN_HOVER },
-            }}
-          >
-            {guestIdentified ? normalizedPhone.slice(-4) : "ورود"}
-          </Button>
-          <IconButton
-            onClick={toggleTheme}
-            aria-label={themeMode === "dark" ? "حالت روشن" : "حالت تیره"}
-            sx={{
-              width: 34,
-              height: 34,
-              color: "#f4efe4",
-              bgcolor: HEADER_BTN_BG,
-              backdropFilter: "blur(8px)",
-              border: `1px solid ${HEADER_BTN_BORDER}`,
-              "&:hover": { bgcolor: HEADER_BTN_HOVER },
-            }}
-          >
-            {themeMode === "dark" ? (
-              <LightModeIcon sx={{ fontSize: 18 }} />
-            ) : (
-              <DarkModeIcon sx={{ fontSize: 18 }} />
-            )}
-          </IconButton>
-          <Box
-            sx={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 0.6,
-              bgcolor: "rgba(212,175,55,0.18)",
-              backdropFilter: "blur(8px)",
-              color: ACCENT,
-              px: 1.2,
-              py: 0.4,
-              borderRadius: "999px",
-              border: "1px solid rgba(212,175,55,0.35)",
-            }}
-          >
-            <TableRestaurantIcon sx={{ fontSize: 16 }} />
-            <Typography sx={{ fontSize: 12, fontWeight: 700 }}>{tableLabel}</Typography>
-          </Box>
-          <IconButton
-            onClick={openCurrentOrders}
-            aria-label="سفارش جاری"
-            sx={{
-              width: 34,
-              height: 34,
-              color: "#f4efe4",
-              bgcolor: HEADER_BTN_BG,
-              backdropFilter: "blur(8px)",
-              border: `1px solid ${HEADER_BTN_BORDER}`,
-              "&:hover": { bgcolor: HEADER_BTN_HOVER },
-            }}
-          >
-            <Badge
-              badgeContent={currentOrders.filter((order) => order.status !== "cancelled").length}
-              color="error"
-              max={9}
-              sx={{ "& .MuiBadge-badge": { fontSize: "0.55rem", minWidth: 14, height: 14 } }}
-            >
-              <RoomServiceIcon sx={{ fontSize: 18 }} />
-            </Badge>
-          </IconButton>
-          <IconButton
-            onClick={openOrders}
-            aria-label="سفارش‌های قبلی"
-            sx={{
-              width: 34,
-              height: 34,
-              color: "#f4efe4",
-              bgcolor: HEADER_BTN_BG,
-              backdropFilter: "blur(8px)",
-              border: `1px solid ${HEADER_BTN_BORDER}`,
-              "&:hover": { bgcolor: HEADER_BTN_HOVER },
-            }}
-          >
-            <HistoryIcon sx={{ fontSize: 18 }} />
-          </IconButton>
-        </Box>
-      </Box>
+      <ReservHeader
+        shopTitle={shopTitle}
+        tableLabel={tableLabel}
+        guestLabel={guestIdentified ? normalizedPhone.slice(-4) : "ورود"}
+        themeMode={themeMode}
+        theme={theme}
+        currentOrderCount={activeCurrentCount}
+        onLogin={() => setLoginOpen(true)}
+        onToggleTheme={toggleTheme}
+        onCurrentOrders={openCurrentOrders}
+        onHistory={openOrders}
+      />
 
       <Box
         sx={{
-          position: "sticky",
-          top: 0,
-          zIndex: 10,
-          bgcolor: BG,
+          maxWidth: 1100,
+          mx: "auto",
+          px: { xs: 1.5, md: 2 },
           pt: 1.5,
-          pb: 1,
-          px: 1.5,
+          pb: cartCount > 0 ? { xs: "112px", md: 3 } : 3,
+          display: { xs: "block", md: "grid" },
+          gridTemplateColumns: { md: "minmax(0,1fr) 340px" },
+          gap: { md: 2.5 },
+          alignItems: "start",
         }}
       >
-        {/* <TextField
-          size="small"
-          fullWidth
-          placeholder="جستجو در منو..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon sx={{ color: MUTED, fontSize: 20 }} />
-              </InputAdornment>
-            ),
-          }}
-          sx={{
-            "& .MuiOutlinedInput-root": {
-              borderRadius: "16px",
-              bgcolor: SURFACE,
-              color: TEXT,
-              fontSize: 14,
-              "& fieldset": { borderColor: "rgba(212,175,55,0.12)" },
-              "&:hover fieldset": { borderColor: "rgba(212,175,55,0.35)" },
-              "&.Mui-focused fieldset": { borderColor: ACCENT },
-            },
-            "& .MuiInputBase-input::placeholder": { color: MUTED, opacity: 1 },
-          }}
-        /> */}
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "flex-start",
-            gap: 0.8,
-            overflowX: "auto",
-            mt: 1.25,
-            pb: 0.5,
-            mx: -1.5,
-            px: 1.5,
-            "&::-webkit-scrollbar": { display: "none" },
-          }}
-        >
-          {categories.map((cat) => {
-            const active = selectedCategory === cat.id;
-            const chipColSx = {
-              flexShrink: 0,
-              width: 58,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 0.4,
-              cursor: "pointer",
-            } as const;
-            const chipLabelSx = {
-              fontSize: 10,
-              fontWeight: 700,
-              lineHeight: 1.25,
-              color: active ? ACCENT : TEXT,
-              textAlign: "center" as const,
-              maxWidth: 58,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            };
-            const chipFrameSx = (extra?: object) => ({
-              width: 52,
-              height: 52,
-              borderRadius: "16px",
-              border: active ? "2px solid" : "1px solid rgba(212,175,55,0.16)",
-              borderColor: active ? ACCENT : undefined,
-              boxShadow: active ? "0 6px 16px rgba(212,175,55,0.28)" : "none",
-              ...extra,
-            });
-            if (cat.image) {
-              return (
-                <Box
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
-                  sx={chipColSx}
-                >
-                  <Box
-                    component="img"
-                    src={cat.image}
-                    alt={cat.name}
-                    sx={chipFrameSx({ objectFit: "cover", bgcolor: SURFACE })}
-                  />
-                  <Box sx={chipLabelSx}>{cat.name}</Box>
-                </Box>
-              );
-            }
-            if (hasImageCategories && cat.id === "all") {
-              return (
-                <Box
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
-                  sx={chipColSx}
-                >
-                  <Box
-                    sx={chipFrameSx({
-                      bgcolor: ALL_TILE_BG,
-                    })}
-                  />
-                  <Box sx={chipLabelSx}>{cat.name}</Box>
-                </Box>
-              );
-            }
-            return (
-              <Box
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                sx={{
-                  flexShrink: 0,
-                  px: 1.6,
-                  py: 0.7,
-                  borderRadius: "999px",
-                  cursor: "pointer",
-                  bgcolor: active ? ACCENT : SURFACE,
-                  color: active ? "#1a1408" : TEXT,
-                  fontSize: 13,
-                  fontWeight: 700,
-                  border: active ? "none" : "1px solid rgba(212,175,55,0.16)",
-                  boxShadow: active ? "0 6px 16px rgba(212,175,55,0.28)" : "none",
-                }}
-              >
-                {cat.name}
-              </Box>
-            );
-          })}
-        </Box>
-      </Box>
+        <Box component="main">
+          <Box sx={{ mb: 1.25 }}>
+            <ReservSearchBar value={search} onChange={setSearch} theme={theme} />
+          </Box>
+          <Box sx={{ mb: 1.5 }}>
+            <ReservCategoryTabs
+              categories={categories}
+              selectedId={selectedCategory}
+              onSelect={setSelectedCategory}
+              theme={theme}
+              dimmed={searchActive}
+            />
+          </Box>
 
-      {productsLoading ? (
-        <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
-          <CircularProgress sx={{ color: ACCENT }} />
-        </Box>
-      ) : visibleProducts.length === 0 ? (
-        <Typography sx={{ textAlign: "center", color: MUTED, py: 6 }}>محصولی پیدا نشد</Typography>
-      ) : (
-        <Box sx={{ px: 1.5, display: "flex", flexDirection: "column", gap: 1.1 }}>
-          {visibleProducts.map((product) => {
-            const qty = qtyOf(product.id);
-            return (
-              <Box
-                key={product.id}
-                sx={{
-                  display: "flex",
-                  gap: 1.25,
-                  bgcolor: SURFACE,
-                  borderRadius: "20px",
-                  p: 1.1,
-                  border: "1px solid rgba(212,175,55,0.1)",
-                }}
-              >
-                <Box
-                  component="img"
-                  src={productImage(product, categoryImageById)}
-                  alt={product.name}
+          {productsLoading ? (
+            <ReservProductSkeletonList theme={theme} />
+          ) : productsError ? (
+            <ReservEmptyState
+              theme={theme}
+              title="اتصال به سرور با مشکل مواجه شد."
+              action={
+                <Button
+                  onClick={() => loadProducts(1, true, debouncedSearch)}
                   sx={{
-                    width: 92,
-                    height: 92,
-                    borderRadius: "16px",
-                    objectFit: "cover",
-                    bgcolor: SURFACE_ALT,
-                    flexShrink: 0,
-                  }}
-                />
-                <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", py: 0.3 }}>
-                  <Typography sx={{ fontWeight: 800, fontSize: 15, color: TEXT, lineHeight: 1.4 }}>
-                    {product.name}
-                  </Typography>
-                  <Typography sx={{ color: ACCENT, fontWeight: 800, mt: "auto", fontSize: 14 }}>
-                    {formatNumber(Number(product.sale_price) || 0)}
-                    <Box component="span" sx={{ fontSize: 11, fontWeight: 600, color: MUTED, mr: 0.5 }}>
-                      تومان
-                    </Box>
-                  </Typography>
-                </Box>
-                <Box
-                  sx={{
-                    width: 36,
-                    flexShrink: 0,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    alignSelf: "stretch",
+                    bgcolor: ACCENT,
+                    color: "#1a1712",
+                    fontWeight: 800,
+                    borderRadius: "14px",
+                    px: 2.5,
+                    py: 1.1,
+                    "&:hover": { bgcolor: ACCENT_DARK, color: "#1a1712" },
                   }}
                 >
-                  {qty > 0 ? (
-                    <IconButton
-                      size="small"
-                      onClick={() => setQty(product, qty - 1)}
-                      sx={{ bgcolor: SURFACE_ALT, color: TEXT, width: 30, height: 30 }}
-                    >
-                      <RemoveIcon sx={{ fontSize: 16 }} />
-                    </IconButton>
-                  ) : (
-                    <Box sx={{ width: 30, height: 30 }} />
-                  )}
-                  {qty > 0 ? (
-                    <Typography sx={{ minWidth: 18, textAlign: "center", fontWeight: 800, fontSize: 13, color: TEXT }}>
-                      {formatNumber(qty)}
-                    </Typography>
-                  ) : (
-                    <Box />
-                  )}
-                  <IconButton
-                    onClick={() => setQty(product, qty + 1)}
-                    sx={{
-                      bgcolor: ACCENT,
-                      color: "#1a1408",
-                      width: 36,
-                      height: 36,
-                      "&:hover": { bgcolor: ACCENT_DARK, color: "#1a1408" },
-                    }}
-                  >
-                    <AddIcon sx={{ fontSize: 20 }} />
-                  </IconButton>
-                </Box>
-              </Box>
-            );
-          })}
-          {hasMore && (
+                  تلاش مجدد
+                </Button>
+              }
+            />
+          ) : visibleProducts.length === 0 ? (
+            <ReservEmptyState
+              theme={theme}
+              title={
+                searchActive
+                  ? `نتیجه‌ای برای «${debouncedSearch}» پیدا نشد.`
+                  : selectedCategory === "all"
+                    ? "غذایی برای نمایش وجود ندارد."
+                    : "غذایی در این دسته پیدا نشد."
+              }
+            />
+          ) : (
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" },
+                gap: 1.1,
+              }}
+            >
+              {visibleProducts.map((product, index) => {
+                const qty = qtyOf(product.id);
+                return (
+                  <ReservProductCard
+                    key={product.id}
+                    name={product.name}
+                    description={product.description}
+                    price={Number(product.sale_price) || 0}
+                    image={productImage(product, categoryImageById)}
+                    quantity={qty}
+                    priority={index < 4}
+                    theme={theme}
+                    onAdd={() => setQty(product, qty + 1)}
+                    onRemove={() => setQty(product, qty - 1)}
+                    onOpen={() => setDetailProduct(product)}
+                  />
+                );
+              })}
+            </Box>
+          )}
+
+          {!productsLoading && !productsError && hasMore ? (
             <Button
               disabled={loadingMore}
               onClick={() => loadProducts(page + 1, false, debouncedSearch)}
-              sx={{ color: ACCENT, fontWeight: 700, py: 1.2 }}
+              fullWidth
+              sx={{ color: ACCENT, fontWeight: 700, py: 1.4, mt: 1 }}
             >
               {loadingMore ? "..." : "موارد بیشتر"}
             </Button>
-          )}
+          ) : null}
         </Box>
-      )}
 
-      {cartCount > 0 && (
-        <Box
-          sx={{
-            position: "fixed",
-            left: 12,
-            right: 12,
-            bottom: "max(12px, env(safe-area-inset-bottom))",
-            zIndex: 20,
-            maxWidth: 496,
-            mx: "auto",
-          }}
-        >
-          <Button
-            fullWidth
-            variant="contained"
-            onClick={() => setCartOpen(true)}
-            sx={{
-              py: 1.45,
-              borderRadius: "18px",
-              bgcolor: ACCENT,
-              fontWeight: 800,
-              fontSize: 15,
-              boxShadow: "0 12px 28px rgba(212,175,55,0.28)",
-              color: "#1a1408",
-              "&:hover": { bgcolor: ACCENT_DARK, color: "#1a1408" },
-            }}
-          >
-            <Box sx={{ display: "flex", width: "100%", alignItems: "center", justifyContent: "space-between", px: 0.5 }}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.8 }}>
-                <ShoppingBagIcon sx={{ fontSize: 20 }} />
-                <Box
-                  sx={{
-                    minWidth: 22,
-                    height: 22,
-                    borderRadius: "8px",
-                    bgcolor: "rgba(255,255,255,0.2)",
-                    fontSize: 12,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  {formatNumber(cartCount)}
-                </Box>
-              </Box>
-              <Typography sx={{ fontWeight: 800, fontSize: 15 }}>مشاهده سفارش</Typography>
-              {creditToApply > 0 ? (
-                <Box sx={{ textAlign: "left" }}>
-                  <Typography sx={{ fontWeight: 800, fontSize: 13, lineHeight: 1.2 }}>
-                    {formatNumber(payableAmount)} ت
-                  </Typography>
-                  <Typography sx={{ fontWeight: 700, fontSize: 10, opacity: 0.8, lineHeight: 1.2 }}>
-                    کسر {formatNumber(creditToApply)}
-                  </Typography>
-                </Box>
-              ) : (
-                <Typography sx={{ fontWeight: 800, fontSize: 14 }}>{formatNumber(cartTotal)} ت</Typography>
-              )}
-            </Box>
-          </Button>
-        </Box>
-      )}
+        <ReservDesktopCartPanel
+          theme={theme}
+          lines={cart}
+          total={payableAmount}
+          onInc={(id) => adjustCartLine(id, qtyOf(id) + 1)}
+          onDec={(id) => adjustCartLine(id, qtyOf(id) - 1)}
+          onRemove={(id) => adjustCartLine(id, 0)}
+          onCheckout={() => setCartOpen(true)}
+        />
+      </Box>
+
+      <ReservCartBar
+        count={cartCount}
+        totalLabel={cartTotalLabel}
+        theme={theme}
+        onOpen={() => setCartOpen(true)}
+      />
 
       <Drawer
         anchor="bottom"
@@ -1572,7 +1258,7 @@ export default function TableReservPage() {
           },
         }}
       >
-        <Box sx={{ width: 42, height: 5, borderRadius: 99, bgcolor: "#3a3a3a", mx: "auto", mb: 1.5 }} />
+        <Box sx={{ width: 42, height: 5, borderRadius: 99, bgcolor: themeMode === "dark" ? "#3a3a3a" : "#d8d2c8", mx: "auto", mb: 1.5 }} />
         <Typography sx={{ fontWeight: 800, mb: 1.5, fontSize: 18, color: TEXT }}>سفارش {tableLabel}</Typography>
         <Box sx={{ maxHeight: "46vh", overflowY: "auto" }}>
           {cart.map((line) => (
@@ -1587,18 +1273,51 @@ export default function TableReservPage() {
                 mb: 0.8,
                 bgcolor: SURFACE_ALT,
                 borderRadius: "16px",
+                border: `1px solid ${BORDER}`,
               }}
             >
               {line.image ? (
-                <Box component="img" src={line.image} alt="" sx={{ width: 48, height: 48, borderRadius: "12px", objectFit: "cover" }} />
+                <Box
+                  component="img"
+                  src={line.image}
+                  alt=""
+                  loading="lazy"
+                  sx={{ width: 48, height: 48, borderRadius: "12px", objectFit: "cover" }}
+                />
               ) : null}
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography sx={{ fontWeight: 800, fontSize: 14, color: TEXT }}>{line.name}</Typography>
                 <Typography sx={{ color: MUTED, fontSize: 12 }}>
-                  {formatNumber(line.sale_price)} × {formatNumber(line.quantity)}
+                  {formatNumber(line.sale_price * line.quantity)} تومان
                 </Typography>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 0.7 }}>
+                  <IconButton
+                    size="small"
+                    aria-label="کاهش تعداد"
+                    onClick={() => adjustCartLine(line.product_id, line.quantity - 1)}
+                    sx={{ width: 36, height: 36, bgcolor: SURFACE, border: `1px solid ${BORDER}`, color: TEXT }}
+                  >
+                    <RemoveIcon sx={{ fontSize: 16 }} />
+                  </IconButton>
+                  <Typography sx={{ minWidth: 22, textAlign: "center", fontWeight: 800, fontSize: 13 }}>
+                    {formatNumber(line.quantity)}
+                  </Typography>
+                  <IconButton
+                    size="small"
+                    aria-label="افزایش تعداد"
+                    onClick={() => adjustCartLine(line.product_id, line.quantity + 1)}
+                    sx={{ width: 36, height: 36, bgcolor: ACCENT, color: "#1a1712" }}
+                  >
+                    <AddIcon sx={{ fontSize: 16 }} />
+                  </IconButton>
+                </Box>
               </Box>
-              <IconButton size="small" onClick={() => persistCart(cart.filter((item) => item.product_id !== line.product_id))} sx={{ color: MUTED }}>
+              <IconButton
+                size="small"
+                aria-label="حذف از سبد"
+                onClick={() => adjustCartLine(line.product_id, 0)}
+                sx={{ color: MUTED }}
+              >
                 <DeleteOutlineIcon fontSize="small" />
               </IconButton>
             </Box>
@@ -2174,8 +1893,96 @@ export default function TableReservPage() {
         hidden
         onChange={(e) => pickReceiptFile(e.target.files?.[0] || null, false)}
       />
+      <Drawer
+        anchor="bottom"
+        open={Boolean(detailProduct)}
+        onClose={() => setDetailProduct(null)}
+        PaperProps={{
+          sx: {
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            p: 2,
+            pb: "max(16px, env(safe-area-inset-bottom))",
+            direction: "rtl",
+            maxWidth: 520,
+            mx: "auto",
+            bgcolor: SURFACE,
+            color: TEXT,
+          },
+        }}
+      >
+        <Box sx={{ width: 42, height: 5, borderRadius: 99, bgcolor: themeMode === "dark" ? "#3a3a3a" : "#d8d2c8", mx: "auto", mb: 1.5 }} />
+        {detailProduct ? (
+          <Box>
+            <Box
+              component="img"
+              src={productImage(detailProduct, categoryImageById)}
+              alt={detailProduct.name}
+              width={480}
+              height={220}
+              sx={{
+                width: "100%",
+                height: 220,
+                objectFit: "cover",
+                borderRadius: "16px",
+                bgcolor: SURFACE_ALT,
+                mb: 1.5,
+              }}
+            />
+            <Typography sx={{ fontWeight: 800, fontSize: 20, color: TEXT, mb: 0.6 }}>
+              {detailProduct.name}
+            </Typography>
+            {detailProduct.description ? (
+              <Typography sx={{ color: MUTED, fontSize: 14, lineHeight: 1.8, mb: 1.2 }}>
+                {detailProduct.description}
+              </Typography>
+            ) : null}
+            <Typography sx={{ fontWeight: 800, fontSize: 16, color: TEXT, mb: 1.5 }}>
+              {formatNumber(Number(detailProduct.sale_price) || 0)} تومان
+            </Typography>
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.8 }}>
+                <IconButton
+                  aria-label="کاهش"
+                  onClick={() => setQty(detailProduct, Math.max(0, qtyOf(detailProduct.id) - 1))}
+                  sx={{ width: 44, height: 44, bgcolor: SURFACE_ALT, border: `1px solid ${BORDER}`, color: TEXT }}
+                >
+                  <RemoveIcon />
+                </IconButton>
+                <Typography sx={{ minWidth: 28, textAlign: "center", fontWeight: 800 }}>
+                  {formatNumber(qtyOf(detailProduct.id))}
+                </Typography>
+                <IconButton
+                  aria-label="افزایش"
+                  onClick={() => setQty(detailProduct, qtyOf(detailProduct.id) + 1)}
+                  sx={{ width: 44, height: 44, bgcolor: SURFACE_ALT, border: `1px solid ${BORDER}`, color: TEXT }}
+                >
+                  <AddIcon />
+                </IconButton>
+              </Box>
+              <Button
+                variant="contained"
+                onClick={() => {
+                  if (qtyOf(detailProduct.id) === 0) setQty(detailProduct, 1);
+                  setDetailProduct(null);
+                }}
+                sx={{
+                  flex: 1,
+                  py: 1.35,
+                  borderRadius: "14px",
+                  bgcolor: ACCENT,
+                  color: "#1a1712",
+                  fontWeight: 800,
+                  "&:hover": { bgcolor: ACCENT_DARK, color: "#1a1712" },
+                }}
+              >
+                {qtyOf(detailProduct.id) > 0 ? "تأیید" : "افزودن به سبد"}
+              </Button>
+            </Box>
+          </Box>
+        ) : null}
+      </Drawer>
       <ToastContainer position="bottom-center" autoClose={3000} theme={themeMode} />
-    </Box>
     </Box>
   );
 }
