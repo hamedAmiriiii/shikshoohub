@@ -654,8 +654,12 @@ export default function purchas(props: any) {
           <Button 
             onClick={()=>{
               const params = new URLSearchParams({
-                price: totalDeleting ,
+                price: String(totalDeleting),
               });
+              const customerPhone = typeof data?.phone === "string" ? data.phone.trim() : "";
+              if (customerPhone) {
+                params.set("phone", customerPhone);
+              }
               router.push(`/admin?${params.toString()}`);
             }}
             variant="contained"

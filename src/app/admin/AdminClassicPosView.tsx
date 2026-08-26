@@ -128,6 +128,7 @@ export default function AdminClassicPosView({
     matchingCheques,
     loadingAvailableCheques = false,
     salePayableAmount,
+    backPrice = 0,
     chequeRemainder = 0,
     selectedChequeAmount = 0,
     onOpenCreateCheque,
@@ -135,7 +136,7 @@ export default function AdminClassicPosView({
     onSalePriceChange,
   } = cartPanel;
 
-  const finalTotal = Math.max(0, total - useCreditAmount - discounttype);
+  const finalTotal = Math.max(0, total - useCreditAmount - discounttype - backPrice);
 
   const submitDisabled =
     !total ||
@@ -471,6 +472,16 @@ export default function AdminClassicPosView({
               </Typography>
               <Typography sx={{ fontSize: "12px", color: "var(--admin-accent)" }}>
                 {formatNumber(useCreditAmount)}
+              </Typography>
+            </Box>
+          )}
+          {backPrice > 0 && (
+            <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1 }}>
+              <Typography sx={{ fontSize: "11px", color: "var(--admin-text-muted)" }}>
+                مبلغ برگشتی
+              </Typography>
+              <Typography sx={{ fontSize: "12px", color: "#e57373" }}>
+                -{formatNumber(backPrice)}
               </Typography>
             </Box>
           )}

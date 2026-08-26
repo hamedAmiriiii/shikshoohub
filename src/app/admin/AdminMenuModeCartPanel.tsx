@@ -119,6 +119,7 @@ export type AdminMenuModeCartPanelProps = {
   }>;
   loadingAvailableCheques?: boolean;
   salePayableAmount: number;
+  backPrice?: number;
   chequeRemainder?: number;
   selectedChequeAmount?: number;
   onOpenCreateCheque?: () => void;
@@ -178,13 +179,14 @@ export default function AdminMenuModeCartPanel({
   matchingCheques,
   loadingAvailableCheques = false,
   salePayableAmount,
+  backPrice = 0,
   chequeRemainder = 0,
   selectedChequeAmount = 0,
   onOpenCreateCheque,
   salePriceEditEnabled = false,
   onSalePriceChange,
 }: AdminMenuModeCartPanelProps) {
-  const finalTotal = Math.max(0, total - useCreditAmount - discounttype);
+  const finalTotal = Math.max(0, total - useCreditAmount - discounttype - backPrice);
   const showPaymentTypeSelector =
     installmentPaymentEnabled || debtPaymentEnabled || chequePaymentEnabled;
 
@@ -608,6 +610,12 @@ export default function AdminMenuModeCartPanel({
             <Typography sx={{ fontSize: "8px" }}>-{formatNumber(useCreditAmount)}</Typography>
           </Box>
         )}
+        {backPrice > 0 && (
+          <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+            <Typography sx={{ fontSize: "8px", color: "var(--admin-text-muted)" }}>برگشتی</Typography>
+            <Typography sx={{ fontSize: "8px" }}>-{formatNumber(backPrice)}</Typography>
+          </Box>
+        )}
         {discounttype > 0 && (
           <Box sx={{ display: "flex", justifyContent: "space-between" }}>
             <Typography sx={{ fontSize: "8px", color: "var(--admin-text-muted)" }}>تخفیف</Typography>
@@ -620,7 +628,9 @@ export default function AdminMenuModeCartPanel({
             {formatNumber(
               installmentPaymentEnabled && paymentType === "installment" && payableNow > 0
                 ? payableNow
-                : finalTotal,
+                : paymentType === "cheque"
+                  ? salePayableAmount
+                  : finalTotal,
             )}
           </Typography>
         </Box>

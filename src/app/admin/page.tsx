@@ -245,8 +245,8 @@ export default function ShoppingPage() {
       }
       return 0;
     }
-    return Math.max(0, total - useCreditAmount - discounttype);
-  }, [paymentType, total, useCreditAmount, discounttype, installmentCalculation]);
+    return Math.max(0, total - useCreditAmount - discounttype - backPrice);
+  }, [paymentType, total, useCreditAmount, discounttype, backPrice, installmentCalculation]);
 
   const salePayableAmount = useMemo(
     () => Math.max(0, total - useCreditAmount - discounttype - backPrice),
@@ -533,10 +533,11 @@ export default function ShoppingPage() {
 
   
   useEffect(() => {
-     
     const price = searchParams.get("price");
-    (parseInt(price) > 0) && setBackPrice(parseInt(price) )
-    
+    const priceNum = Number.parseInt(price || "", 10);
+    if (Number.isFinite(priceNum) && priceNum > 0) {
+      setBackPrice(priceNum);
+    }
   }, [searchParams]);
 
   const refreshShopDashboard = useCallback(async () => {
@@ -1598,6 +1599,15 @@ export default function ShoppingPage() {
     }
   };
 
+  // پر کردن شماره از URL برگشت کالا (?phone=...)
+  useEffect(() => {
+    const rawPhone = searchParams.get("phone")?.trim();
+    if (!rawPhone) return;
+    onChangePhone(rawPhone);
+    // فقط با تغییر URL؛ نه با هر تغییر onChangePhone
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   const checkCredit = async (phoneNumber: string) => {
     setCheckingCredit(true);
 
@@ -1910,6 +1920,7 @@ export default function ShoppingPage() {
     matchingCheques,
     loadingAvailableCheques,
     salePayableAmount,
+    backPrice,
     chequeRemainder,
     selectedChequeAmount,
     onOpenCreateCheque: () => setChequeCreateOpen(true),
@@ -1958,6 +1969,7 @@ export default function ShoppingPage() {
     matchingCheques,
     loadingAvailableCheques,
     salePayableAmount,
+    backPrice,
     chequeRemainder,
     selectedChequeAmount,
     salePriceEditEnabled,
