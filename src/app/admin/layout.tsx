@@ -48,6 +48,8 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/installment-credits': 'اعتبار اقساطی',
     '/admin/profit-loss': 'سود و ضرر',
     '/admin/daily-reconciliation': 'تطبیق روزانه',
+    '/admin/shop-accounts': 'حساب‌های فروشگاه',
+    '/admin/petty-cash': 'تنخواه',
     '/admin/purchase-debts': 'بدهکاران (نسیه)',
     '/admin/payroll': 'حقوق',
     '/admin/payroll/employees': 'کارمندها',

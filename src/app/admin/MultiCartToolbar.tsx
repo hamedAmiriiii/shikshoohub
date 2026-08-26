@@ -13,6 +13,8 @@ export type MultiCartToolbarProps = {
   onAdd: () => void;
   onClearOrRemove: () => void;
   compact?: boolean;
+  /** اگر false باشد عرض را پر نمی‌کند (مثلاً کنار فیلدهای هدر کلاسیک) */
+  fullWidth?: boolean;
 };
 
 export default function MultiCartToolbar({
@@ -22,6 +24,7 @@ export default function MultiCartToolbar({
   onAdd,
   onClearOrRemove,
   compact = false,
+  fullWidth = true,
 }: MultiCartToolbarProps) {
   const iconSize = compact ? 14 : 18;
   const tabSize = compact ? 22 : 28;
@@ -34,7 +37,8 @@ export default function MultiCartToolbar({
         alignItems: "center",
         justifyContent: "space-between",
         gap: compact ? 0.5 : 1,
-        width: "100%",
+        width: fullWidth ? "100%" : "auto",
+        flexShrink: 0,
         direction: "ltr",
         px: compact ? 0.5 : 1,
         py: compact ? 0.4 : 0.75,

@@ -155,10 +155,22 @@ export default function AdminHamburgerSidebar({
         icon: <UndoIcon />,
       },
       {
+        id: "shop-accounts",
+        label: "حساب‌های فروشگاه",
+        href: "/admin/shop-accounts",
+        icon: <PaymentsIcon />,
+      },
+      {
         id: "daily",
         label: "تطبیق روزانه",
         href: "/admin/daily-reconciliation",
         icon: <AccountBalanceIcon />,
+      },
+      {
+        id: "petty-cash",
+        label: "تنخواه",
+        href: "/admin/petty-cash",
+        icon: <AccountBalanceWalletIcon />,
       },
       { id: "profit", label: "سود و ضرر", href: "/admin/profit-loss", icon: <TrendingUpIcon /> },
     ],

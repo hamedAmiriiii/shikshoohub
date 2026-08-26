@@ -26,7 +26,6 @@ import {
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import { tableCellClasses } from "@mui/material/TableCell";
-import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import SaveIcon from "@mui/icons-material/Save";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import SyncIcon from "@mui/icons-material/Sync";
@@ -43,15 +42,17 @@ const StyledTableCell = styled(TableCell)(() => ({
     backgroundColor: "var(--admin-surface-alt)",
     color: "var(--admin-text)",
     fontWeight: "600",
-    fontSize: "13px",
-    padding: "12px 10px",
+    fontSize: "11px",
+    padding: "6px 4px",
     whiteSpace: "nowrap",
+    lineHeight: 1.25,
   },
   [`&.${tableCellClasses.body}`]: {
     color: "var(--admin-text)",
-    fontSize: "13px",
-    padding: "10px 8px",
+    fontSize: "11px",
+    padding: "4px 3px",
     verticalAlign: "middle",
+    lineHeight: 1.25,
   },
 }));
 
@@ -64,6 +65,42 @@ const StyledTableRow = styled(TableRow)(() => ({
     backgroundColor: "var(--admin-menu-hover)",
   },
 }));
+
+/** عرض ستون‌های چسبان سمت راست (واریز و ثبت) */
+const STICKY_W = {
+  date: 56,
+  account: 84,
+  cash: 76,
+  daily: 64,
+  cumul: 64,
+  notes: 92,
+  save: 48,
+} as const;
+
+function stickyRightSx(
+  right: number,
+  width: number,
+  opts?: { isHead?: boolean; isEdge?: boolean; accent?: boolean }
+) {
+  const headBg = opts?.accent
+    ? "rgba(120,181,104,0.14)"
+    : "var(--admin-surface-alt)";
+  return {
+    position: "sticky" as const,
+    right,
+    width,
+    minWidth: width,
+    maxWidth: width,
+    zIndex: opts?.isHead ? 5 : 3,
+    backgroundColor: opts?.isHead ? headBg : "inherit",
+    ...(opts?.isEdge
+      ? {
+          boxShadow: "-6px 0 10px rgba(0,0,0,0.18)",
+          borderLeft: "1px solid var(--admin-border)",
+        }
+      : null),
+  };
+}
 
 interface SalesSnapshot {
   total_sales: number;
@@ -95,22 +132,22 @@ interface DepositsSnapshot {
   deposit_account_1: number;
   deposit_account_2: number;
   deposit_cash: number;
+  account_deposits: AccountDeposit[];
 }
 
-const PERSIAN_MONTH_NAMES = [
-  "فروردین",
-  "اردیبهشت",
-  "خرداد",
-  "تیر",
-  "مرداد",
-  "شهریور",
-  "مهر",
-  "آبان",
-  "آذر",
-  "دی",
-  "بهمن",
-  "اسفند",
-];
+interface AccountDeposit {
+  shop_account_id: number;
+  amount: number;
+}
+
+interface ShopAccount {
+  id: number;
+  name: string;
+  balance: number;
+  is_default?: boolean;
+  is_active?: boolean;
+  sort_order?: number;
+}
 
 interface MonthFilter {
   year: number;
@@ -125,6 +162,7 @@ interface DailyReconciliationResponse {
   from_date_jalali: string;
   to_date_jalali: string;
   daily: DailyReconciliationRow[];
+  shop_accounts: ShopAccount[];
 }
 
 export interface DailyReconciliationRow {
@@ -141,11 +179,26 @@ export interface DailyReconciliationRow {
 }
 
 interface DepositDraft {
-  deposit_account_1: string;
-  deposit_account_2: string;
+  /** مبلغ واریز به هر حساب — کلید = shop_account_id */
+  accounts: Record<string, string>;
   deposit_cash: string;
   notes: string;
 }
+
+const PERSIAN_MONTH_NAMES = [
+  "فروردین",
+  "اردیبهشت",
+  "خرداد",
+  "تیر",
+  "مرداد",
+  "شهریور",
+  "مهر",
+  "آبان",
+  "آذر",
+  "دی",
+  "بهمن",
+  "اسفند",
+];
 
 const formatNumber = (num: number) =>
   new Intl.NumberFormat("fa-IR").format(Math.round(num));
@@ -176,17 +229,48 @@ function formatAmountInput(value: string): string {
   return new Intl.NumberFormat("fa-IR").format(n);
 }
 
-function draftsFromRow(row: DailyReconciliationRow): DepositDraft {
+function emptyAccountDraftMap(accounts: ShopAccount[]): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const account of accounts) {
+    map[String(account.id)] = "";
+  }
+  return map;
+}
+
+function amountFromAccountDeposits(
+  deposits: AccountDeposit[] | undefined,
+  accountId: number
+): number {
+  if (!deposits?.length) return 0;
+  const hit = deposits.find((item) => Number(item.shop_account_id) === accountId);
+  return Math.floor(Number(hit?.amount) || 0);
+}
+
+function draftsFromRow(row: DailyReconciliationRow, accounts: ShopAccount[]): DepositDraft {
   const d = row.deposits;
+  const accountDrafts = emptyAccountDraftMap(accounts);
+
+  if (d?.account_deposits?.length) {
+    for (const item of d.account_deposits) {
+      const key = String(item.shop_account_id);
+      if (!(key in accountDrafts)) continue;
+      const amount = Math.floor(Number(item.amount) || 0);
+      accountDrafts[key] = amount > 0 ? formatAmountInput(String(amount)) : "";
+    }
+  } else if (accounts.length > 0) {
+    // سازگاری با داده قدیمی deposit_account_1 / deposit_account_2
+    const a1 = Math.floor(Number(d?.deposit_account_1) || 0);
+    const a2 = Math.floor(Number(d?.deposit_account_2) || 0);
+    if (accounts[0] && a1 > 0) {
+      accountDrafts[String(accounts[0].id)] = formatAmountInput(String(a1));
+    }
+    if (accounts[1] && a2 > 0) {
+      accountDrafts[String(accounts[1].id)] = formatAmountInput(String(a2));
+    }
+  }
+
   return {
-    deposit_account_1:
-      d?.deposit_account_1 != null && d.deposit_account_1 > 0
-        ? formatAmountInput(String(d.deposit_account_1))
-        : "",
-    deposit_account_2:
-      d?.deposit_account_2 != null && d.deposit_account_2 > 0
-        ? formatAmountInput(String(d.deposit_account_2))
-        : "",
+    accounts: accountDrafts,
     deposit_cash:
       d?.deposit_cash != null && d.deposit_cash > 0
         ? formatAmountInput(String(d.deposit_cash))
@@ -294,6 +378,49 @@ function salesSnapshotFromDailySales(data: DailySalesApiResponse): SalesSnapshot
   return salesSnapshotFromRecord(data as unknown as Record<string, unknown>);
 }
 
+function parseAccountDeposits(raw: unknown): AccountDeposit[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const row = item as Record<string, unknown>;
+      const shopAccountId = Number(row.shop_account_id ?? row.account_id);
+      if (!Number.isFinite(shopAccountId) || shopAccountId <= 0) return null;
+      return {
+        shop_account_id: shopAccountId,
+        amount: Math.floor(Number(row.amount) || 0),
+      };
+    })
+    .filter((item): item is AccountDeposit => item != null);
+}
+
+function parseShopAccounts(raw: unknown): ShopAccount[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const row = item as Record<string, unknown>;
+      const id = Number(row.id);
+      if (!Number.isFinite(id) || id <= 0) return null;
+      if (row.is_active === false) return null;
+      // تنخواه در تطبیق روزانه نیست — واریز روزانه فقط به حساب اصلی
+      if (row.type === "petty_cash") return null;
+      return {
+        id,
+        name: typeof row.name === "string" && row.name.trim() ? row.name.trim() : `حساب ${id}`,
+        balance: Math.floor(Number(row.balance) || 0),
+        is_default: Boolean(row.is_default),
+        is_active: row.is_active !== false,
+        sort_order:
+          row.sort_order != null && Number.isFinite(Number(row.sort_order))
+            ? Number(row.sort_order)
+            : undefined,
+      };
+    })
+    .filter((item): item is ShopAccount => item != null)
+    .sort((a, b) => (a.sort_order ?? a.id) - (b.sort_order ?? b.id));
+}
+
 function depositsSnapshotFromRecord(
   source: Record<string, unknown>
 ): DepositsSnapshot | null {
@@ -303,14 +430,19 @@ function depositsSnapshotFromRecord(
       ? (nested as Record<string, unknown>)
       : source.deposit_account_1 != null ||
           source.deposit_account_2 != null ||
-          source.deposit_cash != null
+          source.deposit_cash != null ||
+          source.account_deposits != null
         ? source
         : null;
   if (!d) return null;
+  const accountDeposits = parseAccountDeposits(
+    d.account_deposits ?? source.account_deposits
+  );
   return {
     deposit_account_1: Math.floor(Number(d.deposit_account_1) || 0),
     deposit_account_2: Math.floor(Number(d.deposit_account_2) || 0),
     deposit_cash: Math.floor(Number(d.deposit_cash) || 0),
+    account_deposits: accountDeposits,
   };
 }
 
@@ -382,6 +514,7 @@ function parseReconciliationResponse(res: unknown): DailyReconciliationResponse 
       from_date_jalali: String(obj.from_date_jalali ?? ""),
       to_date_jalali: String(obj.to_date_jalali ?? ""),
       daily,
+      shop_accounts: parseShopAccounts(obj.shop_accounts),
     };
   };
 
@@ -396,11 +529,11 @@ function parseReconciliationResponse(res: unknown): DailyReconciliationResponse 
 }
 
 function depositTotal(draft: DepositDraft): number {
-  return (
-    parseAmount(draft.deposit_account_1) +
-    parseAmount(draft.deposit_account_2) +
-    parseAmount(draft.deposit_cash)
+  const accountsSum = Object.values(draft.accounts || {}).reduce(
+    (sum, value) => sum + parseAmount(value),
+    0
   );
+  return accountsSum + parseAmount(draft.deposit_cash);
 }
 
 function calculateDailyDiscrepancy(
@@ -408,24 +541,12 @@ function calculateDailyDiscrepancy(
   depositsTotal: number
 ): number {
   const totalCollected = sales?.total_collected ?? 0;
-  const diff = depositsTotal - totalCollected;
-  console.log("dddddddddddd", {
-    depositsTotal,
-    totalCollected,
-    diff,
-    depositsType: typeof depositsTotal,
-    totalCollectedType: typeof totalCollected,
-    isDiffNaN: Number.isNaN(diff),
-  });
-  return diff;
+  return depositsTotal - totalCollected;
 }
- 
+
 function hasDepositDraftInput(draft: DepositDraft): boolean {
-  return (
-    draft.deposit_account_1.trim() !== "" ||
-    draft.deposit_account_2.trim() !== "" ||
-    draft.deposit_cash.trim() !== ""
-  );
+  if (draft.deposit_cash.trim() !== "") return true;
+  return Object.values(draft.accounts || {}).some((value) => value.trim() !== "");
 }
 
 /** اختلاف روز = جمع وصول − مجموع واریزها */
@@ -439,12 +560,12 @@ function previewDailyDiscrepancy(
 }
 
 const amountFieldSx = {
-  minWidth: 100,
-  maxWidth: 130,
+  minWidth: 72,
+  maxWidth: 84,
   "& .MuiOutlinedInput-root": {
     backgroundColor: "var(--admin-surface-alt)",
     color: "var(--admin-text)",
-    fontSize: "12px",
+    fontSize: "11px",
     "& fieldset": { borderColor: "var(--admin-border)" },
     "&:hover fieldset": { borderColor: "var(--admin-accent)" },
     "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
@@ -453,8 +574,9 @@ const amountFieldSx = {
     color: "var(--admin-text)",
     textAlign: "left",
     direction: "ltr",
-    py: 0.75,
-    px: 1,
+    py: 0.35,
+    px: 0.5,
+    fontSize: "11px",
   },
 };
 
@@ -490,17 +612,42 @@ function rowDisplayDiscrepancy(
 
 function depositsTotalForTone(
   row: DailyReconciliationRow,
-  draft: DepositDraft | undefined
+  draft: DepositDraft | undefined,
+  accounts: ShopAccount[]
 ): number {
   if (row.editable && draft && hasDepositDraftInput(draft)) {
     return depositTotal(draft);
   }
   const deposits = row.deposits;
-  return (
-    Math.floor(Number(deposits?.deposit_account_1) || 0) +
-    Math.floor(Number(deposits?.deposit_account_2) || 0) +
-    Math.floor(Number(deposits?.deposit_cash) || 0)
-  );
+  if (deposits?.account_deposits?.length) {
+    return (
+      deposits.account_deposits.reduce((sum, item) => sum + Math.floor(Number(item.amount) || 0), 0) +
+      Math.floor(Number(deposits.deposit_cash) || 0)
+    );
+  }
+  if (accounts.length > 0) {
+    return (
+      Math.floor(Number(deposits?.deposit_account_1) || 0) +
+      Math.floor(Number(deposits?.deposit_account_2) || 0) +
+      Math.floor(Number(deposits?.deposit_cash) || 0)
+    );
+  }
+  return Math.floor(Number(deposits?.deposit_cash) || 0);
+}
+
+function depositAmountForAccount(
+  row: DailyReconciliationRow,
+  account: ShopAccount,
+  accountIndex: number
+): number {
+  const deposits = row.deposits;
+  if (!deposits) return 0;
+  if (deposits.account_deposits?.length) {
+    return amountFromAccountDeposits(deposits.account_deposits, account.id);
+  }
+  if (accountIndex === 0) return Math.floor(Number(deposits.deposit_account_1) || 0);
+  if (accountIndex === 1) return Math.floor(Number(deposits.deposit_account_2) || 0);
+  return 0;
 }
 
 function buildCumulativePreviewByDate(
@@ -596,7 +743,7 @@ function MobileStat({
 function DiscrepancyCell({ value }: { value: number | null | undefined }) {
   if (value == null) {
     return (
-      <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "12px" }}>
+      <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "10px" }}>
         —
       </Typography>
     );
@@ -604,7 +751,7 @@ function DiscrepancyCell({ value }: { value: number | null | undefined }) {
   const color =
     value > 0 ? "#4ade80" : value < 0 ? "#f87171" : "var(--admin-text-muted)";
   return (
-    <Typography sx={{ color, fontWeight: 600, fontSize: "13px", whiteSpace: "nowrap" }}>
+    <Typography sx={{ color, fontWeight: 600, fontSize: "11px", whiteSpace: "nowrap" }}>
       {formatNumber(value)}
     </Typography>
   );
@@ -612,6 +759,7 @@ function DiscrepancyCell({ value }: { value: number | null | undefined }) {
 
 export default function DailyReconciliationPage() {
   const [rows, setRows] = useState<DailyReconciliationRow[]>([]);
+  const [shopAccounts, setShopAccounts] = useState<ShopAccount[]>([]);
   const [drafts, setDrafts] = useState<Record<string, DepositDraft>>({});
   const [loading, setLoading] = useState(true);
   const [savingDate, setSavingDate] = useState<string | null>(null);
@@ -622,6 +770,17 @@ export default function DailyReconciliationPage() {
     to: string;
     days: number;
   } | null>(null);
+
+  const applyDraftsForAccounts = useCallback(
+    (list: DailyReconciliationRow[], accounts: ShopAccount[]) => {
+      const nextDrafts: Record<string, DepositDraft> = {};
+      list.forEach((row) => {
+        nextDrafts[row.date] = draftsFromRow(row, accounts);
+      });
+      setDrafts(nextDrafts);
+    },
+    []
+  );
 
   const fetchGrid = useCallback(async (year?: number, month?: number) => {
     setLoading(true);
@@ -637,41 +796,60 @@ export default function DailyReconciliationPage() {
         token
       );
       if (res?.hasError) {
+        console.log("[daily-reconciliation] GET error", {
+          url: buildReconciliationUrl(year, month),
+          res,
+        });
         toast.error(getApiErrorMessage(res, "خطا در دریافت گرید تطبیق روزانه"));
         setRows([]);
         setDrafts({});
+        setShopAccounts([]);
         setMonthFilter(null);
         setRangeInfo(null);
         return;
       }
+      console.log("[daily-reconciliation] GET /api/daily-reconciliations raw", res);
       const payload = parseReconciliationResponse(res);
       if (!payload) {
+        console.log("[daily-reconciliation] parse failed — payload null");
         toast.error("ساختار پاسخ سرور نامعتبر است");
         setRows([]);
         setDrafts({});
         return;
       }
+      console.log("[daily-reconciliation] parsed", {
+        filter: payload.filter,
+        shop_accounts: payload.shop_accounts,
+        daily_count: payload.daily.length,
+        sample_day: payload.daily[0] ?? null,
+        sample_deposits: payload.daily[0]?.deposits ?? null,
+      });
       setMonthFilter(payload.filter);
       setRangeInfo({
         from: payload.from_date_jalali,
         to: payload.to_date_jalali,
         days: payload.days_in_month,
       });
+      const accounts =
+        payload.shop_accounts.length > 0
+          ? payload.shop_accounts
+          : [
+              { id: 1, name: "حساب ۱", balance: 0, is_default: true },
+              { id: 2, name: "حساب ۲", balance: 0, is_default: true },
+            ];
+      setShopAccounts(accounts);
       const list = payload.daily;
       setRows(list);
-      const nextDrafts: Record<string, DepositDraft> = {};
-      list.forEach((row) => {
-        nextDrafts[row.date] = draftsFromRow(row);
-      });
-      setDrafts(nextDrafts);
+      applyDraftsForAccounts(list, accounts);
     } catch {
       toast.error("خطا در دریافت گرید تطبیق روزانه");
       setRows([]);
       setDrafts({});
+      setShopAccounts([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [applyDraftsForAccounts]);
 
   useEffect(() => {
     fetchGrid();
@@ -714,16 +892,6 @@ export default function DailyReconciliationPage() {
     return last.cumulative_discrepancy ?? null;
   }, [visibleRows, cumulativePreviewByDate]);
 
-  const rowCumulativeDiscrepancy = (
-    row: DailyReconciliationRow,
-    draft: DepositDraft | undefined
-  ): number | null | undefined => {
-    if (row.editable && !row.is_closed && draft) {
-      return cumulativePreviewByDate[row.date] ?? row.cumulative_discrepancy;
-    }
-    return row.cumulative_discrepancy;
-  };
-
   const yearOptions = useMemo(() => {
     const base = monthFilter?.year ?? 1404;
     return Array.from({ length: 11 }, (_, i) => base - 5 + i);
@@ -732,8 +900,38 @@ export default function DailyReconciliationPage() {
   const updateDraft = (date: string, patch: Partial<DepositDraft>) => {
     setDrafts((prev) => ({
       ...prev,
-      [date]: { ...prev[date], ...patch },
+      [date]: {
+        accounts: emptyAccountDraftMap(shopAccounts),
+        deposit_cash: "",
+        notes: "",
+        ...prev[date],
+        ...patch,
+        accounts: {
+          ...(prev[date]?.accounts || emptyAccountDraftMap(shopAccounts)),
+          ...(patch.accounts || {}),
+        },
+      },
     }));
+  };
+
+  const updateAccountDraft = (date: string, accountId: number, value: string) => {
+    setDrafts((prev) => {
+      const current = prev[date] || {
+        accounts: emptyAccountDraftMap(shopAccounts),
+        deposit_cash: "",
+        notes: "",
+      };
+      return {
+        ...prev,
+        [date]: {
+          ...current,
+          accounts: {
+            ...current.accounts,
+            [String(accountId)]: formatAmountInput(value),
+          },
+        },
+      };
+    });
   };
 
   const handleRefreshSales = async (row: DailyReconciliationRow) => {
@@ -784,6 +982,10 @@ export default function DailyReconciliationPage() {
     setSavingDate(row.date);
     const token = tokenCode();
     const sales = row.sales;
+    const accountDeposits = shopAccounts.map((account) => ({
+      shop_account_id: account.id,
+      amount: parseAmount(draft.accounts[String(account.id)] || ""),
+    }));
     const body = {
       date: row.date,
       total_sales: sales?.total_sales ?? 0,
@@ -793,11 +995,15 @@ export default function DailyReconciliationPage() {
       discount_given: sales?.discount_given ?? 0,
       total_collected: sales?.total_collected ?? 0,
       credit_used_total: sales?.credit_used_total ?? 0,
-      deposit_account_1: parseAmount(draft.deposit_account_1),
-      deposit_account_2: parseAmount(draft.deposit_account_2),
       deposit_cash: parseAmount(draft.deposit_cash),
+      account_deposits: accountDeposits,
+      // سازگاری با فرانت/بک‌اند قدیمی
+      deposit_account_1: accountDeposits[0]?.amount ?? 0,
+      deposit_account_2: accountDeposits[1]?.amount ?? 0,
       ...(draft.notes.trim() ? { notes: draft.notes.trim() } : {}),
     };
+
+    console.log("[daily-reconciliation] POST /api/daily-reconciliations body", body);
 
     try {
       const res = await apiRequestError(
@@ -809,6 +1015,7 @@ export default function DailyReconciliationPage() {
         true,
         token
       );
+      console.log("[daily-reconciliation] POST response", res);
       if (res?.hasError) {
         toast.error(getApiErrorMessage(res, "خطا در ثبت تطبیق روزانه"));
         return;
@@ -826,16 +1033,12 @@ export default function DailyReconciliationPage() {
     }
   };
 
-  const renderAmountCell = (
-    row: DailyReconciliationRow,
-    field: keyof Omit<DepositDraft, "notes">,
-    fullWidth = false
-  ) => {
+  const renderCashCell = (row: DailyReconciliationRow, fullWidth = false) => {
     const draft = drafts[row.date];
     if (!row.editable) {
-      const val = row.deposits?.[field] ?? 0;
+      const val = row.deposits?.deposit_cash ?? 0;
       return (
-        <Typography sx={{ color: "var(--admin-text)", fontSize: "13px" }}>
+        <Typography sx={{ color: "var(--admin-text)", fontSize: "11px" }}>
           {val > 0 ? formatNumber(val) : "—"}
         </Typography>
       );
@@ -844,10 +1047,35 @@ export default function DailyReconciliationPage() {
     return (
       <TextField
         size="small"
-        value={draft[field]}
-        onChange={(e) => {
-          updateDraft(row.date, { [field]: formatAmountInput(e.target.value) });
-        }}
+        value={draft.deposit_cash}
+        onChange={(e) => updateDraft(row.date, { deposit_cash: formatAmountInput(e.target.value) })}
+        placeholder="۰"
+        sx={fullWidth ? amountFieldSxFull : amountFieldSx}
+      />
+    );
+  };
+
+  const renderAccountCell = (
+    row: DailyReconciliationRow,
+    account: ShopAccount,
+    accountIndex: number,
+    fullWidth = false
+  ) => {
+    const draft = drafts[row.date];
+    if (!row.editable) {
+      const val = depositAmountForAccount(row, account, accountIndex);
+      return (
+        <Typography sx={{ color: "var(--admin-text)", fontSize: "11px" }}>
+          {val > 0 ? formatNumber(val) : "—"}
+        </Typography>
+      );
+    }
+    if (!draft) return null;
+    return (
+      <TextField
+        size="small"
+        value={draft.accounts[String(account.id)] || ""}
+        onChange={(e) => updateAccountDraft(row.date, account.id, e.target.value)}
         placeholder="۰"
         sx={fullWidth ? amountFieldSxFull : amountFieldSx}
       />
@@ -858,6 +1086,27 @@ export default function DailyReconciliationPage() {
     () => [...visibleRows].reverse(),
     [visibleRows]
   );
+
+  const stickyLayout = useMemo(() => {
+    let right = 0;
+    const date = { right, width: STICKY_W.date };
+    right += STICKY_W.date;
+    const accounts = shopAccounts.map(() => {
+      const col = { right, width: STICKY_W.account };
+      right += STICKY_W.account;
+      return col;
+    });
+    const cash = { right, width: STICKY_W.cash };
+    right += STICKY_W.cash;
+    const daily = { right, width: STICKY_W.daily };
+    right += STICKY_W.daily;
+    const cumul = { right, width: STICKY_W.cumul };
+    right += STICKY_W.cumul;
+    const notes = { right, width: STICKY_W.notes };
+    right += STICKY_W.notes;
+    const save = { right, width: STICKY_W.save };
+    return { date, accounts, cash, daily, cumul, notes, save };
+  }, [shopAccounts]);
 
   return (
     <Box
@@ -870,134 +1119,6 @@ export default function DailyReconciliationPage() {
       }}
     >
       <Container maxWidth={false} sx={{ px: { xs: 1.5, md: 3 } }}>
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: 2,
-            mb: 2,
-          }}
-        >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-            <AccountBalanceWalletIcon sx={{ color: "var(--admin-accent)", fontSize: 32 }} />
-            <Box>
-              <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: { xs: 18, md: 24 } }}>
-                تطبیق روزانه فروش و واریز
-              </Typography>
-             
-            </Box>
-          </Box>
-          <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
-            <Paper
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 0.5,
-                px: 1,
-                py: 0.5,
-                backgroundColor: "var(--admin-surface)",
-                border: "1px solid var(--admin-border)",
-                borderRadius: 2,
-              }}
-            >
-              <IconButton
-                size="small"
-                onClick={goPrevMonth}
-                disabled={loading || !monthFilter}
-                aria-label="ماه قبل"
-                sx={{ color: "var(--admin-text)" }}
-              >
-                <ChevronRightIcon />
-              </IconButton>
-              <FormControl size="small" sx={{ minWidth: 72 }}>
-                <Select
-                  value={monthFilter?.month ?? ""}
-                  displayEmpty
-                  disabled={!monthFilter || loading}
-                  onChange={(e) => {
-                    if (!monthFilter) return;
-                    handleYearMonthSelect(monthFilter.year, Number(e.target.value));
-                  }}
-                  sx={{
-                    color: "var(--admin-text)",
-                    fontSize: 13,
-                    "& .MuiOutlinedInput-notchedOutline": { border: "none" },
-                  }}
-                >
-                  {PERSIAN_MONTH_NAMES.map((name, idx) => (
-                    <MenuItem key={name} value={idx + 1}>
-                      {name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <FormControl size="small" sx={{ minWidth: 80 }}>
-                <Select
-                  value={monthFilter?.year ?? ""}
-                  displayEmpty
-                  disabled={!monthFilter || loading}
-                  onChange={(e) => {
-                    if (!monthFilter) return;
-                    handleYearMonthSelect(Number(e.target.value), monthFilter.month);
-                  }}
-                  sx={{
-                    color: "var(--admin-text)",
-                    fontSize: 13,
-                    "& .MuiOutlinedInput-notchedOutline": { border: "none" },
-                  }}
-                >
-                  {yearOptions.map((y) => (
-                    <MenuItem key={y} value={y}>
-                      {y}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <IconButton
-                size="small"
-                onClick={goNextMonth}
-                disabled={loading || !monthFilter || monthFilter.is_current_month}
-                aria-label="ماه بعد"
-                sx={{ color: "var(--admin-text)" }}
-              >
-                <ChevronLeftIcon />
-              </IconButton>
-            </Paper>
-            {!monthFilter?.is_current_month && (
-              <Button
-                size="small"
-                variant="outlined"
-                startIcon={<TodayIcon />}
-                onClick={goCurrentMonth}
-                disabled={loading}
-                sx={{
-                  color: "var(--admin-accent)",
-                  borderColor: "var(--admin-accent)",
-                }}
-              >
-                ماه جاری
-              </Button>
-            )}
-            <Button
-              variant="outlined"
-              startIcon={<RefreshIcon />}
-              onClick={() =>
-                monthFilter ? fetchGrid(monthFilter.year, monthFilter.month) : fetchGrid()
-              }
-              disabled={loading}
-              sx={{
-                color: "var(--admin-text)",
-                borderColor: "var(--admin-border)",
-                "&:hover": { borderColor: "var(--admin-accent)" },
-              }}
-            >
-              بروزرسانی
-            </Button>
-          </Box>
-        </Box>
-
         <Card
           sx={{
             mb: 2,
@@ -1006,8 +1127,27 @@ export default function DailyReconciliationPage() {
             borderRadius: 2,
           }}
         >
-          <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
-            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 13, lineHeight: 1.7 }}>
+          <CardContent
+            sx={{
+              py: 1.25,
+              px: { xs: 1.5, md: 2 },
+              "&:last-child": { pb: 1.25 },
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 1.5,
+              flexWrap: "wrap",
+            }}
+          >
+            <Typography
+              sx={{
+                color: "var(--admin-text-muted)",
+                fontSize: 13,
+                lineHeight: 1.7,
+                flex: "1 1 220px",
+                minWidth: 0,
+              }}
+            >
               {monthFilter && (
                 <>
                   <Box component="span" sx={{ color: "var(--admin-text)", fontWeight: 700 }}>
@@ -1022,12 +1162,17 @@ export default function DailyReconciliationPage() {
                     </>
                   )}
                   {monthFilter.is_current_month && (
-                    <Chip label="ماه جاری" size="small" sx={{ ml: 1, height: 22, fontSize: 11 }} color="primary" variant="outlined" />
+                    <Chip
+                      label="ماه جاری"
+                      size="small"
+                      sx={{ ml: 1, height: 22, fontSize: 11 }}
+                      color="primary"
+                      variant="outlined"
+                    />
                   )}
                   <br />
                 </>
               )}
-            
               {latestCumulative != null && (
                 <>
                   {" "}
@@ -1038,6 +1183,123 @@ export default function DailyReconciliationPage() {
                 </>
               )}
             </Typography>
+
+            <Box
+              sx={{
+                display: "flex",
+                gap: 1,
+                alignItems: "center",
+                flexWrap: "wrap",
+                flexShrink: 0,
+              }}
+            >
+              <Paper
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.5,
+                  px: 1,
+                  py: 0.5,
+                  backgroundColor: "var(--admin-surface-alt)",
+                  border: "1px solid var(--admin-border)",
+                  borderRadius: 2,
+                }}
+              >
+                <IconButton
+                  size="small"
+                  onClick={goPrevMonth}
+                  disabled={loading || !monthFilter}
+                  aria-label="ماه قبل"
+                  sx={{ color: "var(--admin-text)" }}
+                >
+                  <ChevronRightIcon />
+                </IconButton>
+                <FormControl size="small" sx={{ minWidth: 72 }}>
+                  <Select
+                    value={monthFilter?.month ?? ""}
+                    displayEmpty
+                    disabled={!monthFilter || loading}
+                    onChange={(e) => {
+                      if (!monthFilter) return;
+                      handleYearMonthSelect(monthFilter.year, Number(e.target.value));
+                    }}
+                    sx={{
+                      color: "var(--admin-text)",
+                      fontSize: 13,
+                      "& .MuiOutlinedInput-notchedOutline": { border: "none" },
+                    }}
+                  >
+                    {PERSIAN_MONTH_NAMES.map((name, idx) => (
+                      <MenuItem key={name} value={idx + 1}>
+                        {name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <FormControl size="small" sx={{ minWidth: 80 }}>
+                  <Select
+                    value={monthFilter?.year ?? ""}
+                    displayEmpty
+                    disabled={!monthFilter || loading}
+                    onChange={(e) => {
+                      if (!monthFilter) return;
+                      handleYearMonthSelect(Number(e.target.value), monthFilter.month);
+                    }}
+                    sx={{
+                      color: "var(--admin-text)",
+                      fontSize: 13,
+                      "& .MuiOutlinedInput-notchedOutline": { border: "none" },
+                    }}
+                  >
+                    {yearOptions.map((y) => (
+                      <MenuItem key={y} value={y}>
+                        {y}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <IconButton
+                  size="small"
+                  onClick={goNextMonth}
+                  disabled={loading || !monthFilter || monthFilter.is_current_month}
+                  aria-label="ماه بعد"
+                  sx={{ color: "var(--admin-text)" }}
+                >
+                  <ChevronLeftIcon />
+                </IconButton>
+              </Paper>
+              {!monthFilter?.is_current_month && (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<TodayIcon />}
+                  onClick={goCurrentMonth}
+                  disabled={loading}
+                  sx={{
+                    color: "var(--admin-accent)",
+                    borderColor: "var(--admin-accent)",
+                  }}
+                >
+                  ماه جاری
+                </Button>
+              )}
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<RefreshIcon />}
+                onClick={() =>
+                  monthFilter ? fetchGrid(monthFilter.year, monthFilter.month) : fetchGrid()
+                }
+                disabled={loading}
+                sx={{
+                  color: "var(--admin-text)",
+                  borderColor: "var(--admin-border)",
+                  "&:hover": { borderColor: "var(--admin-accent)" },
+                }}
+              >
+                بروزرسانی
+              </Button>
+            </Box>
           </CardContent>
         </Card>
 
@@ -1069,65 +1331,98 @@ export default function DailyReconciliationPage() {
               overflowX: "auto",
             }}
           >
-            <Table size="small" stickyHeader>
+            <Table size="small" stickyHeader sx={{ borderCollapse: "separate", borderSpacing: 0 }}>
               <TableHead>
                 <TableRow>
-                  <StyledTableCell align="center">تاریخ</StyledTableCell>
+                  <StyledTableCell
+                    align="center"
+                    sx={stickyRightSx(stickyLayout.date.right, stickyLayout.date.width, {
+                      isHead: true,
+                    })}
+                  >
+                    تاریخ
+                  </StyledTableCell>
+                  {shopAccounts.map((account, index) => (
+                    <StyledTableCell
+                      key={account.id}
+                      align="center"
+                      sx={stickyRightSx(
+                        stickyLayout.accounts[index]?.right ?? 0,
+                        stickyLayout.accounts[index]?.width ?? STICKY_W.account,
+                        { isHead: true, accent: true }
+                      )}
+                    >
+                      {account.name}
+                    </StyledTableCell>
+                  ))}
+                  <StyledTableCell
+                    align="center"
+                    sx={stickyRightSx(stickyLayout.cash.right, stickyLayout.cash.width, {
+                      isHead: true,
+                      accent: true,
+                    })}
+                  >
+                    نقدی
+                  </StyledTableCell>
+                  <StyledTableCell
+                    align="center"
+                    sx={stickyRightSx(stickyLayout.daily.right, stickyLayout.daily.width, {
+                      isHead: true,
+                    })}
+                  >
+                    اختلاف روز
+                  </StyledTableCell>
+                  <StyledTableCell
+                    align="center"
+                    sx={stickyRightSx(stickyLayout.cumul.right, stickyLayout.cumul.width, {
+                      isHead: true,
+                    })}
+                  >
+                    تجمعی
+                  </StyledTableCell>
+                  <StyledTableCell
+                    align="center"
+                    sx={stickyRightSx(stickyLayout.notes.right, stickyLayout.notes.width, {
+                      isHead: true,
+                    })}
+                  >
+                    یادداشت
+                  </StyledTableCell>
+                  <StyledTableCell
+                    align="center"
+                    sx={stickyRightSx(stickyLayout.save.right, stickyLayout.save.width, {
+                      isHead: true,
+                      isEdge: true,
+                    })}
+                  >
+                    ثبت
+                  </StyledTableCell>
                   <StyledTableCell align="center">فروش</StyledTableCell>
-                  <StyledTableCell align="center">نقد </StyledTableCell>
+                  <StyledTableCell align="center">نقد</StyledTableCell>
                   <StyledTableCell align="center">کارت</StyledTableCell>
                   <StyledTableCell align="center">اقساط</StyledTableCell>
                   <StyledTableCell align="center">وصول نسیه</StyledTableCell>
                   <StyledTableCell align="center">تخفیف</StyledTableCell>
                   <StyledTableCell align="center">جمع وصول</StyledTableCell>
-                  <StyledTableCell align="center">اعتبارمصرف‌شده</StyledTableCell>
+                  <StyledTableCell align="center">اعتبار</StyledTableCell>
                   <StyledTableCell align="center">بدهی باز</StyledTableCell>
-                  <StyledTableCell align="center">بروزرسانی </StyledTableCell>
-                  <StyledTableCell
-                    align="center"
-                    sx={{ bordercenter: "2px solid var(--admin-accent)", bgcolor: "rgba(120,181,104,0.08)" }}
-                  >
-                    حساب ۱
-                  </StyledTableCell>
-                  <StyledTableCell align="center" sx={{ bgcolor: "rgba(120,181,104,0.08)" }}>
-                    حساب ۲
-                  </StyledTableCell>
-                  <StyledTableCell align="center" sx={{ bgcolor: "rgba(120,181,104,0.08)" }}>
-                    نقدی
-                  </StyledTableCell>
-                  <StyledTableCell align="center">اختلاف روز</StyledTableCell>
-                  <StyledTableCell align="center">تجمعی</StyledTableCell>
-                  <StyledTableCell align="center">یادداشت</StyledTableCell>
-                  {/* <StyledTableCell align="center">وضعیت</StyledTableCell> */}
-                  <StyledTableCell align="center">ثبت</StyledTableCell>
+                  <StyledTableCell align="center">بروز</StyledTableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {reversedVisibleRows.map((row) => {
                   const draft = drafts[row.date];
                   const displayDisc = rowDisplayDiscrepancy(row, draft);
-                  const depositsTotal = depositsTotalForTone(row, draft);
+                  const depositsTotal = depositsTotalForTone(row, draft, shopAccounts);
                   const totalCollected = row.sales?.total_collected ?? 0;
                   const discrepancyTone =
                     displayDisc != null
-                      ? displayDisc <  depositsTotal - totalCollected
+                      ? displayDisc < depositsTotal - totalCollected
                         ? "negative"
-                        : displayDisc >  depositsTotal - totalCollected
+                        : displayDisc > depositsTotal - totalCollected
                           ? "positive"
                           : null
                       : null;
-
-                  console.log("[daily-reconciliation:desktop-tone]", {
-                    date: row.date,
-                    isClosed: row.is_closed,
-                    editable: row.editable,
-                    hasDraft: !!draft,
-                    depositsTotal,
-                    totalCollected,
-                    diffByFormula: depositsTotal - totalCollected,
-                    displayDisc,
-                    discrepancyTone,
-                  });
 
                   return (
                     <StyledTableRow
@@ -1155,10 +1450,130 @@ export default function DailyReconciliationPage() {
                           : undefined
                       }
                     >
-                      <StyledTableCell align="center">
-                        <Typography sx={{ fontWeight: 600, fontSize: 12 }}>
+                      <StyledTableCell
+                        align="center"
+                        sx={stickyRightSx(stickyLayout.date.right, stickyLayout.date.width)}
+                      >
+                        <Typography sx={{ fontWeight: 600, fontSize: 10 }}>
                           {rowDateLabel(row, monthFilter)}
                         </Typography>
+                      </StyledTableCell>
+                      {shopAccounts.map((account, index) => (
+                        <StyledTableCell
+                          key={account.id}
+                          align="center"
+                          sx={stickyRightSx(
+                            stickyLayout.accounts[index]?.right ?? 0,
+                            stickyLayout.accounts[index]?.width ?? STICKY_W.account,
+                            { accent: true }
+                          )}
+                        >
+                          {renderAccountCell(row, account, index)}
+                        </StyledTableCell>
+                      ))}
+                      <StyledTableCell
+                        align="center"
+                        sx={stickyRightSx(stickyLayout.cash.right, stickyLayout.cash.width, {
+                          accent: true,
+                        })}
+                      >
+                        {renderCashCell(row)}
+                      </StyledTableCell>
+                      <StyledTableCell
+                        align="center"
+                        sx={{
+                          ...stickyRightSx(stickyLayout.daily.right, stickyLayout.daily.width),
+                          ...(discrepancyTone
+                            ? {
+                                backgroundColor:
+                                  discrepancyTone === "negative"
+                                    ? "rgba(239, 68, 68, 0.16)"
+                                    : "rgba(74, 222, 128, 0.16)",
+                              }
+                            : null),
+                        }}
+                      >
+                        <DiscrepancyCell value={displayDisc ?? null} />
+                      </StyledTableCell>
+                      <StyledTableCell
+                        align="center"
+                        sx={stickyRightSx(stickyLayout.cumul.right, stickyLayout.cumul.width)}
+                      >
+                        <DiscrepancyCell value={row.cumulative_discrepancy} />
+                      </StyledTableCell>
+                      <StyledTableCell
+                        align="center"
+                        sx={stickyRightSx(stickyLayout.notes.right, stickyLayout.notes.width)}
+                      >
+                        {row.editable && draft ? (
+                          <TextField
+                            size="small"
+                            placeholder="—"
+                            value={draft.notes}
+                            onChange={(e) => updateDraft(row.date, { notes: e.target.value })}
+                            sx={{
+                              minWidth: 78,
+                              maxWidth: 88,
+                              "& .MuiOutlinedInput-root": {
+                                backgroundColor: "var(--admin-surface-alt)",
+                                fontSize: "10px",
+                                "& fieldset": { borderColor: "var(--admin-border)" },
+                              },
+                              "& .MuiInputBase-input": {
+                                color: "var(--admin-text)",
+                                py: 0.35,
+                                px: 0.5,
+                                fontSize: "10px",
+                              },
+                            }}
+                          />
+                        ) : (
+                          <Typography
+                            sx={{
+                              color: "var(--admin-text-muted)",
+                              fontSize: "10px",
+                              maxWidth: 86,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {row.notes?.trim() || "—"}
+                          </Typography>
+                        )}
+                      </StyledTableCell>
+                      <StyledTableCell
+                        align="center"
+                        sx={stickyRightSx(stickyLayout.save.right, stickyLayout.save.width, {
+                          isEdge: true,
+                        })}
+                      >
+                        {row.editable ? (
+                          <IconButton
+                            size="small"
+                            disabled={savingDate === row.date}
+                            onClick={() => handleSave(row)}
+                            aria-label="ثبت"
+                            sx={{
+                              color: "#fff",
+                              bgcolor: "var(--admin-accent)",
+                              width: 28,
+                              height: 28,
+                              "&:hover": { bgcolor: "var(--admin-accent-hover)" },
+                              "&.Mui-disabled": { bgcolor: "var(--admin-border)", color: "var(--admin-text-muted)" },
+                            }}
+                          >
+                            {savingDate === row.date ? (
+                              <CircularProgress size={14} color="inherit" />
+                            ) : (
+                              <SaveIcon sx={{ fontSize: 16 }} />
+                            )}
+                          </IconButton>
+                        ) : (
+                          <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 10 }}>
+                            —
+                          </Typography>
+                        )}
                       </StyledTableCell>
                       <StyledTableCell align="center">
                         {formatNumber(row.sales?.total_sales ?? 0)}
@@ -1179,7 +1594,7 @@ export default function DailyReconciliationPage() {
                         {formatNumber(row.sales?.discount_given ?? 0)}
                       </StyledTableCell>
                       <StyledTableCell align="center">
-                        <Typography sx={{ fontWeight: 700, color: "var(--admin-accent)" }}>
+                        <Typography sx={{ fontWeight: 700, color: "var(--admin-accent)", fontSize: 11 }}>
                           {formatNumber(row.sales?.total_collected ?? 0)}
                         </Typography>
                       </StyledTableCell>
@@ -1190,134 +1605,19 @@ export default function DailyReconciliationPage() {
                         {formatNumber(row.sales?.uncollected_debts ?? 0)}
                       </StyledTableCell>
                       <StyledTableCell align="center">
-                        <Button
+                        <IconButton
                           size="small"
-                          variant="outlined"
                           disabled={refreshingSalesDate === row.date}
-                          startIcon={
-                            refreshingSalesDate === row.date ? (
-                              <CircularProgress size={14} />
-                            ) : (
-                              <SyncIcon fontSize="small" />
-                            )
-                          }
                           onClick={() => handleRefreshSales(row)}
-                          sx={{
-                            fontSize: 11,
-                            minWidth: 68,
-                            color: "var(--admin-text)",
-                            borderColor: "var(--admin-border)",
-                            "&:hover": { borderColor: "var(--admin-accent)" },
-                          }}
+                          aria-label="بروزرسانی فروش"
+                          sx={{ color: "var(--admin-text-muted)", width: 26, height: 26 }}
                         >
-                          
-                        </Button>
-                      </StyledTableCell>
-                      <StyledTableCell
-                        align="center"
-                        sx={{ borderRight: "2px solid var(--admin-accent-border)" }}
-                      >
-                        {renderAmountCell(row, "deposit_account_1")}
-                      </StyledTableCell>
-                      <StyledTableCell align="center">
-                        {renderAmountCell(row, "deposit_account_2")}
-                      </StyledTableCell>
-                      <StyledTableCell align="center">
-                        {renderAmountCell(row, "deposit_cash")}
-                      </StyledTableCell>
-                      <StyledTableCell
-                        align="center"
-                        sx={
-                          discrepancyTone
-                            ? {
-                                backgroundColor:
-                                  discrepancyTone === "negative"
-                                    ? "rgba(239, 68, 68, 0.16)"
-                                    : "rgba(74, 222, 128, 0.16)",
-                              }
-                            : undefined
-                        }
-                      >
-                        <DiscrepancyCell value={displayDisc ?? null} />
-                        {row.editable && !row.is_closed && draft && (
-                          <Typography sx={{ fontSize: 10, color: "var(--admin-text-muted)", mt: 0.25 }}>
-                            پیش‌نمایش
-                          </Typography>
-                        )}
-                      </StyledTableCell>
-                      <StyledTableCell align="center">
-                        <DiscrepancyCell value={row.cumulative_discrepancy} />
-                      </StyledTableCell>
-                      <StyledTableCell align="center">
-                        {row.editable && draft ? (
-                          <TextField
-                            size="small"
-                            placeholder="اختیاری"
-                            value={draft.notes}
-                            onChange={(e) => updateDraft(row.date, { notes: e.target.value })}
-                            sx={{
-                              minWidth: 100,
-                              maxWidth: 160,
-                              "& .MuiOutlinedInput-root": {
-                                backgroundColor: "var(--admin-surface-alt)",
-                                fontSize: "12px",
-                                "& fieldset": { borderColor: "var(--admin-border)" },
-                              },
-                              "& .MuiInputBase-input": {
-                                color: "var(--admin-text)",
-                                py: 0.75,
-                              },
-                            }}
-                          />
-                        ) : (
-                          <Typography
-                            sx={{
-                              color: "var(--admin-text-muted)",
-                              fontSize: "12px",
-                              maxWidth: 140,
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                            }}
-                          >
-                            {row.notes?.trim() || "—"}
-                          </Typography>
-                        )}
-                      </StyledTableCell>
-                      {/* <StyledTableCell align="center">
-                        {row.is_closed ? (
-                          <Chip label="ثبت شده" size="small" color="success" variant="outlined" />
-                        ) : row.editable ? (
-                          <Chip label="قابل ویرایش" size="small" sx={{ borderColor: "var(--admin-accent)", color: "var(--admin-accent)" }} variant="outlined" />
-                        ) : (
-                          <Chip label="فقط نمایش" size="small" variant="outlined" sx={{ color: "var(--admin-text-muted)" }} />
-                        )}
-                      </StyledTableCell> */}
-                      <StyledTableCell align="center">
-                        {row.editable ? (
-                          <Button
-                            size="small"
-                            variant="contained"
-                            disabled={savingDate === row.date}
-                            startIcon={
-                              savingDate === row.date ? (
-                                <CircularProgress size={14} color="inherit" />
-                              ) : (
-                                <SaveIcon fontSize="small" />
-                              )
-                            }
-                            onClick={() => handleSave(row)}
-                            sx={{
-                              backgroundColor: "var(--admin-accent)",
-                              fontSize: 11,
-                              minWidth: 72,
-                              "&:hover": { backgroundColor: "var(--admin-accent-hover)" },
-                            }}
-                          >
-                            ثبت
-                          </Button>
-                        ) : (
-                          <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>—</Typography>
-                        )}
+                          {refreshingSalesDate === row.date ? (
+                            <CircularProgress size={12} />
+                          ) : (
+                            <SyncIcon sx={{ fontSize: 15 }} />
+                          )}
+                        </IconButton>
                       </StyledTableCell>
                     </StyledTableRow>
                   );
@@ -1331,7 +1631,7 @@ export default function DailyReconciliationPage() {
               const draft = drafts[row.date];
               const displayDisc = rowDisplayDiscrepancy(row, draft);
               const sales = row.sales;
-              const depositsTotal = depositsTotalForTone(row, draft);
+              const depositsTotal = depositsTotalForTone(row, draft, shopAccounts);
               const totalCollected = sales?.total_collected ?? 0;
               const discrepancyTone =
                 displayDisc != null
@@ -1456,23 +1756,19 @@ export default function DailyReconciliationPage() {
                       واریز
                     </Typography>
                     <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25, mb: 1.5 }}>
-                      <Box>
-                        <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, mb: 0.5 }}>
-                          حساب ۱
-                        </Typography>
-                        {renderAmountCell(row, "deposit_account_1", true)}
-                      </Box>
-                      <Box>
-                        <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, mb: 0.5 }}>
-                          حساب ۲
-                        </Typography>
-                        {renderAmountCell(row, "deposit_account_2", true)}
-                      </Box>
+                      {shopAccounts.map((account, index) => (
+                        <Box key={account.id}>
+                          <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, mb: 0.5 }}>
+                            {account.name}
+                          </Typography>
+                          {renderAccountCell(row, account, index, true)}
+                        </Box>
+                      ))}
                       <Box>
                         <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, mb: 0.5 }}>
                           نقدی
                         </Typography>
-                        {renderAmountCell(row, "deposit_cash", true)}
+                        {renderCashCell(row, true)}
                       </Box>
                     </Box>
 

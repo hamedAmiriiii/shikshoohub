@@ -33,6 +33,15 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useQueryClient } from '@tanstack/react-query';
 import Header from '@/app/coponent/Header';
+import ShopAccountSelect from "@/app/admin/ShopAccountSelect";
+
+function resolveShopAccountId(item: any): number | "" {
+  const direct = Number(item?.shop_account_id);
+  if (Number.isFinite(direct) && direct > 0) return direct;
+  const nested = Number(item?.shop_account?.id);
+  if (Number.isFinite(nested) && nested > 0) return nested;
+  return "";
+}
 
 export default function ListExpenses() {
   const router = useRouter();
@@ -54,6 +63,7 @@ export default function ListExpenses() {
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
   const [userName, setUserName] = useState("");
+  const [shopAccountId, setShopAccountId] = useState<number | "">("");
 
   // Load userName from localStorage on mount
   useEffect(() => {
@@ -322,6 +332,7 @@ export default function ListExpenses() {
     setTitle(expense.title || "");
     setAmount(formatNumber(expense.amount || 0));
     setUserName(expense.user_name || "");
+    setShopAccountId(resolveShopAccountId(expense));
     setEditBottomSheet(true);
   }, []);
 
@@ -417,6 +428,7 @@ export default function ListExpenses() {
   );
 
   const handleOpenBottomSheet = () => {
+    setShopAccountId("");
     setOpenBottomSheet(true);
   };
 
@@ -426,6 +438,7 @@ export default function ListExpenses() {
     setType("جاری");
     setTitle("");
     setAmount("");
+    setShopAccountId("");
     // Keep userName as it's saved in localStorage
   };
 
@@ -436,6 +449,7 @@ export default function ListExpenses() {
     setType("جاری");
     setTitle("");
     setAmount("");
+    setShopAccountId("");
   };
 
   // Helper function to convert Persian numbers to English and remove all separators
@@ -475,12 +489,15 @@ export default function ListExpenses() {
     // Save userName to localStorage
     localStorage.setItem('expense_user_name', userName);
 
-    const loadData = {
+    const loadData: Record<string, unknown> = {
       user_name: userName.trim(),
       amount: amountNum,
       title: title.trim(),
-      type: type
+      type: type,
     };
+    if (shopAccountId !== "") {
+      loadData.shop_account_id = shopAccountId;
+    }
 
     try {
       const token = localStorage.getItem('token') || '';
@@ -517,11 +534,12 @@ export default function ListExpenses() {
     // Save userName to localStorage
     localStorage.setItem('expense_user_name', userName);
 
-    const loadData = {
+    const loadData: Record<string, unknown> = {
       user_name: userName.trim(),
       amount: amountNum,
       title: title.trim(),
-      type: type
+      type: type,
+      shop_account_id: shopAccountId === "" ? null : shopAccountId,
     };
 
     try {
@@ -796,6 +814,10 @@ export default function ListExpenses() {
                 },
               }}
             />
+            <ShopAccountSelect
+              value={shopAccountId}
+              onChange={setShopAccountId}
+            />
             <TextField
               label="نام ثبت کننده"
               value={userName}
@@ -1009,6 +1031,10 @@ export default function ListExpenses() {
                   transform: "translate(-14px, -9px) scale(0.75)",
                 },
               }}
+            />
+            <ShopAccountSelect
+              value={shopAccountId}
+              onChange={setShopAccountId}
             />
             {/* <TextField
               label="نام ثبت کننده"

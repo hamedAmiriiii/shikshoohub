@@ -38,6 +38,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ReceiptIcon from '@mui/icons-material/Receipt';
+import ShopAccountSelect from '@/app/admin/ShopAccountSelect';
 import DatePicker from "react-multi-date-picker";
 import persian from "react-date-object/calendars/persian";
 import persian_fa from "react-date-object/locales/persian_fa";
@@ -79,6 +80,8 @@ interface Invoice {
   description?: string;
   date: string;
   user_name: string;
+  shop_account_id?: number | null;
+  shop_account?: { id: number; name?: string } | null;
 }
 
 const formatNumber = (num: number) => {
@@ -116,6 +119,7 @@ export default function InvoicesPage() {
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
+  const [shopAccountId, setShopAccountId] = useState<number | "">("");
   
   // Filter states
   const [filterMode, setFilterMode] = useState<'today' | 'week' | 'month' | 'year' | 'range' | null>(null);
@@ -249,11 +253,14 @@ export default function InvoicesPage() {
     }
 
     try {
-      const data = {
+      const data: Record<string, unknown> = {
         amount: amountNum,
         title: title.trim(),
         description: description.trim() || undefined
       };
+      if (shopAccountId !== "") {
+        data.shop_account_id = shopAccountId;
+      }
 
       const token = tokenCode();
       if (!token) {
@@ -290,10 +297,11 @@ export default function InvoicesPage() {
     }
 
     try {
-      const data = {
+      const data: Record<string, unknown> = {
         amount: amountNum,
         title: title.trim(),
-        description: description.trim() || undefined
+        description: description.trim() || undefined,
+        shop_account_id: shopAccountId === "" ? null : shopAccountId,
       };
 
       const token = tokenCode();
@@ -349,6 +357,7 @@ export default function InvoicesPage() {
     setTitle("");
     setAmount("");
     setDescription("");
+    setShopAccountId("");
   };
 
   const openEditDialogHandler = (invoice: Invoice) => {
@@ -356,6 +365,15 @@ export default function InvoicesPage() {
     setTitle(invoice.title);
     setAmount(invoice.amount.toString());
     setDescription(invoice.description || "");
+    const fromDirect = Number(invoice.shop_account_id);
+    const fromNested = Number(invoice.shop_account?.id);
+    setShopAccountId(
+      Number.isFinite(fromDirect) && fromDirect > 0
+        ? fromDirect
+        : Number.isFinite(fromNested) && fromNested > 0
+          ? fromNested
+          : ""
+    );
     setOpenEditDialog(true);
   };
 
@@ -726,6 +744,10 @@ export default function InvoicesPage() {
                   },
                 }}
               />
+              <ShopAccountSelect
+                value={shopAccountId}
+                onChange={setShopAccountId}
+              />
             </Box>
           </DialogContent>
           <DialogActions sx={{ padding: '16px 24px' }}>
@@ -849,6 +871,10 @@ export default function InvoicesPage() {
                     color: 'var(--admin-text-muted)',
                   },
                 }}
+              />
+              <ShopAccountSelect
+                value={shopAccountId}
+                onChange={setShopAccountId}
               />
             </Box>
           </DialogContent>

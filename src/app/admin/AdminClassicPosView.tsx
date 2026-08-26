@@ -163,17 +163,21 @@ export default function AdminClassicPosView({
         (chequeRemainder > 0 && !paymentFieldsValid)));
 
   const selectCashSettlement = (mode: SettlementMode) => {
-    onPaymentTypeChange("cash");
+    if (paymentType !== "cash") {
+      onPaymentTypeChange("cash");
+    }
     onSettlementModeChange(mode);
   };
+
+  const paymentBtnInactiveBg = "var(--admin-surface)";
+  const paymentBtnActiveBg = "var(--admin-accent)";
+  const paymentBtnActiveColor = "#fff";
 
   const paymentButtons: Array<{
     key: string;
     label: string;
     onClick: () => void;
     active: boolean;
-    bgcolor: string;
-    activeBg: string;
     show: boolean;
   }> = [
     {
@@ -181,8 +185,6 @@ export default function AdminClassicPosView({
       label: "نقدی",
       onClick: () => selectCashSettlement("cash_all"),
       active: paymentButtonActive(paymentType, settlementMode, "cash"),
-      bgcolor: "rgba(46, 125, 50, 0.15)",
-      activeBg: "rgba(46, 125, 50, 0.35)",
       show: true,
     },
     {
@@ -190,8 +192,6 @@ export default function AdminClassicPosView({
       label: "کارت",
       onClick: () => selectCashSettlement("card_all"),
       active: paymentButtonActive(paymentType, settlementMode, "card"),
-      bgcolor: "var(--admin-surface-alt)",
-      activeBg: "rgba(55, 84, 165, 0.2)",
       show: true,
     },
     {
@@ -199,8 +199,6 @@ export default function AdminClassicPosView({
       label: "ترکیبی",
       onClick: () => selectCashSettlement("split"),
       active: paymentButtonActive(paymentType, settlementMode, "split"),
-      bgcolor: "rgba(255, 152, 0, 0.15)",
-      activeBg: "rgba(255, 152, 0, 0.35)",
       show: true,
     },
     {
@@ -208,8 +206,6 @@ export default function AdminClassicPosView({
       label: "اقساطی",
       onClick: () => onPaymentTypeChange("installment"),
       active: paymentButtonActive(paymentType, settlementMode, "installment"),
-      bgcolor: "rgba(156, 39, 176, 0.12)",
-      activeBg: "rgba(156, 39, 176, 0.28)",
       show: installmentPaymentEnabled,
     },
     {
@@ -217,8 +213,6 @@ export default function AdminClassicPosView({
       label: "نسیه",
       onClick: () => onPaymentTypeChange("debt"),
       active: paymentButtonActive(paymentType, settlementMode, "debt"),
-      bgcolor: "rgba(255, 193, 7, 0.15)",
-      activeBg: "rgba(255, 193, 7, 0.35)",
       show: debtPaymentEnabled,
     },
     {
@@ -226,8 +220,6 @@ export default function AdminClassicPosView({
       label: "چک+نقد",
       onClick: () => onPaymentTypeChange("cheque"),
       active: paymentButtonActive(paymentType, settlementMode, "cheque"),
-      bgcolor: "rgba(33, 150, 243, 0.12)",
-      activeBg: "rgba(33, 150, 243, 0.28)",
       show: chequePaymentEnabled,
     },
   ];
@@ -259,7 +251,7 @@ export default function AdminClassicPosView({
         height: compact ? "100%" : undefined,
         minHeight: compact
           ? "100%"
-          : { xs: "calc(100vh - 180px)", md: "calc(100vh - 140px)" },
+          : { xs: "calc(100vh - 230px)", md: "calc(100vh - 190px)" },
         border: panelBorder,
         borderRadius: "6px",
         overflow: "hidden",
@@ -271,14 +263,17 @@ export default function AdminClassicPosView({
           display: "flex",
           flexWrap: "wrap",
           alignItems: "center",
+          justifyContent: "space-between",
           gap: 1,
           p: 1,
           borderBottom: panelBorder,
           bgcolor: "var(--admin-surface-alt)",
+          direction: "rtl",
         }}
       >
         <MultiCartToolbar
           compact
+          fullWidth={false}
           cartCount={cartCount}
           activeIndex={activeCartIndex}
           onSwitch={onSwitchCart}
@@ -286,81 +281,98 @@ export default function AdminClassicPosView({
           onClearOrRemove={onClearCart}
         />
 
-        {onOpenScanner ? (
-          <Button
-            size="small"
-            variant="outlined"
-            onClick={onOpenScanner}
-            startIcon={<AddIcon sx={{ fontSize: 15 }} />}
-            aria-label="افزودن کالا"
-            sx={{
-              flexShrink: 0,
-              minHeight: 32,
-              px: 1.1,
-              borderRadius: "4px",
-              fontSize: "11px",
-              fontWeight: 700,
-              border: panelBorder,
-              bgcolor: "var(--admin-surface)",
-              color: "var(--admin-text)",
-              boxShadow: "none",
-              textTransform: "none",
-              "&:hover": {
-                border: "1px solid var(--admin-accent)",
-                bgcolor: "var(--admin-menu-hover)",
+        <Box
+          sx={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: 1,
+            minWidth: 0,
+          }}
+        >
+          {onOpenScanner ? (
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={onOpenScanner}
+              startIcon={<AddIcon sx={{ fontSize: 15 }} />}
+              aria-label="افزودن کالا"
+              sx={{
+                flexShrink: 0,
+                minHeight: 32,
+                px: 1.1,
+                borderRadius: "4px",
+                fontSize: "11px",
+                fontWeight: 700,
+                border: panelBorder,
+                bgcolor: "var(--admin-surface)",
+                color: "var(--admin-text)",
                 boxShadow: "none",
-              },
-              "& .MuiButton-startIcon": { marginInlineEnd: 0.4, marginInlineStart: 0 },
-            }}
-          >
-            افزودن کالا
-          </Button>
-        ) : null}
+                textTransform: "none",
+                "&:hover": {
+                  border: "1px solid var(--admin-accent)",
+                  bgcolor: "var(--admin-menu-hover)",
+                  boxShadow: "none",
+                },
+                "& .MuiButton-startIcon": { marginInlineEnd: 0.4, marginInlineStart: 0 },
+              }}
+            >
+              افزودن کالا
+            </Button>
+          ) : null}
 
-        <Box sx={{ flex: 1, minWidth: 160, maxWidth: 220 }}>
-          <PhoneNumberInput
-            key={phoneInputKey ?? `classic-phone-${activeCartIndex}`}
-            name="classic-phone"
-            defaultValue={phone}
-            onChange={onChangePhone}
-            size="small"
-            compact
-            sx={{ width: "100%", ...compactFieldSx }}
-          />
+          <Box sx={{ flex: "1 1 160px", minWidth: 140, maxWidth: 220 }}>
+            <PhoneNumberInput
+              key={phoneInputKey ?? `classic-phone-${activeCartIndex}`}
+              name="classic-phone"
+              defaultValue={phone}
+              onChange={onChangePhone}
+              size="small"
+              compact
+              sx={{ width: "100%", ...compactFieldSx }}
+            />
+          </Box>
+
+          {checkingCredit ? (
+            <Typography sx={{ fontSize: "11px", color: "var(--admin-text-muted)" }}>
+              بررسی اعتبار…
+            </Typography>
+          ) : credit > 0 ? (
+            <Typography sx={{ fontSize: "11px", color: "var(--admin-accent)", fontWeight: 600 }}>
+              اعتبار: {formatNumber(credit)}
+            </Typography>
+          ) : null}
+
+          {(!installmentPaymentEnabled || paymentType !== "installment") && (
+            <TextField
+              size="small"
+              placeholder="تخفیف (تومان)"
+              value={
+                isDiscountFocused
+                  ? discountDisplay.replace(/,/g, "")
+                  : discounttype > 0
+                    ? discountDisplay
+                    : ""
+              }
+              onFocus={onDiscountFocus}
+              onChange={(e) => onDiscountChange(e.target.value)}
+              onBlur={(e) => onDiscountBlur(e.target.value)}
+              error={!!discountError}
+              helperText={discountError || undefined}
+              sx={{ ...compactFieldSx, width: 130 }}
+            />
+          )}
         </Box>
-
-        {checkingCredit ? (
-          <Typography sx={{ fontSize: "11px", color: "var(--admin-text-muted)" }}>
-            بررسی اعتبار…
-          </Typography>
-        ) : credit > 0 ? (
-          <Typography sx={{ fontSize: "11px", color: "var(--admin-accent)", fontWeight: 600 }}>
-            اعتبار: {formatNumber(credit)}
-          </Typography>
-        ) : null}
-
-        {(!installmentPaymentEnabled || paymentType !== "installment") && (
-          <TextField
-            size="small"
-            placeholder="تخفیف (تومان)"
-            value={
-              isDiscountFocused
-                ? discountDisplay.replace(/,/g, "")
-                : discounttype > 0
-                  ? discountDisplay
-                  : ""
-            }
-            onFocus={onDiscountFocus}
-            onChange={(e) => onDiscountChange(e.target.value)}
-            onBlur={(e) => onDiscountBlur(e.target.value)}
-            error={!!discountError}
-            helperText={discountError || undefined}
-            sx={{ ...compactFieldSx, width: 130 }}
-          />
-        )}
       </Box>
 
-      <TableContainer sx={{ flex: 1, overflow: "auto" }}>
+      <TableContainer
+        sx={{
+          flex: 1,
+          overflow: "auto",
+          minHeight: 0,
+          maxHeight: compact ? "calc(52% - 50px)" : undefined,
+        }}
+      >
         <Table size="small" stickyHeader>
           <TableHead>
             <TableRow sx={{ bgcolor: "var(--admin-accent)" }}>
@@ -387,7 +399,7 @@ export default function AdminClassicPosView({
           <TableBody>
             {cart.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 4, borderBottom: "none" }}>
+                <TableCell colSpan={6} align="center" sx={{ py: 1.5, borderBottom: "none" }}>
                   <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "13px" }}>
                     سبد خالی است — بارکد اسکن کنید یا از لیست کالا اضافه کنید
                   </Typography>
@@ -476,7 +488,7 @@ export default function AdminClassicPosView({
           borderTop: panelBorder,
           bgcolor: "var(--admin-surface-alt)",
           flexShrink: 0,
-          maxHeight: compact ? "48%" : undefined,
+          maxHeight: compact ? "calc(48% + 50px)" : undefined,
           overflow: compact ? "auto" : undefined,
         }}
       >
@@ -579,7 +591,7 @@ export default function AdminClassicPosView({
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+              gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
               gap: 0.5,
             }}
           >
@@ -595,13 +607,18 @@ export default function AdminClassicPosView({
                     fontWeight: 700,
                     py: 0.75,
                     borderRadius: "4px",
-                    border: panelBorder,
-                    bgcolor: btn.active ? btn.activeBg : btn.bgcolor,
-                    color: "var(--admin-text)",
+                    border: btn.active
+                      ? "1px solid var(--admin-accent)"
+                      : panelBorder,
+                    bgcolor: btn.active ? paymentBtnActiveBg : paymentBtnInactiveBg,
+                    color: btn.active ? paymentBtnActiveColor : "var(--admin-text)",
                     boxShadow: "none",
                     "&:hover": {
-                      bgcolor: btn.active ? btn.activeBg : btn.bgcolor,
-                      filter: "brightness(0.97)",
+                      bgcolor: btn.active
+                        ? "var(--admin-accent-hover)"
+                        : "var(--admin-surface-alt)",
+                      borderColor: "var(--admin-accent)",
+                      boxShadow: "none",
                     },
                   }}
                 >
@@ -609,6 +626,37 @@ export default function AdminClassicPosView({
                 </Button>
               ))}
           </Box>
+
+          {paymentType === "cash" && settlementMode === "split" && payableNow > 0 && (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, mt: 0.25 }}>
+              <Typography sx={{ fontSize: "10px", color: "var(--admin-text-muted)" }}>
+                تقسیم مبلغ ({formatNumber(payableNow)} تومان)
+              </Typography>
+              <Box sx={{ display: "flex", gap: 0.5 }}>
+                <TextField
+                  size="small"
+                  label="کارت"
+                  placeholder="کارت خوان"
+                  value={cardAmountInput}
+                  onChange={(e) => onCardAmountChange(e.target.value)}
+                  sx={{ ...compactFieldSx, flex: 1 }}
+                />
+                <TextField
+                  size="small"
+                  label="نقد"
+                  placeholder="نقدی"
+                  value={cashAmountInput}
+                  onChange={(e) => onCashAmountChange(e.target.value)}
+                  sx={{ ...compactFieldSx, flex: 1 }}
+                />
+              </Box>
+              {paymentSplitError ? (
+                <Typography sx={{ fontSize: "10px", color: "#e57373" }}>
+                  {paymentSplitError}
+                </Typography>
+              ) : null}
+            </Box>
+          )}
         </Box>
 
         <Box
@@ -737,30 +785,37 @@ export default function AdminClassicPosView({
             </Box>
           )}
 
-          {((paymentType === "cash" && settlementMode === "split" && payableNow > 0) ||
-            (paymentType === "cheque" &&
-              !!selectedChequeId &&
-              settlementMode === "split" &&
-              chequeRemainder > 0)) && (
-            <Box sx={{ display: "flex", gap: 0.5 }}>
-              <TextField
-                size="small"
-                placeholder="کارت خوان"
-                value={cardAmountInput}
-                onChange={(e) => onCardAmountChange(e.target.value)}
-                sx={{ ...compactFieldSx, flex: 1 }}
-              />
-              <TextField
-                size="small"
-                placeholder="نقدی"
-                value={cashAmountInput}
-                onChange={(e) => onCashAmountChange(e.target.value)}
-                sx={{ ...compactFieldSx, flex: 1 }}
-              />
+          {paymentType === "cheque" &&
+            !!selectedChequeId &&
+            settlementMode === "split" &&
+            chequeRemainder > 0 && (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+              <Typography sx={{ fontSize: "10px", color: "var(--admin-text-muted)" }}>
+                تقسیم باقی‌مانده ({formatNumber(chequeRemainder)} تومان)
+              </Typography>
+              <Box sx={{ display: "flex", gap: 0.5 }}>
+                <TextField
+                  size="small"
+                  label="کارت"
+                  placeholder="کارت خوان"
+                  value={cardAmountInput}
+                  onChange={(e) => onCardAmountChange(e.target.value)}
+                  sx={{ ...compactFieldSx, flex: 1 }}
+                />
+                <TextField
+                  size="small"
+                  label="نقد"
+                  placeholder="نقدی"
+                  value={cashAmountInput}
+                  onChange={(e) => onCashAmountChange(e.target.value)}
+                  sx={{ ...compactFieldSx, flex: 1 }}
+                />
+              </Box>
             </Box>
           )}
 
-          {paymentSplitError && (
+          {paymentSplitError &&
+            !(paymentType === "cash" && settlementMode === "split" && payableNow > 0) && (
             <Typography sx={{ fontSize: "10px", color: "#e57373" }}>
               {paymentSplitError}
             </Typography>
