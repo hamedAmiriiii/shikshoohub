@@ -28,6 +28,7 @@ import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import KitchenIcon from "@mui/icons-material/Kitchen";
 import PriceChangeIcon from "@mui/icons-material/PriceChange";
 import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
+import ImageOutlinedIcon from "@mui/icons-material/ImageOutlined";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useRouter } from "next/navigation";
@@ -229,6 +230,7 @@ export default function SettingsPage() {
   const [isSavingInterestRate, setIsSavingInterestRate] = useState(false);
   const [showProductListOnMainPage, setShowProductListOnMainPage] = useState(false);
   const [menuMode, setMenuMode] = useState(false);
+  const [menuModeShowProductImages, setMenuModeShowProductImages] = useState(true);
   const [installmentPaymentEnabled, setInstallmentPaymentEnabled] = useState(true);
   const [debtPaymentEnabled, setDebtPaymentEnabled] = useState(false);
   const [chequePaymentEnabled, setChequePaymentEnabled] = useState(false);
@@ -248,6 +250,7 @@ export default function SettingsPage() {
     const settings = readAdminPosSettings();
     setShowProductListOnMainPage(settings.showProductListOnMainPage);
     setMenuMode(settings.menuMode);
+    setMenuModeShowProductImages(settings.menuModeShowProductImages);
     setInstallmentPaymentEnabled(settings.installmentPaymentEnabled);
     setDebtPaymentEnabled(settings.debtPaymentEnabled);
     setChequePaymentEnabled(settings.chequePaymentEnabled);
@@ -281,6 +284,19 @@ export default function SettingsPage() {
       enabled
         ? "حالت منو فعال شد — صفحه فروش به نمای کارتی تغییر می‌کند"
         : "حالت منو غیرفعال شد",
+    );
+  };
+
+  const handleToggleMenuModeShowProductImages = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const enabled = event.target.checked;
+    setMenuModeShowProductImages(enabled);
+    writeAdminPosSettings({ menuModeShowProductImages: enabled });
+    toast.success(
+      enabled
+        ? "نمایش عکس کالا در حالت منو فعال شد"
+        : "کارت‌های حالت منو بدون عکس نمایش داده می‌شوند",
     );
   };
 
@@ -714,6 +730,14 @@ export default function SettingsPage() {
             hint="نمایش کارتی با فیلتر دسته"
             checked={menuMode}
             onChange={handleToggleMenuMode}
+          />
+          <SettingsToggleRow
+            icon={<ImageOutlinedIcon sx={{ fontSize: 18 }} />}
+            title="عکس کالا در حالت منو"
+            hint="خاموش = کارت‌ها فقط نام و قیمت"
+            checked={menuModeShowProductImages}
+            onChange={handleToggleMenuModeShowProductImages}
+            disabled={!menuMode}
           />
           <SettingsToggleRow
             icon={<PointOfSaleIcon sx={{ fontSize: 18 }} />}

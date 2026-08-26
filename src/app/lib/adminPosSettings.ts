@@ -4,6 +4,8 @@ export const ADMIN_POS_SETTINGS_CHANGED_EVENT = "admin-pos-settings-changed";
 export type AdminPosSettings = {
   showProductListOnMainPage: boolean;
   menuMode: boolean;
+  /** در حالت منو، تصویر کالا روی کارت نشان داده شود */
+  menuModeShowProductImages: boolean;
   installmentPaymentEnabled: boolean;
   debtPaymentEnabled: boolean;
   /** فروش با چک دریافتی ثبت‌شده */
@@ -25,6 +27,7 @@ export type AdminPosSettings = {
 const DEFAULT_SETTINGS: AdminPosSettings = {
   showProductListOnMainPage: false,
   menuMode: false,
+  menuModeShowProductImages: true,
   installmentPaymentEnabled: true,
   debtPaymentEnabled: false,
   chequePaymentEnabled: false,

@@ -28,7 +28,7 @@ type SettlementMode = "split" | "card_all" | "cash_all";
 
 type AdminClassicPosViewProps = {
   cartPanel: AdminMenuModeCartPanelProps;
-  /** @deprecated اسکن از FAB شناور انجام می‌شود */
+  /** باز کردن مودال اسکن / افزودن کالا */
   onOpenScanner?: () => void;
   /** وقتی با حالت منو ترکیب می‌شود ارتفاع جدول محدود می‌ماند */
   compact?: boolean;
@@ -75,6 +75,7 @@ function paymentButtonActive(
 
 export default function AdminClassicPosView({
   cartPanel,
+  onOpenScanner,
   compact = false,
 }: AdminClassicPosViewProps) {
   const {
@@ -284,6 +285,37 @@ export default function AdminClassicPosView({
           onAdd={onAddCart}
           onClearOrRemove={onClearCart}
         />
+
+        {onOpenScanner ? (
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={onOpenScanner}
+            startIcon={<AddIcon sx={{ fontSize: 15 }} />}
+            aria-label="افزودن کالا"
+            sx={{
+              flexShrink: 0,
+              minHeight: 32,
+              px: 1.1,
+              borderRadius: "4px",
+              fontSize: "11px",
+              fontWeight: 700,
+              border: panelBorder,
+              bgcolor: "var(--admin-surface)",
+              color: "var(--admin-text)",
+              boxShadow: "none",
+              textTransform: "none",
+              "&:hover": {
+                border: "1px solid var(--admin-accent)",
+                bgcolor: "var(--admin-menu-hover)",
+                boxShadow: "none",
+              },
+              "& .MuiButton-startIcon": { marginInlineEnd: 0.4, marginInlineStart: 0 },
+            }}
+          >
+            افزودن کالا
+          </Button>
+        ) : null}
 
         <Box sx={{ flex: 1, minWidth: 160, maxWidth: 220 }}>
           <PhoneNumberInput

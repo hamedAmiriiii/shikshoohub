@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Box,
   Typography,
@@ -21,6 +21,10 @@ import {
   filterProductsByMenuCategory,
   getProductImageUrl,
 } from "@/app/lib/menuModeProducts";
+import {
+  ADMIN_POS_SETTINGS_CHANGED_EVENT,
+  readAdminPosSettings,
+} from "@/app/lib/adminPosSettings";
 import AdminMenuModeCartPanel, {
   type AdminMenuModeCartPanelProps,
 } from "@/app/admin/AdminMenuModeCartPanel";
@@ -43,6 +47,7 @@ type AdminMenuModeViewProps = {
   formatNumber: (num: number) => string;
   cartPanel: AdminMenuModeCartPanelProps;
   classicPosMode?: boolean;
+  onOpenScanner?: () => void;
 };
 
 export default function AdminMenuModeView({
@@ -51,9 +56,29 @@ export default function AdminMenuModeView({
   formatNumber,
   cartPanel,
   classicPosMode = false,
+  onOpenScanner,
 }: AdminMenuModeViewProps) {
   const [selectedCategoryId, setSelectedCategoryId] = useState(MENU_ALL_CATEGORY_ID);
   const [search, setSearch] = useState("");
+  const [showProductImages, setShowProductImages] = useState(true);
+
+  useEffect(() => {
+    const apply = () => {
+      setShowProductImages(readAdminPosSettings().menuModeShowProductImages);
+    };
+    apply();
+    window.addEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, apply);
+    return () => window.removeEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, apply);
+  }, []);
+
+  const cartQtyById = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const item of cartPanel.cart) {
+      const key = String(item.id);
+      map.set(key, (map.get(key) || 0) + (Number(item.quantity) || 0));
+    }
+    return map;
+  }, [cartPanel.cart]);
 
   const categories = useMemo(() => buildMenuCategories(products), [products]);
 
@@ -164,48 +189,58 @@ export default function AdminMenuModeView({
           {filteredProducts.map((product) => {
             const imageUrl = getProductImageUrl(product);
             const price = Number(product.sale_price) || 0;
+            const inCart = (cartQtyById.get(String(product.id)) || 0) > 0;
 
             return (
               <Grid item xs={4} sm={3} md={2} lg={2} key={product.id}>
                 <Card
                   sx={{
                     borderRadius: "8px",
-                    border: "1px solid var(--admin-accent-border)",
-                    bgcolor: "var(--admin-surface)",
+                    border: inCart
+                      ? "1.5px solid var(--admin-accent)"
+                      : "1px solid var(--admin-accent-border)",
+                    bgcolor: inCart
+                      ? "var(--admin-surface-alt)"
+                      : "var(--admin-surface)",
                     overflow: "hidden",
+                    outline: inCart ? "2px solid var(--admin-accent-border)" : "none",
+                    outlineOffset: 0,
+                    transition: "background-color 120ms ease, border-color 120ms ease",
                     "&:hover": { borderColor: "var(--admin-accent)" },
                   }}
                 >
                   <CardActionArea onClick={() => onAddProduct(product)} sx={{ display: "block" }}>
-                    <Box
-                      sx={{
-                        width: "100%",
-                        height: 52,
-                        bgcolor: "var(--admin-surface-alt)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        overflow: "hidden",
-                      }}
-                    >
-                      {imageUrl ? (
-                        <Box
-                          component="img"
-                          src={imageUrl}
-                          alt={product.name || "کالا"}
-                          sx={{ width: "100%", height: "100%", objectFit: "cover" }}
-                        />
-                      ) : (
-                        <Inventory2OutlinedIcon
-                          sx={{ fontSize: 22, color: "var(--admin-text-muted)" }}
-                        />
-                      )}
-                    </Box>
+                    {showProductImages ? (
+                      <Box
+                        sx={{
+                          width: "100%",
+                          height: 52,
+                          bgcolor: "var(--admin-surface-alt)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {imageUrl ? (
+                          <Box
+                            component="img"
+                            src={imageUrl}
+                            alt={product.name || "کالا"}
+                            sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+                          />
+                        ) : (
+                          <Inventory2OutlinedIcon
+                            sx={{ fontSize: 22, color: "var(--admin-text-muted)" }}
+                          />
+                        )}
+                      </Box>
+                    ) : null}
                     <CardContent sx={{ p: 0.5, "&:last-child": { pb: 0.5 } }}>
                       <Typography
                         sx={{
-                          color: "var(--admin-text)",
-                          fontWeight: 600,
+                          color: inCart ? "var(--admin-accent)" : "var(--admin-text)",
+                          fontWeight: inCart ? 700 : 600,
                           fontSize: "9px",
                           lineHeight: 1.25,
                           minHeight: "2.5em",
@@ -274,6 +309,7 @@ export default function AdminMenuModeView({
             <AdminClassicPosView
               cartPanel={cartPanel}
               compact
+              onOpenScanner={onOpenScanner}
             />
           </Box>
         </Box>

@@ -75,6 +75,7 @@ import SaleProductListPanel from '@/app/admin/SaleProductListPanel';
 import AdminMenuModeView from '@/app/admin/AdminMenuModeView';
 import AdminClassicPosView from '@/app/admin/AdminClassicPosView';
 import type { AdminMenuModeCartPanelProps } from '@/app/admin/AdminMenuModeCartPanel';
+import { ADMIN_SIDEBAR_WIDTH } from '@/app/admin/AdminHamburgerSidebar';
 import CartQuantityControl from '@/app/admin/CartQuantityControl';
 import MultiCartToolbar, { MAX_MULTI_CARTS } from '@/app/admin/MultiCartToolbar';
 import { getPriceUnitLabel, getDefaultCartQuantity, getQuantityIncrement, normalizeQuantityValue } from '@/app/lib/productUnits';
@@ -996,30 +997,38 @@ export default function ShoppingPage() {
 
   const addProductToCart = useCallback((item: any) => {
     setCart((prevCart) => {
-      const newCart = [...prevCart];
-      const existingItemIndex = newCart.findIndex((i) => i.id === item.id);
       const addQty = kgSalesEnabled && item.unit_type === "kg"
         ? getDefaultCartQuantity(item)
         : 1;
+      const existing = prevCart.find((i) => String(i.id) === String(item.id));
 
-      if (existingItemIndex === -1) {
-        const line = { ...item, quantity: addQty };
-        if (salePriceEditEnabled) {
-          line.default_sale_price = Number(item.sale_price);
-        }
-        newCart.push(line);
-      } else {
-        newCart[existingItemIndex].quantity = normalizeQuantityValue(
-          newCart[existingItemIndex].quantity + addQty,
-          kgSalesEnabled ? item : { unit_type: "piece" },
-        );
-      }
+      const newCart = existing
+        ? prevCart.map((cartItem) =>
+            String(cartItem.id) === String(item.id)
+              ? {
+                  ...cartItem,
+                  quantity: normalizeQuantityValue(
+                    cartItem.quantity + addQty,
+                    kgSalesEnabled ? item : { unit_type: "piece" },
+                  ),
+                }
+              : cartItem,
+          )
+        : [
+            ...prevCart,
+            {
+              ...item,
+              quantity: addQty,
+              ...(salePriceEditEnabled
+                ? { default_sale_price: Number(item.sale_price) }
+                : {}),
+            },
+          ];
 
-      let newTotal = 0;
-      newCart.forEach((cartItem) => {
-        newTotal += Number(cartItem.sale_price) * cartItem.quantity;
-      });
-
+      const newTotal = newCart.reduce(
+        (sum, cartItem) => sum + Number(cartItem.sale_price) * cartItem.quantity,
+        0,
+      );
       setTotal(newTotal);
       return newCart;
     });
@@ -2125,12 +2134,14 @@ export default function ShoppingPage() {
             formatNumber={formatNumber}
             cartPanel={posCartPanel}
             classicPosMode={classicPosMode}
+            onOpenScanner={handleOpenModal}
           />
         )}
 
         {classicPosMode && !menuMode && (
           <AdminClassicPosView
             cartPanel={posCartPanel}
+            onOpenScanner={handleOpenModal}
           />
         )}
 
@@ -3789,34 +3800,68 @@ export default function ShoppingPage() {
         </Box>
       )}
 
-      {/* Floating Action Button */}
+      {/* Floating Action Button — کنار سایدبار راست تا روی منو نرود */}
       {(!menuMode || classicPosMode) && (
       <Button
         data-admin-tour="scan-product"
         onClick={handleOpenModal}
-        sx={{
-          position: 'fixed',
-          bottom: { xs: '295px', md: '80px' },
-          right: { xs: '20px', md: classicPosMode ? '24px' : '220px' },
-          borderRadius: '50%',
-          width: { xs: '56px', md: '72px' },
-          height: { xs: '56px', md: '72px' },
-          minWidth: { xs: '56px', md: '72px' },
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-          color: 'white',
-          fontSize: { xs: '28px', md: '36px' },
-          fontWeight: 300,
-          lineHeight: 1,
-          transition: "all 0.3s ease",
-          "&:hover": {
-            transform: "scale(1.15)",
-          }
-        }}
+        aria-label="افزودن کالا با اسکن"
+        sx={
+          classicPosMode
+            ? {
+                position: "fixed",
+                bottom: { xs: "88px", md: "80px" },
+                right: {
+                  xs: "20px",
+                  md: `${ADMIN_SIDEBAR_WIDTH + 16}px`,
+                },
+                zIndex: 1300,
+                borderRadius: "4px",
+                width: { xs: "48px", md: "52px" },
+                height: { xs: "48px", md: "52px" },
+                minWidth: { xs: "48px", md: "52px" },
+                bgcolor: "var(--admin-surface)",
+                color: "var(--admin-text)",
+                border: "1px solid var(--admin-border)",
+                fontSize: { xs: "26px", md: "28px" },
+                fontWeight: 400,
+                lineHeight: 1,
+                boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
+                transition: "background-color 120ms ease, border-color 120ms ease",
+                "&:hover": {
+                  bgcolor: "var(--admin-surface-alt)",
+                  borderColor: "var(--admin-accent)",
+                  color: "var(--admin-accent)",
+                },
+              }
+            : {
+                position: "fixed",
+                bottom: { xs: "88px", md: "80px" },
+                right: {
+                  xs: "20px",
+                  md: `${ADMIN_SIDEBAR_WIDTH + 16}px`,
+                },
+                zIndex: 1300,
+                borderRadius: "50%",
+                width: { xs: "56px", md: "72px" },
+                height: { xs: "56px", md: "72px" },
+                minWidth: { xs: "56px", md: "72px" },
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                color: "white",
+                fontSize: { xs: "28px", md: "36px" },
+                fontWeight: 300,
+                lineHeight: 1,
+                boxShadow: "0 8px 24px rgba(102, 126, 234, 0.45)",
+                transition: "all 0.3s ease",
+                "&:hover": {
+                  transform: "scale(1.15)",
+                },
+              }
+        }
       >
         +
       </Button>
       )}
-
 
       <Modal open={openModal} onClose={handleCloseModal}>
         <Box

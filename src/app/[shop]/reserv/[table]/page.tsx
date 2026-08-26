@@ -431,8 +431,6 @@ export default function TableReservPage() {
   const [currentDetailLoading, setCurrentDetailLoading] = useState(false);
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
   const receiptInputRef = useRef<HTMLInputElement | null>(null);
-  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [themeMode, setThemeMode] = useState<ReservThemeMode>(() => {
     if (typeof window === "undefined") return "light";
     try {
@@ -466,14 +464,6 @@ export default function TableReservPage() {
     const saved = readSavedGuestPhone(shopCode);
     if (saved) setPhone(saved);
   }, [shopCode, tableNumber, validTable]);
-
-  useEffect(() => {
-    if (searchTimer.current) clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => setDebouncedSearch(search.trim()), 300);
-    return () => {
-      if (searchTimer.current) clearTimeout(searchTimer.current);
-    };
-  }, [search]);
 
   const persistCart = (next: CartLine[]) => {
     setCart(next);
@@ -578,15 +568,14 @@ export default function TableReservPage() {
   }, [shop, shopApi, shopCode, tableNumber, validTable]);
 
   const loadProducts = useCallback(
-    async (pageNum: number, isInitial: boolean, searchTerm: string) => {
+    async (pageNum: number, isInitial: boolean) => {
       if (!shopCode) return;
       if (isInitial) {
         setProductsLoading(true);
         setProductsError(false);
       } else setLoadingMore(true);
       try {
-        let url = shopApi(`/api/product?page=${pageNum}&per_page=50`);
-        if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
+        const url = shopApi(`/api/product?page=${pageNum}&per_page=200`);
         const res = await apiRequestError("Get", {}, {}, url, false, true, "");
         if (res?.hasError) {
           if (isInitial) {
@@ -599,7 +588,7 @@ export default function TableReservPage() {
         setProducts((prev) => (isInitial ? rows : [...prev, ...rows]));
         setProductsError(false);
         if (res?.last_page) setHasMore(pageNum < res.last_page);
-        else setHasMore(rows.length > 0);
+        else setHasMore(rows.length >= 200);
         setPage(pageNum);
       } catch {
         if (isInitial) {
@@ -619,8 +608,8 @@ export default function TableReservPage() {
   }, [loadTable]);
 
   useEffect(() => {
-    loadProducts(1, true, debouncedSearch);
-  }, [loadProducts, debouncedSearch]);
+    loadProducts(1, true);
+  }, [loadProducts]);
 
   useEffect(() => {
     if (!shopCode) return;
@@ -698,12 +687,18 @@ export default function TableReservPage() {
   }, [categoryImageById, products, shopCategories]);
 
   const visibleProducts = useMemo(() => {
-    if (selectedCategory === "all") return products;
+    const term = search.trim().toLowerCase();
     return products.filter((product) => {
-      if (String(product.category_id) === selectedCategory) return true;
-      return (product.categories || []).some((cat) => String(cat.id) === selectedCategory);
+      if (selectedCategory !== "all") {
+        const inCategory =
+          String(product.category_id) === selectedCategory ||
+          (product.categories || []).some((cat) => String(cat.id) === selectedCategory);
+        if (!inCategory) return false;
+      }
+      if (!term) return true;
+      return (product.name || "").toLowerCase().includes(term);
     });
-  }, [products, selectedCategory]);
+  }, [products, search, selectedCategory]);
 
   const qtyOf = (productId: number) => cart.find((line) => line.product_id === productId)?.quantity || 0;
 
@@ -1090,7 +1085,7 @@ export default function TableReservPage() {
     );
   }
 
-  const searchActive = Boolean(debouncedSearch);
+  const searchActive = Boolean(search.trim());
   const cartTotalLabel =
     creditToApply > 0
       ? `${formatNumber(payableAmount)} تومان`
@@ -1155,7 +1150,7 @@ export default function TableReservPage() {
               title="اتصال به سرور با مشکل مواجه شد."
               action={
                 <Button
-                  onClick={() => loadProducts(1, true, debouncedSearch)}
+                  onClick={() => loadProducts(1, true)}
                   sx={{
                     bgcolor: ACCENT,
                     color: "#1a1712",
@@ -1175,7 +1170,7 @@ export default function TableReservPage() {
               theme={theme}
               title={
                 searchActive
-                  ? `نتیجه‌ای برای «${debouncedSearch}» پیدا نشد.`
+                  ? `نتیجه‌ای برای «${search.trim()}» پیدا نشد.`
                   : selectedCategory === "all"
                     ? "غذایی برای نمایش وجود ندارد."
                     : "غذایی در این دسته پیدا نشد."
@@ -1210,10 +1205,10 @@ export default function TableReservPage() {
             </Box>
           )}
 
-          {!productsLoading && !productsError && hasMore ? (
+          {!productsLoading && !productsError && hasMore && !searchActive ? (
             <Button
               disabled={loadingMore}
-              onClick={() => loadProducts(page + 1, false, debouncedSearch)}
+              onClick={() => loadProducts(page + 1, false)}
               fullWidth
               sx={{ color: ACCENT, fontWeight: 700, py: 1.4, mt: 1 }}
             >
@@ -1295,20 +1290,20 @@ export default function TableReservPage() {
                     size="small"
                     aria-label="کاهش تعداد"
                     onClick={() => adjustCartLine(line.product_id, line.quantity - 1)}
-                    sx={{ width: 36, height: 36, bgcolor: SURFACE, border: `1px solid ${BORDER}`, color: TEXT }}
+                    sx={{ width: 25, height: 25, bgcolor: SURFACE, border: `1px solid ${BORDER}`, color: TEXT }}
                   >
-                    <RemoveIcon sx={{ fontSize: 16 }} />
+                    <RemoveIcon sx={{ fontSize: 11 }} />
                   </IconButton>
-                  <Typography sx={{ minWidth: 22, textAlign: "center", fontWeight: 800, fontSize: 13 }}>
+                  <Typography sx={{ minWidth: 18, textAlign: "center", fontWeight: 800, fontSize: 12 }}>
                     {formatNumber(line.quantity)}
                   </Typography>
                   <IconButton
                     size="small"
                     aria-label="افزایش تعداد"
                     onClick={() => adjustCartLine(line.product_id, line.quantity + 1)}
-                    sx={{ width: 36, height: 36, bgcolor: ACCENT, color: "#1a1712" }}
+                    sx={{ width: 25, height: 25, bgcolor: ACCENT, color: "#1a1712" }}
                   >
-                    <AddIcon sx={{ fontSize: 16 }} />
+                    <AddIcon sx={{ fontSize: 11 }} />
                   </IconButton>
                 </Box>
               </Box>
@@ -1945,19 +1940,19 @@ export default function TableReservPage() {
                 <IconButton
                   aria-label="کاهش"
                   onClick={() => setQty(detailProduct, Math.max(0, qtyOf(detailProduct.id) - 1))}
-                  sx={{ width: 44, height: 44, bgcolor: SURFACE_ALT, border: `1px solid ${BORDER}`, color: TEXT }}
+                  sx={{ width: 31, height: 31, bgcolor: SURFACE_ALT, border: `1px solid ${BORDER}`, color: TEXT }}
                 >
-                  <RemoveIcon />
+                  <RemoveIcon sx={{ fontSize: 15 }} />
                 </IconButton>
-                <Typography sx={{ minWidth: 28, textAlign: "center", fontWeight: 800 }}>
+                <Typography sx={{ minWidth: 22, textAlign: "center", fontWeight: 800, fontSize: 13 }}>
                   {formatNumber(qtyOf(detailProduct.id))}
                 </Typography>
                 <IconButton
                   aria-label="افزایش"
                   onClick={() => setQty(detailProduct, qtyOf(detailProduct.id) + 1)}
-                  sx={{ width: 44, height: 44, bgcolor: SURFACE_ALT, border: `1px solid ${BORDER}`, color: TEXT }}
+                  sx={{ width: 31, height: 31, bgcolor: SURFACE_ALT, border: `1px solid ${BORDER}`, color: TEXT }}
                 >
-                  <AddIcon />
+                  <AddIcon sx={{ fontSize: 15 }} />
                 </IconButton>
               </Box>
               <Button

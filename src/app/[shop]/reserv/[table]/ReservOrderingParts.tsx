@@ -468,7 +468,7 @@ export function ReservProductCard({
           alignItems: "center",
           justifyContent: quantity > 0 ? "space-between" : "flex-end",
           alignSelf: "stretch",
-          minWidth: 44,
+          minWidth: 31,
         }}
       >
         {quantity > 0 ? (
@@ -477,17 +477,17 @@ export function ReservProductCard({
               aria-label={`کاهش ${name}`}
               onClick={onRemove}
               sx={{
-                width: 40,
-                height: 40,
+                width: 28,
+                height: 28,
                 bgcolor: theme.SURFACE_ALT,
                 color: theme.TEXT,
                 border: `1px solid ${theme.BORDER}`,
                 "&:hover": { bgcolor: theme.SURFACE_ALT },
               }}
             >
-              <RemoveIcon sx={{ fontSize: 18 }} />
+              <RemoveIcon sx={{ fontSize: 13 }} />
             </IconButton>
-            <Typography aria-live="polite" sx={{ fontWeight: 800, fontSize: 14, color: theme.TEXT, lineHeight: 1 }}>
+            <Typography aria-live="polite" sx={{ fontWeight: 800, fontSize: 12, color: theme.TEXT, lineHeight: 1 }}>
               {formatNumber(quantity)}
             </Typography>
           </>
@@ -496,18 +496,18 @@ export function ReservProductCard({
           aria-label={quantity > 0 ? `افزایش ${name}` : `افزودن ${name}`}
           onClick={onAdd}
           sx={{
-            width: 44,
-            height: 44,
+            width: 31,
+            height: 31,
             bgcolor: ACCENT,
             color: "#1a1712",
             "&:hover": { bgcolor: ACCENT_DARK, color: "#1a1712" },
-            boxShadow: "0 4px 12px rgba(201,162,39,0.28)",
+            boxShadow: "0 3px 8px rgba(201,162,39,0.28)",
             transition: "transform 120ms ease",
             "&:active": { transform: "scale(0.94)" },
             ...motionSafe,
           }}
         >
-          <AddIcon sx={{ fontSize: 22 }} />
+          <AddIcon sx={{ fontSize: 15 }} />
         </IconButton>
       </Box>
     </Box>
@@ -631,7 +631,7 @@ export function ReservProductSkeletonList({ theme }: { theme: ReservTheme }) {
             <Skeleton width="90%" height={16} sx={{ mt: 1, bgcolor: theme.SURFACE_ALT }} />
             <Skeleton width="40%" height={18} sx={{ mt: 2, bgcolor: theme.SURFACE_ALT }} />
           </Box>
-          <Skeleton variant="circular" width={44} height={44} sx={{ alignSelf: "flex-end", bgcolor: theme.SURFACE_ALT }} />
+          <Skeleton variant="circular" width={31} height={31} sx={{ alignSelf: "flex-end", bgcolor: theme.SURFACE_ALT }} />
         </Box>
       ))}
     </Box>
@@ -735,20 +735,20 @@ export function ReservDesktopCartPanel({
                       size="small"
                       aria-label="کاهش"
                       onClick={() => onDec(line.product_id)}
-                      sx={{ width: 32, height: 32, bgcolor: theme.SURFACE, border: `1px solid ${theme.BORDER}` }}
+                      sx={{ width: 22, height: 22, bgcolor: theme.SURFACE, border: `1px solid ${theme.BORDER}` }}
                     >
-                      <RemoveIcon sx={{ fontSize: 16 }} />
+                      <RemoveIcon sx={{ fontSize: 11 }} />
                     </IconButton>
-                    <Typography sx={{ minWidth: 20, textAlign: "center", fontWeight: 800, fontSize: 13 }}>
+                    <Typography sx={{ minWidth: 16, textAlign: "center", fontWeight: 800, fontSize: 12 }}>
                       {formatNumber(line.quantity)}
                     </Typography>
                     <IconButton
                       size="small"
                       aria-label="افزایش"
                       onClick={() => onInc(line.product_id)}
-                      sx={{ width: 32, height: 32, bgcolor: ACCENT, color: "#1a1712" }}
+                      sx={{ width: 22, height: 22, bgcolor: ACCENT, color: "#1a1712" }}
                     >
-                      <AddIcon sx={{ fontSize: 16 }} />
+                      <AddIcon sx={{ fontSize: 11 }} />
                     </IconButton>
                     <IconButton
                       size="small"
