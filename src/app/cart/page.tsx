@@ -379,7 +379,7 @@ export default function CartPage() {
           'Get',
           {},
           {},
-          `/api/geo/cities?state_id=${Number(shippingInfo.state_id) - 1}`,
+          `/api/geo/cities?state_id=${Number(shippingInfo.state_id)}`,
           false,
           false,
           ''

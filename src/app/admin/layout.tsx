@@ -44,6 +44,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/referral': 'پنل معرفی',
     '/admin/sms-packages': 'خرید بسته پیامک',
     '/admin/sms-package-orders': 'درخواست‌های بسته پیامک',
+    '/admin/agency-requests': 'نمایندگی‌ها',
     '/admin/installments': 'اقساط',
     '/admin/installment-credits': 'اعتبار اقساطی',
     '/admin/profit-loss': 'سود و ضرر',

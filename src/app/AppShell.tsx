@@ -12,11 +12,19 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
 
   const isAdminPage = pathname?.startsWith("/admin");
   const isLandingPage = pathname?.startsWith("/landing");
+  const isAgencyRequest = pathname?.startsWith("/agency-request");
   const isCustomerAuth = isCustomerAuthPath(pathname);
   const isReferralPage = pathname?.startsWith("/referrals");
   const isTableReserv = isTableReservPath(pathname);
 
-  if (isAdminPage || isLandingPage || isCustomerAuth || isReferralPage || isTableReserv) {
+  if (
+    isAdminPage ||
+    isLandingPage ||
+    isAgencyRequest ||
+    isCustomerAuth ||
+    isReferralPage ||
+    isTableReserv
+  ) {
     return <>{children}</>;
   }
 

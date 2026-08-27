@@ -28,6 +28,7 @@ import {
 
 const REGISTER_URL = "/admin/register-shop";
 const LOGIN_URL = "/admin/login";
+const AGENCY_REQUEST_URL = "/agency-request";
 const SUPPORT_PHONE = "09399166196";
 const SUPPORT_TEL = "tel:09399166196";
 const LINK_BALE = "https://ble.ir/AmiriWebino";
@@ -222,6 +223,14 @@ export default function LandingShopClient() {
             <a href="#screenshots" className="hover:text-cyan-400 transition">گالری</a>
             <a href="#pricing" className="hover:text-cyan-400 transition">تعرفه</a>
             <a href="#faq" className="hover:text-cyan-400 transition">سوالات</a>
+            <Link
+              href={AGENCY_REQUEST_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-cyan-400 transition"
+            >
+              درخواست نمایندگی
+            </Link>
             <Link href={LOGIN_URL} className="hover:text-cyan-400 transition">ورود</Link>
             <Link
               href={REGISTER_URL}
@@ -245,6 +254,14 @@ export default function LandingShopClient() {
             <a href="#screenshots" onClick={() => setNavOpen(false)}>گالری</a>
             <a href="#pricing" onClick={() => setNavOpen(false)}>تعرفه</a>
             <a href="#faq" onClick={() => setNavOpen(false)}>سوالات</a>
+            <Link
+              href={AGENCY_REQUEST_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setNavOpen(false)}
+            >
+              درخواست نمایندگی
+            </Link>
             <Link href={LOGIN_URL}>ورود</Link>
             <Link href={REGISTER_URL} className="text-fuchsia-400 font-semibold">شروع رایگان</Link>
           </div>
@@ -711,6 +728,16 @@ export default function LandingShopClient() {
             <ul className="space-y-2">
               <li><Link href={REGISTER_URL} className="hover:text-cyan-400">ثبت‌نام رایگان</Link></li>
               <li><Link href={LOGIN_URL} className="hover:text-cyan-400">ورود</Link></li>
+              <li>
+                <Link
+                  href={AGENCY_REQUEST_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-cyan-400"
+                >
+                  درخواست نمایندگی
+                </Link>
+              </li>
               <li><a href="#pricing" className="hover:text-cyan-400">تعرفه</a></li>
             </ul>
           </div>

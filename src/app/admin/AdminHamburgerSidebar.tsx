@@ -31,6 +31,7 @@ import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import FactoryIcon from "@mui/icons-material/Factory";
 import CreditCardIcon from "@mui/icons-material/CreditCard";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
+import HandshakeIcon from "@mui/icons-material/Handshake";
 import ShareIcon from "@mui/icons-material/Share";
 import StorefrontIcon from "@mui/icons-material/Storefront";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
@@ -277,6 +278,12 @@ export default function AdminHamburgerSidebar({
         label: "درخواست‌های بسته پیامک",
         href: "/admin/sms-package-orders",
         icon: <ReceiptLongIcon />,
+      },
+      {
+        id: "agency-requests",
+        label: "نمایندگی‌ها",
+        href: "/admin/agency-requests",
+        icon: <HandshakeIcon />,
       },
     ],
     [],
