@@ -68,6 +68,7 @@ import {
   normalizePhoneDigits,
   normalizeSearchText,
   parseAmount,
+  formatInputWithSeparator,
   parseJalaliMonthPicker,
   paymentTypeLabel,
   payrollStatusColor,
@@ -889,10 +890,11 @@ export default function PayrollPage() {
                   ) : null}
                   <TextField
                     size="small"
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     label="مبلغ (تومان)"
                     value={paymentAmount}
-                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    onChange={(e) => setPaymentAmount(formatInputWithSeparator(e.target.value))}
                     sx={fieldSx}
                   />
                   <TextField

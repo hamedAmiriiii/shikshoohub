@@ -44,6 +44,7 @@ import ListAltIcon from "@mui/icons-material/ListAlt";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import FileUploadIcon from "@mui/icons-material/FileUpload";
 import KitchenIcon from "@mui/icons-material/Kitchen";
+import DescriptionIcon from "@mui/icons-material/Description";
 import {
   ADMIN_POS_SETTINGS_CHANGED_EVENT,
   readAdminPosSettings,
@@ -124,6 +125,12 @@ export default function AdminHamburgerSidebar({
       { id: "reports", label: "گزارشات", href: "/admin/reports", icon: <AssessmentIcon /> },
       { id: "inventory", label: "موجودی انبار", href: "/admin/inventory", icon: <InventoryIcon /> },
       { id: "expenses", label: "لیست هزینه‌ها", href: "/admin/expenses", icon: <AttachMoneyIcon /> },
+      {
+        id: "manual-trades",
+        label: "ثبت سند",
+        href: "/admin/manual-trades",
+        icon: <DescriptionIcon />,
+      },
       {
         id: "expenses-stats",
         label: "گزارش هزینه‌ها",

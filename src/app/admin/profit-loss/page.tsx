@@ -16,6 +16,8 @@ interface MonthlyReport {
   month_name: string;
   total_sales: number;
   total_purchases: number;
+  total_manual_sales?: number;
+  total_manual_purchases?: number;
   total_profit: number;
   total_expenses: number;
   total_invoices: number;
@@ -28,6 +30,8 @@ interface FinancialReportResponse {
   totals: {
     total_sales: number;
     total_purchases: number;
+    total_manual_sales?: number;
+    total_manual_purchases?: number;
     total_profit: number;
     total_expenses: number;
     total_invoices: number;
@@ -296,7 +300,13 @@ export default function ProfitLossPage() {
                         کل فروش
                       </TableCell>
                       <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)", whiteSpace: "nowrap" }}>
+                        سند فروش دستی
+                      </TableCell>
+                      <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)", whiteSpace: "nowrap" }}>
                         کل مبلغ خرید
+                      </TableCell>
+                      <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)", whiteSpace: "nowrap" }}>
+                        سند خرید دستی
                       </TableCell>
                       <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)", whiteSpace: "nowrap" }}>
                         کل سود
@@ -334,8 +344,14 @@ export default function ProfitLossPage() {
                         <TableCell align="right" sx={{ color: "var(--admin-text)" }}>
                           {formatNumber(report.total_sales)} 
                         </TableCell>
+                        <TableCell align="right" sx={{ color: "var(--admin-accent)" }}>
+                          {formatNumber(report.total_manual_sales ?? 0)} 
+                        </TableCell>
                         <TableCell align="right" sx={{ color: "var(--admin-text)" }}>
                           {formatNumber(report.total_purchases)} 
+                        </TableCell>
+                        <TableCell align="right" sx={{ color: "#ff9800" }}>
+                          {formatNumber(report.total_manual_purchases ?? 0)} 
                         </TableCell>
                         <TableCell align="right" sx={{ color: "var(--admin-accent)", fontWeight: "600" }}>
                           {formatNumber(report.total_profit)} 
@@ -405,9 +421,33 @@ export default function ProfitLossPage() {
                           },
                         }}
                       >
+                        <TableCell sx={{ color: "var(--admin-text)" }}>سند فروش دستی</TableCell>
+                        <TableCell align="right" sx={{ color: "var(--admin-accent)", fontWeight: "600" }}>
+                          {formatNumber(data.totals.total_manual_sales ?? 0)} تومان
+                        </TableCell>
+                      </TableRow>
+                      <TableRow
+                        sx={{
+                          "&:hover": {
+                            backgroundColor: "var(--admin-surface-alt)",
+                          },
+                        }}
+                      >
                         <TableCell sx={{ color: "var(--admin-text)" }}>کل مبلغ خرید</TableCell>
                         <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600" }}>
                           {formatNumber(data.totals.total_purchases)} تومان
+                        </TableCell>
+                      </TableRow>
+                      <TableRow
+                        sx={{
+                          "&:hover": {
+                            backgroundColor: "var(--admin-surface-alt)",
+                          },
+                        }}
+                      >
+                        <TableCell sx={{ color: "var(--admin-text)" }}>سند خرید دستی</TableCell>
+                        <TableCell align="right" sx={{ color: "#ff9800", fontWeight: "600" }}>
+                          {formatNumber(data.totals.total_manual_purchases ?? 0)} تومان
                         </TableCell>
                       </TableRow>
                       <TableRow

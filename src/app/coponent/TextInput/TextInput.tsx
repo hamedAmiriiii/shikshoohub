@@ -17,24 +17,27 @@ const TextInput: React.FC<TextInput> = ({ name, defaultValue, onChange, label, v
   const [isFocused, setIsFocused] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputVal = e.target.value.replace(/,/g, '');
-    // برای type="number" اعداد اعشاری را هم قبول کن
+    const inputVal = e.target.value
+      .replace(/,/g, "")
+      .replace(/٬/g, "")
+      .replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)))
+      .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)))
+      .replace(/\s/g, "");
     if (type === "number") {
-      // قبول کردن اعداد اعشاری (مثل 0.45 یا 45.5)
-      if (/^\d*\.?\d*$/.test(inputVal) || inputVal === '') {
+      if (/^\d*\.?\d*$/.test(inputVal) || inputVal === "") {
         onChange(inputVal);
       }
-    } else if (/^\d*$/.test(inputVal) || inputVal === '') {
+    } else if (/^\d*$/.test(inputVal) || inputVal === "") {
       onChange(inputVal);
     } else {
-      onChange(e.target.value); // در صورت تایپ حروف، همون مقدار رو بده
+      onChange(e.target.value);
     }
   };
 
   const formatNumber = (val: string) => {
     if (type === "number") {
       const num = Number(val);
-      return !isNaN(num) && val !== '' ? new Intl.NumberFormat().format(num) : val;
+      return !isNaN(num) && val !== '' ? new Intl.NumberFormat("fa-IR").format(num) : val;
     }
     return val;
   };

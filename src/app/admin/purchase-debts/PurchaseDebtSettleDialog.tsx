@@ -23,6 +23,7 @@ import {
   type PurchaseDebtInvoice,
 } from "@/app/lib/purchaseDebts";
 import { toast } from "react-toastify";
+import { formatAmountInput, formatAmountNumber, parseAmountInput } from "@/app/lib/amountInput";
 
 const inputSx = {
   "& .MuiOutlinedInput-root": {
@@ -65,7 +66,7 @@ export default function PurchaseDebtSettleDialog({
     if (!open || !invoice) return;
     setMode("cash");
     setCardAmount("");
-    setCashAmount(String(debtAmount));
+    setCashAmount(debtAmount > 0 ? formatAmountNumber(debtAmount) : "");
     setNote("");
   }, [open, invoice, debtAmount]);
 
@@ -78,8 +79,8 @@ export default function PurchaseDebtSettleDialog({
     } else if (mode === "card") {
       body = { payment_settlement: "card" };
     } else {
-      const card = Number(cardAmount.replace(/\D/g, "")) || 0;
-      const cash = Number(cashAmount.replace(/\D/g, "")) || 0;
+      const card = parseAmountInput(cardAmount);
+      const cash = parseAmountInput(cashAmount);
       if (card + cash !== debtAmount) {
         toast.error(`جمع کارت و نقد باید برابر ${formatNumber(debtAmount)} تومان باشد`);
         return;
@@ -130,11 +131,11 @@ export default function PurchaseDebtSettleDialog({
               const next = e.target.value as SettlementMode;
               setMode(next);
               if (next === "cash") {
-                setCashAmount(String(debtAmount));
-                setCardAmount("0");
+                setCashAmount(debtAmount > 0 ? formatAmountNumber(debtAmount) : "");
+                setCardAmount("");
               } else if (next === "card") {
-                setCardAmount(String(debtAmount));
-                setCashAmount("0");
+                setCardAmount(debtAmount > 0 ? formatAmountNumber(debtAmount) : "");
+                setCashAmount("");
               }
             }}
           >
@@ -149,18 +150,20 @@ export default function PurchaseDebtSettleDialog({
             <TextField
               label="مبلغ کارت"
               value={cardAmount}
-              onChange={(e) => setCardAmount(e.target.value.replace(/\D/g, ""))}
+              onChange={(e) => setCardAmount(formatAmountInput(e.target.value))}
               fullWidth
               size="small"
               sx={inputSx}
+              inputMode="numeric"
             />
             <TextField
               label="مبلغ نقد"
               value={cashAmount}
-              onChange={(e) => setCashAmount(e.target.value.replace(/\D/g, ""))}
+              onChange={(e) => setCashAmount(formatAmountInput(e.target.value))}
               fullWidth
               size="small"
               sx={inputSx}
+              inputMode="numeric"
             />
           </Box>
         )}

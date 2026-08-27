@@ -43,10 +43,15 @@ export type MaterialShortage = {
   shortage_kg: number;
 };
 
+export type SalePriceMode = "percent" | "manual";
+
 export type ProducedGood = {
   id: number;
   name: string;
   sale_price?: number;
+  sale_price_mode?: SalePriceMode | string | null;
+  markup_percent?: number | null;
+  round_sale_price?: boolean | number | string | null;
   note?: string | null;
   quantity_kg?: number;
   total_cost?: number;
@@ -161,4 +166,37 @@ export function salePriceFromProfitPercent(costPerKg: number, percent: number): 
 export function profitPercentFromSale(costPerKg: number, salePrice: number): number {
   if (!costPerKg || costPerKg <= 0) return 0;
   return Math.round((((salePrice || 0) - costPerKg) / costPerKg) * 10000) / 100;
+}
+
+export function isPercentSaleMode(good: Pick<ProducedGood, "sale_price_mode" | "markup_percent">): boolean {
+  if (good.sale_price_mode === "percent") return true;
+  if (good.sale_price_mode === "manual") return false;
+  return good.markup_percent != null;
+}
+
+export function storedMarkupPercent(good: Pick<ProducedGood, "markup_percent" | "profit_percent">): number | null {
+  if (good.markup_percent != null && Number.isFinite(Number(good.markup_percent))) {
+    return Number(good.markup_percent);
+  }
+  if (good.profit_percent != null && Number.isFinite(Number(good.profit_percent))) {
+    return Number(good.profit_percent);
+  }
+  return null;
+}
+
+export function isRoundSalePrice(good: Pick<ProducedGood, "round_sale_price">): boolean {
+  const value = good.round_sale_price as unknown;
+  return value === true || value === 1 || value === "1";
+}
+
+/** نزدیک‌ترین هزار تومان: ۳۲۵۶۰ → ۳۳۰۰۰ */
+export function roundSalePriceToThousand(price: number): number {
+  const n = Number(price) || 0;
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.round(n / 1000) * 1000;
+}
+
+export function applySalePriceRounding(price: number, round: boolean): number {
+  const n = Math.round(Number(price) || 0);
+  return round ? roundSalePriceToThousand(n) : n;
 }

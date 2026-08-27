@@ -70,6 +70,7 @@ import {
   readAdminPosSettings,
   ADMIN_POS_SETTINGS_CHANGED_EVENT,
 } from '@/app/lib/adminPosSettings';
+import { formatAmountInput } from '@/app/lib/amountInput';
 import type { PaymentType } from '@/app/lib/paymentTypes';
 import SaleProductListPanel from '@/app/admin/SaleProductListPanel';
 import AdminMenuModeView from '@/app/admin/AdminMenuModeView';
@@ -137,6 +138,10 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
     border: 0,
   },
 }));
+
+function moneyField(n: number): string {
+  return formatAmountInput(String(Math.max(0, Math.floor(n || 0))));
+}
 
 export default function ShoppingPage() {
   const router = useRouter();
@@ -282,12 +287,12 @@ export default function ShoppingPage() {
       setPaymentSplitError("");
       if (sanitized === "") {
         setCardAmountInput("");
-        setCashAmountInput(String(settlementTarget));
+        setCashAmountInput(moneyField(settlementTarget));
         return;
       }
       const card = Math.min(parseAmountInput(sanitized), settlementTarget);
-      setCardAmountInput(String(card));
-      setCashAmountInput(String(Math.max(0, settlementTarget - card)));
+      setCardAmountInput(moneyField(card));
+      setCashAmountInput(moneyField(Math.max(0, settlementTarget - card)));
     },
     [sanitizeAmountInput, parseAmountInput, settlementTarget],
   );
@@ -298,12 +303,12 @@ export default function ShoppingPage() {
       setPaymentSplitError("");
       if (sanitized === "") {
         setCashAmountInput("");
-        setCardAmountInput(String(settlementTarget));
+        setCardAmountInput(moneyField(settlementTarget));
         return;
       }
       const cash = Math.min(parseAmountInput(sanitized), settlementTarget);
-      setCashAmountInput(String(cash));
-      setCardAmountInput(String(Math.max(0, settlementTarget - cash)));
+      setCashAmountInput(moneyField(cash));
+      setCardAmountInput(moneyField(Math.max(0, settlementTarget - cash)));
     },
     [sanitizeAmountInput, parseAmountInput, settlementTarget],
   );
@@ -371,8 +376,8 @@ export default function ShoppingPage() {
     installmentCalculationRef.current = slot.installmentCalculation ?? null;
     setInstallmentCreditError(slot.installmentCreditError ?? "");
     setSettlementMode(slot.settlementMode ?? "card_all");
-    setCardAmountInput(slot.cardAmountInput ?? "");
-    setCashAmountInput(slot.cashAmountInput ?? "");
+    setCardAmountInput(formatAmountInput(slot.cardAmountInput ?? ""));
+    setCashAmountInput(formatAmountInput(slot.cashAmountInput ?? ""));
     setPaymentSplitError(slot.paymentSplitError ?? "");
     setSelectedChequeId(slot.selectedChequeId ?? null);
     setIsDiscountFocused(false);
@@ -438,28 +443,28 @@ export default function ShoppingPage() {
 
   useEffect(() => {
     if (settlementTarget <= 0) {
-      setCardAmountInput(paymentType === "cheque" ? "0" : "");
-      setCashAmountInput(paymentType === "cheque" ? "0" : "");
+      setCardAmountInput(paymentType === "cheque" ? moneyField(0) : "");
+      setCashAmountInput(paymentType === "cheque" ? moneyField(0) : "");
       setPaymentSplitError("");
       return;
     }
     if (settlementMode === "card_all") {
-      setCardAmountInput(String(settlementTarget));
-      setCashAmountInput("0");
+      setCardAmountInput(moneyField(settlementTarget));
+      setCashAmountInput(moneyField(0));
       setPaymentSplitError("");
     } else if (settlementMode === "cash_all") {
-      setCardAmountInput("0");
-      setCashAmountInput(String(settlementTarget));
+      setCardAmountInput(moneyField(0));
+      setCashAmountInput(moneyField(settlementTarget));
       setPaymentSplitError("");
     } else if (settlementMode === "split") {
       const existingCard = parseAmountInput(cardAmountInput);
       if (!cardAmountInput || cardAmountInput === "") {
-        setCardAmountInput(String(settlementTarget));
-        setCashAmountInput("0");
+        setCardAmountInput(moneyField(settlementTarget));
+        setCashAmountInput(moneyField(0));
       } else {
         const card = Math.min(existingCard, settlementTarget);
-        setCardAmountInput(String(card));
-        setCashAmountInput(String(Math.max(0, settlementTarget - card)));
+        setCardAmountInput(moneyField(card));
+        setCashAmountInput(moneyField(Math.max(0, settlementTarget - card)));
       }
     }
   }, [settlementTarget, settlementMode, cardAmountInput, parseAmountInput, paymentType]);
@@ -1853,30 +1858,28 @@ export default function ShoppingPage() {
     isDiscountFocused,
     onDiscountFocus: () => setIsDiscountFocused(true),
     onDiscountChange: (value: string) => {
-      const cleaned = value.replace(/,/g, "");
-      if (cleaned === "" || /^\d+$/.test(cleaned)) {
-        const numValue = cleaned === "" ? 0 : Number(cleaned);
-        const maxDiscount = Math.floor(total * 0.15);
-        if (numValue > maxDiscount) {
-          setDiscountError(`حداکثر ${formatNumber(maxDiscount)} تومان`);
-          setDiscounttype(0);
-          setDiscountDisplay("");
-        } else {
-          setDiscountError("");
-          setDiscounttype(numValue);
-          setDiscountDisplay(cleaned === "" ? "" : cleaned);
-        }
+      const formatted = formatAmountInput(value);
+      const numValue = formatted === "" ? 0 : parseAmountInput(formatted);
+      const maxDiscount = Math.floor(total * 0.15);
+      if (numValue > maxDiscount) {
+        setDiscountError(`حداکثر ${formatNumber(maxDiscount)} تومان`);
+        setDiscounttype(0);
+        setDiscountDisplay("");
+      } else {
+        setDiscountError("");
+        setDiscounttype(numValue);
+        setDiscountDisplay(formatted);
       }
     },
     onDiscountBlur: (value: string) => {
       setIsDiscountFocused(false);
-      const cleaned = value.replace(/,/g, "");
-      if (cleaned === "" || cleaned === "0" || Number(cleaned) === 0) {
+      const numValue = parseAmountInput(value);
+      if (numValue <= 0) {
         setDiscountDisplay("");
         setDiscounttype(0);
         setDiscountError("");
       } else {
-        setDiscountDisplay(new Intl.NumberFormat("fa-IR").format(Number(cleaned)));
+        setDiscountDisplay(formatAmountInput(value));
       }
     },
     paymentType,
@@ -1906,8 +1909,8 @@ export default function ShoppingPage() {
       setSettlementMode(mode);
       setPaymentSplitError("");
       if (mode === "split") {
-        setCardAmountInput(String(settlementTarget));
-        setCashAmountInput("0");
+        setCardAmountInput(moneyField(settlementTarget));
+        setCashAmountInput(moneyField(0));
       }
     },
     cardAmountInput,
@@ -2847,29 +2850,19 @@ export default function ShoppingPage() {
                         تخفیف (تومان):
                       </Typography>
                       <TextField
-                      value={
-                        isDiscountFocused
-                          ? discountDisplay.replace(/,/g, '')
-                          : discounttype > 0
-                            ? discountDisplay
-                            : ''
-                      }
+                      value={discountDisplay}
                       onChange={(e) => {
-                        const value = e.target.value.replace(/,/g, ''); // حذف جداکننده‌ها
-                        if (value === '' || /^\d+$/.test(value)) {
-                          const numValue = value === '' ? 0 : Number(value);
-                          
-                          // اعتبارسنجی: تخفیف نباید بیشتر از 15% مبلغ کل باشد
-                          const maxDiscount = Math.floor(total * 0.15);
-                          if (numValue > maxDiscount) {
-                            setDiscountError(`مبلغ تخفیف نمی‌تواند بیشتر از ${formatNumber(maxDiscount)} تومان (15% مبلغ کل) باشد`);
-                            setDiscounttype(0);
-                            setDiscountDisplay('');
-                          } else {
-                            setDiscountError('');
-                            setDiscounttype(numValue);
-                            setDiscountDisplay(value === '' ? '' : value);
-                          }
+                        const formatted = formatAmountInput(e.target.value);
+                        const numValue = formatted === "" ? 0 : parseAmountInput(formatted);
+                        const maxDiscount = Math.floor(total * 0.15);
+                        if (numValue > maxDiscount) {
+                          setDiscountError(`مبلغ تخفیف نمی‌تواند بیشتر از ${formatNumber(maxDiscount)} تومان (15% مبلغ کل) باشد`);
+                          setDiscounttype(0);
+                          setDiscountDisplay("");
+                        } else {
+                          setDiscountError("");
+                          setDiscounttype(numValue);
+                          setDiscountDisplay(formatted);
                         }
                       }}
                       onFocus={() => {
@@ -2877,16 +2870,13 @@ export default function ShoppingPage() {
                       }}
                       onBlur={(e) => {
                         setIsDiscountFocused(false);
-                        const value = e.target.value.replace(/,/g, '');
-                        // اگر مقدار خالی است، مطمئن شو که 0 ست شده
-                        if (value === '' || value === '0' || Number(value) === 0) {
-                          setDiscountDisplay('');
+                        const numValue = parseAmountInput(e.target.value);
+                        if (numValue <= 0) {
+                          setDiscountDisplay("");
                           setDiscounttype(0);
-                          setDiscountError('');
+                          setDiscountError("");
                         } else {
-                          // فرمت کردن برای نمایش
-                          const numValue = Number(value);
-                          setDiscountDisplay(new Intl.NumberFormat('fa-IR').format(numValue));
+                          setDiscountDisplay(formatAmountInput(e.target.value));
                         }
                       }}
                       placeholder="مقدار تخفیف را وارد کنید"
@@ -3177,8 +3167,8 @@ export default function ShoppingPage() {
                               setSettlementMode(mode);
                               setPaymentSplitError("");
                               if (mode === "split") {
-                                setCardAmountInput(String(Math.max(0, chequeRemainder)));
-                                setCashAmountInput("0");
+                                setCardAmountInput(moneyField(Math.max(0, chequeRemainder)));
+                                setCashAmountInput(moneyField(0));
                               }
                             }}
                             sx={{
@@ -3437,8 +3427,8 @@ export default function ShoppingPage() {
                                 setSettlementMode(mode);
                                 setPaymentSplitError("");
                                 if (mode === "split") {
-                                  setCardAmountInput(String(settlementTarget));
-                                  setCashAmountInput("0");
+                                  setCardAmountInput(moneyField(settlementTarget));
+                                  setCashAmountInput(moneyField(0));
                                 }
                               }}
                               sx={{

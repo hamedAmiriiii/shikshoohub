@@ -16,6 +16,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import { mainColors, searchColors } from "../../liberari/colors";
 import { appendProductLabelPrintParams } from "@/app/lib/productLabelPrint";
+import { formatAmountInput, parseAmountInput } from "@/app/lib/amountInput";
 
 const formatNumber = (num: number | string) => {
   const numValue = typeof num === 'string' ? parseFloat(num.replace(/,/g, '')) : num;
@@ -42,10 +43,6 @@ export default function CardUser(props: any) {
   const [images, setImages] = useState<string[]>([]); // آرایه عکس‌های base64 یا URL
   const [originalImageUrls, setOriginalImageUrls] = useState<string[]>([]); // عکس‌های اصلی (URL) که از API آمده‌اند
   const [imageData, setImageData] = useState<Array<{id?: number, url: string}>>([]); // نگهداری id و url عکس‌ها
-  
-  // Focus states for formatting
-  const [purchasePriceFocused, setPurchasePriceFocused] = useState(false);
-  const [salePriceFocused, setSalePriceFocused] = useState(false);
   
   // Size and Color Modal states
   const [sizeColorModalOpen, setSizeColorModalOpen] = useState(false);
@@ -330,8 +327,8 @@ export default function CardUser(props: any) {
     const data: any = {
       name: name,
       barcode: barcode,
-      purchase_price: purchasePrice || "0",
-      sale_price: salePrice || "0",
+      purchase_price: String(Math.floor(parseAmountInput(purchasePrice) || 0)),
+      sale_price: String(Math.floor(parseAmountInput(salePrice) || 0)),
       quantity: quantity || "0",
       // discount_percent: discountValue
     };
@@ -466,21 +463,16 @@ export default function CardUser(props: any) {
           <Box sx={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "4px" }}>
             <Typography sx={{ color: "var(--admin-text)", fontSize: "12px" }}>قیمت خرید:</Typography>
             <TextField
-              value={purchasePriceFocused ? purchasePrice : (purchasePrice ? formatNumber(purchasePrice) : '')}
+              value={formatAmountInput(purchasePrice)}
               onChange={(e) => {
-                const value = e.target.value.replace(/,/g, '');
-                if (/^\d*$/.test(value) || value === '') {
-                  setPurchasePrice(value);
-                }
+                const formatted = formatAmountInput(e.target.value);
+                setPurchasePrice(formatted === "" ? "" : String(Math.floor(parseAmountInput(formatted))));
               }}
-              onFocus={() => setPurchasePriceFocused(true)}
-              onBlur={() => {
-                setPurchasePriceFocused(false);
-                handleUpdate();
-              }}
+              onBlur={handleUpdate}
               size="small"
               fullWidth
               type="text"
+              inputMode="numeric"
               sx={{
                 "& .MuiOutlinedInput-root": {
                   backgroundColor: "var(--admin-surface-alt)",
@@ -510,21 +502,16 @@ export default function CardUser(props: any) {
           <Box sx={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "4px" }}>
             <Typography sx={{ color: "var(--admin-text)", fontSize: "12px" }}>قیمت فروش:</Typography>
             <TextField
-              value={salePriceFocused ? salePrice : (salePrice ? formatNumber(salePrice) : '')}
+              value={formatAmountInput(salePrice)}
               onChange={(e) => {
-                const value = e.target.value.replace(/,/g, '');
-                if (/^\d*$/.test(value) || value === '') {
-                  setSalePrice(value);
-                }
+                const formatted = formatAmountInput(e.target.value);
+                setSalePrice(formatted === "" ? "" : String(Math.floor(parseAmountInput(formatted))));
               }}
-              onFocus={() => setSalePriceFocused(true)}
-              onBlur={() => {
-                setSalePriceFocused(false);
-                handleUpdate();
-              }}
+              onBlur={handleUpdate}
               size="small"
               fullWidth
               type="text"
+              inputMode="numeric"
               sx={{
                 "& .MuiOutlinedInput-root": {
                   backgroundColor: "var(--admin-surface-alt)",

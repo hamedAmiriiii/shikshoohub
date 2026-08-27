@@ -34,6 +34,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { useQueryClient } from '@tanstack/react-query';
 import Header from '@/app/coponent/Header';
 import ShopAccountSelect from "@/app/admin/ShopAccountSelect";
+import { formatAmountInput } from "@/app/lib/amountInput";
 
 function resolveShopAccountId(item: any): number | "" {
   const direct = Number(item?.shop_account_id);
@@ -744,41 +745,10 @@ export default function ListExpenses() {
             <TextField
               label="مبلغ (تومان)"
               value={amount}
-              onChange={(e) => {
-                // Accept both English and Persian digits, and remove separators
-                let value = e.target.value.replace(/,/g, '').replace(/٬/g, '').replace(/\s/g, '');
-                // Convert Persian digits to English for validation
-                const persianToEnglish: { [key: string]: string } = {
-                  '۰': '0', '۱': '1', '۲': '2', '۳': '3', '۴': '4',
-                  '۵': '5', '۶': '6', '۷': '7', '۸': '8', '۹': '9'
-                };
-                let cleanedForValidation = value;
-                Object.keys(persianToEnglish).forEach(persian => {
-                  cleanedForValidation = cleanedForValidation.replace(new RegExp(persian, 'g'), persianToEnglish[persian]);
-                });
-                // Allow only digits (English or Persian) or empty
-                if (/^[\d۰-۹]*$/.test(value) || value === '') {
-                  setAmount(value);
-                }
-              }}
-              onBlur={(e) => {
-                // Remove all formatting (both English and Persian commas)
-                const cleanValue = cleanAmount(e.target.value);
-                const numValue = parseFloat(cleanValue);
-                if (!isNaN(numValue) && numValue > 0) {
-                  setAmount(formatNumber(numValue));
-                }
-              }}
-              onFocus={(e) => {
-                // Show raw number when focused for editing
-                const cleanValue = cleanAmount(e.target.value);
-                const numValue = parseFloat(cleanValue);
-                if (!isNaN(numValue) && numValue > 0) {
-                  setAmount(cleanValue);
-                }
-              }}
+              onChange={(e) => setAmount(formatAmountInput(e.target.value))}
               fullWidth
               type="text"
+              inputMode="numeric"
               sx={{
                 direction: "rtl",
                 "& .MuiOutlinedInput-root": {
@@ -962,41 +932,10 @@ export default function ListExpenses() {
             <TextField
               label="مبلغ (تومان)"
               value={amount}
-              onChange={(e) => {
-                // Accept both English and Persian digits, and remove separators
-                let value = e.target.value.replace(/,/g, '').replace(/٬/g, '').replace(/\s/g, '');
-                // Convert Persian digits to English for validation
-                const persianToEnglish: { [key: string]: string } = {
-                  '۰': '0', '۱': '1', '۲': '2', '۳': '3', '۴': '4',
-                  '۵': '5', '۶': '6', '۷': '7', '۸': '8', '۹': '9'
-                };
-                let cleanedForValidation = value;
-                Object.keys(persianToEnglish).forEach(persian => {
-                  cleanedForValidation = cleanedForValidation.replace(new RegExp(persian, 'g'), persianToEnglish[persian]);
-                });
-                // Allow only digits (English or Persian) or empty
-                if (/^[\d۰-۹]*$/.test(value) || value === '') {
-                  setAmount(value);
-                }
-              }}
-              onBlur={(e) => {
-                // Remove all formatting (both English and Persian commas)
-                const cleanValue = cleanAmount(e.target.value);
-                const numValue = parseFloat(cleanValue);
-                if (!isNaN(numValue) && numValue > 0) {
-                  setAmount(formatNumber(numValue));
-                }
-              }}
-              onFocus={(e) => {
-                // Show raw number when focused for editing
-                const cleanValue = cleanAmount(e.target.value);
-                const numValue = parseFloat(cleanValue);
-                if (!isNaN(numValue) && numValue > 0) {
-                  setAmount(cleanValue);
-                }
-              }}
+              onChange={(e) => setAmount(formatAmountInput(e.target.value))}
               fullWidth
               type="text"
+              inputMode="numeric"
               sx={{
                 direction: "rtl",
                 "& .MuiOutlinedInput-root": {

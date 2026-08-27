@@ -12,10 +12,12 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
   IconButton,
   InputAdornment,
   MenuItem,
   Paper,
+  Switch,
   Tab,
   Table,
   TableBody,
@@ -25,6 +27,8 @@ import {
   TableRow,
   Tabs,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Tooltip,
   Typography,
 } from "@mui/material";
@@ -53,15 +57,21 @@ import {
   extractList,
   formatKg,
   formatToman,
+  isPercentSaleMode,
+  isRoundSalePrice,
   parseAmount,
   profitPercentFromSale,
   recipeLinesFromGood,
+  applySalePriceRounding,
   salePriceFromProfitPercent,
+  storedMarkupPercent,
   type ProducedGood,
   type ProductionRecord,
   type RawMaterial,
   type RecipeLine,
+  type SalePriceMode,
 } from "@/app/lib/productionCosting";
+import { formatAmountInput } from "@/app/lib/amountInput";
 
 const fieldSx = {
   "& .MuiOutlinedInput-root": {
@@ -139,6 +149,8 @@ export default function ProductionCostingPage() {
   const [saleGood, setSaleGood] = useState<ProducedGood | null>(null);
   const [salePrice, setSalePrice] = useState("");
   const [salePercent, setSalePercent] = useState("");
+  const [salePriceMode, setSalePriceMode] = useState<SalePriceMode>("percent");
+  const [roundSalePrice, setRoundSalePrice] = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState<
     | { kind: "material"; item: RawMaterial }
@@ -407,7 +419,15 @@ export default function ProductionCostingPage() {
     if (!token) return;
     setSaving(true);
     try {
-      const body = JSON.stringify({ name, ingredients });
+      const payload: Record<string, unknown> = { name, ingredients };
+      if (editingGood && isPercentSaleMode(editingGood)) {
+        const markup = storedMarkupPercent(editingGood);
+        if (markup != null) payload.markup_percent = markup;
+      }
+      if (editingGood) {
+        payload.round_sale_price = isRoundSalePrice(editingGood);
+      }
+      const body = JSON.stringify(payload);
       const res = editingGood
         ? await FetchWithJwtClient("PUT", `/api/produced-goods/${editingGood.id}`, token, {}, { body })
         : await FetchWithJwtClient("POST", "/api/produced-goods", token, {}, { body });
@@ -423,38 +443,92 @@ export default function ProductionCostingPage() {
     }
   };
 
+  const previewSaleFromPercent = (cost: number, percent: number, round: boolean) => {
+    if (cost <= 0) return "";
+    return formatAmountInput(String(applySalePriceRounding(salePriceFromProfitPercent(cost, percent), round)));
+  };
+
   const openSalePrice = (good: ProducedGood) => {
     const cost = Number(good.cost_per_kg) || 0;
     const price = Number(good.sale_price) || 0;
+    const mode: SalePriceMode = isPercentSaleMode(good) ? "percent" : "manual";
+    const round = isRoundSalePrice(good);
     setSaleGood(good);
-    setSalePrice(price ? String(Math.round(price)) : "");
-    const percent = good.profit_percent != null ? Number(good.profit_percent) : profitPercentFromSale(cost, price);
+    setSalePriceMode(mode);
+    setRoundSalePrice(round);
+    if (mode === "percent") {
+      const percent = storedMarkupPercent(good) ?? profitPercentFromSale(cost, price);
+      setSalePercent(good.markup_percent != null || percent ? String(percent) : "");
+      const preview = previewSaleFromPercent(cost, percent, round);
+      setSalePrice(preview || (price ? formatAmountInput(String(Math.round(price))) : ""));
+      return;
+    }
+    setSalePrice(price ? formatAmountInput(String(Math.round(price))) : "");
+    const percent = profitPercentFromSale(cost, price);
     setSalePercent(percent ? String(percent) : "");
   };
 
-  const onSalePriceChange = (raw: string) => {
-    setSalePrice(raw);
+  const onSalePriceModeChange = (_: unknown, mode: SalePriceMode | null) => {
+    if (!mode) return;
+    setSalePriceMode(mode);
     const cost = Number(saleGood?.cost_per_kg) || 0;
-    const price = parseAmount(raw);
+    if (mode === "percent") {
+      const typed = salePercent.trim() === "" ? null : parseAmount(salePercent);
+      const percent = typed != null ? typed : profitPercentFromSale(cost, parseAmount(salePrice));
+      if (salePercent.trim() !== "" || percent) setSalePercent(String(percent));
+      const preview = previewSaleFromPercent(cost, percent, roundSalePrice);
+      if (preview) setSalePrice(preview);
+      return;
+    }
+    const price = parseAmount(salePrice);
+    setSalePercent(cost > 0 && price > 0 ? String(profitPercentFromSale(cost, price)) : salePercent);
+  };
+
+  const onRoundSalePriceChange = (round: boolean) => {
+    setRoundSalePrice(round);
+    if (salePriceMode !== "percent") return;
+    const cost = Number(saleGood?.cost_per_kg) || 0;
+    const preview = previewSaleFromPercent(cost, parseAmount(salePercent), round);
+    if (preview) setSalePrice(preview);
+  };
+
+  const onSalePriceChange = (raw: string) => {
+    setSalePriceMode("manual");
+    const formatted = formatAmountInput(raw);
+    setSalePrice(formatted);
+    const cost = Number(saleGood?.cost_per_kg) || 0;
+    const price = parseAmount(formatted);
     setSalePercent(cost > 0 && price > 0 ? String(profitPercentFromSale(cost, price)) : "");
   };
 
   const onSalePercentChange = (raw: string) => {
+    setSalePriceMode("percent");
     setSalePercent(raw);
     const cost = Number(saleGood?.cost_per_kg) || 0;
-    const percent = parseAmount(raw);
-    if (cost > 0) setSalePrice(String(salePriceFromProfitPercent(cost, percent)));
+    const preview = previewSaleFromPercent(cost, parseAmount(raw), roundSalePrice);
+    if (preview) setSalePrice(preview);
   };
 
   const saveSalePrice = async () => {
     if (!saleGood) return;
-    const price = parseAmount(salePrice);
-    if (price < 0) {
-      toast.error("قیمت فروش نامعتبر است");
-      return;
-    }
     const token = tokenCode();
     if (!token) return;
+    let body: Record<string, unknown>;
+    if (salePriceMode === "percent") {
+      const percent = parseAmount(salePercent);
+      if (salePercent.trim() === "" || percent < 0) {
+        toast.error("درصد سود را وارد کنید");
+        return;
+      }
+      body = { markup_percent: percent, round_sale_price: roundSalePrice };
+    } else {
+      const price = parseAmount(salePrice);
+      if (price < 0) {
+        toast.error("قیمت فروش نامعتبر است");
+        return;
+      }
+      body = { sale_price: price, markup_percent: null, round_sale_price: roundSalePrice };
+    }
     setSaving(true);
     try {
       const res = await FetchWithJwtClient(
@@ -462,13 +536,13 @@ export default function ProductionCostingPage() {
         `/api/produced-goods/${saleGood.id}`,
         token,
         {},
-        { body: JSON.stringify({ sale_price: price }) },
+        { body: JSON.stringify(body) },
       );
       if (res?.hasError) {
         toast.error(getApiErrorMessage(res, "ذخیره قیمت فروش ناموفق بود"));
         return;
       }
-      toast.success("قیمت فروش به‌روز شد");
+      toast.success(salePriceMode === "percent" ? "درصد سود ذخیره شد" : "قیمت فروش به‌روز شد");
       setSaleGood(null);
       await loadAll();
     } finally {
@@ -515,6 +589,10 @@ export default function ProductionCostingPage() {
       setSaving(false);
     }
   };
+
+  const saleRawPrice = parseAmount(salePrice);
+  const saleFinalPrice = applySalePriceRounding(saleRawPrice, roundSalePrice);
+  const saleCost = Number(saleGood?.cost_per_kg) || 0;
 
   return (
     <Box sx={{ ...adminPageSx, px: { xs: 2, md: 3 }, pt: { xs: 1.5, md: 3 }, pb: { xs: 12, md: 5 } }}>
@@ -608,7 +686,12 @@ export default function ProductionCostingPage() {
                   const cost = Number(good.cost_per_kg) || 0;
                   const sale = Number(good.sale_price) || 0;
                   const profit = good.profit_per_kg != null ? Number(good.profit_per_kg) : sale - cost;
-                  const percent = good.profit_percent != null ? Number(good.profit_percent) : profitPercentFromSale(cost, sale);
+                  const percentMode = isPercentSaleMode(good);
+                  const percent = percentMode
+                    ? storedMarkupPercent(good) ?? profitPercentFromSale(cost, sale)
+                    : good.profit_percent != null
+                      ? Number(good.profit_percent)
+                      : profitPercentFromSale(cost, sale);
                   return (
                     <StyledTableRow key={good.id}>
                       <StyledTableCell align="right">
@@ -624,13 +707,19 @@ export default function ProductionCostingPage() {
                       <StyledTableCell align="right">{formatToman(cost)}</StyledTableCell>
                       <StyledTableCell align="right" sx={{ color: "var(--admin-accent)", fontWeight: 700 }}>
                         {formatToman(sale)}
+                        {(good.sale_price_mode || good.markup_percent != null || sale > 0) && (
+                          <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, fontWeight: 600 }}>
+                            {percentMode ? "بر اساس درصد" : "دستی"}
+                            {isRoundSalePrice(good) ? " · رند هزار" : ""}
+                          </Typography>
+                        )}
                       </StyledTableCell>
                       <StyledTableCell align="right" sx={{ color: profit >= 0 ? "var(--admin-accent)" : "#ef5350", fontWeight: 700 }}>
                         {formatToman(profit)}
                       </StyledTableCell>
                       <StyledTableCell align="right">
-                        {percent
-                          ? `${new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 2 }).format(percent)}٪`
+                        {percentMode || percent
+                          ? `${new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 2 }).format(percent || 0)}٪`
                           : "—"}
                       </StyledTableCell>
                       <StyledTableCell align="right">
@@ -782,7 +871,7 @@ export default function ProductionCostingPage() {
                       </Box>
                     </Typography>
                     <Typography sx={{ color: "var(--admin-accent)", fontWeight: 800, fontSize: 16, mt: 0.5 }}>
-                      قیمت تمام‌شده هر کیلو: {formatToman(good.cost_per_kg || 0)} تومان
+                      قیمت تمام‌شده هر واحد: {formatToman(good.cost_per_kg || 0)} تومان
                     </Typography>
                     {good.stock_sufficient === false && (
                       <Typography sx={{ color: "#ef5350", fontSize: 13, mt: 0.5 }}>موجودی مواد برای تولید کافی نیست</Typography>
@@ -831,7 +920,7 @@ export default function ProductionCostingPage() {
             <>
               <Typography sx={{ fontSize: 13, color: "var(--admin-text-muted)" }}>خرید اول انبار اختیاری است.</Typography>
               <TextField label="مقدار (کیلو)" value={lotQty} onChange={(e) => setLotQty(e.target.value)} inputMode="decimal" sx={fieldSx} />
-              <TextField label="قیمت هر کیلو (تومان)" value={lotPrice} onChange={(e) => setLotPrice(e.target.value)} inputMode="numeric" sx={fieldSx} />
+              <TextField label="قیمت هر کیلو (تومان)" value={lotPrice} onChange={(e) => setLotPrice(formatAmountInput(e.target.value))} inputMode="numeric" sx={fieldSx} />
             </>
           )}
         </DialogContent>
@@ -847,7 +936,7 @@ export default function ProductionCostingPage() {
         <DialogTitle>خرید جدید {lotDialogMaterial?.name || ""}</DialogTitle>
         <DialogContent sx={{ display: "grid", gap: 2, pt: "16px !important" }}>
           <TextField label="مقدار (کیلو)" value={lotQty} onChange={(e) => setLotQty(e.target.value)} inputMode="decimal" sx={fieldSx} />
-          <TextField label="قیمت هر کیلو (تومان)" value={lotPrice} onChange={(e) => setLotPrice(e.target.value)} inputMode="numeric" sx={fieldSx} />
+          <TextField label="قیمت هر کیلو (تومان)" value={lotPrice} onChange={(e) => setLotPrice(formatAmountInput(e.target.value))} inputMode="numeric" sx={fieldSx} />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setLotDialogMaterial(null)}>انصراف</Button>
@@ -919,7 +1008,7 @@ export default function ProductionCostingPage() {
         <DialogTitle>ثبت تولید {produceGood?.name || ""}</DialogTitle>
         <DialogContent sx={{ display: "grid", gap: 2, pt: "16px !important" }}>
           <TextField
-            label="چند کیلو تولید شود؟"
+            label="چند واحد تولید شود؟"
             value={produceKg}
             onChange={(e) => setProduceKg(e.target.value)}
             inputMode="decimal"
@@ -929,7 +1018,7 @@ export default function ProductionCostingPage() {
           {producePreview && (
             <Box sx={{ p: 1.5, borderRadius: "12px", backgroundColor: "var(--admin-surface-alt)", border: "1px solid var(--admin-border)" }}>
               <Typography sx={{ fontWeight: 800, color: producePreview.stock_sufficient === false ? "#ef5350" : "var(--admin-accent)" }}>
-                پیش‌نمایش هزینه هر کیلو: {formatToman(producePreview.cost_per_kg || 0)} تومان
+                پیش‌نمایش هزینه هر واحد: {formatToman(producePreview.cost_per_kg || 0)} تومان
               </Typography>
               <Typography sx={{ fontSize: 13, color: "var(--admin-text-muted)", mb: 1 }}>
                 جمع هزینه این تولید: {formatToman(producePreview.total_cost || 0)} تومان — موجودی کم نمی‌شود تا ثبت کنید.
@@ -937,12 +1026,12 @@ export default function ProductionCostingPage() {
               {(producePreview.ingredient_costs || []).map((line) => (
                 <Box key={line.raw_material_id} sx={{ mb: 1 }}>
                   <Typography sx={{ fontSize: 13, color: line.shortage_kg ? "#ef5350" : "var(--admin-text-muted)" }}>
-                    {line.name}: مصرف {formatKg(line.needed_kg || 0)} کیلو
-                    {line.shortage_kg ? ` · کمبود ${formatKg(line.shortage_kg)} کیلو` : ""}
+                    {line.name}: مصرف {formatKg(line.needed_kg || 0)} واحد
+                    {line.shortage_kg ? ` · کمبود ${formatKg(line.shortage_kg)} واحد` : ""}
                   </Typography>
                   {(line.lots || []).map((lot) => (
                     <Typography key={lot.lot_id} sx={{ fontSize: 12, color: "var(--admin-text-muted)", pr: 1 }}>
-                      لات {lot.lot_id}: {formatKg(lot.quantity_kg)} کیلو × {formatToman(lot.price_per_kg)} = {formatToman(lot.cost)}
+                      لات {lot.lot_id}: {formatKg(lot.quantity_kg)} واحد × {formatToman(lot.price_per_kg)} = {formatToman(lot.cost)}
                     </Typography>
                   ))}
                 </Box>
@@ -988,48 +1077,41 @@ export default function ProductionCostingPage() {
         <DialogTitle>قیمت فروش {saleGood?.name || ""}</DialogTitle>
         <DialogContent sx={{ display: "grid", gap: 2, pt: "16px !important" }}>
           <Typography sx={{ fontSize: 13, color: "var(--admin-text-muted)" }}>
-            قیمت تمام‌شده هر کیلو: {formatToman(Number(saleGood?.cost_per_kg) || 0)} تومان
+            قیمت تمام‌شده هر واحد: {formatToman(Number(saleGood?.cost_per_kg) || 0)} تومان
           </Typography>
-          <TextField
-            label="درصد سود"
-            value={salePercent}
-            onChange={(e) => onSalePercentChange(e.target.value)}
-            inputMode="decimal"
-            sx={fieldSx}
-            helperText="با زدن درصد، مبلغ فروش پر می‌شود"
-          />
-          <TextField
-            label="قیمت فروش هر کیلو (تومان)"
-            value={salePrice}
-            onChange={(e) => onSalePriceChange(e.target.value)}
-            inputMode="numeric"
-            sx={fieldSx}
-          />
-          <Typography sx={{ fontSize: 13, color: "var(--admin-accent)", fontWeight: 700 }}>
-            سود هر کیلو: {formatToman(parseAmount(salePrice) - (Number(saleGood?.cost_per_kg) || 0))} تومان
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setSaleGood(null)}>انصراف</Button>
-          <Button disabled={saving} onClick={() => void saveSalePrice()} variant="contained" sx={{ backgroundColor: "var(--admin-accent)" }}>
-            ذخیره قیمت
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog open={!!saleGood} onClose={() => setSaleGood(null)} fullWidth maxWidth="xs">
-        <DialogTitle>قیمت فروش {saleGood?.name || ""}</DialogTitle>
-        <DialogContent sx={{ display: "grid", gap: 2, pt: "16px !important" }}>
+          <ToggleButtonGroup
+            exclusive
+            fullWidth
+            size="small"
+            value={salePriceMode}
+            onChange={onSalePriceModeChange}
+            sx={{
+              "& .MuiToggleButton-root": {
+                color: "var(--admin-text)",
+                borderColor: "var(--admin-border)",
+                "&.Mui-selected": {
+                  bgcolor: "var(--admin-accent)",
+                  color: "#fff",
+                  "&:hover": { bgcolor: "var(--admin-accent-hover)" },
+                },
+              },
+            }}
+          >
+            <ToggleButton value="percent">درصد</ToggleButton>
+            <ToggleButton value="manual">دستی</ToggleButton>
+          </ToggleButtonGroup>
           <Typography sx={{ fontSize: 13, color: "var(--admin-text-muted)" }}>
-            قیمت تمام‌شده هر کیلو: {formatToman(Number(saleGood?.cost_per_kg) || 0)} تومان
+            {salePriceMode === "percent"
+              ? "۵۰ یعنی فروش ۵۰٪ بالاتر از قیمت تمام‌شده. همین درصد ذخیره می‌شود و بعد از تولید بعدی، اگر هزینه مواد عوض شود، فروش به‌روز می‌شود."
+              : "عدد فروش را خودتان می‌گذارید و با تغییر قیمت تمام‌شده عوض نمی‌شود."}
           </Typography>
           <TextField
             label="درصد سود"
             value={salePercent}
             onChange={(e) => onSalePercentChange(e.target.value)}
             inputMode="decimal"
-            helperText="با زدن درصد، مبلغ فروش پر می‌شود"
             sx={fieldSx}
+            helperText={salePriceMode === "percent" ? "با ذخیره این درصد، فروش خودکار محاسبه می‌شود" : "با زدن درصد، حالت خودکار فعال می‌شود"}
           />
           <TextField
             label="قیمت فروش هر کیلو (تومان)"
@@ -1037,11 +1119,40 @@ export default function ProductionCostingPage() {
             onChange={(e) => onSalePriceChange(e.target.value)}
             inputMode="numeric"
             sx={fieldSx}
+            helperText={salePriceMode === "manual" ? "با ذخیره این مبلغ، قیمت ثابت می‌ماند" : "با تغییر مبلغ، حالت دستی فعال می‌شود"}
           />
-          {saleGood && parseAmount(salePrice) > 0 && (
-            <Typography sx={{ fontSize: 13, color: "var(--admin-accent)", fontWeight: 700 }}>
-              سود هر کیلو: {formatToman(parseAmount(salePrice) - (Number(saleGood.cost_per_kg) || 0))} تومان
-            </Typography>
+          <FormControlLabel
+            sx={{ m: 0, color: "var(--admin-text)" }}
+            control={
+              <Switch
+                checked={roundSalePrice}
+                onChange={(e) => onRoundSalePriceChange(e.target.checked)}
+                sx={{
+                  "& .MuiSwitch-switchBase.Mui-checked": { color: "var(--admin-accent)" },
+                  "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { backgroundColor: "var(--admin-accent)" },
+                }}
+              />
+            }
+            label="رند به نزدیک‌ترین هزار تومان"
+          />
+          <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)", mt: -1 }}>
+            {roundSalePrice
+              ? salePriceMode === "percent"
+                ? "بعد از هر تولید، اول درصد حساب می‌شود، بعد قیمت به نزدیک‌ترین هزار گرد می‌شود (۳۲۵۶۰ → ۳۳۰۰۰)."
+                : "همین حالا رند می‌شود و با تولید بعدی عوض نمی‌شود."
+              : "قیمت دقیق همان عدد محاسبه‌شده می‌ماند."}
+          </Typography>
+          {saleRawPrice > 0 && (
+            <>
+              {roundSalePrice && saleFinalPrice !== saleRawPrice && (
+                <Typography sx={{ fontSize: 13, color: "var(--admin-text)", fontWeight: 700 }}>
+                  بعد از رند: {formatToman(saleFinalPrice)} تومان
+                </Typography>
+              )}
+              <Typography sx={{ fontSize: 13, color: "var(--admin-accent)", fontWeight: 700 }}>
+                سود هر کیلو: {formatToman(saleFinalPrice - saleCost)} تومان
+              </Typography>
+            </>
           )}
         </DialogContent>
         <DialogActions>

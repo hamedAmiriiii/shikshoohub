@@ -88,6 +88,25 @@ const formatNumber = (num: number) => {
   return new Intl.NumberFormat('fa-IR').format(num);
 };
 
+function parseAmountInput(value: string): number {
+  const cleaned = String(value ?? "")
+    .replace(/,/g, "")
+    .replace(/٬/g, "")
+    .replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)))
+    .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)))
+    .replace(/\s/g, "");
+  const num = parseFloat(cleaned);
+  return Number.isFinite(num) ? num : NaN;
+}
+
+function formatAmountInput(value: string): string {
+  const digitsOnly = String(value ?? "").replace(/[^\d۰-۹٠-٩]/g, "");
+  if (!digitsOnly) return "";
+  const num = parseAmountInput(digitsOnly);
+  if (!Number.isFinite(num)) return "";
+  return formatNumber(num);
+}
+
 function getApiErrorMessage(res: any, fallback: string): string {
   if (!res) return fallback;
   if (typeof res.message === 'string') return res.message;
@@ -246,7 +265,7 @@ export default function InvoicesPage() {
       return;
     }
 
-    const amountNum = parseFloat(amount);
+    const amountNum = parseAmountInput(amount);
     if (isNaN(amountNum) || amountNum <= 0) {
       toast.error("مبلغ باید یک عدد مثبت باشد");
       return;
@@ -290,7 +309,7 @@ export default function InvoicesPage() {
       return;
     }
 
-    const amountNum = parseFloat(amount);
+    const amountNum = parseAmountInput(amount);
     if (isNaN(amountNum) || amountNum <= 0) {
       toast.error("مبلغ باید یک عدد مثبت باشد");
       return;
@@ -363,7 +382,7 @@ export default function InvoicesPage() {
   const openEditDialogHandler = (invoice: Invoice) => {
     setEditingInvoice(invoice);
     setTitle(invoice.title);
-    setAmount(invoice.amount.toString());
+    setAmount(formatNumber(invoice.amount));
     setDescription(invoice.description || "");
     const fromDirect = Number(invoice.shop_account_id);
     const fromNested = Number(invoice.shop_account?.id);
@@ -696,9 +715,10 @@ export default function InvoicesPage() {
               />
               <TextField
                 label="مبلغ"
-                type="number"
+                type="text"
+                inputMode="numeric"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => setAmount(formatAmountInput(e.target.value))}
                 required
                 fullWidth
                 sx={{
@@ -824,9 +844,10 @@ export default function InvoicesPage() {
               />
               <TextField
                 label="مبلغ"
-                type="number"
+                type="text"
+                inputMode="numeric"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => setAmount(formatAmountInput(e.target.value))}
                 required
                 fullWidth
                 sx={{

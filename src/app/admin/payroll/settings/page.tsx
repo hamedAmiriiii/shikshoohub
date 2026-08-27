@@ -19,6 +19,7 @@ import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
 import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
 import { adminPageSx } from "@/app/admin/theme/adminTheme";
 import { extractSettings, type PayrollSettings } from "@/app/lib/payroll";
+import { formatAmountNumber, parseAmountInput } from "@/app/lib/amountInput";
 
 const fieldSx = {
   "& .MuiOutlinedInput-root": {
@@ -123,12 +124,13 @@ export default function PayrollSettingsPage() {
                     fullWidth
                     size="small"
                     label="حقوق پایه ساعتی (تومان)"
-                    type="number"
-                    value={settings.salary_hourly_wage}
+                    type="text"
+                    inputMode="numeric"
+                    value={settings.salary_hourly_wage ? formatAmountNumber(settings.salary_hourly_wage) : ""}
                     onChange={(e) =>
                       setSettings((prev) => ({
                         ...prev,
-                        salary_hourly_wage: Number(e.target.value) || 0,
+                        salary_hourly_wage: parseAmountInput(e.target.value),
                       }))
                     }
                     sx={fieldSx}

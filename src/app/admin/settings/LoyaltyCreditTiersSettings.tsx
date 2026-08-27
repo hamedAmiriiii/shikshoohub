@@ -25,6 +25,7 @@ import { apiRequestError } from "@/app/lib/apiRequestError/client";
 import tokenCode from "@/app/coponent/tokenCode";
 import { adminButtonStartIconSx } from "@/app/admin/theme/adminTheme";
 import { parseApiErrorMessage } from "@/app/lib/translateApiMessage";
+import { formatAmountInput, formatAmountNumber, parseAmountInput } from "@/app/lib/amountInput";
 
 export type LoyaltyCreditTier = {
   max_amount: number | null;
@@ -376,16 +377,17 @@ export default function LoyaltyCreditTiersSettings({
                               <TextField
                                 size="small"
                                 disabled={disabled}
-                                value={tier.max_amount ?? ""}
+                                value={tier.max_amount != null ? formatAmountNumber(tier.max_amount) : ""}
                                 onChange={(e) => {
-                                  const value = e.target.value.replace(/[^\d]/g, "");
-                                  if (value === "") return;
-                                  const parsed = parseInt(value, 10);
-                                  if (!Number.isNaN(parsed) && parsed > 0) {
+                                  const formatted = formatAmountInput(e.target.value);
+                                  if (formatted === "") return;
+                                  const parsed = parseAmountInput(formatted);
+                                  if (parsed > 0) {
                                     updateTier(index, { max_amount: parsed });
                                   }
                                 }}
                                 sx={{ ...inputSx, minWidth: 110 }}
+                                inputMode="numeric"
                               />
                             )}
                           </TableCell>

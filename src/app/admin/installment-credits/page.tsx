@@ -9,6 +9,7 @@ import { apiRequestError } from "@/app/lib/apiRequestError/client";
 import tokenCode from "@/app/coponent/tokenCode";
 import { toast, ToastContainer } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
+import { formatAmountInput, parseAmountInput } from "@/app/lib/amountInput";
 
 export default function InstallmentCreditsPage() {
   const router = useRouter();
@@ -92,11 +93,11 @@ export default function InstallmentCreditsPage() {
     setPhone(creditData.phone || '');
     const creditValue = creditData.credit?.toString() || '0';
     setCredit(creditValue);
-    setCreditDisplay(formatNumber(parseFloat(creditValue) || 0));
+    setCreditDisplay(formatAmountInput(creditValue));
     setIsCreditFocused(false);
     const installmentValue = creditData.installment_credit?.toString() || '0';
     setInstallmentCredit(installmentValue);
-    setInstallmentCreditDisplay(formatNumber(parseFloat(installmentValue) || 0));
+    setInstallmentCreditDisplay(formatAmountInput(installmentValue));
     setIsInstallmentCreditFocused(false);
     setCreateDialogOpen(true);
   };
@@ -153,8 +154,8 @@ export default function InstallmentCreditsPage() {
       return;
     }
 
-    const creditValue = parseFloat(credit.replace(/,/g, ''));
-    if (isNaN(creditValue) || creditValue < 0) {
+    const creditValue = parseAmountInput(credit);
+    if (creditValue < 0) {
       toast.error("مبلغ اعتبار باید یک عدد مثبت باشد");
       return;
     }
@@ -162,8 +163,8 @@ export default function InstallmentCreditsPage() {
     setIsSubmitting(true);
     try {
       const token = tokenCode();
-      const installmentValue = parseFloat(installmentCredit.replace(/,/g, ''));
-      if (isNaN(installmentValue) || installmentValue < 0) {
+      const installmentValue = parseAmountInput(installmentCredit);
+      if (installmentValue < 0) {
         toast.error("مبلغ اعتبار اقساطی باید یک عدد مثبت باشد");
         setIsSubmitting(false);
         return;
@@ -214,13 +215,6 @@ export default function InstallmentCreditsPage() {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const formatCreditInput = (value: string) => {
-    // حذف همه کاراکترهای غیر عددی
-    const numericValue = value.replace(/[^0-9]/g, '');
-    if (numericValue === '') return '';
-    return numericValue;
   };
 
   return (
@@ -335,37 +329,14 @@ export default function InstallmentCreditsPage() {
               />
               <TextField
                 label="مبلغ اعتبار (تومان)"
-                value={isCreditFocused ? credit : creditDisplay}
+                value={creditDisplay}
                 onChange={(e) => {
-                  const numericValue = formatCreditInput(e.target.value);
-                  setCredit(numericValue);
-                  if (numericValue === '') {
-                    setCreditDisplay('');
-                  } else {
-                    const num = parseFloat(numericValue);
-                    if (!isNaN(num)) {
-                      setCreditDisplay(formatNumber(num));
-                    }
-                  }
-                }}
-                onFocus={() => {
-                  setIsCreditFocused(true);
-                  // نمایش عدد خام بدون جداکننده
-                  setCredit(credit.replace(/,/g, ''));
-                }}
-                onBlur={() => {
-                  setIsCreditFocused(false);
-                  // فرمت کردن عدد با جداکننده هزارگان
-                  const num = parseFloat(credit.replace(/,/g, ''));
-                  if (!isNaN(num) && num >= 0) {
-                    setCredit(num.toString());
-                    setCreditDisplay(formatNumber(num));
-                  } else {
-                    setCredit('');
-                    setCreditDisplay('');
-                  }
+                  const formatted = formatAmountInput(e.target.value);
+                  setCredit(formatted);
+                  setCreditDisplay(formatted);
                 }}
                 inputProps={{
+                  inputMode: "numeric",
                   style: { textAlign: "right", direction: "ltr" }
                 }}
                 fullWidth
@@ -394,35 +365,14 @@ export default function InstallmentCreditsPage() {
               />
               <TextField
                 label="مبلغ اعتبار اقساطی (تومان)"
-                value={isInstallmentCreditFocused ? installmentCredit : installmentCreditDisplay}
+                value={installmentCreditDisplay}
                 onChange={(e) => {
-                  const numericValue = formatCreditInput(e.target.value);
-                  setInstallmentCredit(numericValue);
-                  if (numericValue === '') {
-                    setInstallmentCreditDisplay('');
-                  } else {
-                    const num = parseFloat(numericValue);
-                    if (!isNaN(num)) {
-                      setInstallmentCreditDisplay(formatNumber(num));
-                    }
-                  }
-                }}
-                onFocus={() => {
-                  setIsInstallmentCreditFocused(true);
-                  setInstallmentCredit(installmentCredit.replace(/,/g, ''));
-                }}
-                onBlur={() => {
-                  setIsInstallmentCreditFocused(false);
-                  const num = parseFloat(installmentCredit.replace(/,/g, ''));
-                  if (!isNaN(num) && num >= 0) {
-                    setInstallmentCredit(num.toString());
-                    setInstallmentCreditDisplay(formatNumber(num));
-                  } else {
-                    setInstallmentCredit('');
-                    setInstallmentCreditDisplay('');
-                  }
+                  const formatted = formatAmountInput(e.target.value);
+                  setInstallmentCredit(formatted);
+                  setInstallmentCreditDisplay(formatted);
                 }}
                 inputProps={{
+                  inputMode: "numeric",
                   style: { textAlign: "right", direction: "ltr" }
                 }}
                 fullWidth

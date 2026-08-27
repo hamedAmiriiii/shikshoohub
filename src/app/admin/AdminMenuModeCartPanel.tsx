@@ -21,6 +21,7 @@ import type { PaymentType } from "@/app/lib/paymentTypes";
 import MultiCartToolbar from "@/app/admin/MultiCartToolbar";
 import CartQuantityControl from "@/app/admin/CartQuantityControl";
 import { getPriceUnitLabel } from "@/app/lib/productUnits";
+import { formatAmountInput } from "@/app/lib/amountInput";
 import {
   ADMIN_MENU_CART_WIDTH,
   ADMIN_MENU_CART_WIDTH_VAR,
@@ -299,7 +300,7 @@ export default function AdminMenuModeCartPanel({
                   <TextField
                     size="small"
                     placeholder="قیمت"
-                    value={String(item.sale_price ?? "")}
+                    value={formatAmountInput(String(item.sale_price ?? ""))}
                     onChange={(e) => onSalePriceChange(item.id, e.target.value)}
                     inputProps={{ inputMode: "numeric", style: { textAlign: "right", direction: "ltr" } }}
                     sx={{ ...tinyFieldSx, mb: 0.25 }}
@@ -379,19 +380,15 @@ export default function AdminMenuModeCartPanel({
           <TextField
             size="small"
             placeholder="تخفیف"
-            value={
-              isDiscountFocused
-                ? discountDisplay.replace(/,/g, "")
-                : discounttype > 0
-                  ? discountDisplay
-                  : ""
-            }
+            value={discountDisplay}
             onFocus={onDiscountFocus}
             onChange={(e) => onDiscountChange(e.target.value)}
             onBlur={(e) => onDiscountBlur(e.target.value)}
             error={!!discountError}
             helperText={discountError || undefined}
             sx={tinyFieldSx}
+            inputMode="numeric"
+          />
           />
         )}
 
