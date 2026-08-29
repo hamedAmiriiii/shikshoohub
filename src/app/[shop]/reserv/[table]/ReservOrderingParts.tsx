@@ -656,16 +656,16 @@ export function ReservEmptyState({ title, theme, action }: EmptyProps) {
 type DesktopCartProps = {
   theme: ReservTheme;
   lines: Array<{
-    product_id: number;
+    key: string;
     name: string;
     sale_price: number;
     quantity: number;
     image?: string;
   }>;
   total: number;
-  onInc: (productId: number) => void;
-  onDec: (productId: number) => void;
-  onRemove: (productId: number) => void;
+  onInc: (lineKey: string) => void;
+  onDec: (lineKey: string) => void;
+  onRemove: (lineKey: string) => void;
   onCheckout: () => void;
 };
 
@@ -705,7 +705,7 @@ export function ReservDesktopCartPanel({
           <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
             {lines.map((line) => (
               <Box
-                key={line.product_id}
+                key={line.key}
                 sx={{
                   display: "flex",
                   gap: 1,
@@ -734,7 +734,7 @@ export function ReservDesktopCartPanel({
                     <IconButton
                       size="small"
                       aria-label="کاهش"
-                      onClick={() => onDec(line.product_id)}
+                      onClick={() => onDec(line.key)}
                       sx={{ width: 22, height: 22, bgcolor: theme.SURFACE, border: `1px solid ${theme.BORDER}` }}
                     >
                       <RemoveIcon sx={{ fontSize: 11 }} />
@@ -745,7 +745,7 @@ export function ReservDesktopCartPanel({
                     <IconButton
                       size="small"
                       aria-label="افزایش"
-                      onClick={() => onInc(line.product_id)}
+                      onClick={() => onInc(line.key)}
                       sx={{ width: 22, height: 22, bgcolor: ACCENT, color: "#1a1712" }}
                     >
                       <AddIcon sx={{ fontSize: 11 }} />
@@ -753,7 +753,7 @@ export function ReservDesktopCartPanel({
                     <IconButton
                       size="small"
                       aria-label="حذف"
-                      onClick={() => onRemove(line.product_id)}
+                      onClick={() => onRemove(line.key)}
                       sx={{ width: 32, height: 32, color: theme.MUTED, ms: "auto" }}
                     >
                       <CloseRoundedIcon sx={{ fontSize: 16 }} />

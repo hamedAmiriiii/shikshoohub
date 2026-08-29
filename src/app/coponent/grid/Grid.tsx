@@ -16,6 +16,7 @@ import CustomizedInputBase from "../CustomizedInputBase";
 import BottomSheetModal from "../BottomSheetModal";
 import { useResponsive } from "../useResponsive";
 import { appendProductLabelPrintParams } from "@/app/lib/productLabelPrint";
+import { isProducedGoodItem } from "@/app/lib/catalogItems";
 
 // Component to render actions in desktop table
 const DesktopActionsCell: React.FC<{
@@ -57,7 +58,7 @@ const DesktopActionsCell: React.FC<{
   return (
     <Box sx={{ display: "flex", justifyContent: "center", gap: 1, flexWrap: "wrap" }}>
       {onEdit && (
-        <Tooltip title="ویرایش" arrow placement="top">
+        <Tooltip title={isProducedGoodItem(item) ? "ویرایش در تولید" : "ویرایش"} arrow placement="top">
           <IconButton
             onClick={() => onEdit(item)}
             sx={{
@@ -70,7 +71,7 @@ const DesktopActionsCell: React.FC<{
           </IconButton>
         </Tooltip>
       )}
-      {onSizeColor && (
+      {onSizeColor && !isProducedGoodItem(item) && (
         <Tooltip title="سایز و رنگ" arrow placement="top">
           <IconButton
             onClick={() => onSizeColor(item)}
@@ -84,7 +85,7 @@ const DesktopActionsCell: React.FC<{
           </IconButton>
         </Tooltip>
       )}
-      {onManufacturer && (
+      {onManufacturer && !isProducedGoodItem(item) && (
         <Tooltip title="تولیدکننده" arrow placement="top">
           <IconButton
             onClick={() => onManufacturer(item)}

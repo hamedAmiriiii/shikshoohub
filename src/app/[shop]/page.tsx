@@ -42,6 +42,7 @@ import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 import Badge from '@mui/material/Badge';
 import { apiRequestError } from '@/app/lib/apiRequestError';
 import { addToCart, isProductInCart, getCartItemQuantity, updateCartItemQuantity, removeFromCart, type CartItem } from '@/app/liberari/cart';
+import { catalogItemKey, catalogProductHref } from '@/app/lib/catalogItems';
 import Image from 'next/image';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
@@ -79,6 +80,8 @@ interface Product {
   has_discount?: boolean;
   image?: string;
   images?: ProductImage[];
+  item_type?: string;
+  produced_good_id?: number | null;
 }
 
 const features = [
@@ -342,6 +345,8 @@ export default function ShopHomePage() {
       discount_percent: product.discount_percent,
       image: product.image,
       images: product.images,
+      item_type: product.item_type,
+      produced_good_id: product.produced_good_id,
     });
     window.dispatchEvent(new Event('cartUpdated'));
   };
@@ -351,8 +356,8 @@ export default function ShopHomePage() {
     const discount = product.discount_percent || calculateDiscount(originalPrice, product.sale_price);
     const hasDiscount = discount > 0;
     const productImage = getProductImage(product);
-    const inCart = isProductInCart(product.id);
-    const cartQuantity = getCartItemQuantity(product.id);
+    const inCart = isProductInCart(product);
+    const cartQuantity = getCartItemQuantity(product);
 
     const handleIncrease = (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -364,6 +369,8 @@ export default function ShopHomePage() {
         discount_percent: product.discount_percent,
         image: product.image,
         images: product.images,
+        item_type: product.item_type,
+        produced_good_id: product.produced_good_id,
       });
       window.dispatchEvent(new Event('cartUpdated'));
       setCartUpdateTrigger(prev => prev + 1);
@@ -372,9 +379,9 @@ export default function ShopHomePage() {
     const handleDecrease = (e: React.MouseEvent) => {
       e.stopPropagation();
       if (cartQuantity > 1) {
-        updateCartItemQuantity(product.id, cartQuantity - 1);
+        updateCartItemQuantity(product, cartQuantity - 1);
       } else {
-        removeFromCart(product.id);
+        removeFromCart(product);
       }
       window.dispatchEvent(new Event('cartUpdated'));
       setCartUpdateTrigger(prev => prev + 1);
@@ -382,7 +389,7 @@ export default function ShopHomePage() {
 
     return (
       <Card
-        onClick={() => router.push(shopPath(`/product/${product.id}`))}
+        onClick={() => router.push(catalogProductHref(product, shopPath))}
         sx={{
           height: '100%',
           display: 'flex',
@@ -988,8 +995,8 @@ export default function ShopHomePage() {
                 </Card>
 
                 {bestSellingProducts.map((product) => {
-                  const inCart = isProductInCart(product.id);
-                  const cartQuantity = getCartItemQuantity(product.id);
+                  const inCart = isProductInCart(product);
+                  const cartQuantity = getCartItemQuantity(product);
                   
                   // محاسبه قیمت و تخفیف مثل ProductCard
                   const originalPrice = product.purchase_price || product.sale_price * 1.5;
@@ -1006,6 +1013,8 @@ export default function ShopHomePage() {
                       discount_percent: product.discount_percent,
                       image: product.image,
                       images: product.images,
+                      item_type: product.item_type,
+                      produced_good_id: product.produced_good_id,
                     });
                     window.dispatchEvent(new Event('cartUpdated'));
                     setCartUpdateTrigger(prev => prev + 1);
@@ -1014,9 +1023,9 @@ export default function ShopHomePage() {
                   const handleDecrease = (e: React.MouseEvent) => {
                     e.stopPropagation();
                     if (cartQuantity > 1) {
-                      updateCartItemQuantity(product.id, cartQuantity - 1);
+                      updateCartItemQuantity(product, cartQuantity - 1);
                     } else {
-                      removeFromCart(product.id);
+                      removeFromCart(product);
                     }
                     window.dispatchEvent(new Event('cartUpdated'));
                     setCartUpdateTrigger(prev => prev + 1);
@@ -1024,8 +1033,8 @@ export default function ShopHomePage() {
 
                   return (
                     <Card
-                      key={product.id}
-                      onClick={() => router.push(shopPath(`/product/${product.id}`))}
+                      key={catalogItemKey(product)}
+                      onClick={() => router.push(catalogProductHref(product, shopPath))}
                       sx={{
                         minWidth: { xs: '180px', sm: '220px', md: '260px' },
                         maxWidth: { xs: '180px', sm: '220px', md: '260px' },
@@ -1297,7 +1306,7 @@ export default function ShopHomePage() {
             <>
               <Grid container spacing={{ xs: 2, md: 3 }}>
                 {latestProducts.map((product) => (
-                  <Grid item xs={6} sm={4} md={3} key={product.id}>
+                  <Grid item xs={6} sm={4} md={3} key={catalogItemKey(product)}>
                     <ProductCard product={product} />
                   </Grid>
                 ))}

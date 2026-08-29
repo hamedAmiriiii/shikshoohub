@@ -41,6 +41,7 @@ import Badge from '@mui/material/Badge';
 import HomeIcon from '@mui/icons-material/Home';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import { addToCart, getCartItemCount, isProductInCart, getCartItemQuantity, updateCartItemQuantity, removeFromCart } from '../../liberari/cart';
+import { catalogItemKey, catalogProductHref } from '@/app/lib/catalogItems';
 import { useShopContext, useShopStorefront } from '../../context/ShopContext';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
@@ -67,6 +68,8 @@ interface Product {
   image?: string;
   images?: ProductImage[];
   categories?: any[];
+  item_type?: string;
+  produced_good_id?: number | null;
 }
 
 interface Category {
@@ -448,9 +451,9 @@ console.log("res2222 : ",res);
         ) : (
           <Grid container spacing={3}>
             {products.map((product) => (
-              <Grid item xs={6} sm={4} md={3} key={product.id}>
+              <Grid item xs={6} sm={4} md={3} key={catalogItemKey(product)}>
                 <Card
-                  onClick={() => router.push(shopPath(`/product/${product.id}`))}
+                  onClick={() => router.push(catalogProductHref(product, shopPath))}
                   sx={{
                     height: '100%',
                     display: 'flex',
@@ -529,7 +532,7 @@ console.log("res2222 : ",res);
                     </Typography>
                   </CardContent>
                   <Box sx={{ padding: '0 16px 16px 16px' }}>
-                    {isProductInCart(product.id) ? (
+                    {isProductInCart(product) ? (
                       <Box
                         sx={{
                           display: 'flex',
@@ -546,11 +549,11 @@ console.log("res2222 : ",res);
                           size="small"
                           onClick={(e) => {
                             e.stopPropagation();
-                            const qty = getCartItemQuantity(product.id);
+                            const qty = getCartItemQuantity(product);
                             if (qty > 1) {
-                              updateCartItemQuantity(product.id, qty - 1);
+                              updateCartItemQuantity(product, qty - 1);
                             } else {
-                              removeFromCart(product.id);
+                              removeFromCart(product);
                             }
                             window.dispatchEvent(new Event('cartUpdated'));
                             setCartUpdateTrigger(prev => prev + 1);
@@ -576,7 +579,7 @@ console.log("res2222 : ",res);
                             color: '#333',
                           }}
                         >
-                          {getCartItemQuantity(product.id)}
+                          {getCartItemQuantity(product)}
                         </Typography>
                         <IconButton
                           size="small"
@@ -590,6 +593,8 @@ console.log("res2222 : ",res);
                               discount_percent: product.discount_percent,
                               image: product.image,
                               images: product.images,
+                              item_type: product.item_type,
+                              produced_good_id: product.produced_good_id,
                             });
                             window.dispatchEvent(new Event('cartUpdated'));
                             setCartUpdateTrigger(prev => prev + 1);
@@ -621,6 +626,8 @@ console.log("res2222 : ",res);
                             discount_percent: product.discount_percent,
                             image: product.image,
                             images: product.images,
+                            item_type: product.item_type,
+                            produced_good_id: product.produced_good_id,
                           });
                           window.dispatchEvent(new Event('cartUpdated'));
                           setCartUpdateTrigger(prev => prev + 1);

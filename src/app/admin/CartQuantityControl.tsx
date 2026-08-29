@@ -13,9 +13,10 @@ import {
   parseQuantityInput,
   type ProductUnitFields,
 } from "@/app/lib/productUnits";
+import { catalogItemKey, type CatalogIdentity } from "@/app/lib/catalogItems";
 
 type CartQuantityControlProps = {
-  item: ProductUnitFields & { id: number | string; quantity: number };
+  item: ProductUnitFields & CatalogIdentity & { id: number | string; quantity: number };
   kgSalesEnabled: boolean;
   onChange: (itemId: number | string, quantity: number) => void;
   compact?: boolean;
@@ -37,10 +38,10 @@ export default function CartQuantityControl({
   const applyQuantity = (raw: number) => {
     const normalized = normalizeQuantityValue(raw, isKg ? item : { unit_type: "piece" });
     if (normalized < minQty) {
-      onChange(item.id, 0);
+      onChange(catalogItemKey(item), 0);
       return;
     }
-    onChange(item.id, normalized);
+    onChange(catalogItemKey(item), normalized);
   };
 
   const bump = (delta: number) => {

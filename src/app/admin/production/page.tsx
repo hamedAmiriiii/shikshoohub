@@ -30,6 +30,8 @@ import {
   ToggleButtonGroup,
   Tooltip,
   Typography,
+  Autocomplete,
+  Chip,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import { tableCellClasses } from "@mui/material/TableCell";
@@ -53,6 +55,7 @@ import {
   asProducedGood,
   asProductionRecord,
   asRawMaterial,
+  categoryIdsFromGood,
   extractList,
   formatKg,
   formatToman,
@@ -115,6 +118,34 @@ const dialogGridSx = {
   pt: "12px !important",
   direction: "rtl",
 } as const;
+
+type ShopCategoryOption = { id: number; name: string; children?: ShopCategoryOption[] };
+
+function flattenCategories(cats: ShopCategoryOption[], prefix = ""): { id: number; name: string }[] {
+  const out: { id: number; name: string }[] = [];
+  for (const cat of cats) {
+    const label = prefix ? `${prefix} / ${cat.name}` : cat.name;
+    if (cat.id != null) out.push({ id: Number(cat.id), name: label });
+    if (cat.children?.length) out.push(...flattenCategories(cat.children, label));
+  }
+  return out;
+}
+
+function extractCategoryTree(res: unknown): ShopCategoryOption[] {
+  if (!res || typeof res !== "object") return [];
+  if (Array.isArray(res)) return res as ShopCategoryOption[];
+  const r = res as Record<string, unknown>;
+  if (Array.isArray(r.data)) return r.data as ShopCategoryOption[];
+  const nested = r.data;
+  if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+    const d = nested as Record<string, unknown>;
+    if (Array.isArray(d.categories)) return d.categories as ShopCategoryOption[];
+    if (Array.isArray(d.tree)) return d.tree as ShopCategoryOption[];
+  }
+  if (Array.isArray(r.categories)) return r.categories as ShopCategoryOption[];
+  if (Array.isArray(r.tree)) return r.tree as ShopCategoryOption[];
+  return [];
+}
 
 const StyledTableCell = styled(TableCell)({
   [`&.${tableCellClasses.head}`]: {
@@ -185,6 +216,8 @@ export default function ProductionCostingPage() {
   const [editingGood, setEditingGood] = useState<ProducedGood | null>(null);
   const [goodName, setGoodName] = useState("");
   const [recipeLines, setRecipeLines] = useState<RecipeLine[]>([emptyLine()]);
+  const [goodCategoryIds, setGoodCategoryIds] = useState<number[]>([]);
+  const [shopCategories, setShopCategories] = useState<ShopCategoryOption[]>([]);
 
   const [produceGood, setProduceGood] = useState<ProducedGood | null>(null);
   const [produceKg, setProduceKg] = useState("1");
@@ -234,6 +267,19 @@ export default function ProductionCostingPage() {
   useEffect(() => {
     void loadAll();
   }, [loadAll]);
+
+  useEffect(() => {
+    const token = tokenCode();
+    if (!token) return;
+    let cancelled = false;
+    void FetchWithJwtClient("GET", "/api/category?tree=true", token).then((res) => {
+      if (cancelled || res?.hasError) return;
+      setShopCategories(extractCategoryTree(res));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (tab === "materials" && !canMaterials && canGoods) setTab("stock");
@@ -479,6 +525,7 @@ export default function ProductionCostingPage() {
     setEditingGood(null);
     setGoodName("");
     setRecipeLines([emptyLine()]);
+    setGoodCategoryIds([]);
     setGoodDialogOpen(true);
   };
 
@@ -486,6 +533,7 @@ export default function ProductionCostingPage() {
     setEditingGood(good);
     setGoodName(good.name);
     setRecipeLines(recipeLinesFromGood(good));
+    setGoodCategoryIds(categoryIdsFromGood(good));
     setGoodDialogOpen(true);
   };
 
@@ -513,7 +561,7 @@ export default function ProductionCostingPage() {
     if (!token) return;
     setSaving(true);
     try {
-      const payload: Record<string, unknown> = { name, ingredients };
+      const payload: Record<string, unknown> = { name, ingredients, category_ids: goodCategoryIds };
       if (editingGood && isPercentSaleMode(editingGood)) {
         const markup = storedMarkupPercent(editingGood);
         if (markup != null) payload.markup_percent = markup;
@@ -1122,6 +1170,22 @@ export default function ProductionCostingPage() {
         <DialogTitle>{editingGood ? "ویرایش کالای تولیدی" : "کالای تولیدی جدید"}</DialogTitle>
         <DialogContent sx={{ display: "grid", gap: 2, pt: "16px !important" }}>
           <TextField label="نام کالا (مثلاً کلوچه)" value={goodName} onChange={(e) => setGoodName(e.target.value)} sx={fieldSx} />
+          <Autocomplete
+            multiple
+            options={flattenCategories(shopCategories)}
+            value={flattenCategories(shopCategories).filter((cat) => goodCategoryIds.includes(cat.id))}
+            onChange={(_, value) => setGoodCategoryIds(value.map((cat) => cat.id))}
+            getOptionLabel={(option) => option.name}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => (
+                <Chip {...getTagProps({ index })} key={option.id} label={option.name} size="small" />
+              ))
+            }
+            renderInput={(params) => (
+              <TextField {...params} label="دسته‌بندی‌ها" sx={fieldSx} />
+            )}
+          />
           <Typography sx={{ fontSize: 13, color: "var(--admin-text-muted)" }}>
             مصرف هر ماده را به گرم در هر کیلو کالای آماده وارد کنید.
           </Typography>

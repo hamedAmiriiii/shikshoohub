@@ -1,3 +1,5 @@
+export { catalogItemKey, isProducedGoodItem } from "@/app/lib/catalogItems";
+
 export const PRODUCTS_CACHE_KEY = "products_cache";
 
 export type CachedProduct = {

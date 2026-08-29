@@ -65,7 +65,30 @@ export type ProducedGood = {
   stock_sufficient?: boolean;
   shortages?: MaterialShortage[];
   ingredient_costs?: IngredientCost[];
+  category_ids?: Array<number | string>;
+  categories?: Array<{ id?: number | string; name?: string } | number | string>;
 };
+
+export function categoryIdsFromGood(good: ProducedGood): number[] {
+  const ids: number[] = [];
+  const seen = new Set<number>();
+  const push = (raw: unknown) => {
+    const n = Number(raw);
+    if (!Number.isFinite(n) || seen.has(n)) return;
+    seen.add(n);
+    ids.push(n);
+  };
+  if (Array.isArray(good.category_ids)) {
+    for (const id of good.category_ids) push(id);
+  }
+  if (Array.isArray(good.categories)) {
+    for (const cat of good.categories) {
+      if (cat && typeof cat === "object") push((cat as { id?: unknown }).id);
+      else push(cat);
+    }
+  }
+  return ids;
+}
 
 export type ProductionConsumption = {
   id: number;

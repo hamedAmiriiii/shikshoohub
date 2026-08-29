@@ -10,6 +10,7 @@ import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
 import { apiRequestError } from "@/app/lib/apiRequestError/client";
 import tokenCode from "@/app/coponent/tokenCode";
 import { useQueryClient } from '@tanstack/react-query';
+import { catalogItemKey, isProducedGoodItem, producedGoodNumericId } from "@/app/lib/catalogItems";
 
 const formatNumber = (num: number | string) => {
   const numValue = typeof num === 'string' ? parseFloat(num.replace(/,/g, '')) : num;
@@ -22,7 +23,7 @@ export default function BulkDiscountPage() {
   const queryClient = useQueryClient();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [discountPercent, setDiscountPercent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [allSelected, setAllSelected] = useState(false);
@@ -62,7 +63,7 @@ export default function BulkDiscountPage() {
   // Handle select all
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
-      setSelectedProducts(products.map(p => p.id));
+      setSelectedProducts(products.map((p) => catalogItemKey(p)));
       setAllSelected(true);
     } else {
       setSelectedProducts([]);
@@ -71,14 +72,15 @@ export default function BulkDiscountPage() {
   };
 
   // Handle individual product selection
-  const handleProductSelect = (productId: number) => {
+  const handleProductSelect = (product: any) => {
+    const key = catalogItemKey(product);
     setSelectedProducts(prev => {
-      if (prev.includes(productId)) {
-        const newSelection = prev.filter(id => id !== productId);
+      if (prev.includes(key)) {
+        const newSelection = prev.filter(id => id !== key);
         setAllSelected(newSelection.length === products.length);
         return newSelection;
       } else {
-        const newSelection = [...prev, productId];
+        const newSelection = [...prev, key];
         setAllSelected(newSelection.length === products.length);
         return newSelection;
       }
@@ -107,8 +109,19 @@ export default function BulkDiscountPage() {
     const token = tokenCode();
 
     try {
+      const selectedItems = products.filter((p) => selectedProducts.includes(catalogItemKey(p)));
+      const product_ids = selectedItems
+        .filter((item) => !isProducedGoodItem(item))
+        .map((item) => Number(item.id))
+        .filter((id) => Number.isFinite(id));
+      const produced_good_ids = selectedItems
+        .filter((item) => isProducedGoodItem(item))
+        .map((item) => producedGoodNumericId(item))
+        .filter((id): id is number => id != null);
+
       const data = {
-        product_ids: selectedProducts,
+        product_ids,
+        produced_good_ids,
         discount_percent: discountValue
       };
 
@@ -241,11 +254,11 @@ export default function BulkDiscountPage() {
           {/* Products */}
           <Grid container spacing={2}>
             {products.map((product) => (
-              <Grid item xs={12} key={product.id}>
+              <Grid item xs={12} key={catalogItemKey(product)}>
                 <Card
                   sx={{
                     backgroundColor: "var(--admin-surface-alt)",
-                    border: selectedProducts.includes(product.id) ? "2px solid #ff9100" : "1px solid #505669",
+                    border: selectedProducts.includes(catalogItemKey(product)) ? "2px solid #ff9100" : "1px solid #505669",
                     transition: "all 0.3s ease",
                     "&:hover": {
                       borderColor: "#ff9100",
@@ -256,8 +269,8 @@ export default function BulkDiscountPage() {
                   <CardContent>
                     <Box sx={{ display: "flex", alignItems: "center", gap: "12px" }}>
                       <Checkbox
-                        checked={selectedProducts.includes(product.id)}
-                        onChange={() => handleProductSelect(product.id)}
+                        checked={selectedProducts.includes(catalogItemKey(product))}
+                        onChange={() => handleProductSelect(product)}
                         sx={{
                           color: "#ff9100",
                           "&.Mui-checked": {
@@ -268,6 +281,11 @@ export default function BulkDiscountPage() {
                       <Box sx={{ flex: 1 }}>
                         <Typography sx={{ color: "var(--admin-text)", fontSize: "16px", fontWeight: "600", marginBottom: "8px" }}>
                           {product.name || "بدون نام"}
+                          {isProducedGoodItem(product) ? (
+                            <Box component="span" sx={{ color: "#ff9100", fontSize: "12px", fontWeight: 700, mr: 1 }}>
+                              تولیدی
+                            </Box>
+                          ) : null}
                         </Typography>
                         <Box sx={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center" }}>
                           {product.barcode && (

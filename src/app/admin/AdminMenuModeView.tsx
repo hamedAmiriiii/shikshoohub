@@ -18,6 +18,7 @@ import {
   getCachedProductDiscount,
   type CachedProduct,
 } from "@/app/lib/productsCache";
+import { catalogItemKey } from "@/app/lib/catalogItems";
 import {
   MENU_ALL_CATEGORY_ID,
   buildMenuCategories,
@@ -77,7 +78,7 @@ export default function AdminMenuModeView({
   const cartQtyById = useMemo(() => {
     const map = new Map<string, number>();
     for (const item of cartPanel.cart) {
-      const key = String(item.id);
+      const key = catalogItemKey(item);
       map.set(key, (map.get(key) || 0) + (Number(item.quantity) || 0));
     }
     return map;
@@ -192,10 +193,10 @@ export default function AdminMenuModeView({
           {filteredProducts.map((product) => {
             const imageUrl = getProductImageUrl(product);
             const { salePrice, originalPrice, hasDiscount } = getCachedProductDiscount(product);
-            const inCart = (cartQtyById.get(String(product.id)) || 0) > 0;
+            const inCart = (cartQtyById.get(catalogItemKey(product)) || 0) > 0;
 
             return (
-              <Grid item xs={4} sm={3} md={2} lg={2} key={product.id}>
+              <Grid item xs={4} sm={3} md={2} lg={2} key={catalogItemKey(product)}>
                 <Card
                   sx={{
                     height: "100%",

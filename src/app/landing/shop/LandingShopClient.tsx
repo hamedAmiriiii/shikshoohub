@@ -215,7 +215,7 @@ export default function LandingShopClient() {
       {/* Navbar */}
       <header className="sticky top-0 z-50 bg-[#0b0f1a]/80 backdrop-blur-xl border-b border-white/10">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/landing" className="font-bold text-xl bg-gradient-to-l from-cyan-400 to-fuchsia-400 bg-clip-text text-transparent">
+          <Link href="/" className="font-bold text-xl bg-gradient-to-l from-cyan-400 to-fuchsia-400 bg-clip-text text-transparent">
             وبینو
           </Link>
           <nav className="hidden md:flex items-center gap-8 text-sm text-slate-300">

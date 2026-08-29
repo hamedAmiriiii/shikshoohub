@@ -27,6 +27,7 @@ import { apiRequestError } from "@/app/lib/apiRequestError/client";
 import { useQueryClient } from '@tanstack/react-query';
 import { mainColors, searchColors } from "../../liberari/colors";
 import { PRODUCTS_CACHE_KEY } from "@/app/lib/productsCache";
+import { catalogItemKey, isProducedGoodItem } from "@/app/lib/catalogItems";
 
 const PRODUCT_SORT_OPTIONS = [
     { value: "", label: "پیش‌فرض" },
@@ -146,7 +147,9 @@ export default function ListData() {
                 "Delete",
                 {},
                 {},
-                `/api/product/${id}`,
+                isProducedGoodItem(productToDelete)
+                  ? `/api/produced-goods/${id}`
+                  : `/api/product/${id}`,
                 true,
                 true,
                 token,
@@ -174,7 +177,7 @@ export default function ListData() {
                     if (Array.isArray(arr)) {
                         localStorage.setItem(
                             PRODUCTS_CACHE_KEY,
-                            JSON.stringify(arr.filter((p: { id?: number }) => p.id !== id)),
+                            JSON.stringify(arr.filter((p: { id?: number; item_type?: string; produced_good_id?: number }) => catalogItemKey(p) !== catalogItemKey(productToDelete))),
                         );
                     }
                 }
@@ -387,7 +390,17 @@ export default function ListData() {
     };
 
     const desktopColumns = [
-      { label: "کالا", field: "name" },
+      {
+        label: "کالا",
+        field: (item: any) => (
+          <Box sx={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <span>{item?.name || "—"}</span>
+            {isProducedGoodItem(item) ? (
+              <Chip label="تولیدی" size="small" sx={{ height: 20, fontSize: "11px", backgroundColor: "rgba(120, 181, 104, 0.18)", color: "var(--admin-accent)" }} />
+            ) : null}
+          </Box>
+        ),
+      },
       { label: "بارکد", field: "barcode" },
       { label: "قیمت خرید", field: (item: any) => item?.purchase_price ? formatNumber(item.purchase_price) + " تومان" : '-' },
       { 
@@ -530,6 +543,10 @@ export default function ListData() {
     };
 
     const handleSizeColorProduct = (product: any) => {
+      if (isProducedGoodItem(product)) {
+        toast.info("سایز و رنگ برای کالای تولیدی تعریف نشده است");
+        return;
+      }
       setSizeColorProduct(product);
       // Load existing sizes and colors
       if (product?.sizes && Array.isArray(product.sizes)) {
@@ -546,6 +563,10 @@ export default function ListData() {
     };
 
     const handleManufacturerProduct = (product: any) => {
+        if (isProducedGoodItem(product)) {
+          toast.info("تولیدکننده برای کالای تولیدی تعریف نشده است");
+          return;
+        }
         setManufacturerProduct(product);
         if (product?.manufacturer_id) {
             setSelectedManufacturerId(product.manufacturer_id);
@@ -600,6 +621,11 @@ export default function ListData() {
     };
 
     const handleEditProduct = (product: any) => {
+      if (isProducedGoodItem(product)) {
+        router.push("/admin/production");
+        toast.info("ویرایش کالای تولیدی از صفحه تولید انجام می‌شود");
+        return;
+      }
       setEditingProduct(product);
       // بارگذاری عکس‌های موجود محصول
       if (product.images && Array.isArray(product.images)) {

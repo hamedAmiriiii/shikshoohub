@@ -53,6 +53,7 @@ import {
 } from '@/app/lib/shopSalesByDay';
 import SalesByDayChart from '@/app/coponent/SalesByDayChart';
 import { readProductsCountFromCache, readProductsFromCache } from '@/app/lib/productsCache';
+import { catalogItemKey, isProducedGoodItem } from '@/app/lib/catalogItems';
 import {
   OUTBOX_CHANGED_EVENT,
   attachClientIdToPayload,
@@ -1008,11 +1009,12 @@ export default function ShoppingPage() {
       const addQty = kgSalesEnabled && item.unit_type === "kg"
         ? getDefaultCartQuantity(item)
         : 1;
-      const existing = prevCart.find((i) => String(i.id) === String(item.id));
+      const incomingKey = catalogItemKey(item);
+      const existing = prevCart.find((i) => catalogItemKey(i) === incomingKey);
 
       const newCart = existing
         ? prevCart.map((cartItem) =>
-            String(cartItem.id) === String(item.id)
+            catalogItemKey(cartItem) === incomingKey
               ? {
                   ...cartItem,
                   quantity: normalizeQuantityValue(
@@ -1206,9 +1208,9 @@ export default function ShoppingPage() {
 
   const buildPurchaseProductLine = useCallback(
     (item: any) => {
-      if (item.item_type === "produced_good" && item.produced_good_id) {
+      if (isProducedGoodItem(item)) {
         const payload: Record<string, unknown> = {
-          produced_good_id: Number(item.produced_good_id),
+          produced_good_id: Number(item.produced_good_id ?? item.id),
           quantity: item.quantity,
           purchase_price: Number(item.purchase_price),
         };
@@ -1762,7 +1764,7 @@ export default function ShoppingPage() {
 
   const removeItemFromCart = (itemId) => {
     setCart((prevCart) => {
-      const updatedCart = prevCart.filter(item => item.id !== itemId);
+      const updatedCart = prevCart.filter(item => catalogItemKey(item) !== String(itemId));
 
       // Recalculate total based on updated cart
       let newTotal = 0;
@@ -1779,7 +1781,7 @@ export default function ShoppingPage() {
   const updateQuantity = (itemId, increment) => {
     setCart((prevCart) => {
       const newCart = prevCart.map((item) => {
-        if (item.id === itemId) {
+        if (catalogItemKey(item) === String(itemId)) {
           const step = kgSalesEnabled ? getQuantityIncrement(item) : 1;
           const newQuantity = normalizeQuantityValue(
             item.quantity + increment * step,
@@ -1806,7 +1808,7 @@ export default function ShoppingPage() {
     setCart((prevCart) => {
       const newCart = prevCart
         .map((item) => {
-          if (item.id !== itemId) return item;
+          if (catalogItemKey(item) !== String(itemId)) return item;
           const normalized = normalizeQuantityValue(
             quantity,
             kgSalesEnabled ? item : { unit_type: "piece" },
@@ -1830,7 +1832,7 @@ export default function ShoppingPage() {
     if (parsed <= 0) return;
     setCart((prevCart) => {
       const newCart = prevCart.map((item) =>
-        item.id === itemId ? { ...item, sale_price: parsed } : item,
+        catalogItemKey(item) === String(itemId) ? { ...item, sale_price: parsed } : item,
       );
       const newTotal = newCart.reduce(
         (sum, item) => sum + Number(item.sale_price) * item.quantity,
@@ -2231,7 +2233,7 @@ export default function ShoppingPage() {
                 <TableBody>
                   {cart.map((item) => (
                     <StyledTableRow 
-                      key={item.id}
+                      key={catalogItemKey(item)}
                       sx={{
                         backgroundColor: "#1e2330",
                         borderBottom: "1px solid var(--admin-menu-hover)",
@@ -2259,7 +2261,7 @@ export default function ShoppingPage() {
                             <TextField
                               size="small"
                               value={String(item.sale_price ?? "")}
-                              onChange={(e) => setCartItemSalePrice(item.id, e.target.value)}
+                              onChange={(e) => setCartItemSalePrice(catalogItemKey(item), e.target.value)}
                               inputProps={{ inputMode: "numeric", style: { textAlign: "right", direction: "ltr" } }}
                               sx={{
                                 width: { xs: 110, md: 140 },
@@ -2335,7 +2337,7 @@ export default function ShoppingPage() {
                       </StyledTableCell>
                       <StyledTableCell align="right" sx={{ padding: { xs: "8px 12px", md: "16px 24px" } }}>
                         <IconButton 
-                          onClick={() => removeItemFromCart(item.id)} 
+                          onClick={() => removeItemFromCart(catalogItemKey(item))} 
                           sx={{ 
                             color: "#ff4444",
                             padding: { xs: "4px", md: "8px" },

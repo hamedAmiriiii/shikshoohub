@@ -22,6 +22,7 @@ import MultiCartToolbar from "@/app/admin/MultiCartToolbar";
 import CartQuantityControl from "@/app/admin/CartQuantityControl";
 import { getPriceUnitLabel } from "@/app/lib/productUnits";
 import { formatAmountInput } from "@/app/lib/amountInput";
+import { catalogItemKey } from "@/app/lib/catalogItems";
 import {
   ADMIN_MENU_CART_WIDTH,
   ADMIN_MENU_CART_WIDTH_VAR,
@@ -59,6 +60,8 @@ type MenuCartItem = {
   unit_type?: string;
   unit_label?: string;
   price_unit_label?: string;
+  item_type?: string;
+  produced_good_id?: number | string | null;
 };
 
 export type AdminMenuModeCartPanelProps = {
@@ -261,7 +264,7 @@ export default function AdminMenuModeCartPanel({
         )}
         {cart.map((item) => (
           <Box
-            key={item.id}
+            key={catalogItemKey(item)}
             sx={{
               mb: 0.75,
               pb: 0.75,
@@ -287,7 +290,7 @@ export default function AdminMenuModeCartPanel({
               </Typography>
               <IconButton
                 size="small"
-                onClick={() => onRemoveItem(item.id)}
+                onClick={() => onRemoveItem(catalogItemKey(item))}
                 sx={{ p: 0.15, mt: -0.25 }}
                 aria-label="حذف"
               >
@@ -301,7 +304,7 @@ export default function AdminMenuModeCartPanel({
                     size="small"
                     placeholder="قیمت"
                     value={formatAmountInput(String(item.sale_price ?? ""))}
-                    onChange={(e) => onSalePriceChange(item.id, e.target.value)}
+                    onChange={(e) => onSalePriceChange(catalogItemKey(item), e.target.value)}
                     inputProps={{ inputMode: "numeric", style: { textAlign: "right", direction: "ltr" } }}
                     sx={{ ...tinyFieldSx, mb: 0.25 }}
                   />

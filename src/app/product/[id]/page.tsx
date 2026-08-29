@@ -18,7 +18,7 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { apiRequestError } from '@/app/lib/apiRequestError';
 import Image from 'next/image';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -41,6 +41,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { addToCart, isProductInCart, getCartItemQuantity, updateCartItemQuantity, removeFromCart } from '../../liberari/cart';
 import { findColorByName, isLightColor } from '../../liberari/colors';
 import { resolveCategoryImageUrl } from '../../lib/shopCategories';
+import { useShopStorefront } from '../../context/ShopContext';
 
 interface ProductImage {
   id: number;
@@ -78,12 +79,17 @@ interface Product {
   brand?: string;
   sizes?: string[];
   colors?: string[];
+  item_type?: string;
+  produced_good_id?: number | null;
 }
 
 export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { shopApi } = useShopStorefront();
   const productId = params?.id as string;
+  const itemType = searchParams.get("item_type");
   
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -104,12 +110,13 @@ export default function ProductDetailPage() {
     if (productId) {
       fetchProduct();
     }
-  }, [productId]);
+  }, [productId, itemType, shopApi]);
 
   const fetchProduct = async () => {
     try {
       setLoading(true);
-      const res = await apiRequestError("Get", {}, {}, `/api/product/${productId}`, false, false, "");
+      const qs = itemType === "produced_good" ? "?item_type=produced_good" : "";
+      const res = await apiRequestError("Get", {}, {}, shopApi(`/api/product/${productId}${qs}`), false, false, "");
       
       if (!res.hasError && res) {
         setProduct(res);
@@ -206,6 +213,8 @@ export default function ProductDetailPage() {
       images: product.images,
       size: selectedSize || null,
       color: selectedColor || null,
+      item_type: itemType === "produced_good" ? "produced_good" : product.item_type,
+      produced_good_id: product.produced_good_id ?? (itemType === "produced_good" ? Number(product.id) : null),
     });
     window.dispatchEvent(new Event('cartUpdated'));
     setCartUpdateTrigger(prev => prev + 1);
@@ -223,6 +232,8 @@ export default function ProductDetailPage() {
       images: product.images,
       size: selectedSize || null,
       color: selectedColor || null,
+      item_type: itemType === "produced_good" ? "produced_good" : product.item_type,
+      produced_good_id: product.produced_good_id ?? (itemType === "produced_good" ? Number(product.id) : null),
     });
     window.dispatchEvent(new Event('cartUpdated'));
     setCartUpdateTrigger(prev => prev + 1);
@@ -230,11 +241,11 @@ export default function ProductDetailPage() {
 
   const handleDecreaseQuantity = () => {
     if (!product) return;
-    const qty = getCartItemQuantity(product.id);
+    const qty = getCartItemQuantity(product);
     if (qty > 1) {
-      updateCartItemQuantity(product.id, qty - 1);
+      updateCartItemQuantity(product, qty - 1);
     } else {
-      removeFromCart(product.id);
+      removeFromCart(product);
     }
     window.dispatchEvent(new Event('cartUpdated'));
     setCartUpdateTrigger(prev => prev + 1);
@@ -301,8 +312,8 @@ export default function ProductDetailPage() {
   }
 
   const images = getProductImages();
-  const inCart = isProductInCart(product.id);
-  const cartQuantity = getCartItemQuantity(product.id);
+  const inCart = isProductInCart(product);
+  const cartQuantity = getCartItemQuantity(product);
   const hasDiscount = product.has_discount || (product.original_sale_price && parseFloat(product.original_sale_price) > parseFloat(product.sale_price));
   const discountPercent = product.discount_percent || (product.original_sale_price ? Math.round(((parseFloat(product.original_sale_price) - parseFloat(product.sale_price)) / parseFloat(product.original_sale_price)) * 100) : 0);
 

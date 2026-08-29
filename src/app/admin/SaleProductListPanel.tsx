@@ -19,6 +19,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import AddShoppingCartIcon from "@mui/icons-material/AddShoppingCart";
 import { getCachedProductDiscount, type CachedProduct } from "@/app/lib/productsCache";
+import { catalogItemKey, isProducedGoodItem } from "@/app/lib/catalogItems";
 
 function normalizeSearchText(value: string): string {
   const persianDigits = "۰۱۲۳۴۵۶۷۸۹";
@@ -110,7 +111,7 @@ export default function SaleProductListPanel({
           const { salePrice, originalPrice, hasDiscount } = getCachedProductDiscount(product);
           return (
           <ListItem
-            key={product.id}
+            key={catalogItemKey(product)}
             secondaryAction={
               <IconButton
                 edge="end"
@@ -128,7 +129,16 @@ export default function SaleProductListPanel({
             sx={{ alignItems: "flex-start", py: 1 }}
           >
             <ListItemText
-              primary={product.name || "بدون نام"}
+              primary={
+                <Box component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
+                  {product.name || "بدون نام"}
+                  {isProducedGoodItem(product) ? (
+                    <Typography component="span" sx={{ color: "var(--admin-accent)", fontSize: "10px", fontWeight: 700 }}>
+                      تولیدی
+                    </Typography>
+                  ) : null}
+                </Box>
+              }
               secondary={
                 <Box component="span" sx={{ display: "block", mt: 0.25 }}>
                   {hasDiscount ? (

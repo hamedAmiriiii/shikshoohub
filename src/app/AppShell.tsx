@@ -11,7 +11,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   const isAdminPage = pathname?.startsWith("/admin");
-  const isLandingPage = pathname?.startsWith("/landing");
+  const isLandingPage = pathname === "/" || pathname?.startsWith("/landing");
   const isAgencyRequest = pathname?.startsWith("/agency-request");
   const isCustomerAuth = isCustomerAuthPath(pathname);
   const isReferralPage = pathname?.startsWith("/referrals");

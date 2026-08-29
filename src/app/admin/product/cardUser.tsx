@@ -17,6 +17,7 @@ import AddIcon from '@mui/icons-material/Add';
 import { mainColors, searchColors } from "../../liberari/colors";
 import { appendProductLabelPrintParams } from "@/app/lib/productLabelPrint";
 import { formatAmountInput, parseAmountInput } from "@/app/lib/amountInput";
+import { isProducedGoodItem } from "@/app/lib/catalogItems";
 
 const formatNumber = (num: number | string) => {
   const numValue = typeof num === 'string' ? parseFloat(num.replace(/,/g, '')) : num;
@@ -29,6 +30,7 @@ export default function CardUser(props: any) {
   const searchParams = useSearchParams();
   const [load] = useState(true);
   const productId = props.props.data?.id;
+  const isProduced = isProducedGoodItem(props.props.data);
   const onEdit = props.props.onEdit; // تابع ویرایش از parent component
   const onDelete = props.onDelete as ((product: { id?: number; name?: string; barcode?: string }) => void) | undefined;
   const manufacturersFromParent = props.manufacturers || []; // لیست تولیدکنندگان از parent
@@ -231,6 +233,10 @@ export default function CardUser(props: any) {
 
   // ذخیره عکس‌ها
   const saveImages = async () => {
+    if (isProduced) {
+      toast.info("تصویر کالای تولیدی از صفحه تولید مدیریت می‌شود");
+      return;
+    }
     if (!productId) return;
     
     // جدا کردن عکس‌های base64 (جدید)
@@ -293,6 +299,7 @@ export default function CardUser(props: any) {
   };
 
   const handleUpdate = async () => {
+    if (isProduced) return;
     if (!productId) return;
     
     // اعتبارسنجی درصد تخفیف
@@ -395,12 +402,16 @@ export default function CardUser(props: any) {
         <Grid xs={12} sx={{ paddingBottom: 0 }}>
           <Box sx={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "8px" }}>
             <Typography sx={{ color: "var(--admin-text)", fontSize: "14px", minWidth: "80px" }}>کالا:</Typography>
+            {isProduced ? (
+              <Chip label="تولیدی" size="small" sx={{ height: 22, fontSize: "11px", backgroundColor: "rgba(120, 181, 104, 0.18)", color: "var(--admin-accent)" }} />
+            ) : null}
             <TextField
               value={name}
               onChange={(e) => setName(e.target.value)}
               onBlur={handleUpdate}
               size="small"
               fullWidth
+              disabled={isProduced}
               sx={{
                 "& .MuiOutlinedInput-root": {
                   backgroundColor: "var(--admin-surface-alt)",
@@ -723,7 +734,7 @@ export default function CardUser(props: any) {
         {/* دکمه‌های عملیات */}
         <Grid xs={12} sx={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", marginTop: "16px" }}>
           {onEdit && (
-            <Tooltip title="ویرایش" arrow placement="top">
+            <Tooltip title={isProduced ? "ویرایش در تولید" : "ویرایش"} arrow placement="top">
               <IconButton
                 onClick={() => onEdit(props.props.data)}
                 sx={{
@@ -737,6 +748,7 @@ export default function CardUser(props: any) {
               </IconButton>
             </Tooltip>
           )}
+          {!isProduced ? (
           <Tooltip title="سایز و رنگ" arrow placement="top">
             <IconButton
               onClick={() => {
@@ -763,6 +775,7 @@ export default function CardUser(props: any) {
               <PaletteIcon />
             </IconButton>
           </Tooltip>
+          ) : null}
           <Tooltip title="چاپ برچسب" arrow placement="top">
             <IconButton
               onClick={handlePrint}
@@ -776,6 +789,7 @@ export default function CardUser(props: any) {
               <PrintIcon />
             </IconButton>
           </Tooltip>
+          {!isProduced ? (
           <Tooltip title="تولیدکننده" arrow placement="top">
             <IconButton
               onClick={() => {
@@ -797,6 +811,7 @@ export default function CardUser(props: any) {
               <FactoryIcon />
             </IconButton>
           </Tooltip>
+          ) : null}
           {onDelete && (
             <Tooltip title="حذف محصول" arrow placement="top">
               <IconButton

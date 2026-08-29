@@ -38,6 +38,7 @@ import {
 } from "@/app/lib/shopCategories";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { catalogCartApiLine, catalogItemKey, isProducedGoodItem } from "@/app/lib/catalogItems";
 import {
   ACCENT,
   ACCENT_DARK,
@@ -68,6 +69,9 @@ type Product = {
   images?: ProductImage[];
   category_id?: number;
   category_name?: string;
+  item_type?: string;
+  produced_good_id?: number | null;
+  product_id?: number | null;
   categories?: Array<{
     id?: number;
     name?: string;
@@ -78,7 +82,9 @@ type Product = {
 };
 
 type CartLine = {
-  product_id: number;
+  product_id?: number | null;
+  produced_good_id?: number | null;
+  item_type?: string;
   name: string;
   sale_price: number;
   quantity: number;
@@ -700,20 +706,28 @@ export default function TableReservPage() {
     });
   }, [products, search, selectedCategory]);
 
-  const qtyOf = (productId: number) => cart.find((line) => line.product_id === productId)?.quantity || 0;
+  const qtyOf = (product: Product | string) => {
+    const key = typeof product === "string" ? product : catalogItemKey(product);
+    return cart.find((line) => catalogItemKey(line) === key)?.quantity || 0;
+  };
 
   const setQty = (product: Product, quantity: number) => {
+    const key = catalogItemKey(product);
     persistCart(
       quantity <= 0
-        ? cart.filter((line) => line.product_id !== product.id)
-        : cart.some((line) => line.product_id === product.id)
+        ? cart.filter((line) => catalogItemKey(line) !== key)
+        : cart.some((line) => catalogItemKey(line) === key)
           ? cart.map((line) =>
-              line.product_id === product.id ? { ...line, quantity } : line,
+              catalogItemKey(line) === key ? { ...line, quantity } : line,
             )
           : [
               ...cart,
               {
-                product_id: product.id,
+                product_id: isProducedGoodItem(product) ? null : product.id,
+                produced_good_id: isProducedGoodItem(product)
+                  ? (product.produced_good_id ?? product.id)
+                  : null,
+                item_type: isProducedGoodItem(product) ? "produced_good" : product.item_type,
                 name: product.name,
                 sale_price: Number(product.sale_price) || 0,
                 quantity,
@@ -723,13 +737,13 @@ export default function TableReservPage() {
     );
   };
 
-  const adjustCartLine = (productId: number, quantity: number) => {
+  const adjustCartLine = (lineKey: string, quantity: number) => {
     if (quantity <= 0) {
-      persistCart(cart.filter((line) => line.product_id !== productId));
+      persistCart(cart.filter((line) => catalogItemKey(line) !== lineKey));
       return;
     }
     persistCart(
-      cart.map((line) => (line.product_id === productId ? { ...line, quantity } : line)),
+      cart.map((line) => (catalogItemKey(line) === lineKey ? { ...line, quantity } : line)),
     );
   };
 
@@ -903,10 +917,7 @@ export default function TableReservPage() {
         {
           table_number: tableNumber,
           payment_method: paymentMethod,
-          products: cart.map((line) => ({
-            product_id: line.product_id,
-            quantity: line.quantity,
-          })),
+          products: cart.map((line) => catalogCartApiLine(line)),
           ...(note.trim() ? { note: note.trim() } : {}),
           ...(phoneReady ? { phone: normalizedPhone } : {}),
           ...(useCredit && phoneReady ? { use_credit: true } : {}),
@@ -1185,10 +1196,10 @@ export default function TableReservPage() {
               }}
             >
               {visibleProducts.map((product, index) => {
-                const qty = qtyOf(product.id);
+                const qty = qtyOf(product);
                 return (
                   <ReservProductCard
-                    key={product.id}
+                    key={catalogItemKey(product)}
                     name={product.name}
                     description={product.description}
                     price={Number(product.sale_price) || 0}
@@ -1219,11 +1230,11 @@ export default function TableReservPage() {
 
         <ReservDesktopCartPanel
           theme={theme}
-          lines={cart}
+          lines={cart.map((line) => ({ ...line, key: catalogItemKey(line) }))}
           total={payableAmount}
-          onInc={(id) => adjustCartLine(id, qtyOf(id) + 1)}
-          onDec={(id) => adjustCartLine(id, qtyOf(id) - 1)}
-          onRemove={(id) => adjustCartLine(id, 0)}
+          onInc={(key) => adjustCartLine(key, qtyOf(key) + 1)}
+          onDec={(key) => adjustCartLine(key, qtyOf(key) - 1)}
+          onRemove={(key) => adjustCartLine(key, 0)}
           onCheckout={() => setCartOpen(true)}
         />
       </Box>
@@ -1258,7 +1269,7 @@ export default function TableReservPage() {
         <Box sx={{ maxHeight: "46vh", overflowY: "auto" }}>
           {cart.map((line) => (
             <Box
-              key={line.product_id}
+              key={catalogItemKey(line)}
               sx={{
                 display: "flex",
                 alignItems: "center",
@@ -1289,7 +1300,7 @@ export default function TableReservPage() {
                   <IconButton
                     size="small"
                     aria-label="کاهش تعداد"
-                    onClick={() => adjustCartLine(line.product_id, line.quantity - 1)}
+                    onClick={() => adjustCartLine(catalogItemKey(line), line.quantity - 1)}
                     sx={{ width: 25, height: 25, bgcolor: SURFACE, border: `1px solid ${BORDER}`, color: TEXT }}
                   >
                     <RemoveIcon sx={{ fontSize: 11 }} />
@@ -1300,7 +1311,7 @@ export default function TableReservPage() {
                   <IconButton
                     size="small"
                     aria-label="افزایش تعداد"
-                    onClick={() => adjustCartLine(line.product_id, line.quantity + 1)}
+                    onClick={() => adjustCartLine(catalogItemKey(line), line.quantity + 1)}
                     sx={{ width: 25, height: 25, bgcolor: ACCENT, color: "#1a1712" }}
                   >
                     <AddIcon sx={{ fontSize: 11 }} />
@@ -1310,7 +1321,7 @@ export default function TableReservPage() {
               <IconButton
                 size="small"
                 aria-label="حذف از سبد"
-                onClick={() => adjustCartLine(line.product_id, 0)}
+                onClick={() => adjustCartLine(catalogItemKey(line), 0)}
                 sx={{ color: MUTED }}
               >
                 <DeleteOutlineIcon fontSize="small" />
@@ -1939,17 +1950,17 @@ export default function TableReservPage() {
               <Box sx={{ display: "flex", alignItems: "center", gap: 0.8 }}>
                 <IconButton
                   aria-label="کاهش"
-                  onClick={() => setQty(detailProduct, Math.max(0, qtyOf(detailProduct.id) - 1))}
+                  onClick={() => setQty(detailProduct, Math.max(0, qtyOf(detailProduct) - 1))}
                   sx={{ width: 31, height: 31, bgcolor: SURFACE_ALT, border: `1px solid ${BORDER}`, color: TEXT }}
                 >
                   <RemoveIcon sx={{ fontSize: 15 }} />
                 </IconButton>
                 <Typography sx={{ minWidth: 22, textAlign: "center", fontWeight: 800, fontSize: 13 }}>
-                  {formatNumber(qtyOf(detailProduct.id))}
+                  {formatNumber(qtyOf(detailProduct))}
                 </Typography>
                 <IconButton
                   aria-label="افزایش"
-                  onClick={() => setQty(detailProduct, qtyOf(detailProduct.id) + 1)}
+                  onClick={() => setQty(detailProduct, qtyOf(detailProduct) + 1)}
                   sx={{ width: 31, height: 31, bgcolor: SURFACE_ALT, border: `1px solid ${BORDER}`, color: TEXT }}
                 >
                   <AddIcon sx={{ fontSize: 15 }} />
@@ -1958,7 +1969,7 @@ export default function TableReservPage() {
               <Button
                 variant="contained"
                 onClick={() => {
-                  if (qtyOf(detailProduct.id) === 0) setQty(detailProduct, 1);
+                  if (qtyOf(detailProduct) === 0) setQty(detailProduct, 1);
                   setDetailProduct(null);
                 }}
                 sx={{

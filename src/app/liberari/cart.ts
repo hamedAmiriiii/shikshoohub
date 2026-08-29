@@ -1,4 +1,10 @@
 import {
+  catalogCartApiLine,
+  catalogItemKey,
+  isProducedGoodItem,
+  type CatalogIdentity,
+} from "@/app/lib/catalogItems";
+import {
   cartStorageKey,
   getCustomerToken as getShopCustomerToken,
   getLastShopCode,
@@ -16,6 +22,35 @@ export interface CartItem {
   images?: any[];
   size?: string | null;
   color?: string | null;
+  item_type?: string;
+  produced_good_id?: number | string | null;
+}
+
+export type CartProductInput = CatalogIdentity & {
+  id: number;
+  name: string;
+  sale_price: string | number;
+  original_sale_price?: string;
+  discount_percent?: number;
+  image?: string;
+  images?: any[];
+  size?: string | null;
+  color?: string | null;
+};
+
+type CartRef = CatalogIdentity & { size?: string | null; color?: string | null };
+
+function asCartRef(idOrItem: number | CartRef): CartRef {
+  if (typeof idOrItem === "object" && idOrItem != null) return idOrItem;
+  return { id: idOrItem };
+}
+
+function cartLinesMatch(item: CartItem, ref: CartRef): boolean {
+  return (
+    catalogItemKey(item) === catalogItemKey(ref) &&
+    (item.size || null) === (ref.size || null) &&
+    (item.color || null) === (ref.color || null)
+  );
 }
 
 const LEGACY_CART_KEY = "shikshoo_cart";
@@ -30,12 +65,7 @@ export function setCartShopCode(shopCode: string | null): void {
 }
 
 function cartProductsPayload(cart: CartItem[]) {
-  return cart.map((item) => ({
-    product_id: item.id,
-    quantity: item.quantity,
-    ...(item.size && { size: item.size }),
-    ...(item.color && { color: item.color }),
-  }));
+  return cart.map((item) => catalogCartApiLine(item));
 }
 
 function resolveShopCode(shopCode?: string | null): string | null {
@@ -123,26 +153,11 @@ export const getCart = (shopCode?: string | null): CartItem[] => {
 };
 
 export const addToCart = (
-  product: {
-    id: number;
-    name: string;
-    sale_price: string | number;
-    original_sale_price?: string;
-    discount_percent?: number;
-    image?: string;
-    images?: any[];
-    size?: string | null;
-    color?: string | null;
-  },
+  product: CartProductInput,
   shopCode?: string | null,
 ): CartItem[] => {
   const cart = getCart(shopCode);
-  const existingItemIndex = cart.findIndex(
-    (item) =>
-      item.id === product.id &&
-      item.size === (product.size || null) &&
-      item.color === (product.color || null),
-  );
+  const existingItemIndex = cart.findIndex((item) => cartLinesMatch(item, product));
 
   if (existingItemIndex >= 0) {
     cart[existingItemIndex].quantity += 1;
@@ -161,6 +176,10 @@ export const addToCart = (
       images: product.images,
       size: product.size || null,
       color: product.color || null,
+      item_type: isProducedGoodItem(product) ? "produced_good" : product.item_type,
+      produced_good_id: isProducedGoodItem(product)
+        ? product.produced_good_id ?? product.id
+        : product.produced_good_id ?? null,
     });
   }
 
@@ -169,25 +188,30 @@ export const addToCart = (
   return cart;
 };
 
-export const removeFromCart = (productId: number, shopCode?: string | null): CartItem[] => {
+export const removeFromCart = (
+  productId: number | CartRef,
+  shopCode?: string | null,
+): CartItem[] => {
   const cart = getCart(shopCode);
-  const newCart = cart.filter((item) => item.id !== productId);
+  const ref = asCartRef(productId);
+  const newCart = cart.filter((item) => !cartLinesMatch(item, ref));
   localStorage.setItem(storageKey(shopCode), JSON.stringify(newCart));
   syncCartWithServer(shopCode).catch((err) => console.error("Error syncing cart:", err));
   return newCart;
 };
 
 export const updateCartItemQuantity = (
-  productId: number,
+  productId: number | CartRef,
   quantity: number,
   shopCode?: string | null,
 ): CartItem[] => {
   const cart = getCart(shopCode);
-  const itemIndex = cart.findIndex((item) => item.id === productId);
+  const ref = asCartRef(productId);
+  const itemIndex = cart.findIndex((item) => cartLinesMatch(item, ref));
 
   if (itemIndex >= 0) {
     if (quantity <= 0) {
-      return removeFromCart(productId, shopCode);
+      return removeFromCart(ref, shopCode);
     }
     cart[itemIndex].quantity = quantity;
     localStorage.setItem(storageKey(shopCode), JSON.stringify(cart));
@@ -221,13 +245,21 @@ export const clearCart = async (shopCode?: string | null): Promise<void> => {
   }
 };
 
-export const isProductInCart = (productId: number, shopCode?: string | null): boolean => {
+export const isProductInCart = (
+  productId: number | CartRef,
+  shopCode?: string | null,
+): boolean => {
   const cart = getCart(shopCode);
-  return cart.some((item) => item.id === productId);
+  const ref = asCartRef(productId);
+  return cart.some((item) => cartLinesMatch(item, ref));
 };
 
-export const getCartItemQuantity = (productId: number, shopCode?: string | null): number => {
+export const getCartItemQuantity = (
+  productId: number | CartRef,
+  shopCode?: string | null,
+): number => {
   const cart = getCart(shopCode);
-  const item = cart.find((item) => item.id === productId);
+  const ref = asCartRef(productId);
+  const item = cart.find((item) => cartLinesMatch(item, ref));
   return item ? item.quantity : 0;
 };

@@ -24,6 +24,7 @@ import CartQuantityControl from "@/app/admin/CartQuantityControl";
 import { getPriceUnitLabel } from "@/app/lib/productUnits";
 import { formatAmountInput } from "@/app/lib/amountInput";
 import type { AdminMenuModeCartPanelProps } from "@/app/admin/AdminMenuModeCartPanel";
+import { catalogItemKey } from "@/app/lib/catalogItems";
 
 type SettlementMode = "split" | "card_all" | "cash_all";
 
@@ -406,7 +407,7 @@ export default function AdminClassicPosView({
                 const lineTotal = Number(item.sale_price) * item.quantity;
                 return (
                   <TableRow
-                    key={`${item.id}-${index}`}
+                    key={`${catalogItemKey(item)}-${index}`}
                     sx={{
                       bgcolor:
                         index % 2 === 0
@@ -441,7 +442,7 @@ export default function AdminClassicPosView({
                         <TextField
                           size="small"
                           value={formatAmountInput(String(item.sale_price ?? ""))}
-                          onChange={(e) => onSalePriceChange(item.id, e.target.value)}
+                          onChange={(e) => onSalePriceChange(catalogItemKey(item), e.target.value)}
                           sx={{ ...compactFieldSx, width: 88 }}
                           inputMode="numeric"
                         />
@@ -455,7 +456,7 @@ export default function AdminClassicPosView({
                     <TableCell align="center" sx={bodyCellSx}>
                       <IconButton
                         size="small"
-                        onClick={() => onRemoveItem(item.id)}
+                        onClick={() => onRemoveItem(catalogItemKey(item))}
                         sx={{
                           color: "#e53935",
                           bgcolor: "rgba(229, 57, 53, 0.1)",

@@ -50,6 +50,7 @@ import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import { clearCart } from '@/app/liberari/cart';
 import { getCart, removeFromCart, updateCartItemQuantity, type CartItem } from '@/app/liberari/cart';
+import { catalogCartApiLine, catalogItemKey } from '@/app/lib/catalogItems';
 import { apiRequestError } from '@/app/lib/apiRequestError';
 import { findColorByName, isLightColor } from '@/app/liberari/colors';
 import { useShopStorefront } from '@/app/context/ShopContext';
@@ -192,12 +193,7 @@ export default function CartPage() {
       setLoadingTotal(true);
       try {
         const cart = getCart(shopCode);
-        const products = cart.map((item) => ({
-          product_id: item.id,
-          quantity: item.quantity,
-          ...(item.size && { size: item.size }),
-          ...(item.color && { color: item.color }),
-        }));
+        const products = cart.map((item) => catalogCartApiLine(item));
 
         if (options?.pushLocal && products.length > 0) {
           const postRes = await apiRequestError(
@@ -428,12 +424,12 @@ export default function CartPage() {
     return new Intl.NumberFormat('fa-IR').format(numPrice) + ' تومان';
   };
 
-  const handleQuantityChange = async (productId: number, newQuantity: number) => {
+  const handleQuantityChange = async (item: CartItem, newQuantity: number) => {
     if (newQuantity <= 0) {
-      handleRemoveItem(productId);
+      handleRemoveItem(item);
       return;
     }
-    updateCartItemQuantity(productId, newQuantity, shopCode);
+    updateCartItemQuantity(item, newQuantity, shopCode);
     const next = getCart(shopCode);
     setCartItems(next);
     setServerTotal(
@@ -445,8 +441,8 @@ export default function CartPage() {
     window.dispatchEvent(new Event('cartUpdated'));
   };
 
-  const handleRemoveItem = (productId: number) => {
-    removeFromCart(productId, shopCode);
+  const handleRemoveItem = (item: CartItem) => {
+    removeFromCart(item, shopCode);
     const next = getCart(shopCode);
     setCartItems(next);
     setServerTotal(
@@ -650,12 +646,7 @@ export default function CartPage() {
     
     try {
       // آماده‌سازی محصولات با سایز و رنگ
-      const products = cartItems.map(item => ({
-        product_id: item.id,
-        quantity: item.quantity,
-        ...(item.size && { size: item.size }),
-        ...(item.color && { color: item.color }),
-      }));
+      const products = cartItems.map((item) => catalogCartApiLine(item));
 
       // آماده‌سازی داده‌ها برای API
       const requestData: any = {
@@ -863,7 +854,7 @@ export default function CartPage() {
           <Grid item xs={12} md={8}>
             {cartItems.map((item) => (
               <Card
-                key={item.id}
+                key={catalogItemKey(item)}
                 sx={{
                   marginBottom: { xs: '12px', sm: '16px' },
                   borderRadius: '12px',
@@ -983,7 +974,7 @@ export default function CartPage() {
                         >
                           <IconButton
                             size="small"
-                            onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                            onClick={() => handleQuantityChange(item, item.quantity - 1)}
                             sx={{ padding: '2px' }}
                           >
                             <RemoveIcon sx={{ fontSize: '18px' }} />
@@ -1000,7 +991,7 @@ export default function CartPage() {
                           </Typography>
                           <IconButton
                             size="small"
-                            onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                            onClick={() => handleQuantityChange(item, item.quantity + 1)}
                             sx={{ padding: '2px' }}
                           >
                             <AddIcon sx={{ fontSize: '18px' }} />
@@ -1008,7 +999,7 @@ export default function CartPage() {
                         </Box>
                         <IconButton
                           size="small"
-                          onClick={() => handleRemoveItem(item.id)}
+                          onClick={() => handleRemoveItem(item)}
                           sx={{ color: '#f44336', padding: '4px' }}
                         >
                           <DeleteIcon sx={{ fontSize: '20px' }} />
@@ -1037,7 +1028,7 @@ export default function CartPage() {
                       >
                         <IconButton
                           size="small"
-                          onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                          onClick={() => handleQuantityChange(item, item.quantity - 1)}
                           sx={{ padding: '4px', '&:hover': { backgroundColor: 'rgba(120, 181, 104, 0.1)' } }}
                         >
                           <RemoveIcon fontSize="small" />
@@ -1047,14 +1038,14 @@ export default function CartPage() {
                         </Typography>
                         <IconButton
                           size="small"
-                          onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                          onClick={() => handleQuantityChange(item, item.quantity + 1)}
                           sx={{ padding: '4px', '&:hover': { backgroundColor: 'rgba(120, 181, 104, 0.1)' } }}
                         >
                           <AddIcon fontSize="small" />
                         </IconButton>
                       </Box>
                       <IconButton
-                        onClick={() => handleRemoveItem(item.id)}
+                        onClick={() => handleRemoveItem(item)}
                         sx={{ color: '#f44336', '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.1)' } }}
                       >
                         <DeleteIcon />
@@ -2221,7 +2212,7 @@ export default function CartPage() {
               <Divider sx={{ marginBottom: '16px' }} />
               
               {cartItems.slice(0, 3).map((item) => (
-                <Box key={item.id} sx={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
+                <Box key={catalogItemKey(item)} sx={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
                   <Box
                     sx={{
                       width: '50px',
