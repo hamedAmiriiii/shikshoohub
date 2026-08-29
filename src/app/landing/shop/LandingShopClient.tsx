@@ -33,6 +33,8 @@ const SUPPORT_PHONE = "09399166196";
 const SUPPORT_TEL = "tel:09399166196";
 const LINK_BALE = "https://ble.ir/AmiriWebino";
 const LINK_RUBIKA = "https://rubika.ir/WebinoPlus";
+const ENAMAD_HTML =
+  "<a referrerpolicy='origin' target='_blank' href='https://trustseal.enamad.ir/?id=7529264&Code=GLi3yveM4jposDINx6Ukri04cknZLvuY'><img referrerpolicy='origin' src='https://trustseal.enamad.ir/logo.aspx?id=7529264&Code=GLi3yveM4jposDINx6Ukri04cknZLvuY' alt='' style='cursor:pointer' code='GLi3yveM4jposDINx6Ukri04cknZLvuY'></a>";
 
 const BENEFITS = [
   { icon: Zap, title: "ثبت فروش سریع", desc: "فاکتور، بارکد و چند سبد همزمان", color: "from-violet-500 to-fuchsia-500" },
@@ -718,7 +720,7 @@ export default function LandingShopClient() {
 
       {/* Footer */}
       <footer className="bg-[#070a12] text-slate-500 py-12 border-t border-white/5">
-        <div className="max-w-6xl mx-auto px-4 grid md:grid-cols-3 gap-8 text-sm">
+        <div className="max-w-6xl mx-auto px-4 grid md:grid-cols-4 gap-8 text-sm">
           <div>
             <div className="text-white font-bold text-lg mb-2">وبینو</div>
             <p>نرم‌افزار حسابداری، فروش و فروشگاه آنلاین</p>
@@ -744,6 +746,13 @@ export default function LandingShopClient() {
           <div>
             <div className="text-white font-medium mb-3">تماس</div>
             <a href={SUPPORT_TEL} className="hover:text-cyan-400" dir="ltr">{SUPPORT_PHONE}</a>
+          </div>
+          <div>
+            <div className="text-white font-medium mb-3">نماد اعتماد الکترونیکی</div>
+            <div
+              className="inline-block bg-white rounded-lg p-2"
+              dangerouslySetInnerHTML={{ __html: ENAMAD_HTML }}
+            />
           </div>
         </div>
         <div className="max-w-6xl mx-auto px-4 mt-8 pt-8 border-t border-white/5 text-center text-xs">
