@@ -2,10 +2,12 @@
 import React, { Suspense } from "react";
 import { Box } from "@mui/material";
 import CustomersList from "./CustomersList";
+import { formatBeneficiaryAmount, parseAsBeneficiary } from "@/app/lib/beneficiaries";
 
 export default function CustomersPage() {
   const searchBoxList = [
     { fieldName: "phone", fieldOperation: "MATCH" as const, fieldValue: "", nextConditionOperator: "OR" as const },
+    { fieldName: "name", fieldOperation: "MATCH" as const, fieldValue: "", nextConditionOperator: "OR" as const },
   ];
 
   const formatNumber = (num: number | string) => {
@@ -32,6 +34,10 @@ export default function CustomersPage() {
   };
 
   const desktopColumns = [
+    {
+      label: "نام",
+      field: (item: { name?: string | null }) => item?.name?.trim() || "—",
+    },
     {
       label: "شماره تلفن",
       field: (item: { phone?: string }) => item?.phone || "بدون شماره",
@@ -60,6 +66,14 @@ export default function CustomersPage() {
       label: "اعتبار فعلی",
       field: (item: { current_credit?: number }) =>
         item?.current_credit ? `${formatNumber(item.current_credit)} تومان` : "0 تومان",
+    },
+    {
+      label: "خرید از او (ذینفع)",
+      field: (item: unknown) => {
+        const asBeneficiary = parseAsBeneficiary(item);
+        if (!asBeneficiary) return "—";
+        return `خرید ${formatBeneficiaryAmount(asBeneficiary.purchased_total)} / بدهی ${formatBeneficiaryAmount(asBeneficiary.unpaid_total)}`;
+      },
     },
   ];
 

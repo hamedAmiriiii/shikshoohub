@@ -498,40 +498,40 @@ export default function AdminClassicPosView({
             gap: 0.5,
           }}
         >
-          <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1 }}>
-            <Typography sx={{ fontSize: "11px", color: "var(--admin-text-muted)" }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1, alignItems: "baseline" }}>
+            <Typography sx={{ fontSize: "13px", color: "var(--admin-text-muted)" }}>
               جمع فاکتور
             </Typography>
-            <Typography sx={{ fontSize: "12px", fontWeight: 700 }}>
+            <Typography sx={{ fontSize: "15px", fontWeight: 700, lineHeight: 1.2 }}>
               {formatNumber(total)}
             </Typography>
           </Box>
           {useCreditAmount > 0 && (
-            <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1 }}>
-              <Typography sx={{ fontSize: "11px", color: "var(--admin-accent)" }}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1, alignItems: "baseline" }}>
+              <Typography sx={{ fontSize: "13px", color: "var(--admin-accent)" }}>
                 اعتبار مصرفی
               </Typography>
-              <Typography sx={{ fontSize: "12px", color: "var(--admin-accent)" }}>
+              <Typography sx={{ fontSize: "15px", fontWeight: 700, color: "var(--admin-accent)", lineHeight: 1.2 }}>
                 {formatNumber(useCreditAmount)}
               </Typography>
             </Box>
           )}
           {backPrice > 0 && (
-            <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1 }}>
-              <Typography sx={{ fontSize: "11px", color: "var(--admin-text-muted)" }}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1, alignItems: "baseline" }}>
+              <Typography sx={{ fontSize: "13px", color: "var(--admin-text-muted)" }}>
                 مبلغ برگشتی
               </Typography>
-              <Typography sx={{ fontSize: "12px", color: "#e57373" }}>
+              <Typography sx={{ fontSize: "15px", fontWeight: 700, color: "#e57373", lineHeight: 1.2 }}>
                 -{formatNumber(backPrice)}
               </Typography>
             </Box>
           )}
           {discounttype > 0 && (
-            <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1 }}>
-              <Typography sx={{ fontSize: "11px", color: "var(--admin-text-muted)" }}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1, alignItems: "baseline" }}>
+              <Typography sx={{ fontSize: "13px", color: "var(--admin-text-muted)" }}>
                 تخفیف
               </Typography>
-              <Typography sx={{ fontSize: "12px" }}>
+              <Typography sx={{ fontSize: "15px", fontWeight: 700, lineHeight: 1.2 }}>
                 {formatNumber(discounttype)}
               </Typography>
             </Box>
@@ -547,14 +547,15 @@ export default function AdminClassicPosView({
               gap: 1,
             }}
           >
-            <Typography sx={{ fontSize: "12px", fontWeight: 700 }}>
+            <Typography sx={{ fontSize: "14px", fontWeight: 800 }}>
               مبلغ نهایی
             </Typography>
             <Typography
               sx={{
-                fontSize: { xs: "16px", md: "18px" },
+                fontSize: { xs: "22px", md: "24px" },
                 fontWeight: 800,
                 color: "var(--admin-accent)",
+                lineHeight: 1.1,
               }}
             >
               {formatNumber(finalTotal)}

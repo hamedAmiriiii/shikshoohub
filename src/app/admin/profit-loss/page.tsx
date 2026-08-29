@@ -300,25 +300,25 @@ export default function ProfitLossPage() {
                         کل فروش
                       </TableCell>
                       <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)", whiteSpace: "nowrap" }}>
-                        سند فروش دستی
+                         فروش دستی
                       </TableCell>
                       <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)", whiteSpace: "nowrap" }}>
                         کل مبلغ خرید
                       </TableCell>
                       <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)", whiteSpace: "nowrap" }}>
-                        سند خرید دستی
+                         خرید دستی
                       </TableCell>
                       <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)", whiteSpace: "nowrap" }}>
-                        کل سود
+                        سود ناخالص
                       </TableCell>
                       <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)", whiteSpace: "nowrap" }}>
-                        کل هزینه‌های جاری
+                         هزینه‌های جاری
                       </TableCell>
                       <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)", whiteSpace: "nowrap" }}>
-                        کل فاکتورها
+                         فاکتورها
                       </TableCell>
                       <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)", whiteSpace: "nowrap" }}>
-                        خالص سود
+                        سود خالص
                       </TableCell>
                       <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)", whiteSpace: "nowrap" }}>
                         موجودی حساب

@@ -37,6 +37,16 @@ import {
   parseQuantityInput,
 } from "@/app/lib/productUnits";
 import { paymentTypeLabel } from "@/app/lib/paymentTypes";
+import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
+import {
+  isIranMobile,
+  normalizeIranMobile,
+  purchaseReturnCreditMessage,
+  returnFullPurchase,
+  returnPurchaseItem,
+} from "@/app/lib/purchaseReturns";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const formatNumber = (num: number | string) => {
   const numValue = typeof num === 'string' ? parseFloat(num.replace(/,/g, '')) : num;
@@ -119,8 +129,11 @@ export default function purchas(props: any) {
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [returnMode, setReturnMode] = useState<"item" | "full">("item");
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [returnQuantity, setReturnQuantity] = useState(1);
+  const [returnPhone, setReturnPhone] = useState("");
+  const [returnNotes, setReturnNotes] = useState("");
   const [adjustedQuantities, setAdjustedQuantities] = useState<Record<number, number>>({});
   const [deleting, setDeleting] = useState(false);
   const [totalDeleting, setTotalDeleting] = useState(0);
@@ -134,13 +147,28 @@ export default function purchas(props: any) {
   const router = useRouter();
   const data = props?.props?.data;
   const onRefresh = props?.props?.onRefresh || props?.props?.refreshGrid;
+  const isDetailsView = props?.props?.variant === "details";
   const isInstallment = data?.payment_type === 'installment';
   const isCheque = data?.payment_type === 'cheque';
 
+  const purchasePhone = typeof data?.phone === "string" ? normalizeIranMobile(data.phone) : "";
+  const needsReturnPhone = !isIranMobile(purchasePhone);
+
   const handleOpenDeleteDialog = (item: any) => {
+    setReturnMode("item");
     setSelectedItem(item);
     const isKg = isKgProduct(item.product ?? item);
     setReturnQuantity(isKg ? 0.5 : 1);
+    setReturnPhone(purchasePhone);
+    setReturnNotes("");
+    setDeleteDialogOpen(true);
+  };
+
+  const handleOpenFullReturn = () => {
+    setReturnMode("full");
+    setSelectedItem(null);
+    setReturnPhone(purchasePhone);
+    setReturnNotes("");
     setDeleteDialogOpen(true);
   };
 
@@ -148,7 +176,17 @@ export default function purchas(props: any) {
     setDeleteDialogOpen(false);
     setSelectedItem(null);
     setReturnQuantity(1);
+    setReturnNotes("");
     setDeleting(false);
+  };
+
+  const resolveReturnPhone = (): string | null => {
+    const phone = normalizeIranMobile(returnPhone || purchasePhone);
+    if (!isIranMobile(phone)) {
+      toast.error("برای برگشت باید شماره موبایل مشتری را وارد کنید تا اعتبار به همان فرد برگردد");
+      return null;
+    }
+    return phone;
   };
 
   const getItemQuantity = (item: any) => {
@@ -226,6 +264,9 @@ export default function purchas(props: any) {
   const handleDeleteItem = async () => {
     if (!selectedItem || !data?.id) return;
 
+    const phone = resolveReturnPhone();
+    if (!phone) return;
+
     const maxQty = getItemQuantity(selectedItem);
     const minQty = getMinQuantity(selectedItem.product ?? selectedItem);
     const qtyToReturn = Math.min(
@@ -235,16 +276,13 @@ export default function purchas(props: any) {
 
     setDeleting(true);
     try {
-      const response = await FetchWithJwtClient(
-        "DELETE",
-        `/api/purchased-products/${data.id}/items/${selectedItem.id}`,
-        null,
-        { quantity: qtyToReturn },
-        {
-          body: JSON.stringify({ quantity: qtyToReturn }),
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      const payload: { quantity: number; phone: string; notes?: string } = {
+        quantity: qtyToReturn,
+        phone,
+      };
+      if (returnNotes.trim()) payload.notes = returnNotes.trim();
+
+      const response = await returnPurchaseItem(data.id, selectedItem.id, payload);
 
       if (response !== null && !response.hasError) {
         const returnedQty = Number(response?.returned_item?.quantity ?? qtyToReturn);
@@ -269,18 +307,64 @@ export default function purchas(props: any) {
           }));
         }
 
+        const creditMsg = purchaseReturnCreditMessage(response);
+        toast.success(creditMsg || (returnedQty === 1 ? "برگشت کالا ثبت شد" : "برگشت کالا ثبت شد"));
+        setReturnPhone(phone);
+
         if (onRefresh) {
           onRefresh();
         }
       } else {
-        alert(response?.message || "خطا در حذف آیتم");
-        setDeleting(false);
+        toast.error(getApiErrorMessage(response, "خطا در برگشت کالا"));
       }
     } catch (error) {
       console.error("Error deleting item:", error);
-      alert("خطا در حذف آیتم");
+      toast.error("خطا در برگشت کالا");
+    } finally {
       setDeleting(false);
     }
+  };
+
+  const handleFullReturn = async () => {
+    if (!data?.id) return;
+    const phone = resolveReturnPhone();
+    if (!phone) return;
+
+    setDeleting(true);
+    try {
+      const payload: { phone: string; notes?: string } = { phone };
+      if (returnNotes.trim()) payload.notes = returnNotes.trim();
+      const response = await returnFullPurchase(data.id, payload);
+      if (!response || response.hasError) {
+        toast.error(getApiErrorMessage(response, "خطا در برگشت کامل فاکتور"));
+        return;
+      }
+
+      const items = Array.isArray(data.purchased_products) ? data.purchased_products : [];
+      setDeletedItems(items.map((item: any) => item.id).filter(Boolean));
+      const returnedTotal = Number(
+        response?.return_amount ?? response?.return_sale_total ?? data?.total_amount ?? 0,
+      );
+      if (returnedTotal > 0) setTotalDeleting(returnedTotal);
+      setReturnPhone(phone);
+
+      const creditMsg = purchaseReturnCreditMessage(response);
+      toast.success(creditMsg || "فاکتور به‌طور کامل برگشت خورد و مبلغ به اعتبار مشتری اضافه شد");
+      if (onRefresh) onRefresh();
+    } catch (error) {
+      console.error("Error returning purchase:", error);
+      toast.error("خطا در برگشت کامل فاکتور");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const goToNewPurchase = () => {
+    const params = new URLSearchParams();
+    if (totalDeleting) params.set("price", String(totalDeleting));
+    const phone = normalizeIranMobile(returnPhone || purchasePhone);
+    if (isIranMobile(phone)) params.set("phone", phone);
+    router.push(`/admin?${params.toString()}`);
   };
 
   useEffect(() => {
@@ -303,7 +387,14 @@ export default function purchas(props: any) {
 
  
   return load ? (
-    <Box style={{ backgroundColor: "var(--admin-surface)", borderRadius: "15px"  , border:"1px solid rgb(55, 84, 165)" }} m={1} p={1}
+    <Box
+      sx={{
+        backgroundColor: "var(--admin-surface)",
+        borderRadius: isDetailsView ? 0 : "15px",
+        border: isDetailsView ? "none" : "1px solid rgb(55, 84, 165)",
+        m: isDetailsView ? 0 : 1,
+        p: isDetailsView ? 0 : 1,
+      }}
     >
       <Grid
         xs={12} style={{backgroundColor:"#1f9ad1" ,
@@ -446,6 +537,24 @@ export default function purchas(props: any) {
           {/* نمایش لیست محصولات */}
           {data?.purchased_products && Array.isArray(data.purchased_products) && data.purchased_products.length > 0 && (
             <Box className="mt-2">
+              {!isInstallment && data.purchased_products.some((item: any) => !deletedItems.includes(item.id)) ? (
+                <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<ReplayIcon />}
+                    onClick={handleOpenFullReturn}
+                    sx={{
+                      color: "#ff8a80",
+                      borderColor: "#ff5252",
+                      fontSize: 12,
+                      "&:hover": { borderColor: "#ff1744", backgroundColor: "rgba(255, 82, 82, 0.08)" },
+                    }}
+                  >
+                    برگشت کامل فاکتور
+                  </Button>
+                </Box>
+              ) : null}
               
               {data.purchased_products
                 .filter((item: any) => !deletedItems.includes(item.id))
@@ -555,12 +664,15 @@ export default function purchas(props: any) {
         }}
       >
         <DialogTitle sx={{ color: "var(--admin-text)", textAlign: "center", fontSize: "18px" }}>
-          تایید برگشت کالا
+          {returnMode === "full" ? "برگشت کامل فاکتور" : "تایید برگشت کالا"}
         </DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ color: "var(--admin-text-secondary)", textAlign: "center" }}>
-            آیا از برگشت این کالا مطمئن هستید؟
-            {selectedItem && (
+            {returnMode === "full"
+              ? "تمام کالاهای این فاکتور برگشت می‌خورد. مبلغ فروش به اعتبار مشتری اضافه می‌شود و اگر از اعتبار این خرید استفاده شده باشد، به نسبت از اعتبار کم می‌شود."
+              : "آیا از برگشت این کالا مطمئن هستید؟ مبلغ به اعتبار مشتری برمی‌گردد."}
+          </DialogContentText>
+            {returnMode === "item" && selectedItem && (
               <Box sx={{ 
                 marginTop: "12px", 
                 padding: "8px", 
@@ -619,7 +731,50 @@ export default function purchas(props: any) {
                 </Typography>
               </Box>
             )}
-          </DialogContentText>
+            <TextField
+              fullWidth
+              required={needsReturnPhone}
+              label={needsReturnPhone ? "شماره موبایل مشتری (الزامی)" : "شماره موبایل مشتری"}
+              value={returnPhone}
+              onChange={(e) => setReturnPhone(normalizeIranMobile(e.target.value))}
+              placeholder="09xxxxxxxxx"
+              helperText={
+                needsReturnPhone
+                  ? "این فاکتور مشتری ندارد. با این شماره کاربر باشگاه پیدا یا ساخته می‌شود و اعتبار به همان فرد برمی‌گردد."
+                  : "مبلغ برگشتی به اعتبار همین شماره اضافه می‌شود."
+              }
+              sx={{
+                mt: 1.5,
+                "& .MuiOutlinedInput-root": {
+                  backgroundColor: "var(--admin-surface-alt)",
+                  color: "var(--admin-text)",
+                  "& fieldset": { borderColor: "#505669" },
+                  "&:hover fieldset": { borderColor: "var(--admin-accent)" },
+                  "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
+                },
+                "& .MuiInputLabel-root": { color: "var(--admin-text-secondary)" },
+                "& .MuiFormHelperText-root": { color: "var(--admin-text-muted)", textAlign: "right" },
+              }}
+            />
+            <TextField
+              fullWidth
+              multiline
+              minRows={2}
+              label="یادداشت (اختیاری)"
+              value={returnNotes}
+              onChange={(e) => setReturnNotes(e.target.value)}
+              sx={{
+                mt: 1.5,
+                "& .MuiOutlinedInput-root": {
+                  backgroundColor: "var(--admin-surface-alt)",
+                  color: "var(--admin-text)",
+                  "& fieldset": { borderColor: "#505669" },
+                  "&:hover fieldset": { borderColor: "var(--admin-accent)" },
+                  "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
+                },
+                "& .MuiInputLabel-root": { color: "var(--admin-text-secondary)" },
+              }}
+            />
         </DialogContent>
         <DialogActions sx={{ justifyContent: "center", padding: "16px", gap: "12px" }}>
           <Button 
@@ -638,7 +793,7 @@ export default function purchas(props: any) {
             انصراف
           </Button>
           <Button 
-            onClick={handleDeleteItem}
+            onClick={returnMode === "full" ? handleFullReturn : handleDeleteItem}
             variant="contained"
             sx={{ 
               backgroundColor: "#ff5252",
@@ -649,24 +804,15 @@ export default function purchas(props: any) {
             disabled={deleting}
             startIcon={deleting ? <CircularProgress size={16} color="inherit" /> : <ReplayIcon />}
           >
-            {deleting ? "در حال حذف..." : "برگشت کالا"}
+            {deleting ? "در حال ثبت..." : returnMode === "full" ? "برگشت کامل فاکتور" : "برگشت کالا"}
           </Button>
           <Button 
-            onClick={()=>{
-              const params = new URLSearchParams({
-                price: String(totalDeleting),
-              });
-              const customerPhone = typeof data?.phone === "string" ? data.phone.trim() : "";
-              if (customerPhone) {
-                params.set("phone", customerPhone);
-              }
-              router.push(`/admin?${params.toString()}`);
-            }}
+            onClick={goToNewPurchase}
             variant="contained"
             sx={{ 
-              backgroundColor: "#ff5252",
+              backgroundColor: "var(--admin-accent)",
               "&:hover": {
-                backgroundColor: "#ff1744"
+                backgroundColor: "var(--admin-accent-hover)"
               }
             }}
             disabled={!totalDeleting}
@@ -985,6 +1131,7 @@ export default function purchas(props: any) {
           </Button>
         </DialogActions>
       </Dialog>
+      <ToastContainer autoClose={3000} position="bottom-right" />
     </Box>
   ) : (<></>)
 }

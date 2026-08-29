@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
 import { ADMIN_SIDEBAR_WIDTH } from './AdminHamburgerSidebar';
 import { ADMIN_MENU_CART_WIDTH_VAR } from './adminMenuCartLayout';
+import { canAccessAdminPath, getFirstAllowedAdminPath, isPublicAdminPath } from '@/app/lib/shopPermissions';
 
 // Map pathname to page title
 const getPageTitle = (pathname: string | null): string | undefined => {
@@ -18,6 +19,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
   
   const titleMap: { [key: string]: string } = {
     '/admin/expenses': 'هزینه‌ها',
+    '/admin/beneficiaries': 'ذینفعان خرید',
     '/admin/manual-trades': 'ثبت سند',
     '/admin/cheques': 'چک',
     '/admin/inventory': 'موجودی انبار',
@@ -59,6 +61,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/production': 'قیمت تمام‌شده تولید',
   };
   
+  if (pathname.startsWith("/admin/beneficiaries")) return "ذینفعان خرید";
   return titleMap[pathname];
 };
 
@@ -102,9 +105,13 @@ export default function ShikshooLayout({
     
     if (!token && !isPublicAdminPage) {
       router.push('/admin/login');
-    } else {
-      setIsChecking(false);
+      return;
     }
+    if (token && !isPublicAdminPath(pathname) && !canAccessAdminPath(pathname)) {
+      router.replace(getFirstAllowedAdminPath());
+      return;
+    }
+    setIsChecking(false);
 
     // مانیفست PWA: ورود و scope فقط /admin
     if (typeof window !== 'undefined') {
@@ -141,7 +148,7 @@ export default function ShikshooLayout({
               <Header
                 title={pageTitle}
                 showBack={showBack}
-                backUrl="/admin"
+                backUrl={getFirstAllowedAdminPath()}
               />
             )}
             <Box

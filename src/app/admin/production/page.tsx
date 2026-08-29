@@ -1,13 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, Fragment } from "react";
 import {
   Box,
   Button,
   Card,
   CardContent,
   CircularProgress,
-  Collapse,
   Dialog,
   DialogActions,
   DialogContent,
@@ -72,17 +71,49 @@ import {
   type SalePriceMode,
 } from "@/app/lib/productionCosting";
 import { formatAmountInput } from "@/app/lib/amountInput";
+import { useShopPermissionGate } from "@/app/lib/shopPermissions";
+import InvoiceLinkFields, {
+  buildInvoiceLinkPayload,
+  emptyInvoiceLinkState,
+  validateInvoiceLink,
+  type InvoiceLinkState,
+} from "@/app/admin/production/InvoiceLinkFields";
 
 const fieldSx = {
   "& .MuiOutlinedInput-root": {
     backgroundColor: "var(--admin-surface-alt)",
     color: "var(--admin-text)",
+    fontSize: 12,
     "& fieldset": { borderColor: "var(--admin-border)" },
     "&:hover fieldset": { borderColor: "var(--admin-accent)" },
     "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
   },
-  "& .MuiInputLabel-root": { color: "var(--admin-text-muted)" },
-  "& .MuiSelect-icon": { color: "var(--admin-text-muted)" },
+  "& .MuiInputLabel-root": {
+    color: "var(--admin-text-muted)",
+    fontSize: 12,
+    right: 14,
+    left: "auto",
+    transformOrigin: "top right",
+    textAlign: "right",
+  },
+  "& .MuiInputLabel-shrink": {
+    transform: "translate(-14px, -9px) scale(0.75)",
+  },
+  "& .MuiInputBase-input": {
+    py: "6px",
+    fontSize: 12,
+    textAlign: "right",
+    direction: "rtl",
+  },
+  "& .MuiSelect-icon": { color: "var(--admin-text-muted)", left: 7, right: "auto" },
+} as const;
+
+const dialogGridSx = {
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: 1,
+  pt: "12px !important",
+  direction: "rtl",
 } as const;
 
 const StyledTableCell = styled(TableCell)({
@@ -90,15 +121,18 @@ const StyledTableCell = styled(TableCell)({
     backgroundColor: "var(--admin-surface-alt)",
     color: "var(--admin-text)",
     fontWeight: 600,
-    fontSize: 15,
-    padding: "12px 16px",
+    fontSize: 12,
+    padding: "8px 10px",
     whiteSpace: "nowrap",
+    textAlign: "center",
   },
   [`&.${tableCellClasses.body}`]: {
     color: "var(--admin-text)",
-    fontSize: 14,
-    padding: "12px 16px",
+    fontSize: 12,
+    padding: "7px 10px",
     whiteSpace: "nowrap",
+    textAlign: "center",
+    "& .MuiTypography-root": { fontSize: 12 },
   },
 });
 
@@ -109,10 +143,17 @@ const StyledTableRow = styled(TableRow)({
   "&:last-child td, &:last-child th": { border: 0 },
 });
 
+const tableWrapSx = {
+  backgroundColor: "var(--admin-surface)",
+  borderRadius: "10px",
+  border: "1px solid var(--admin-border)",
+  boxShadow: "none",
+  overflowX: "auto",
+} as const;
+
 const actionBtnSx = {
-  color: "#fff",
-  width: 36,
-  height: 36,
+  color: "var(--admin-text-muted)",
+  p: 0.4,
 } as const;
 
 type TabKey = "stock" | "materials" | "goods";
@@ -120,7 +161,10 @@ type TabKey = "stock" | "materials" | "goods";
 const emptyLine = (): RecipeLine => ({ raw_material_id: "", grams_per_kg: 0 });
 
 export default function ProductionCostingPage() {
-  const [tab, setTab] = useState<TabKey>("stock");
+  const { can } = useShopPermissionGate();
+  const canMaterials = can("raw_materials");
+  const canGoods = can("produced_goods");
+  const [tab, setTab] = useState<TabKey>(canGoods ? "stock" : "materials");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [materials, setMaterials] = useState<RawMaterial[]>([]);
@@ -133,6 +177,7 @@ export default function ProductionCostingPage() {
   const [materialName, setMaterialName] = useState("");
   const [lotQty, setLotQty] = useState("");
   const [lotPrice, setLotPrice] = useState("");
+  const [invoiceLink, setInvoiceLink] = useState<InvoiceLinkState>(emptyInvoiceLinkState);
 
   const [lotDialogMaterial, setLotDialogMaterial] = useState<RawMaterial | null>(null);
 
@@ -190,6 +235,11 @@ export default function ProductionCostingPage() {
     void loadAll();
   }, [loadAll]);
 
+  useEffect(() => {
+    if (tab === "materials" && !canMaterials && canGoods) setTab("stock");
+    if ((tab === "stock" || tab === "goods") && !canGoods && canMaterials) setTab("materials");
+  }, [tab, canMaterials, canGoods]);
+
   const searchText = searchQuery.trim().toLowerCase();
   const filteredGoods = useMemo(() => {
     if (!searchText) return goods;
@@ -242,6 +292,7 @@ export default function ProductionCostingPage() {
     setMaterialName("");
     setLotQty("");
     setLotPrice("");
+    setInvoiceLink(emptyInvoiceLinkState());
     setMaterialDialogOpen(true);
   };
 
@@ -250,6 +301,7 @@ export default function ProductionCostingPage() {
     setMaterialName(material.name);
     setLotQty("");
     setLotPrice("");
+    setInvoiceLink(emptyInvoiceLinkState());
     setMaterialDialogOpen(true);
   };
 
@@ -277,33 +329,64 @@ export default function ProductionCostingPage() {
         }
         toast.success("نام ماده اولیه به‌روز شد");
       } else {
-        const res = await FetchWithJwtClient(
-          "POST",
-          "/api/raw-materials",
-          token,
-          {},
-          { body: JSON.stringify({ name }) },
-        );
-        if (res?.hasError) {
-          toast.error(getApiErrorMessage(res, "ثبت ماده اولیه ناموفق بود"));
-          return;
-        }
-        const created = asRawMaterial(res);
         const qty = parseAmount(lotQty);
         const price = parseAmount(lotPrice);
-        if (created && qty > 0 && price > 0) {
-          const lotRes = await FetchWithJwtClient(
+        if (invoiceLink.createInvoice && (qty <= 0 || price <= 0)) {
+          toast.error("برای ایجاد فاکتور، مقدار و قیمت هر کیلو را وارد کنید");
+          return;
+        }
+        const invoiceError = validateInvoiceLink(invoiceLink, qty * price);
+        if (invoiceError) {
+          toast.error(invoiceError);
+          return;
+        }
+
+        if (invoiceLink.createInvoice) {
+          const res = await FetchWithJwtClient(
             "POST",
-            `/api/raw-materials/${created.id}/lots`,
+            "/api/raw-materials",
             token,
             {},
-            { body: JSON.stringify({ quantity_kg: qty, price_per_kg: price }) },
+            {
+              body: JSON.stringify({
+                name,
+                quantity_kg: qty,
+                price_per_kg: price,
+                ...buildInvoiceLinkPayload(invoiceLink, qty * price),
+              }),
+            },
           );
-          if (lotRes?.hasError) {
-            toast.error(getApiErrorMessage(lotRes, "ماده ثبت شد ولی خرید انبار ذخیره نشد"));
-            await loadAll();
-            setMaterialDialogOpen(false);
+          if (res?.hasError) {
+            toast.error(getApiErrorMessage(res, "ثبت ماده اولیه ناموفق بود"));
             return;
+          }
+        } else {
+          const res = await FetchWithJwtClient(
+            "POST",
+            "/api/raw-materials",
+            token,
+            {},
+            { body: JSON.stringify({ name }) },
+          );
+          if (res?.hasError) {
+            toast.error(getApiErrorMessage(res, "ثبت ماده اولیه ناموفق بود"));
+            return;
+          }
+          const created = asRawMaterial(res);
+          if (created && qty > 0 && price > 0) {
+            const lotRes = await FetchWithJwtClient(
+              "POST",
+              `/api/raw-materials/${created.id}/lots`,
+              token,
+              {},
+              { body: JSON.stringify({ quantity_kg: qty, price_per_kg: price }) },
+            );
+            if (lotRes?.hasError) {
+              toast.error(getApiErrorMessage(lotRes, "ماده ثبت شد ولی خرید انبار ذخیره نشد"));
+              await loadAll();
+              setMaterialDialogOpen(false);
+              return;
+            }
           }
         }
         toast.success("ماده اولیه ثبت شد");
@@ -323,6 +406,11 @@ export default function ProductionCostingPage() {
       toast.error("مقدار کیلو و قیمت هر کیلو را وارد کنید");
       return;
     }
+    const invoiceError = validateInvoiceLink(invoiceLink, qty * price);
+    if (invoiceError) {
+      toast.error(invoiceError);
+      return;
+    }
     const token = tokenCode();
     if (!token) return;
     setSaving(true);
@@ -332,7 +420,13 @@ export default function ProductionCostingPage() {
         `/api/raw-materials/${lotDialogMaterial.id}/lots`,
         token,
         {},
-        { body: JSON.stringify({ quantity_kg: qty, price_per_kg: price }) },
+        {
+          body: JSON.stringify({
+            quantity_kg: qty,
+            price_per_kg: price,
+            ...buildInvoiceLinkPayload(invoiceLink, qty * price),
+          }),
+        },
       );
       if (res?.hasError) {
         toast.error(getApiErrorMessage(res, "ثبت خرید انبار ناموفق بود"));
@@ -598,18 +692,20 @@ export default function ProductionCostingPage() {
     <Box sx={{ ...adminPageSx, px: { xs: 2, md: 3 }, pt: { xs: 1.5, md: 3 }, pb: { xs: 12, md: 5 } }}>
       <ToastContainer position="top-center" rtl />
 
-      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1.5, flexWrap: "wrap", mb: 2 }}>
-       
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 1.5, flexWrap: "wrap", mb: 1.25 }}>
         {tab !== "stock" && (
           <Button
+            size="small"
             variant="contained"
-            startIcon={<AddIcon />}
+            startIcon={<AddIcon sx={{ fontSize: 16 }} />}
             onClick={tab === "materials" ? openCreateMaterial : openCreateGood}
             sx={{
               ...adminButtonStartIconSx,
               backgroundColor: "var(--admin-accent)",
               color: "#fff",
-              borderRadius: "12px",
+              fontSize: 12,
+              minHeight: 28,
+              py: 0.25,
               "&:hover": { backgroundColor: "var(--admin-accent-hover)" },
             }}
           >
@@ -624,15 +720,16 @@ export default function ProductionCostingPage() {
         variant="scrollable"
         allowScrollButtonsMobile
         sx={{
-          mb: 2,
-          "& .MuiTab-root": { color: "var(--admin-text-muted)", fontWeight: 700 },
+          mb: 1.25,
+          minHeight: 36,
+          "& .MuiTab-root": { color: "var(--admin-text-muted)", fontWeight: 600, fontSize: 13, minHeight: 36, py: 0 },
           "& .Mui-selected": { color: "var(--admin-accent) !important" },
           "& .MuiTabs-indicator": { backgroundColor: "var(--admin-accent)" },
         }}
       >
-        <Tab value="stock" icon={<WarehouseIcon />} iconPosition="start" label="موجودی" />
-        <Tab value="materials" icon={<Inventory2Icon />} iconPosition="start" label="انبار مواد اولیه" />
-        <Tab value="goods" icon={<KitchenIcon />} iconPosition="start" label="کالای تولیدی" />
+        {canGoods ? <Tab value="stock" icon={<WarehouseIcon />} iconPosition="start" label="موجودی" /> : null}
+        {canMaterials ? <Tab value="materials" icon={<Inventory2Icon />} iconPosition="start" label="انبار مواد اولیه" /> : null}
+        {canGoods ? <Tab value="goods" icon={<KitchenIcon />} iconPosition="start" label="کالای تولیدی" /> : null}
       </Tabs>
 
       <TextField
@@ -640,7 +737,7 @@ export default function ProductionCostingPage() {
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         placeholder={searchPlaceholder}
-        sx={{ ...fieldSx, mb: 2 }}
+        sx={{ ...fieldSx, mb: 1.25 }}
         InputProps={{
           startAdornment: (
             <InputAdornment position="start">
@@ -660,29 +757,22 @@ export default function ProductionCostingPage() {
         ) : filteredGoods.length === 0 ? (
           <EmptyHint title="نتیجه‌ای پیدا نشد" text="نام دیگری جستجو کنید." />
         ) : (
-          <TableContainer
-            component={Paper}
-            sx={{
-              backgroundColor: "var(--admin-surface)",
-              borderRadius: "16px",
-              border: "1px solid var(--admin-border)",
-              overflowX: "auto",
-            }}
-          >
-            <Table aria-label="موجودی کالاهای تولیدی">
+          <TableContainer component={Paper} sx={tableWrapSx}>
+            <Table size="small" aria-label="موجودی کالاهای تولیدی">
               <TableHead>
                 <TableRow>
-                  <StyledTableCell align="right">کالا</StyledTableCell>
-                  <StyledTableCell align="right">موجودی (کیلو)</StyledTableCell>
-                  <StyledTableCell align="right">قیمت تمام‌شده</StyledTableCell>
-                  <StyledTableCell align="right">قیمت فروش</StyledTableCell>
-                  <StyledTableCell align="right">سود هر کیلو</StyledTableCell>
-                  <StyledTableCell align="right">درصد سود</StyledTableCell>
-                  <StyledTableCell align="right">عملیات</StyledTableCell>
+                  <StyledTableCell align="center">ردیف</StyledTableCell>
+                  <StyledTableCell align="center">کالا</StyledTableCell>
+                  <StyledTableCell align="center">موجودی</StyledTableCell>
+                  <StyledTableCell align="center">قیمت تمام‌شده</StyledTableCell>
+                  <StyledTableCell align="center">قیمت فروش</StyledTableCell>
+                  <StyledTableCell align="center">سود</StyledTableCell>
+                  <StyledTableCell align="center">درصد سود</StyledTableCell>
+                  <StyledTableCell align="center">عملیات</StyledTableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredGoods.map((good) => {
+                {filteredGoods.map((good, index) => {
                   const cost = Number(good.cost_per_kg) || 0;
                   const sale = Number(good.sale_price) || 0;
                   const profit = good.profit_per_kg != null ? Number(good.profit_per_kg) : sale - cost;
@@ -694,70 +784,51 @@ export default function ProductionCostingPage() {
                       : profitPercentFromSale(cost, sale);
                   return (
                     <StyledTableRow key={good.id}>
-                      <StyledTableCell align="right">
-                        <Typography sx={{ fontWeight: 700 }}>
-                          {good.name}
-                          <Box component="span" sx={{ color: "var(--admin-text-muted)", fontWeight: 600, mr: 0.75 }}>
-                            {" "}
-                            — {good.id}
-                          </Box>
-                        </Typography>
+                      <StyledTableCell align="center">{index + 1}</StyledTableCell>
+                      <StyledTableCell align="center">
+                        <Typography sx={{ fontWeight: 600 }}>{good.name}</Typography>
                       </StyledTableCell>
-                      <StyledTableCell align="right">{formatKg(good.stock_kg || 0)}</StyledTableCell>
-                      <StyledTableCell align="right">{formatToman(cost)}</StyledTableCell>
-                      <StyledTableCell align="right" sx={{ color: "var(--admin-accent)", fontWeight: 700 }}>
+                      <StyledTableCell align="center">{formatKg(good.stock_kg || 0)}</StyledTableCell>
+                      <StyledTableCell align="center">{formatToman(cost)}</StyledTableCell>
+                      <StyledTableCell align="center" sx={{ color: "var(--admin-accent)", fontWeight: 700 }}>
                         {formatToman(sale)}
-                        {(good.sale_price_mode || good.markup_percent != null || sale > 0) && (
-                          <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, fontWeight: 600 }}>
-                            {percentMode ? "بر اساس درصد" : "دستی"}
-                            {isRoundSalePrice(good) ? " · رند هزار" : ""}
-                          </Typography>
-                        )}
                       </StyledTableCell>
-                      <StyledTableCell align="right" sx={{ color: profit >= 0 ? "var(--admin-accent)" : "#ef5350", fontWeight: 700 }}>
+                      <StyledTableCell align="center" sx={{ color: profit >= 0 ? "var(--admin-accent)" : "#ef5350", fontWeight: 700 }}>
                         {formatToman(profit)}
                       </StyledTableCell>
-                      <StyledTableCell align="right">
+                      <StyledTableCell align="center">
                         {percentMode || percent
                           ? `${new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 2 }).format(percent || 0)}٪`
                           : "—"}
                       </StyledTableCell>
-                      <StyledTableCell align="right">
-                        <Box sx={{ display: "flex", gap: 0.75, justifyContent: "flex-end" }}>
+                      <StyledTableCell align="center">
+                        <Box sx={{ display: "flex", gap: 0.25, justifyContent: "center" }}>
                           <Tooltip title="قیمت فروش">
-                            <IconButton
-                              onClick={() => openSalePrice(good)}
-                              sx={{ ...actionBtnSx, backgroundColor: "#ff9100", "&:hover": { backgroundColor: "#e68100" } }}
-                            >
-                              <LocalOfferIcon fontSize="small" />
+                            <IconButton size="small" onClick={() => openSalePrice(good)} sx={{ ...actionBtnSx, color: "#ff9100" }}>
+                              <LocalOfferIcon sx={{ fontSize: 18 }} />
                             </IconButton>
                           </Tooltip>
                           <Tooltip title="ثبت تولید">
                             <IconButton
+                              size="small"
                               onClick={() => {
                                 setProduceGood(good);
                                 setProduceKg("1");
                                 setProducePreview(null);
                               }}
-                              sx={{ ...actionBtnSx, backgroundColor: "var(--admin-accent)", "&:hover": { backgroundColor: "var(--admin-accent-hover)" } }}
+                              sx={{ ...actionBtnSx, color: "var(--admin-accent)" }}
                             >
-                              <PrecisionManufacturingIcon fontSize="small" />
+                              <PrecisionManufacturingIcon sx={{ fontSize: 18 }} />
                             </IconButton>
                           </Tooltip>
                           <Tooltip title="ویرایش فرمول">
-                            <IconButton
-                              onClick={() => openEditGood(good)}
-                              sx={{ ...actionBtnSx, backgroundColor: "#2196f3", "&:hover": { backgroundColor: "#1976d2" } }}
-                            >
-                              <EditIcon fontSize="small" />
+                            <IconButton size="small" onClick={() => openEditGood(good)} sx={{ ...actionBtnSx, color: "var(--admin-accent)" }}>
+                              <EditIcon sx={{ fontSize: 18 }} />
                             </IconButton>
                           </Tooltip>
                           <Tooltip title="حذف">
-                            <IconButton
-                              onClick={() => setDeleteTarget({ kind: "good", item: good })}
-                              sx={{ ...actionBtnSx, backgroundColor: "#ff4444", "&:hover": { backgroundColor: "#cc3333" } }}
-                            >
-                              <DeleteOutlineIcon fontSize="small" />
+                            <IconButton size="small" onClick={() => setDeleteTarget({ kind: "good", item: good })} sx={{ ...actionBtnSx, color: "#ff4444" }}>
+                              <DeleteOutlineIcon sx={{ fontSize: 18 }} />
                             </IconButton>
                           </Tooltip>
                         </Box>
@@ -775,172 +846,273 @@ export default function ProductionCostingPage() {
         ) : filteredMaterials.length === 0 ? (
           <EmptyHint title="نتیجه‌ای پیدا نشد" text="نام دیگری جستجو کنید." />
         ) : (
-          <Box sx={{ display: "grid", gap: 1.5 }}>
-            {filteredMaterials.map((material) => {
-              const lots = material.lots || [];
-              const open = expandedMaterialId === material.id;
-              return (
-                <Card key={material.id} sx={{ backgroundColor: "var(--admin-surface)", border: "1px solid var(--admin-border)", borderRadius: "16px" }}>
-                  <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
-                    <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 1 }}>
-                      <Box>
-                        <Typography sx={{ fontWeight: 700, fontSize: 18 }}>
-                          {material.name}
-                          <Box component="span" sx={{ color: "var(--admin-text-muted)", fontWeight: 600, fontSize: 15, mr: 0.75 }}>
-                            {" "}
-                            — {material.id}
-                          </Box>
-                        </Typography>
-                        <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 14 }}>
-                          موجودی {formatKg(material.stock_kg || 0)} کیلو
-                          {material.next_price_per_kg != null
-                            ? ` · قیمت لات بعدی ${formatToman(material.next_price_per_kg)} تومان`
-                            : ""}
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: "flex", alignItems: "center" }}>
-                        <IconButton
-                          onClick={() => {
-                            setLotDialogMaterial(material);
-                            setLotQty("");
-                            setLotPrice("");
-                          }}
-                          sx={{ color: "var(--admin-accent)" }}
-                          title="خرید جدید"
-                        >
-                          <AddIcon />
-                        </IconButton>
-                        <IconButton onClick={() => openEditMaterial(material)} sx={{ color: "var(--admin-accent)" }}>
-                          <EditIcon />
-                        </IconButton>
-                        <IconButton onClick={() => setDeleteTarget({ kind: "material", item: material })} sx={{ color: "#ef5350" }}>
-                          <DeleteOutlineIcon />
-                        </IconButton>
-                        <IconButton
-                          onClick={() => setExpandedMaterialId(open ? null : material.id)}
-                          sx={{ color: "var(--admin-text-muted)", transform: open ? "rotate(180deg)" : "none" }}
-                        >
-                          <ExpandMoreIcon />
-                        </IconButton>
-                      </Box>
-                    </Box>
-                    <Collapse in={open}>
-                      <Box sx={{ mt: 1.25, display: "grid", gap: 0.75 }}>
-                        {lots.length === 0 ? (
-                          <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 13 }}>هنوز خریدی ثبت نشده.</Typography>
-                        ) : (
-                          lots.map((lot) => (
-                            <Box key={lot.id} sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1 }}>
-                              <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 13 }}>
-                                {formatKg(lot.remaining_kg)} از {formatKg(lot.quantity_kg)} کیلو · {formatToman(lot.price_per_kg)} تومان
-                              </Typography>
+          <TableContainer component={Paper} sx={tableWrapSx}>
+            <Table size="small" aria-label="انبار مواد اولیه">
+              <TableHead>
+                <TableRow>
+                  <StyledTableCell align="center">ردیف</StyledTableCell>
+                  <StyledTableCell align="center">نام</StyledTableCell>
+                  <StyledTableCell align="center">موجودی</StyledTableCell>
+                  <StyledTableCell align="center">قیمت لات بعدی</StyledTableCell>
+                  <StyledTableCell align="center">عملیات</StyledTableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {filteredMaterials.map((material, index) => {
+                  const lots = material.lots || [];
+                  const open = expandedMaterialId === material.id;
+                  return (
+                    <Fragment key={material.id}>
+                      <StyledTableRow>
+                        <StyledTableCell align="center">{index + 1}</StyledTableCell>
+                        <StyledTableCell align="center">
+                          <Typography sx={{ fontWeight: 600 }}>{material.name}</Typography>
+                        </StyledTableCell>
+                        <StyledTableCell align="center">{formatKg(material.stock_kg || 0)}</StyledTableCell>
+                        <StyledTableCell align="center">
+                          {material.next_price_per_kg != null ? formatToman(material.next_price_per_kg) : "—"}
+                        </StyledTableCell>
+                        <StyledTableCell align="center">
+                          <Box sx={{ display: "flex", gap: 0.25, justifyContent: "center" }}>
+                            <Tooltip title="خرید جدید">
                               <IconButton
                                 size="small"
-                                onClick={() => setDeleteTarget({ kind: "lot", material, lotId: lot.id })}
-                                sx={{ color: "#ef5350" }}
+                                onClick={() => {
+                                  setLotDialogMaterial(material);
+                                  setLotQty("");
+                                  setLotPrice("");
+                                  setInvoiceLink(emptyInvoiceLinkState());
+                                }}
+                                sx={{ ...actionBtnSx, color: "var(--admin-accent)" }}
                               >
-                                <DeleteOutlineIcon fontSize="small" />
+                                <AddIcon sx={{ fontSize: 18 }} />
                               </IconButton>
-                            </Box>
-                          ))
-                        )}
-                      </Box>
-                    </Collapse>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </Box>
+                            </Tooltip>
+                            <Tooltip title="ویرایش">
+                              <IconButton size="small" onClick={() => openEditMaterial(material)} sx={{ ...actionBtnSx, color: "var(--admin-accent)" }}>
+                                <EditIcon sx={{ fontSize: 18 }} />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="حذف">
+                              <IconButton size="small" onClick={() => setDeleteTarget({ kind: "material", item: material })} sx={{ ...actionBtnSx, color: "#ef5350" }}>
+                                <DeleteOutlineIcon sx={{ fontSize: 18 }} />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="لات‌ها">
+                              <IconButton
+                                size="small"
+                                onClick={() => setExpandedMaterialId(open ? null : material.id)}
+                                sx={{
+                                  ...actionBtnSx,
+                                  color: "var(--admin-text-muted)",
+                                  transform: open ? "rotate(180deg)" : "none",
+                                }}
+                              >
+                                <ExpandMoreIcon sx={{ fontSize: 18 }} />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                        </StyledTableCell>
+                      </StyledTableRow>
+                      {open ? (
+                        <StyledTableRow>
+                          <StyledTableCell align="center" colSpan={5} sx={{ whiteSpace: "normal", py: 1 }}>
+                            {lots.length === 0 ? (
+                              <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>هنوز خریدی ثبت نشده.</Typography>
+                            ) : (
+                              <Table size="small">
+                                <TableHead>
+                                  <TableRow>
+                                    <StyledTableCell align="center">ردیف</StyledTableCell>
+                                    <StyledTableCell align="center">باقیمانده</StyledTableCell>
+                                    <StyledTableCell align="center">مقدار خرید</StyledTableCell>
+                                    <StyledTableCell align="center">قیمت هر کیلو</StyledTableCell>
+                                    <StyledTableCell align="center">فاکتور</StyledTableCell>
+                                    <StyledTableCell align="center">عملیات</StyledTableCell>
+                                  </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                  {lots.map((lot, lotIndex) => (
+                                    <StyledTableRow key={lot.id}>
+                                      <StyledTableCell align="center">{lotIndex + 1}</StyledTableCell>
+                                      <StyledTableCell align="center">{formatKg(lot.remaining_kg)}</StyledTableCell>
+                                      <StyledTableCell align="center">{formatKg(lot.quantity_kg)}</StyledTableCell>
+                                      <StyledTableCell align="center">{formatToman(lot.price_per_kg)}</StyledTableCell>
+                                      <StyledTableCell align="center">
+                                        {lot.invoice_id
+                                          ? lot.invoice_link === "item"
+                                            ? `#${lot.invoice_id} آیتم`
+                                            : `#${lot.invoice_id}`
+                                          : "—"}
+                                      </StyledTableCell>
+                                      <StyledTableCell align="center">
+                                        <IconButton
+                                          size="small"
+                                          onClick={() => setDeleteTarget({ kind: "lot", material, lotId: lot.id })}
+                                          sx={{ ...actionBtnSx, color: "#ef5350" }}
+                                        >
+                                          <DeleteOutlineIcon sx={{ fontSize: 18 }} />
+                                        </IconButton>
+                                      </StyledTableCell>
+                                    </StyledTableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            )}
+                          </StyledTableCell>
+                        </StyledTableRow>
+                      ) : null}
+                    </Fragment>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
         )
       ) : goods.length === 0 ? (
         <EmptyHint title="هنوز کالای تولیدی نیست" text="فرمول هر کیلو کالا را با گرم مواد بنویسید. هزینه از لات‌های موجود انبار حساب می‌شود." />
       ) : filteredGoods.length === 0 ? (
         <EmptyHint title="نتیجه‌ای پیدا نشد" text="نام دیگری جستجو کنید." />
       ) : (
-        <Box sx={{ display: "grid", gap: 1.5 }}>
-          {filteredGoods.map((good) => (
-            <Card key={good.id} sx={{ backgroundColor: "var(--admin-surface)", border: "1px solid var(--admin-border)", borderRadius: "16px" }}>
-              <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
-                <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 1 }}>
-                  <Box>
-                    <Typography sx={{ fontWeight: 700, fontSize: 18 }}>
-                      {good.name}
-                      <Box component="span" sx={{ color: "var(--admin-text-muted)", fontWeight: 600, fontSize: 15, mr: 0.75 }}>
-                        {" "}
-                        — {good.id}
+          <TableContainer component={Paper} sx={tableWrapSx}>
+            <Table size="small" aria-label="کالای تولیدی">
+              <TableHead>
+                <TableRow>
+                  <StyledTableCell align="center">ردیف</StyledTableCell>
+                  <StyledTableCell align="center">نام</StyledTableCell>
+                  <StyledTableCell align="center">قیمت تمام‌شده</StyledTableCell>
+                  <StyledTableCell align="center">مواد</StyledTableCell>
+                  <StyledTableCell align="center">عملیات</StyledTableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {filteredGoods.map((good, index) => (
+                  <StyledTableRow key={good.id}>
+                    <StyledTableCell align="center">{index + 1}</StyledTableCell>
+                    <StyledTableCell align="center">
+                      <Typography sx={{ fontWeight: 600 }}>{good.name}</Typography>
+                    </StyledTableCell>
+                    <StyledTableCell align="center" sx={{ color: "var(--admin-accent)", fontWeight: 700 }}>
+                      {formatToman(good.cost_per_kg || 0)}
+                    </StyledTableCell>
+                    <StyledTableCell align="center" sx={{ color: good.stock_sufficient === false ? "#ef5350" : "var(--admin-text-muted)" }}>
+                      {good.stock_sufficient === false
+                        ? "کمبود مواد"
+                        : (good.ingredient_costs || []).length > 0
+                          ? `${(good.ingredient_costs || []).length} ماده`
+                          : "—"}
+                    </StyledTableCell>
+                    <StyledTableCell align="center">
+                      <Box sx={{ display: "flex", gap: 0.25, justifyContent: "center" }}>
+                        <Tooltip title="ثبت تولید">
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              setProduceGood(good);
+                              setProduceKg("1");
+                              setProducePreview(null);
+                            }}
+                            sx={{ ...actionBtnSx, color: "var(--admin-accent)" }}
+                          >
+                            <PrecisionManufacturingIcon sx={{ fontSize: 18 }} />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="ویرایش">
+                          <IconButton size="small" onClick={() => openEditGood(good)} sx={{ ...actionBtnSx, color: "var(--admin-accent)" }}>
+                            <EditIcon sx={{ fontSize: 18 }} />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="حذف">
+                          <IconButton size="small" onClick={() => setDeleteTarget({ kind: "good", item: good })} sx={{ ...actionBtnSx, color: "#ef5350" }}>
+                            <DeleteOutlineIcon sx={{ fontSize: 18 }} />
+                          </IconButton>
+                        </Tooltip>
                       </Box>
-                    </Typography>
-                    <Typography sx={{ color: "var(--admin-accent)", fontWeight: 800, fontSize: 16, mt: 0.5 }}>
-                      قیمت تمام‌شده هر واحد: {formatToman(good.cost_per_kg || 0)} تومان
-                    </Typography>
-                    {good.stock_sufficient === false && (
-                      <Typography sx={{ color: "#ef5350", fontSize: 13, mt: 0.5 }}>موجودی مواد برای تولید کافی نیست</Typography>
-                    )}
-                  </Box>
-                  <Box>
-                    <IconButton
-                      onClick={() => {
-                        setProduceGood(good);
-                        setProduceKg("1");
-                        setProducePreview(null);
-                      }}
-                      sx={{ color: "var(--admin-accent)" }}
-                      title="ثبت تولید"
-                    >
-                      <PrecisionManufacturingIcon />
-                    </IconButton>
-                    <IconButton onClick={() => openEditGood(good)} sx={{ color: "var(--admin-accent)" }}>
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton onClick={() => setDeleteTarget({ kind: "good", item: good })} sx={{ color: "#ef5350" }}>
-                      <DeleteOutlineIcon />
-                    </IconButton>
-                  </Box>
-                </Box>
-                <Box sx={{ mt: 1.25, display: "grid", gap: 0.75 }}>
-                  {(good.ingredient_costs || []).map((line) => (
-                    <Typography key={`${good.id}-${line.raw_material_id}`} sx={{ color: "var(--admin-text-muted)", fontSize: 13 }}>
-                      {formatKg(line.grams_per_kg)} گرم {line.name}
-                      {line.cost != null ? ` → ${formatToman(line.cost)} تومان` : ""}
-                      {line.shortage_kg ? ` · کمبود ${formatKg(line.shortage_kg)} کیلو` : ""}
-                    </Typography>
-                  ))}
-                </Box>
-              </CardContent>
-            </Card>
-          ))}
-        </Box>
+                    </StyledTableCell>
+                  </StyledTableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
       )}
 
-      <Dialog open={materialDialogOpen} onClose={() => setMaterialDialogOpen(false)} fullWidth maxWidth="xs">
-        <DialogTitle>{editingMaterial ? "ویرایش ماده اولیه" : "ماده اولیه جدید"}</DialogTitle>
-        <DialogContent sx={{ display: "grid", gap: 2, pt: "16px !important" }}>
-          <TextField autoFocus label="نام" value={materialName} onChange={(e) => setMaterialName(e.target.value)} sx={fieldSx} />
+      <Dialog open={materialDialogOpen} onClose={() => setMaterialDialogOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle sx={{ fontSize: 15, fontWeight: 700, py: 1, direction: "rtl" }}>
+          {editingMaterial ? "ویرایش ماده اولیه" : "ماده اولیه جدید"}
+        </DialogTitle>
+        <DialogContent sx={dialogGridSx}>
+          <TextField
+            autoFocus
+            size="small"
+            label="نام"
+            value={materialName}
+            onChange={(e) => setMaterialName(e.target.value)}
+            sx={{ ...fieldSx, gridColumn: editingMaterial ? "1 / -1" : undefined }}
+          />
           {!editingMaterial && (
             <>
-              <Typography sx={{ fontSize: 13, color: "var(--admin-text-muted)" }}>خرید اول انبار اختیاری است.</Typography>
-              <TextField label="مقدار (کیلو)" value={lotQty} onChange={(e) => setLotQty(e.target.value)} inputMode="decimal" sx={fieldSx} />
-              <TextField label="قیمت هر کیلو (تومان)" value={lotPrice} onChange={(e) => setLotPrice(formatAmountInput(e.target.value))} inputMode="numeric" sx={fieldSx} />
+              <TextField
+                size="small"
+                label="مقدار (کیلو)"
+                value={lotQty}
+                onChange={(e) => setLotQty(e.target.value)}
+                inputMode="decimal"
+                sx={fieldSx}
+              />
+              <TextField
+                size="small"
+                label="قیمت هر کیلو"
+                value={lotPrice}
+                onChange={(e) => setLotPrice(formatAmountInput(e.target.value))}
+                inputMode="numeric"
+                sx={fieldSx}
+              />
+              <Typography sx={{ gridColumn: "1 / -1", fontSize: 11, color: "var(--admin-text-muted)", textAlign: "right" }}>
+                خرید اول انبار اختیاری است.
+              </Typography>
+              <Box sx={{ gridColumn: "1 / -1" }}>
+                <InvoiceLinkFields
+                  value={invoiceLink}
+                  onChange={setInvoiceLink}
+                  lotTotal={parseAmount(lotQty) * parseAmount(lotPrice)}
+                />
+              </Box>
             </>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setMaterialDialogOpen(false)}>انصراف</Button>
-          <Button disabled={saving} onClick={() => void saveMaterial()} variant="contained" sx={{ backgroundColor: "var(--admin-accent)" }}>
+        <DialogActions sx={{ px: 1.5, py: 1 }}>
+          <Button size="small" onClick={() => setMaterialDialogOpen(false)}>انصراف</Button>
+          <Button disabled={saving} onClick={() => void saveMaterial()} variant="contained" size="small" sx={{ backgroundColor: "var(--admin-accent)" }}>
             ذخیره
           </Button>
         </DialogActions>
       </Dialog>
 
-      <Dialog open={!!lotDialogMaterial} onClose={() => setLotDialogMaterial(null)} fullWidth maxWidth="xs">
-        <DialogTitle>خرید جدید {lotDialogMaterial?.name || ""}</DialogTitle>
-        <DialogContent sx={{ display: "grid", gap: 2, pt: "16px !important" }}>
-          <TextField label="مقدار (کیلو)" value={lotQty} onChange={(e) => setLotQty(e.target.value)} inputMode="decimal" sx={fieldSx} />
-          <TextField label="قیمت هر کیلو (تومان)" value={lotPrice} onChange={(e) => setLotPrice(formatAmountInput(e.target.value))} inputMode="numeric" sx={fieldSx} />
+      <Dialog open={!!lotDialogMaterial} onClose={() => setLotDialogMaterial(null)} fullWidth maxWidth="sm">
+        <DialogTitle sx={{ fontSize: 15, fontWeight: 700, py: 1, direction: "rtl" }}>
+          خرید جدید {lotDialogMaterial?.name || ""}
+        </DialogTitle>
+        <DialogContent sx={dialogGridSx}>
+          <TextField size="small" label="مقدار (کیلو)" value={lotQty} onChange={(e) => setLotQty(e.target.value)} inputMode="decimal" sx={fieldSx} />
+          <TextField
+            size="small"
+            label="قیمت هر کیلو"
+            value={lotPrice}
+            onChange={(e) => setLotPrice(formatAmountInput(e.target.value))}
+            inputMode="numeric"
+            sx={fieldSx}
+          />
+          <Box sx={{ gridColumn: "1 / -1" }}>
+            <InvoiceLinkFields
+              value={invoiceLink}
+              onChange={setInvoiceLink}
+              lotTotal={parseAmount(lotQty) * parseAmount(lotPrice)}
+            />
+          </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setLotDialogMaterial(null)}>انصراف</Button>
-          <Button disabled={saving} onClick={() => void saveLot()} variant="contained" sx={{ backgroundColor: "var(--admin-accent)" }}>
+        <DialogActions sx={{ px: 1.5, py: 1 }}>
+          <Button size="small" onClick={() => setLotDialogMaterial(null)}>انصراف</Button>
+          <Button disabled={saving} onClick={() => void saveLot()} variant="contained" size="small" sx={{ backgroundColor: "var(--admin-accent)" }}>
             ثبت خرید
           </Button>
         </DialogActions>
@@ -1100,11 +1272,11 @@ export default function ProductionCostingPage() {
             <ToggleButton value="percent">درصد</ToggleButton>
             <ToggleButton value="manual">دستی</ToggleButton>
           </ToggleButtonGroup>
-          <Typography sx={{ fontSize: 13, color: "var(--admin-text-muted)" }}>
+          {/* <Typography sx={{ fontSize: 13, color: "var(--admin-text-muted)" }}>
             {salePriceMode === "percent"
               ? "۵۰ یعنی فروش ۵۰٪ بالاتر از قیمت تمام‌شده. همین درصد ذخیره می‌شود و بعد از تولید بعدی، اگر هزینه مواد عوض شود، فروش به‌روز می‌شود."
               : "عدد فروش را خودتان می‌گذارید و با تغییر قیمت تمام‌شده عوض نمی‌شود."}
-          </Typography>
+          </Typography> */}
           <TextField
             label="درصد سود"
             value={salePercent}
@@ -1135,13 +1307,13 @@ export default function ProductionCostingPage() {
             }
             label="رند به نزدیک‌ترین هزار تومان"
           />
-          <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)", mt: -1 }}>
+          {/* <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)", mt: -1 }}>
             {roundSalePrice
               ? salePriceMode === "percent"
                 ? "بعد از هر تولید، اول درصد حساب می‌شود، بعد قیمت به نزدیک‌ترین هزار گرد می‌شود (۳۲۵۶۰ → ۳۳۰۰۰)."
                 : "همین حالا رند می‌شود و با تولید بعدی عوض نمی‌شود."
               : "قیمت دقیق همان عدد محاسبه‌شده می‌ماند."}
-          </Typography>
+          </Typography> */}
           {saleRawPrice > 0 && (
             <>
               {roundSalePrice && saleFinalPrice !== saleRawPrice && (

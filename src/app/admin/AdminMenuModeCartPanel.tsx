@@ -389,7 +389,6 @@ export default function AdminMenuModeCartPanel({
             sx={tinyFieldSx}
             inputMode="numeric"
           />
-          />
         )}
 
         {showPaymentTypeSelector && (
@@ -597,31 +596,37 @@ export default function AdminMenuModeCartPanel({
 
         <Divider sx={{ my: 0.25 }} />
 
-        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-          <Typography sx={{ fontSize: "9px", color: "var(--admin-text-secondary)" }}>جمع</Typography>
-          <Typography sx={{ fontSize: "9px", fontWeight: 700 }}>{formatNumber(total)}</Typography>
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 0.5 }}>
+          <Typography sx={{ fontSize: "12px", color: "var(--admin-text-secondary)" }}>جمع</Typography>
+          <Typography sx={{ fontSize: "14px", fontWeight: 700, lineHeight: 1.2 }}>{formatNumber(total)}</Typography>
         </Box>
         {useCreditAmount > 0 && (
-          <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-            <Typography sx={{ fontSize: "8px", color: "var(--admin-text-muted)" }}>اعتبار</Typography>
-            <Typography sx={{ fontSize: "8px" }}>-{formatNumber(useCreditAmount)}</Typography>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 0.5 }}>
+            <Typography sx={{ fontSize: "12px", color: "var(--admin-text-muted)" }}>اعتبار</Typography>
+            <Typography sx={{ fontSize: "13px", fontWeight: 700, color: "#e57373", lineHeight: 1.2 }}>
+              -{formatNumber(useCreditAmount)}
+            </Typography>
           </Box>
         )}
         {backPrice > 0 && (
-          <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-            <Typography sx={{ fontSize: "8px", color: "var(--admin-text-muted)" }}>برگشتی</Typography>
-            <Typography sx={{ fontSize: "8px" }}>-{formatNumber(backPrice)}</Typography>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 0.5 }}>
+            <Typography sx={{ fontSize: "12px", color: "var(--admin-text-muted)" }}>برگشتی</Typography>
+            <Typography sx={{ fontSize: "13px", fontWeight: 700, color: "#e57373", lineHeight: 1.2 }}>
+              -{formatNumber(backPrice)}
+            </Typography>
           </Box>
         )}
         {discounttype > 0 && (
-          <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-            <Typography sx={{ fontSize: "8px", color: "var(--admin-text-muted)" }}>تخفیف</Typography>
-            <Typography sx={{ fontSize: "8px" }}>-{formatNumber(discounttype)}</Typography>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 0.5 }}>
+            <Typography sx={{ fontSize: "12px", color: "var(--admin-text-muted)" }}>تخفیف</Typography>
+            <Typography sx={{ fontSize: "13px", fontWeight: 700, lineHeight: 1.2 }}>
+              -{formatNumber(discounttype)}
+            </Typography>
           </Box>
         )}
-        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-          <Typography sx={{ fontSize: "9px", fontWeight: 700 }}>نهایی</Typography>
-          <Typography sx={{ fontSize: "10px", fontWeight: 800, color: "var(--admin-accent)" }}>
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 0.5 }}>
+          <Typography sx={{ fontSize: "13px", fontWeight: 800 }}>نهایی</Typography>
+          <Typography sx={{ fontSize: "18px", fontWeight: 800, color: "var(--admin-accent)", lineHeight: 1.15 }}>
             {formatNumber(
               installmentPaymentEnabled && paymentType === "installment" && payableNow > 0
                 ? payableNow

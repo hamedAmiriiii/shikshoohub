@@ -11,49 +11,47 @@ import BottomSheet from '@/app/coponent/BottomSheet';
 import ListData from './List';
 import ListPurches from './ListPurches';
 import { useRouter, usePathname } from 'next/navigation';
+import { useShopPermissionGate } from "@/app/lib/shopPermissions";
+
+const BOTTOM_NAV_ITEMS = [
+  { href: "/admin/product/create", label: "ثبت کالا", permission: "products" as const, tour: "nav-register-product" },
+  { href: "/admin/purchas", label: "فروش", permission: "pos" as const, tour: "nav-sales" },
+  { href: "/admin/product", label: "کالاها", permission: "products" as const, tour: "nav-products" },
+  { href: "/admin", label: "خانه", permission: ["pos", "dashboard"] as const, tour: "nav-home" },
+];
 
 export default function SimpleBottomNavigationAtelier() {
   const router = useRouter();
   const pathname = usePathname();
-  
+  const { can } = useShopPermissionGate();
+  const items = BOTTOM_NAV_ITEMS.filter((item) => can(item.permission));
+
   function getNavigationValue(path: string) {
-    if (path.includes('/admin/product/create')) return 0; // ثبت کالا
-    if (path.includes('/admin/purchas')) return 1; // خریدها
-    if (path.includes('/admin/product')) return 2; // کالاها
-    if (path === '/admin' || path.includes('/admin/') && !path.includes('/admin/product') && !path.includes('/admin/purchas')) return 3; // خانه
-    return 3; // Default to 'home'
+    const exactHome = items.findIndex((item) => item.href === "/admin");
+    const match = items.findIndex((item) =>
+      item.href === "/admin"
+        ? path === "/admin"
+        : path === item.href || path.startsWith(`${item.href}/`),
+    );
+    if (match >= 0) return match;
+    return exactHome >= 0 ? exactHome : 0;
   }
 
   const [value, setValue] = React.useState(() => getNavigationValue(pathname));
   const [productsSheetOpen, setProductsSheetOpen] = React.useState(false);
   const [purchasesSheetOpen, setPurchasesSheetOpen] = React.useState(false);
 
-  // Update value when pathname changes
   React.useEffect(() => {
     setValue(getNavigationValue(pathname));
-  }, [pathname]);
+  }, [pathname, items.length]);
 
-  const handleNavChange = (event: any, newValue: number) => {
+  const handleNavChange = (_event: unknown, newValue: number) => {
     setValue(newValue);
-    
-    // Open the appropriate bottom sheet based on the selected navigation item
-    if (newValue === 0) {
-      router.push("/admin/product/create")
-
-     
-    } else if (newValue === 1) {
-      // setPurchasesSheetOpen(true);
-      // setProductsSheetOpen(false);
-      router.push("/admin/purchas")
-
-      }else if (newValue === 2) {
-        // setProductsSheetOpen(true);
-        // setPurchasesSheetOpen(false);
-        router.push("/admin/product")
-    }else if (newValue === 3) {
-      router.push("/admin")
-    }
+    const target = items[newValue];
+    if (target) router.push(target.href);
   };
+
+  if (items.length === 0) return null;
 
   return (
     <Box sx={{ display: { xs: "block", md: "none" }, width: 500, height: "65" }}>
@@ -64,26 +62,14 @@ export default function SimpleBottomNavigationAtelier() {
           value={value}
           onChange={handleNavChange}
         >
+          {items.map((item) => (
           <BottomNavigationAction
-            data-admin-tour="nav-register-product"
-            label={"ثبت کالا"}
-            icon={<AssignmentIcon />}
+            key={item.href}
+            data-admin-tour={item.tour}
+            label={item.label}
+            icon={item.href === "/admin" ? <HomeIcon /> : <AssignmentIcon />}
           />
-          <BottomNavigationAction
-            data-admin-tour="nav-sales"
-            label={"فروش"}
-            icon={<AssignmentIcon />}
-          />
-          <BottomNavigationAction
-            data-admin-tour="nav-products"
-            label={"کالاها"}
-            icon={<AssignmentIcon />}
-          />
-          <BottomNavigationAction
-            data-admin-tour="nav-home"
-            label={"خانه"}
-            icon={<HomeIcon />}
-          />
+          ))}
         </BottomNavigation>
       </Paper>
 

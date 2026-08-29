@@ -5,6 +5,9 @@ export type RawMaterialLot = {
   price_per_kg: number;
   purchased_at?: string | null;
   note?: string | null;
+  invoice_id?: number | null;
+  invoice_item_id?: number | null;
+  invoice_link?: "whole" | "item" | string | null;
 };
 
 export type RawMaterial = {

@@ -154,6 +154,7 @@ interface SearchBoxItem {
 interface DesktopColumn {
   label: string;
   field: string | ((item: any) => ReactNode);
+  width?: string | number;
 }
 
 interface Props {
@@ -172,6 +173,8 @@ interface Props {
   Price?: any;
   showTotal: Boolean | undefined;
   desktopColumns?: DesktopColumn[];
+  /** جدول دسکتاپ فشرده: سلول‌ها و ستون عملیات باریک‌تر */
+  compactDesktop?: boolean;
   enablePagination?: boolean; // برای فعال کردن pagination بدون desktopColumns
   customActions?: ReactNode; // برای نمایش دکمه‌های اضافی کنار جستجو
   onEditItem?: (item: any) => void; // برای ویرایش آیتم در حالت دسکتاپ
@@ -181,6 +184,7 @@ interface Props {
   onDeleteItem?: (item: any) => void;
   /** ستون عملیات سفارشی دسکتاپ (مثلاً مدیریت فروشگاه‌ها) */
   renderRowActions?: (item: any) => ReactNode;
+  onRowClick?: (item: any) => void;
   /** مخفی کردن دکمه چاپ برچسب در ستون عملیات */
   hidePrintAction?: boolean;
 }
@@ -287,6 +291,7 @@ const List: React.FC<Props> = ({
   rows = 10,
   showTotal = true,
   desktopColumns,
+  compactDesktop = false,
   enablePagination = false,
   customActions,
   onEditItem,
@@ -295,16 +300,22 @@ const List: React.FC<Props> = ({
   onPayInstallmentItem,
   onDeleteItem,
   renderRowActions,
+  onRowClick,
   hidePrintAction = false,
 }) => {
+  const compactActionWidth = compactDesktop ? "96px" : "280px";
+  const compactCellPad = compactDesktop ? "7px 10px" : "16px 24px";
+  const compactFont = compactDesktop ? "12px" : "16px";
+
   const actionsHeaderCellSx = {
     fontWeight: "600",
     backgroundColor: "var(--admin-surface-alt)",
     color: "var(--admin-text)",
-    fontSize: "16px",
-    padding: "16px 12px",
-    minWidth: "280px",
-    width: "280px",
+    fontSize: compactFont,
+    padding: compactDesktop ? "7px 8px" : "16px 12px",
+    minWidth: compactActionWidth,
+    width: compactActionWidth,
+    whiteSpace: "nowrap" as const,
     position: "sticky" as const,
     right: 0,
     zIndex: 2,
@@ -313,10 +324,10 @@ const List: React.FC<Props> = ({
 
   const actionsBodyCellSx = {
     color: "var(--admin-text)",
-    fontSize: 16,
-    padding: "12px",
-    minWidth: "280px",
-    width: "280px",
+    fontSize: compactDesktop ? 12 : 16,
+    padding: compactDesktop ? "6px 8px" : "12px",
+    minWidth: compactActionWidth,
+    width: compactActionWidth,
     position: "sticky" as const,
     right: 0,
     zIndex: 1,
@@ -328,6 +339,16 @@ const List: React.FC<Props> = ({
     ".MuiTableRow-root:hover &": {
       backgroundColor: "var(--admin-menu-hover)",
     },
+  };
+
+  const columnWidthSx = (column: DesktopColumn, idx: number) => {
+    if (column.width) {
+      return { minWidth: column.width, width: column.width };
+    }
+    if (!compactDesktop && idx === 0) {
+      return { minWidth: "300px", width: "300px" };
+    }
+    return {};
   };
 
   const { ref, inView } = useInView();
@@ -672,7 +693,7 @@ const List: React.FC<Props> = ({
                         overflowX: 'auto',
                       }}
                     >
-                      <Table sx={{ minWidth: 650, direction: "rtl" }} aria-label="simple table">
+                      <Table sx={{ minWidth: compactDesktop ? 560 : 650, direction: "rtl" }} aria-label="simple table">
                         <TableHead>
                           <TableRow>
                             {(CartComponent || renderRowActions) && (
@@ -688,9 +709,10 @@ const List: React.FC<Props> = ({
                                   fontWeight: "600",
                                   backgroundColor: "var(--admin-surface-alt)",
                                   color: "var(--admin-text)",
-                                  fontSize: "16px",
-                                  padding: "16px 24px",
-                                  ...(idx === 0 ? { minWidth: '300px', width: '300px' } : {}),
+                                  fontSize: compactFont,
+                                  padding: compactCellPad,
+                                  whiteSpace: "nowrap",
+                                  ...columnWidthSx(column, idx),
                                 }}
                               >
                                 {column.label}
@@ -702,8 +724,10 @@ const List: React.FC<Props> = ({
                           {currentData.map((item: any, index: number) => (
                             <TableRow
                               key={`desktop-${desktopPage}-${index}`}
+                              onClick={onRowClick ? () => onRowClick(item) : undefined}
                               sx={{ 
                                 backgroundColor: "var(--admin-surface)",
+                                cursor: onRowClick ? "pointer" : "default",
                                 '&:nth-of-type(even)': {
                                   backgroundColor: "var(--admin-surface-alt)",
                                 },
@@ -714,7 +738,11 @@ const List: React.FC<Props> = ({
                               }}
                             >
                               {(CartComponent || renderRowActions) && (
-                                <TableCell align="center" sx={actionsBodyCellSx}>
+                                <TableCell
+                                  align="center"
+                                  sx={actionsBodyCellSx}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
                                   {renderRowActions ? (
                                     renderRowActions(item)
                                   ) : (
@@ -739,9 +767,10 @@ const List: React.FC<Props> = ({
                                   align="right"
                                   sx={{
                                     color: "var(--admin-text)",
-                                    fontSize: 16,
-                                    padding: "16px 24px",
-                                    ...(colIdx === 0 ? { minWidth: '300px', width: '300px' } : {}),
+                                    fontSize: compactDesktop ? 12 : 16,
+                                    padding: compactCellPad,
+                                    whiteSpace: compactDesktop ? "nowrap" : undefined,
+                                    ...columnWidthSx(column, colIdx),
                                   }}
                                 >
                                   {getFieldValue(item, column.field)}

@@ -8,6 +8,8 @@ import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import CardGiftcardIcon from '@mui/icons-material/CardGiftcard';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
+import Link from "next/link";
+import { formatBeneficiaryAmount, parseAsBeneficiary } from "@/app/lib/beneficiaries";
 
 const formatNumber = (num: number | string) => {
   const numValue = typeof num === 'string' ? parseFloat(num.replace(/,/g, '')) : num;
@@ -37,6 +39,7 @@ const formatDate = (dateString: string) => {
 
 export default function CustomerCard({ props: gridProps }: { props: { data?: Record<string, unknown> } }) {
   const customer = gridProps?.data;
+  const asBeneficiary = parseAsBeneficiary(customer);
   
   return (
     <Card
@@ -66,12 +69,18 @@ export default function CustomerCard({ props: gridProps }: { props: { data?: Rec
               justifyContent: "center",
             }}
           >
-            <PhoneIcon sx={{ color: "var(--admin-accent)", fontSize: "24px" }} />
+            <PersonIcon sx={{ color: "var(--admin-accent)", fontSize: "24px" }} />
           </Box>
           <Box sx={{ flex: 1 }}>
             <Typography sx={{ color: "var(--admin-text)", fontSize: "18px", fontWeight: "600" }}>
-              {customer?.phone || "بدون شماره"}
+              {(customer?.name as string) || (customer?.phone as string) || "بدون شماره"}
             </Typography>
+            {customer?.name ? (
+              <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
+                <PhoneIcon sx={{ fontSize: "16px", color: "var(--admin-accent)" }} />
+                {(customer?.phone as string) || "بدون شماره"}
+              </Typography>
+            ) : null}
           </Box>
         </Box>
 
@@ -176,6 +185,33 @@ export default function CustomerCard({ props: gridProps }: { props: { data?: Rec
             </Typography>
           </Box>
         </Box>
+
+        {asBeneficiary ? (
+          <Box
+            sx={{
+              mt: 1,
+              pt: 1.5,
+              borderTop: "1px solid var(--admin-divider)",
+            }}
+          >
+            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "12px", mb: 0.75 }}>
+              خرید از این طرف‌حساب (ذینفع)
+            </Typography>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: "13px" }}>
+              کل خرید {formatBeneficiaryAmount(asBeneficiary.purchased_total)} — بدهی{" "}
+              {formatBeneficiaryAmount(asBeneficiary.unpaid_total)} تومان
+            </Typography>
+            {asBeneficiary.id ? (
+              <Typography
+                component={Link}
+                href={`/admin/beneficiaries/${asBeneficiary.id}`}
+                sx={{ color: "var(--admin-accent)", fontSize: "12px", display: "inline-block", mt: 0.5 }}
+              >
+                مشاهده جزئیات ذینفع
+              </Typography>
+            ) : null}
+          </Box>
+        ) : null}
       </CardContent>
     </Card>
   );

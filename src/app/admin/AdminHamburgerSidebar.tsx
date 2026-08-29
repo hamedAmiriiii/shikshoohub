@@ -45,10 +45,12 @@ import Inventory2Icon from "@mui/icons-material/Inventory2";
 import FileUploadIcon from "@mui/icons-material/FileUpload";
 import KitchenIcon from "@mui/icons-material/Kitchen";
 import DescriptionIcon from "@mui/icons-material/Description";
+import GroupsIcon from "@mui/icons-material/Groups";
 import {
   ADMIN_POS_SETTINGS_CHANGED_EVENT,
   readAdminPosSettings,
 } from "@/app/lib/adminPosSettings";
+import { useShopPermissionGate, type ShopPermissionKey } from "@/app/lib/shopPermissions";
 
 export const ADMIN_SIDEBAR_WIDTH = 200;
 
@@ -57,6 +59,7 @@ type NavLeaf = {
   label: string;
   href: string;
   icon: ReactNode;
+  permission?: ShopPermissionKey | ShopPermissionKey[];
 };
 
 type NavGroup = {
@@ -71,6 +74,7 @@ type NavLink = {
   label: string;
   href: string;
   icon: ReactNode;
+  permission?: ShopPermissionKey | ShopPermissionKey[];
 };
 
 function isPathActive(pathname: string | null, href: string): boolean {
@@ -107,6 +111,7 @@ export default function AdminHamburgerSidebar({
   accessBanner,
 }: AdminHamburgerSidebarProps) {
   const { count: pendingTableOrders } = useTableOrdersPending();
+  const { can } = useShopPermissionGate();
   const [restaurantCafeEnabled, setRestaurantCafeEnabled] = useState(false);
   const [producedGoodsMenuEnabled, setProducedGoodsMenuEnabled] = useState(false);
 
@@ -122,83 +127,101 @@ export default function AdminHamburgerSidebar({
   }, []);
   const financialChildren: NavLeaf[] = useMemo(
     () => [
-      { id: "reports", label: "گزارشات", href: "/admin/reports", icon: <AssessmentIcon /> },
-      { id: "inventory", label: "موجودی انبار", href: "/admin/inventory", icon: <InventoryIcon /> },
-      { id: "expenses", label: "لیست هزینه‌ها", href: "/admin/expenses", icon: <AttachMoneyIcon /> },
+      { id: "reports", label: "گزارش فروش", href: "/admin/reports", icon: <AssessmentIcon />, permission: "reports" },
+      { id: "inventory", label: "موجودی انبار", href: "/admin/inventory", icon: <InventoryIcon />, permission: "products" },
+      { id: "expenses", label: "لیست هزینه‌ها", href: "/admin/expenses", icon: <AttachMoneyIcon />, permission: "expenses" },
+      {
+        id: "beneficiaries",
+        label: "ذینفعان خرید",
+        href: "/admin/beneficiaries",
+        icon: <GroupsIcon />,
+        permission: ["invoices", "expenses"],
+      },
       {
         id: "manual-trades",
         label: "ثبت سند",
         href: "/admin/manual-trades",
         icon: <DescriptionIcon />,
+        permission: "manual_trades",
       },
       {
         id: "expenses-stats",
         label: "گزارش هزینه‌ها",
         href: "/admin/expenses-statistics",
         icon: <ReceiptIcon />,
+        permission: "expenses",
       },
       {
         id: "cheques",
         label: "چک",
         href: "/admin/cheques",
         icon: <ReceiptLongIcon />,
+        permission: "cheques",
       },
-      { id: "installments", label: "لیست اقساط", href: "/admin/installments", icon: <CreditCardIcon /> },
+      { id: "installments", label: "لیست اقساط", href: "/admin/installments", icon: <CreditCardIcon />, permission: "installments" },
       {
         id: "installment-credits",
         label: "اعتبار اقساطی",
         href: "/admin/installment-credits",
         icon: <CreditCardIcon />,
+        permission: "installments",
       },
       {
         id: "purchase-debts",
         label: "بدهکاران (نسیه)",
         href: "/admin/purchase-debts",
         icon: <AccountBalanceWalletIcon />,
+        permission: "debts",
       },
       {
         id: "returned",
         label: "برگشت خرید",
         href: "/admin/returned-products",
         icon: <UndoIcon />,
+        permission: "returns",
       },
       {
         id: "shop-accounts",
         label: "حساب‌های فروشگاه",
         href: "/admin/shop-accounts",
         icon: <PaymentsIcon />,
+        permission: "shop_accounts",
       },
       {
         id: "daily",
         label: "تطبیق روزانه",
         href: "/admin/daily-reconciliation",
         icon: <AccountBalanceIcon />,
+        permission: "daily_reconciliations",
       },
       {
         id: "petty-cash",
         label: "تنخواه",
         href: "/admin/petty-cash",
         icon: <AccountBalanceWalletIcon />,
+        permission: "shop_accounts",
       },
-      { id: "profit", label: "سود و ضرر", href: "/admin/profit-loss", icon: <TrendingUpIcon /> },
+      { id: "profit", label: "سود و ضرر", href: "/admin/profit-loss", icon: <TrendingUpIcon />, permission: "reports" },
     ],
     [],
   );
 
   const payrollChildren: NavLeaf[] = useMemo(
     () => [
-      { id: "payroll", label: "لیست حقوق", href: "/admin/payroll", icon: <BadgeIcon /> },
+      { id: "payroll", label: "لیست حقوق", href: "/admin/payroll", icon: <BadgeIcon />, permission: "employees" },
       {
         id: "payroll-employees",
         label: "کارمندها",
         href: "/admin/payroll/employees",
         icon: <PeopleIcon />,
+        permission: "employees",
       },
       {
         id: "payroll-settings",
         label: "تنظیمات حقوق",
         href: "/admin/payroll/settings",
         icon: <SettingsIcon />,
+        permission: "employees",
       },
     ],
     [],
@@ -212,26 +235,30 @@ export default function AdminHamburgerSidebar({
         label: "محصولات پرفروش",
         href: "/admin/best-selling",
         icon: <TrendingUpIcon />,
+        permission: "products",
       },
       {
         id: "manufacturers",
         label: "تولیدکنندگان",
         href: "/admin/manufacturers",
         icon: <FactoryIcon />,
+        permission: "manufacturers",
       },
-      { id: "invoices", label: "فاکتورها", href: "/admin/invoices", icon: <ReceiptIcon /> },
-      { id: "categories", label: "دسته‌بندی", href: "/admin/categories", icon: <CategoryIcon /> },
+      { id: "invoices", label: "فاکتورها", href: "/admin/invoices", icon: <ReceiptIcon />, permission: "invoices" },
+      { id: "categories", label: "دسته‌بندی", href: "/admin/categories", icon: <CategoryIcon />, permission: "categories" },
       {
         id: "bulk-discount",
         label: "تخفیف دسته جمعی",
         href: "/admin/bulk-discount",
         icon: <LocalOfferIcon />,
+        permission: "products",
       },
       {
         id: "import-products",
         label: "ایمپورت  اکسل",
         href: "/admin/product/import",
         icon: <FileUploadIcon />,
+        permission: "products",
       },
       ];
       if (producedGoodsMenuEnabled) {
@@ -240,6 +267,7 @@ export default function AdminHamburgerSidebar({
           label: "کالاهای تولیدی",
           href: "/admin/production",
           icon: <KitchenIcon />,
+          permission: ["produced_goods", "raw_materials"],
         });
       }
       return items;
@@ -249,24 +277,27 @@ export default function AdminHamburgerSidebar({
 
   const smsChildren: NavLeaf[] = useMemo(
     () => [
-      { id: "referral", label: "پنل معرفی", href: "/admin/referral", icon: <ShareIcon /> },
+      { id: "referral", label: "پنل معرفی", href: "/admin/referral", icon: <ShareIcon />, permission: "referral" },
       {
         id: "sms-logs",
         label: "پیامک‌های فروشگاه",
         href: "/admin/shop-sms-logs",
         icon: <SmsIcon />,
+        permission: "shop_sms",
       },
       {
         id: "broadcast",
         label: "ارسال پیامک",
         href: "/admin/broadcast-sms",
         icon: <SmsIcon />,
+        permission: "shop_sms",
       },
       {
         id: "sms-packages",
         label: "خرید بسته پیامک",
         href: "/admin/sms-packages",
         icon: <ShoppingCartCheckoutIcon />,
+        permission: "shop_sms",
       },
     ],
     [],
@@ -298,75 +329,83 @@ export default function AdminHamburgerSidebar({
 
   const topLinks: NavLink[] = useMemo(
     () => [
-      { id: "sale", label: "فروش", href: "/admin", icon: <HomeIcon /> },
+      { id: "sale", label: "فروش", href: "/admin", icon: <HomeIcon />, permission: ["pos", "dashboard"] },
       {
         id: "create-product",
         label: "ثبت کالا",
         href: "/admin/product/create",
         icon: <AddBoxIcon />,
+        permission: "products",
       },
       {
         id: "sales-list",
         label: "لیست فروش",
         href: "/admin/purchas",
         icon: <ListAltIcon />,
+        permission: "pos",
       },
       {
         id: "products",
         label: "محصولات",
         href: "/admin/product",
         icon: <Inventory2Icon />,
+        permission: "products",
       },
-      { id: "customers", label: "خریداران", href: "/admin/customers", icon: <PeopleIcon /> },
+      { id: "customers", label: "خریداران", href: "/admin/customers", icon: <PeopleIcon />, permission: "customers" },
       {
         id: "orders",
         label: "سفارشات اینترنتی",
         href: "/admin/orders",
         icon: <ShoppingBagIcon />,
+        permission: "online_orders",
       },
       {
         id: "table-orders",
         label: "سفارش حضوری",
         href: "/admin/table-orders",
         icon: <TableRestaurantIcon />,
+        permission: "shop_tables",
       },
       {
         id: "shop-tables",
         label: "میزهای فروشگاه",
         href: "/admin/shop-tables",
         icon: <TableRestaurantIcon />,
+        permission: "shop_tables",
       },
     ],
     [],
   );
 
   const groups: NavGroup[] = useMemo(() => {
+    const filterLeaves = (children: NavLeaf[]) =>
+      children.filter((child) => can(child.permission));
     const base: NavGroup[] = [
       {
         id: "financial",
         label: "مالی",
         icon: <AccountBalanceIcon />,
-        children: financialChildren,
+        children: filterLeaves(financialChildren),
       },
       {
         id: "payroll",
         label: "حقوق دستمزد",
         icon: <PaymentsIcon />,
-        children: payrollChildren,
+        children: filterLeaves(payrollChildren),
       },
       {
         id: "products",
         label: "مدیریت کالا",
         icon: <InventoryIcon />,
-        children: productChildren,
+        children: filterLeaves(productChildren),
       },
       {
         id: "sms",
         label: "پیامک",
         icon: <SmsIcon />,
-        children: smsChildren,
+        children: smsChildren.filter((child) => can(child.permission)),
       },
-    ];
+    ].filter((group) => group.children.length > 0);
     if (isSuperAdmin) {
       base.push({
         id: "admin",
@@ -376,30 +415,17 @@ export default function AdminHamburgerSidebar({
       });
     }
     return base;
-  }, [adminChildren, financialChildren, isSuperAdmin, payrollChildren, productChildren, smsChildren]);
+  }, [adminChildren, can, financialChildren, isSuperAdmin, payrollChildren, productChildren, smsChildren]);
 
-  const initiallyOpen = useMemo(() => {
-    const open: Record<string, boolean> = {};
-    for (const group of groups) {
-      if (groupHasActive(pathname, group.children)) open[group.id] = true;
-    }
-    return open;
-  }, [groups, pathname]);
-
-  const [expanded, setExpanded] = useState<Record<string, boolean>>(initiallyOpen);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
-    setExpanded((prev) => {
-      const next = { ...prev };
-      for (const group of groups) {
-        if (groupHasActive(pathname, group.children)) next[group.id] = true;
-      }
-      return next;
-    });
+    const activeGroup = groups.find((group) => groupHasActive(pathname, group.children));
+    if (activeGroup) setExpandedId(activeGroup.id);
   }, [groups, pathname]);
 
   const toggleGroup = (id: string) => {
-    setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
+    setExpandedId((prev) => (prev === id ? null : id));
   };
 
   const itemSx = (active: boolean) => ({
@@ -500,15 +526,40 @@ export default function AdminHamburgerSidebar({
   );
 
   const renderGroup = (group: NavGroup) => {
-    const open = Boolean(expanded[group.id]);
-    const parentActive = groupHasActive(pathname, group.children);
+    const open = expandedId === group.id;
     return (
-      <Box key={group.id}>
+      <Box
+        key={group.id}
+        sx={{
+          mx: 0.75,
+          mb: 0.25,
+          borderRadius: "8px",
+          overflow: "hidden",
+          bgcolor: open ? "var(--admin-surface-nested)" : "transparent",
+          outline: open ? "1px solid var(--admin-accent-border)" : "none",
+        }}
+      >
         <ListItemButton
           onClick={() => toggleGroup(group.id)}
           sx={{
             ...itemSx(false),
-            bgcolor: parentActive && !open ? "var(--admin-menu-hover)" : "transparent",
+            mx: 0,
+            mb: 0,
+            borderRadius: open ? "8px 8px 0 0" : "8px",
+            bgcolor: open ? "var(--admin-menu-hover)" : "transparent",
+            "&:hover": {
+              bgcolor: "var(--admin-menu-hover)",
+            },
+            "& .MuiListItemText-primary": {
+              fontSize: "12px",
+              fontWeight: open ? 700 : 500,
+              textAlign: "right",
+            },
+            "& .nav-expand-icon": {
+              fontSize: 18,
+              color: open ? "var(--admin-accent)" : "var(--admin-text-muted)",
+              flexShrink: 0,
+            },
           }}
         >
           <ExpandMoreIcon
@@ -602,19 +653,23 @@ export default function AdminHamburgerSidebar({
           },
         }}
       >
-        {renderLeaf(topLinks[0], isPathActive(pathname, topLinks[0].href))}
-        {topLinks.slice(1, 4).map((link) =>
+        {topLinks[0] && can(topLinks[0].permission)
+          ? renderLeaf(topLinks[0], isPathActive(pathname, topLinks[0].href))
+          : null}
+        {topLinks.slice(1, 4).filter((link) => can(link.permission)).map((link) =>
           renderLeaf(link, isPathActive(pathname, link.href)),
         )}
         {groups.filter((g) => g.id === "financial").map(renderGroup)}
         {topLinks.slice(4).filter((link) =>
-          restaurantCafeEnabled || (link.id !== "table-orders" && link.id !== "shop-tables"),
+          can(link.permission) &&
+          (restaurantCafeEnabled || (link.id !== "table-orders" && link.id !== "shop-tables")),
         ).map((link) =>
           renderLeaf(link, isPathActive(pathname, link.href)),
         )}
         {groups.filter((g) => g.id !== "financial").map(renderGroup)}
       </List>
 
+      {can(["settings", "backup"]) ? (
       <Box
         sx={{
           flexShrink: 0,
@@ -638,6 +693,7 @@ export default function AdminHamburgerSidebar({
           </ListItemButton>
         </List>
       </Box>
+      ) : null}
     </Box>
   );
 }

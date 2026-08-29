@@ -1,6 +1,6 @@
 "use client";
 import List from "@/app/coponent/grid/Grid";
-import React, { useState, Suspense } from "react";
+import React, { useMemo, useState, Suspense } from "react";
 
 import {
   Box,
@@ -17,20 +17,87 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import CloseIcon from '@mui/icons-material/Close';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import Purchas from "./purchas";
+import PurchaseSummaryCard from "./PurchaseSummaryCard";
 import DatePicker from "react-multi-date-picker";
 import persian from "react-date-object/calendars/persian";
 import persian_fa from "react-date-object/locales/persian_fa";
 import "react-multi-date-picker/styles/layouts/mobile.css";
+import { paymentTypeLabel } from "@/app/lib/paymentTypes";
 
+const formatNumber = (num: number | string) => {
+    const numValue = typeof num === "string" ? parseFloat(num.replace(/,/g, "")) : num;
+    if (isNaN(numValue)) return "—";
+    return new Intl.NumberFormat("fa-IR").format(numValue);
+};
 
-
+const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return "نامشخص";
+    try {
+        if (dateString.includes("T")) {
+            const date = new Date(dateString);
+            return new Intl.DateTimeFormat("fa-IR", {
+                year: "numeric",
+                month: "2-digit",
+                day: "numeric",
+            }).format(date);
+        }
+        return dateString.split(" ")[0];
+    } catch {
+        return dateString || "نامشخص";
+    }
+};
 
 export default function ListPurches() {
     const [dataFilter, setDataFilter] = useState([]);
     const [dateRange, setDateRange] = useState<any>([]);
     const [filterMode, setFilterMode] = useState<'today' | 'week' | 'month' | 'range' | null>(null);
     const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+    const [detailsItem, setDetailsItem] = useState<any>(null);
+    const [refreshGrid, setRefreshGrid] = useState(false);
+
+    const openDetails = (item: any) => setDetailsItem(item);
+    const closeDetails = () => setDetailsItem(null);
+    const handleRefresh = () => setRefreshGrid((v) => !v);
+
+    const desktopColumns = useMemo(
+        () => [
+            {
+                label: "شماره",
+                field: (item: any) => (item?.id != null ? `#${item.id}` : "—"),
+                width: "72px",
+            },
+            {
+                label: "تاریخ",
+                field: (item: any) => formatDate(item?.created_at || item?.createdAt),
+                width: "110px",
+            },
+            {
+                label: "تلفن",
+                field: (item: any) => item?.phone || "بدون شماره",
+                width: "120px",
+            },
+            {
+                label: "پرداخت",
+                field: (item: any) =>
+                    item?.payment_type_label || paymentTypeLabel(item?.payment_type || "") || "—",
+                width: "90px",
+            },
+            {
+                label: "مبلغ",
+                field: (item: any) =>
+                    item?.total_amount != null ? `${formatNumber(item.total_amount)} تومان` : "—",
+            },
+            {
+                label: "اقلام",
+                field: (item: any) =>
+                    Array.isArray(item?.purchased_products) ? `${item.purchased_products.length}` : "—",
+                width: "64px",
+            },
+        ],
+        [],
+    );
     
     let searchBoxList: any = [
       { fieldName: "phone", fieldOperation: "MATCH", fieldValue: "", nextConditionOperator: "OR" },
@@ -198,11 +265,40 @@ export default function ListPurches() {
               disableFilter={true}
               searchBoxList={searchBoxList}
               filterBoxList={dataFilter}
-              CartComponent={(props: any) => <Purchas props={props} />}
+              CartComponent={(gridProps: any) => (
+                <PurchaseSummaryCard
+                  data={gridProps.data}
+                  onOpenDetails={() => openDetails(gridProps.data)}
+                />
+              )}
               url={buildUrl()}
               filterComponent={<FilterComponent />}
               showTotal={true}
               enablePagination={true}
+              compactDesktop
+              desktopColumns={desktopColumns}
+              refreshGrid={refreshGrid}
+              hidePrintAction
+              onRowClick={openDetails}
+              renderRowActions={(item: any) => (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<VisibilityIcon sx={{ fontSize: 16 }} />}
+                  onClick={() => openDetails(item)}
+                  sx={{
+                    fontSize: 11,
+                    minWidth: 0,
+                    px: 1,
+                    py: 0.25,
+                    color: "var(--admin-accent)",
+                    borderColor: "var(--admin-border)",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  جزئیات
+                </Button>
+              )}
               customActions={
                 <Box sx={{ display: "flex", gap: "8px", alignItems: "center" }}>
                   {hasActiveFilters() && (
@@ -240,6 +336,56 @@ export default function ListPurches() {
               }
             />
           </div>
+
+          <Dialog
+            open={!!detailsItem}
+            onClose={closeDetails}
+            fullWidth
+            maxWidth="md"
+            scroll="paper"
+            PaperProps={{
+              sx: {
+                backgroundColor: "var(--admin-surface)",
+                borderRadius: "16px",
+                direction: "rtl",
+                border: "1px solid var(--admin-border)",
+                maxHeight: "92vh",
+              },
+            }}
+          >
+            <DialogTitle
+              sx={{
+                color: "var(--admin-text)",
+                fontSize: "16px",
+                fontWeight: 600,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                pb: 1,
+              }}
+            >
+              جزئیات فروش {detailsItem?.id != null ? `#${detailsItem.id}` : ""}
+              <IconButton
+                onClick={closeDetails}
+                size="small"
+                sx={{ color: "var(--admin-text-muted)" }}
+                aria-label="بستن"
+              >
+                <CloseIcon />
+              </IconButton>
+            </DialogTitle>
+            <DialogContent sx={{ px: { xs: 1.5, md: 2 }, pb: 2 }}>
+              {detailsItem ? (
+                <Purchas
+                  props={{
+                    data: detailsItem,
+                    refreshGrid: handleRefresh,
+                    variant: "details",
+                  }}
+                />
+              ) : null}
+            </DialogContent>
+          </Dialog>
 
           <Dialog
             open={filterSheetOpen}

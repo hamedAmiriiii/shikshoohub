@@ -80,12 +80,18 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
 interface ShopSmsLog {
   id: number;
   phone: string;
+  name?: string | null;
+  customer_name?: string | null;
   message: string;
   purchase_id?: string;
   credit_amount?: string;
   sms_type: string;
   created_at: string;
   updated_at: string;
+}
+
+function smsCustomerName(log: ShopSmsLog): string {
+  return String(log.name || log.customer_name || "").trim();
 }
 
 const formatNumber = (num: number) => {
@@ -130,7 +136,7 @@ export default function ShopSmsLogsPage() {
   const [dateRange, setDateRange] = useState<any>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [smsTypeFilter, setSmsTypeFilter] = useState<string>("");
-  const [searchField, setSearchField] = useState<'phone' | 'message' | 'purchase_id' | 'all'>('all');
+  const [searchField, setSearchField] = useState<'phone' | 'name' | 'message' | 'purchase_id' | 'all'>('all');
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -338,8 +344,13 @@ export default function ShopSmsLogsPage() {
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                     <Box>
                       <Typography sx={{ color: 'var(--admin-text)', fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>
-                        {log.phone}
+                        {smsCustomerName(log) || log.phone}
                       </Typography>
+                      {smsCustomerName(log) ? (
+                        <Typography sx={{ color: 'var(--admin-text-secondary)', fontSize: '13px', marginBottom: '8px' }}>
+                          {log.phone}
+                        </Typography>
+                      ) : null}
                       <Chip 
                         label={getSmsTypeLabel(log.sms_type)} 
                         size="small"
@@ -403,6 +414,7 @@ export default function ShopSmsLogsPage() {
               <Table aria-label="SMS logs table">
                 <TableHead>
                   <TableRow>
+                    <StyledTableCell align="right">نام</StyledTableCell>
                     <StyledTableCell align="right">شماره تلفن</StyledTableCell>
                     <StyledTableCell align="right">نوع پیامک</StyledTableCell>
                     <StyledTableCell align="right">پیام</StyledTableCell>
@@ -415,6 +427,7 @@ export default function ShopSmsLogsPage() {
                 <TableBody>
                   {logs.map((log) => (
                     <StyledTableRow key={log.id}>
+                      <StyledTableCell>{smsCustomerName(log) || '—'}</StyledTableCell>
                       <StyledTableCell>{log.phone}</StyledTableCell>
                       <StyledTableCell>
                         <Chip 
@@ -516,6 +529,10 @@ export default function ShopSmsLogsPage() {
           <DialogContent sx={{ paddingTop: "24px" }}>
             {selectedLog && (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <Box>
+                  <Typography sx={{ color: 'var(--admin-text-secondary)', fontSize: '14px', marginBottom: '4px' }}>نام مشتری</Typography>
+                  <Typography sx={{ color: 'var(--admin-text)', fontSize: '16px' }}>{smsCustomerName(selectedLog) || '—'}</Typography>
+                </Box>
                 <Box>
                   <Typography sx={{ color: 'var(--admin-text-secondary)', fontSize: '14px', marginBottom: '4px' }}>شماره تلفن</Typography>
                   <Typography sx={{ color: 'var(--admin-text)', fontSize: '16px' }}>{selectedLog.phone}</Typography>

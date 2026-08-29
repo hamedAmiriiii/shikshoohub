@@ -1,29 +1,165 @@
 "use client";
-import { useEffect, useState } from 'react';
-import { Box, Typography, Paper, Grid, CircularProgress, Card, CardContent } from '@mui/material';
-import { useRouter } from 'next/navigation';
-import { apiRequestError } from '@/app/lib/apiRequestError/client';
-import tokenCode from '@/app/coponent/tokenCode';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import InventoryIcon from '@mui/icons-material/Inventory';
-import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 
-interface InventoryData {
+import { useEffect, useState, type ReactNode } from "react";
+import { Box, Typography, Paper, Grid, CircularProgress } from "@mui/material";
+import { apiRequestError } from "@/app/lib/apiRequestError/client";
+import tokenCode from "@/app/coponent/tokenCode";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import InventoryIcon from "@mui/icons-material/Inventory";
+import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import KitchenIcon from "@mui/icons-material/Kitchen";
+import PrecisionManufacturingIcon from "@mui/icons-material/PrecisionManufacturing";
+
+type InventoryTotals = {
   total_purchase_value: number;
   total_sale_value: number;
-}
-
-const formatNumber = (num: number) => {
-  return new Intl.NumberFormat('fa-IR').format(num);
+  stock_kg?: number;
 };
 
+function asMoney(value: unknown): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function asInventory(raw: unknown): InventoryTotals | null {
+  if (!raw || typeof raw !== "object") return null;
+  const row = raw as Record<string, unknown>;
+  return {
+    total_purchase_value: asMoney(row.total_purchase_value),
+    total_sale_value: asMoney(row.total_sale_value),
+    stock_kg: row.stock_kg == null ? undefined : asMoney(row.stock_kg),
+  };
+}
+
+function hasRawMaterialsBlock(raw: unknown): boolean {
+  if (!raw || typeof raw !== "object") return false;
+  const row = raw as Record<string, unknown>;
+  if (Array.isArray(row.raw_materials) && row.raw_materials.length > 0) return true;
+  return asMoney(row.total_purchase_value) > 0 || asMoney(row.stock_kg) > 0;
+}
+
+const formatNumber = (num: number) => new Intl.NumberFormat("fa-IR").format(num);
+
+function profitOf(inv: InventoryTotals) {
+  return inv.total_sale_value - inv.total_purchase_value;
+}
+
+function profitPercent(inv: InventoryTotals) {
+  if (!inv.total_purchase_value) return "0";
+  return ((profitOf(inv) / inv.total_purchase_value) * 100).toFixed(1);
+}
+
+function StatCard({
+  title,
+  value,
+  hint,
+  icon,
+  gradient,
+}: {
+  title: string;
+  value: string;
+  hint?: string;
+  icon: ReactNode;
+  gradient: string;
+}) {
+  return (
+    <Grid item xs={12} sm={6} md={4}>
+      <Paper
+        elevation={0}
+        sx={{
+          padding: "18px",
+          background: gradient,
+          borderRadius: "14px",
+          height: "100%",
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        <Box sx={{ position: "relative", zIndex: 1 }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.25 }}>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: 14, fontWeight: 700 }}>
+              {title}
+            </Typography>
+            <Box
+              sx={{
+                backgroundColor: "var(--admin-icon-bg)",
+                borderRadius: "8px",
+                p: 0.75,
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              {icon}
+            </Box>
+          </Box>
+          <Typography sx={{ color: "var(--admin-text)", fontSize: 26, fontWeight: 800, lineHeight: 1.2 }}>
+            {value}
+          </Typography>
+          <Typography sx={{ color: "var(--admin-text)", fontSize: 12, mt: 0.25 }}>تومان</Typography>
+          {hint ? (
+            <Typography sx={{ color: "var(--admin-text)", fontSize: 12, mt: 0.75, opacity: 0.9 }}>
+              {hint}
+            </Typography>
+          ) : null}
+        </Box>
+      </Paper>
+    </Grid>
+  );
+}
+
+function InventorySection({
+  title,
+  subtitle,
+  inventory,
+  icon,
+}: {
+  title: string;
+  subtitle: string;
+  inventory: InventoryTotals;
+  icon: ReactNode;
+}) {
+  return (
+    <Box sx={{ mb: 3 }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
+        {icon}
+        <Box>
+          <Typography sx={{ color: "var(--admin-text)", fontSize: 16, fontWeight: 700 }}>
+            {title}
+          </Typography>
+          <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>{subtitle}</Typography>
+        </Box>
+      </Box>
+      <Grid container spacing={2}>
+        <StatCard
+          title="قیمت خرید کل"
+          value={formatNumber(inventory.total_purchase_value)}
+          icon={<AttachMoneyIcon sx={{ color: "var(--admin-text)", fontSize: 20 }} />}
+          gradient="linear-gradient(135deg, var(--admin-accent) 0%, var(--admin-accent-hover) 100%)"
+        />
+        <StatCard
+          title="قیمت فروش کل"
+          value={formatNumber(inventory.total_sale_value)}
+          icon={<TrendingUpIcon sx={{ color: "var(--admin-text)", fontSize: 20 }} />}
+          gradient="linear-gradient(135deg, #ff9100 0%, #ff6f00 100%)"
+        />
+        <StatCard
+          title="سود احتمالی"
+          value={formatNumber(profitOf(inventory))}
+          hint={`${profitPercent(inventory)}٪`}
+          icon={<InventoryIcon sx={{ color: "var(--admin-text)", fontSize: 20 }} />}
+          gradient="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+        />
+      </Grid>
+    </Box>
+  );
+}
+
 export default function InventoryPage() {
-  const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [inventory, setInventory] = useState<InventoryData | null>(null);
+  const [goods, setGoods] = useState<InventoryTotals | null>(null);
+  const [materials, setMaterials] = useState<InventoryTotals | null>(null);
 
   useEffect(() => {
     const fetchInventory = async () => {
@@ -31,290 +167,78 @@ export default function InventoryPage() {
       try {
         const res = await apiRequestError("Get", {}, {}, "/api/reports", true, true, token);
         if (res.hasError) {
-          const parsedResponse = JSON.parse(res.errorText);
-          const readableMessage = parsedResponse.message;
-          toast.error(readableMessage || "خطا در دریافت موجودی انبار");
+          let message = "خطا در دریافت موجودی انبار";
+          try {
+            message = JSON.parse(res.errorText).message || message;
+          } catch {
+            /* keep default */
+          }
+          toast.error(message);
           return;
         }
-        
-        // Extract inventory data from response
-        if (res.products_inventory) {
-          setInventory(res.products_inventory);
-        } else if (res.inventory) {
-          setInventory(res.inventory);
-        } else {
-          toast.error("اطلاعات موجودی انبار یافت نشد");
-        }
-      } catch (error) {
+
+        const productsInventory = asInventory(res.products_inventory ?? res.inventory);
+        setGoods(productsInventory);
+
+        const rawBlock = res.raw_materials_inventory;
+        setMaterials(hasRawMaterialsBlock(rawBlock) ? asInventory(rawBlock) : null);
+      } catch {
         toast.error("خطا در دریافت موجودی انبار");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchInventory();
+    void fetchInventory();
   }, []);
 
-  const calculateProfit = () => {
-    if (!inventory) return 0;
-    return inventory.total_sale_value - inventory.total_purchase_value;
-  };
-
-  const calculateProfitPercentage = () => {
-    if (!inventory || inventory.total_purchase_value === 0) return 0;
-    return ((calculateProfit() / inventory.total_purchase_value) * 100).toFixed(1);
-  };
-
   return (
-    <Box sx={{ width: "100%", direction: "rtl", padding: "16px", minHeight: "100vh", background: "var(--admin-bg-gradient)" }}>
-     
-
+    <Box
+      sx={{
+        width: "100%",
+        direction: "rtl",
+        padding: "16px",
+        paddingBottom: "100px",
+        minHeight: "100vh",
+        background: "var(--admin-bg-gradient)",
+      }}
+    >
       {loading ? (
         <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "50vh" }}>
           <CircularProgress sx={{ color: "var(--admin-accent)" }} />
         </Box>
-      ) : inventory ? (
-        <Grid container spacing={3}>
-          {/* قیمت خرید کل */}
-          <Grid item xs={12} sm={6} md={4}>
-            <Paper
-              elevation={0}
-              sx={{
-                padding: "24px",
-                background: "linear-gradient(135deg, var(--admin-accent) 0%, var(--admin-accent-hover) 100%)",
-                borderRadius: "16px",
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-                position: "relative",
-                overflow: "hidden",
-                transition: "all 0.3s ease",
-                cursor: "pointer",
-                "&:hover": {
-                  transform: "translateY(-6px)",
-                },
-                "&::before": {
-                  content: '""',
-                  position: "absolute",
-                  top: 0,
-                  right: 0,
-                  width: "100px",
-                  height: "100px",
-                  background: "var(--admin-divider)",
-                  borderRadius: "50%",
-                  transform: "translate(30px, -30px)",
-                },
-                "&::after": {
-                  content: '""',
-                  position: "absolute",
-                  bottom: 0,
-                  left: 0,
-                  width: "80px",
-                  height: "80px",
-                  background: "var(--admin-divider)",
-                  borderRadius: "50%",
-                  transform: "translate(-20px, 20px)",
-                },
-              }}
-            >
-              <Box sx={{ position: "relative", zIndex: 1 }}>
-                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                  <Typography sx={{ color: "var(--admin-text)", fontSize: "16px", fontWeight: "700", textShadow: "0 2px 4px rgba(0,0,0,0.2)" }}>
-                    قیمت خرید کل
-                  </Typography>
-                  <Box
-                    sx={{
-                      backgroundColor: "var(--admin-icon-bg)",
-                      borderRadius: "10px",
-                      padding: "8px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      backdropFilter: "blur(10px)",
-                    }}
-                  >
-                    <AttachMoneyIcon sx={{ color: "var(--admin-text)", fontSize: "24px" }} />
-                  </Box>
-                </Box>
-                <Typography sx={{ color: "var(--admin-text)", fontSize: "32px", fontWeight: "700", textShadow: "0 2px 4px rgba(0,0,0,0.2)", marginBottom: "4px" }}>
-                  {formatNumber(inventory.total_purchase_value)}
-                </Typography>
-                <Typography sx={{ color: "var(--admin-text)", fontSize: "14px" }}>
-                  تومان
-                </Typography>
-              </Box>
-            </Paper>
-          </Grid>
-
-          {/* قیمت فروش کل */}
-          <Grid item xs={12} sm={6} md={4}>
-            <Paper
-              elevation={0}
-              sx={{
-                padding: "24px",
-                background: "linear-gradient(135deg, #ff9100 0%, #ff6f00 100%)",
-                borderRadius: "16px",
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-                position: "relative",
-                overflow: "hidden",
-                transition: "all 0.3s ease",
-                cursor: "pointer",
-                "&:hover": {
-                  transform: "translateY(-6px)",
-                 },
-                "&::before": {
-                  content: '""',
-                  position: "absolute",
-                  top: 0,
-                  right: 0,
-                  width: "100px",
-                  height: "100px",
-                  background: "var(--admin-divider)",
-                  borderRadius: "50%",
-                  transform: "translate(30px, -30px)",
-                },
-                "&::after": {
-                  content: '""',
-                  position: "absolute",
-                  bottom: 0,
-                  left: 0,
-                  width: "80px",
-                  height: "80px",
-                  background: "var(--admin-divider)",
-                  borderRadius: "50%",
-                  transform: "translate(-20px, 20px)",
-                },
-              }}
-            >
-              <Box sx={{ position: "relative", zIndex: 1 }}>
-                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                  <Typography sx={{ color: "var(--admin-text)", fontSize: "16px", fontWeight: "700", textShadow: "0 2px 4px rgba(0,0,0,0.2)" }}>
-                    قیمت فروش کل
-                  </Typography>
-                  <Box
-                    sx={{
-                      backgroundColor: "var(--admin-icon-bg)",
-                      borderRadius: "10px",
-                      padding: "8px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      backdropFilter: "blur(10px)",
-                    }}
-                  >
-                    <TrendingUpIcon sx={{ color: "var(--admin-text)", fontSize: "24px" }} />
-                  </Box>
-                </Box>
-                <Typography sx={{ color: "var(--admin-text)", fontSize: "32px", fontWeight: "700", textShadow: "0 2px 4px rgba(0,0,0,0.2)", marginBottom: "4px" }}>
-                  {formatNumber(inventory.total_sale_value)}
-                </Typography>
-                <Typography sx={{ color: "var(--admin-text)", fontSize: "14px" }}>
-                  تومان
-                </Typography>
-              </Box>
-            </Paper>
-          </Grid>
-
-          {/* سود احتمالی */}
-          <Grid item xs={12} sm={12} md={4}>
-            <Paper
-              elevation={0}
-              sx={{
-                padding: "24px",
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                borderRadius: "16px",
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-                position: "relative",
-                overflow: "hidden",
-                transition: "all 0.3s ease",
-                cursor: "pointer",
-                "&:hover": {
-                  transform: "translateY(-6px)",
-                },
-                "&::before": {
-                  content: '""',
-                  position: "absolute",
-                  top: 0,
-                  right: 0,
-                  width: "100px",
-                  height: "100px",
-                  background: "var(--admin-divider)",
-                  borderRadius: "50%",
-                  transform: "translate(30px, -30px)",
-                },
-                "&::after": {
-                  content: '""',
-                  position: "absolute",
-                  bottom: 0,
-                  left: 0,
-                  width: "80px",
-                  height: "80px",
-                  background: "var(--admin-divider)",
-                  borderRadius: "50%",
-                  transform: "translate(-20px, 20px)",
-                },
-              }}
-            >
-              <Box sx={{ position: "relative", zIndex: 1 }}>
-                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                  <Typography sx={{ color: "var(--admin-text)", fontSize: "16px", fontWeight: "700", textShadow: "0 2px 4px rgba(0,0,0,0.2)" }}>
-                    سود احتمالی
-                  </Typography>
-                  <Box
-                    sx={{
-                      backgroundColor: "var(--admin-icon-bg)",
-                      borderRadius: "10px",
-                      padding: "8px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      backdropFilter: "blur(10px)",
-                    }}
-                  >
-                    <InventoryIcon sx={{ color: "var(--admin-text)", fontSize: "24px" }} />
-                  </Box>
-                </Box>
-                <Typography sx={{ color: "var(--admin-text)", fontSize: "32px", fontWeight: "700", textShadow: "0 2px 4px rgba(0,0,0,0.2)", marginBottom: "4px" }}>
-                  {formatNumber(calculateProfit())}
-                </Typography>
-                <Box sx={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "8px" }}>
-                  <Typography sx={{ color: "var(--admin-text)", fontSize: "14px" }}>
-                    تومان
-                  </Typography>
-                  <Box
-                    sx={{
-                      backgroundColor: "var(--admin-icon-bg-hover)",
-                      borderRadius: "8px",
-                      padding: "4px 12px",
-                      fontSize: "14px",
-                      fontWeight: "600",
-                      color: "var(--admin-text)",
-                    }}
-                  >
-                    {calculateProfitPercentage()}%
-                  </Box>
-                </Box>
-              </Box>
-            </Paper>
-          </Grid>
-        </Grid>
+      ) : goods || materials ? (
+        <>
+          {goods ? (
+            <InventorySection
+              title="موجودی انبار کالا"
+              subtitle="کالاهای کاتالوگ با موجودی مثبت و باقی‌مانده کالای تولیدی"
+              inventory={goods}
+              icon={<PrecisionManufacturingIcon sx={{ color: "var(--admin-accent)" }} />}
+            />
+          ) : null}
+          {materials ? (
+            <InventorySection
+              title="موجودی مواد اولیه"
+              subtitle={
+                materials.stock_kg != null
+                  ? `لات‌های باز · ${formatNumber(materials.stock_kg)} کیلو`
+                  : "لات‌های باز مواد اولیه — جدا از موجودی کالا"
+              }
+              inventory={materials}
+              icon={<KitchenIcon sx={{ color: "var(--admin-accent)" }} />}
+            />
+          ) : null}
+        </>
       ) : (
         <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "50vh" }}>
-          <Typography sx={{ color: "var(--admin-text)", fontSize: "18px" }}>
+          <Typography sx={{ color: "var(--admin-text)", fontSize: 16 }}>
             داده‌ای برای نمایش وجود ندارد
           </Typography>
         </Box>
       )}
 
-      <ToastContainer autoClose={3000} style={{ marginBottom: '76px', borderRadius: "15px" }} position={"bottom-right"} />
+      <ToastContainer autoClose={3000} style={{ marginBottom: "76px", borderRadius: "15px" }} position="bottom-right" />
     </Box>
   );
 }
-

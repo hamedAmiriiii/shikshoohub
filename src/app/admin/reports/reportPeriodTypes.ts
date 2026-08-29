@@ -24,6 +24,13 @@ export interface ReportData {
   products_inventory?: {
     total_purchase_value: number;
     total_sale_value: number;
+    products?: unknown[];
+    produced_goods?: unknown[];
+  };
+  raw_materials_inventory?: {
+    total_purchase_value: number;
+    total_sale_value: number;
+    stock_kg?: number;
   };
   meta?: {
     total_uncollected_installments?: number;

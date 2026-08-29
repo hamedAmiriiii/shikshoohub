@@ -44,6 +44,7 @@ import ReturnedProductCard, { type PurchaseItemReturnRow } from "./returnedProdu
 import { paymentTypeLabel } from "./types";
 import BottomSheet from "@/app/coponent/BottomSheet";
 import SafeBarcodeScanner from "@/app/coponent/SafeBarcodeScanner";
+import { isIranMobile, normalizeIranMobile, purchaseReturnCreditMessage } from "@/app/lib/purchaseReturns";
 
 const StyledTableCell = styled(TableCell)(() => ({
   [`&.${tableCellClasses.head}`]: {
@@ -275,6 +276,8 @@ export default function ReturnedProductsPage() {
 
   const [barcode, setBarcode] = useState("");
   const [returnQuantity, setReturnQuantity] = useState("1");
+  const [returnPhone, setReturnPhone] = useState("");
+  const [returnNotes, setReturnNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [openBottomSheet, setOpenBottomSheet] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
@@ -394,13 +397,26 @@ export default function ReturnedProductsPage() {
       return;
     }
 
+    const phone = normalizeIranMobile(returnPhone);
+    if (!isIranMobile(phone)) {
+      toast.error("شماره موبایل مشتری را وارد کنید تا اعتبار به همان فرد برگردد");
+      return;
+    }
+
     setIsSubmitting(true);
     const token = tokenCode();
     try {
+      const body: Record<string, unknown> = {
+        barcode: barcode.trim(),
+        quantity: qty,
+        phone,
+      };
+      if (returnNotes.trim()) body.notes = returnNotes.trim();
+
       const res = await apiRequestError(
         "Post",
-        { quantity: String(qty) },
-        { barcode: barcode.trim() },
+        {},
+        body,
         "/api/purchase-item-returns",
         true,
         true,
@@ -413,10 +429,13 @@ export default function ReturnedProductsPage() {
       }
 
       toast.success(
-        qty === 1 ? "برگشت کالا ثبت شد" : `${formatNumber(qty)} عدد از خط فاکتور برگشت خورد`
+        purchaseReturnCreditMessage(res) ||
+          (qty === 1 ? "برگشت کالا ثبت شد" : `${formatNumber(qty)} عدد از خط فاکتور برگشت خورد`),
       );
       setBarcode("");
       setReturnQuantity("1");
+      setReturnPhone("");
+      setReturnNotes("");
       setOpenBottomSheet(false);
       setShowScanner(false);
       if (monthFilter) {
@@ -704,6 +723,7 @@ export default function ReturnedProductsPage() {
                         <StyledTableCell align="center">قیمت واحد</StyledTableCell>
                         <StyledTableCell align="center">جمع برگشت</StyledTableCell>
                         <StyledTableCell align="center">موبایل</StyledTableCell>
+                        <StyledTableCell align="center">اعتبار</StyledTableCell>
                         <StyledTableCell align="center">پرداخت</StyledTableCell>
                         <StyledTableCell align="center">پرسنل</StyledTableCell>
                       </TableRow>
@@ -740,6 +760,11 @@ export default function ReturnedProductsPage() {
                             </StyledTableCell>
                             <StyledTableCell align="center">{row.phone || "—"}</StyledTableCell>
                             <StyledTableCell align="center">
+                              {row.credit_returned != null && row.credit_returned > 0
+                                ? formatNumber(row.credit_returned)
+                                : "—"}
+                            </StyledTableCell>
+                            <StyledTableCell align="center">
                               {paymentTypeLabel(row.payment_type)}
                             </StyledTableCell>
                             <StyledTableCell align="center">{row.user_name || "—"}</StyledTableCell>
@@ -767,6 +792,8 @@ export default function ReturnedProductsPage() {
             setShowScanner(false);
             setBarcode("");
             setReturnQuantity("1");
+            setReturnPhone("");
+            setReturnNotes("");
             setTorchOn(false);
           }}
           title="ثبت برگشت کالا"
@@ -828,6 +855,24 @@ export default function ReturnedProductsPage() {
             <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, mt: -1 }}>
               اگر خط چند عدد دارد، فقط همان تعداد از فاکتور برمی‌گردد (مثلاً ۱ از ۳).
             </Typography>
+            <TextInput
+              value={returnPhone}
+              label="شماره موبایل مشتری"
+              onChange={(e) => setReturnPhone(normalizeIranMobile(e))}
+              name="return_phone"
+              type="text"
+              onKeyPress={handleKeyPress}
+            />
+            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, mt: -1 }}>
+              اگر فاکتور مشتری نداشت، با این شماره کاربر پیدا یا ساخته می‌شود و مبلغ به اعتبار همان فرد برمی‌گردد.
+            </Typography>
+            <TextInput
+              value={returnNotes}
+              label="یادداشت (اختیاری)"
+              onChange={(e) => setReturnNotes(e)}
+              name="return_notes"
+              type="text"
+            />
 
             <Button
               variant="contained"

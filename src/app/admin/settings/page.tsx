@@ -26,9 +26,11 @@ import ScaleIcon from "@mui/icons-material/Scale";
 import CreditCardIcon from "@mui/icons-material/CreditCard";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import KitchenIcon from "@mui/icons-material/Kitchen";
+import PersonIcon from "@mui/icons-material/Person";
 import PriceChangeIcon from "@mui/icons-material/PriceChange";
 import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
 import ImageOutlinedIcon from "@mui/icons-material/ImageOutlined";
+import CloudDownloadIcon from "@mui/icons-material/CloudDownload";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useRouter } from "next/navigation";
@@ -42,10 +44,12 @@ import {
   writeAdminPosSettings,
 } from "@/app/lib/adminPosSettings";
 import LoyaltyCreditTiersSettings from "@/app/admin/settings/LoyaltyCreditTiersSettings";
+import ShopBackupSettings from "@/app/admin/settings/ShopBackupSettings";
 import {
   readSaleReceiptPrintSettings,
   writeSaleReceiptPrintSettings,
 } from "@/app/lib/saleReceiptPrint";
+import { useShopPermissionGate } from "@/app/lib/shopPermissions";
 
 const settingsCardSx = {
   backgroundColor: "var(--admin-surface)",
@@ -221,6 +225,7 @@ function SettingsToggleRow({
 
 export default function SettingsPage() {
   const router = useRouter();
+  const { can } = useShopPermissionGate();
   const [loyaltyCreditEnabled, setLoyaltyCreditEnabled] = useState(true);
   const [creditExpiryDays, setCreditExpiryDays] = useState<number>(60);
   const [installmentInterestRate, setInstallmentInterestRate] = useState<number>(0);
@@ -238,6 +243,7 @@ export default function SettingsPage() {
   const [kgSalesEnabled, setKgSalesEnabled] = useState(false);
   const [salePriceEditEnabled, setSalePriceEditEnabled] = useState(false);
   const [classicPosMode, setClassicPosMode] = useState(false);
+  const [askCustomerName, setAskCustomerName] = useState(false);
   const [restaurantCafeEnabled, setRestaurantCafeEnabled] = useState(false);
   const [menuTableOrdersPopupEnabled, setMenuTableOrdersPopupEnabled] = useState(false);
   const [directPrintEnabled, setDirectPrintEnabled] = useState(false);
@@ -258,6 +264,7 @@ export default function SettingsPage() {
     setKgSalesEnabled(settings.kgSalesEnabled);
     setSalePriceEditEnabled(settings.salePriceEditEnabled);
     setClassicPosMode(settings.classicPosMode);
+    setAskCustomerName(settings.askCustomerName);
     setRestaurantCafeEnabled(settings.restaurantCafeEnabled);
     setMenuTableOrdersPopupEnabled(settings.menuTableOrdersPopupEnabled);
     setDirectPrintEnabled(readSaleReceiptPrintSettings().autoPrint);
@@ -396,6 +403,17 @@ export default function SettingsPage() {
       enabled
         ? "«کالاهای تولیدی» در منوی مدیریت کالا نمایش داده می‌شود"
         : "«کالاهای تولیدی» از منوی مدیریت کالا پنهان شد",
+    );
+  };
+
+  const handleToggleAskCustomerName = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setAskCustomerName(enabled);
+    writeAdminPosSettings({ askCustomerName: enabled });
+    toast.success(
+      enabled
+        ? "در ثبت مشتری، فیلد نام هم نمایش داده می‌شود"
+        : "ثبت مشتری فقط با شماره تلفن انجام می‌شود",
     );
   };
 
@@ -789,6 +807,13 @@ export default function SettingsPage() {
             onChange={handleToggleSalePriceEdit}
           />
           <SettingsToggleRow
+            icon={<PersonIcon sx={{ fontSize: 18 }} />}
+            title="نام مشتری هنگام ثبت"
+            hint="علاوه بر تلفن، نام هم گرفته شود"
+            checked={askCustomerName}
+            onChange={handleToggleAskCustomerName}
+          />
+          <SettingsToggleRow
             icon={<PrintIcon sx={{ fontSize: 18 }} />}
             title="چاپ مستقیم فاکتور"
             hint="بدون پیش‌نمایش چاپ"
@@ -865,6 +890,16 @@ export default function SettingsPage() {
           </Button>
         </Box>
       </SettingsSectionCard>
+
+      {can("backup") ? (
+      <SettingsSectionCard
+        icon={<CloudDownloadIcon sx={{ fontSize: 18 }} />}
+        title="پشتیبان‌گیری"
+        hint="دانلود و بازگردانی دادهٔ همین فروشگاه"
+      >
+        <ShopBackupSettings />
+      </SettingsSectionCard>
+      ) : null}
 
       <SettingsSectionCard
         icon={<LoyaltyIcon sx={{ fontSize: 18 }} />}

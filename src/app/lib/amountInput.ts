@@ -21,9 +21,9 @@ export function formatAmountNumber(n: number): string {
 
 /** مقدار فیلد مبلغ هنگام تایپ — فقط رقم را نگه می‌دارد و سه‌رقمی جدا می‌کند */
 export function formatAmountInput(value: string): string {
-  const digitsOnly = String(value ?? "").replace(/[^\d۰-۹٠-٩]/g, "");
-  if (!digitsOnly) return "";
-  const num = parseAmountInput(digitsOnly);
+  const raw = String(value ?? "");
+  if (!/[\d۰-۹٠-٩]/.test(raw)) return "";
+  const num = parseAmountInput(raw);
   if (!Number.isFinite(num)) return "";
   return formatAmountNumber(num);
 }

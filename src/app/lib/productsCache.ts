@@ -10,6 +10,7 @@ export type CachedProduct = {
   sale_price?: number | string;
   purchase_price?: number | string;
   original_sale_price?: number | string;
+  discount_percent?: number | string;
   has_discount?: boolean;
   quantity?: number;
   unit_type?: "kg" | "piece" | string;
@@ -30,6 +31,18 @@ function parseProductsCache(raw: string | null): CachedProduct[] {
   } catch {
     return [];
   }
+}
+
+export function getCachedProductDiscount(product: CachedProduct): {
+  salePrice: number;
+  originalPrice: number;
+  hasDiscount: boolean;
+} {
+  const salePrice = Number(product.sale_price) || 0;
+  const originalPrice = Number(product.original_sale_price) || 0;
+  const hasDiscount =
+    Boolean(product.has_discount) || (originalPrice > 0 && originalPrice > salePrice);
+  return { salePrice, originalPrice, hasDiscount };
 }
 
 /** لیست کالاهای کش‌شده در localStorage (همان لیست بارکد/فروش) */

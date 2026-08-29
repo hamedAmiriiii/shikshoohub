@@ -11,6 +11,7 @@ import LightModeIcon from "@mui/icons-material/LightMode";
 import ShareIcon from "@mui/icons-material/Share";
 import { useRouter, usePathname } from "next/navigation";
 import { isSuperAdminUser, getUserPhoneFromRecord } from "@/app/lib/superAdmin";
+import { hasShopPermission } from "@/app/lib/shopPermissions";
 import {
   getShopAccessFromUser,
   getAccessMenuSummary,
@@ -485,7 +486,7 @@ export default function Header({
                 {rightAction}
               </Box>
             )}
-            {hasShop && (
+            {hasShop && hasShopPermission("referral") && (
               <Button
                 size="small"
                 variant="outlined"

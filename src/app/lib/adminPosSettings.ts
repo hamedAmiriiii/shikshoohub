@@ -22,6 +22,8 @@ export type AdminPosSettings = {
   salePriceEditEnabled: boolean;
   /** ظاهر کلاسیک فاکتور در صفحه فروش */
   classicPosMode: boolean;
+  /** در ثبت مشتری، فیلد نام هم گرفته شود */
+  askCustomerName: boolean;
 };
 
 const DEFAULT_SETTINGS: AdminPosSettings = {
@@ -37,6 +39,7 @@ const DEFAULT_SETTINGS: AdminPosSettings = {
   menuTableOrdersPopupEnabled: false,
   salePriceEditEnabled: false,
   classicPosMode: false,
+  askCustomerName: false,
 };
 
 export function readAdminPosSettings(): AdminPosSettings {

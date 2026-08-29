@@ -14,6 +14,10 @@ import {
   notifyShopAccessIfExpired,
   syncShopAccessFromLogin,
 } from "@/app/lib/shopAccess";
+import {
+  getFirstAllowedAdminPath,
+  mergeUserWithShopPermissions,
+} from "@/app/lib/shopPermissions";
 
 type View = "login" | "forgot-phone" | "forgot-reset";
 
@@ -121,7 +125,7 @@ export default function ShikshooLoginPage() {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
-      router.push("/admin");
+      router.push(getFirstAllowedAdminPath());
     }
   }, [router]);
 
@@ -307,14 +311,15 @@ export default function ShikshooLoginPage() {
 
       if (res.user && res.token) {
         localStorage.setItem("token", res.token);
-        const user = mergeUserWithShopAccess(
-          res.user as Record<string, unknown>,
-          res as Record<string, unknown>,
+        const payload = res as Record<string, unknown>;
+        const user = mergeUserWithShopPermissions(
+          mergeUserWithShopAccess(res.user as Record<string, unknown>, payload),
+          payload,
         );
         localStorage.setItem("user", JSON.stringify(user));
-        syncShopAccessFromLogin(res as Record<string, unknown>);
+        syncShopAccessFromLogin(payload);
         toast.success("ورود با موفقیت انجام شد");
-        router.push("/admin");
+        router.push(getFirstAllowedAdminPath(user));
       }
     } catch {
       toast.error("خطا در اتصال به سرور");

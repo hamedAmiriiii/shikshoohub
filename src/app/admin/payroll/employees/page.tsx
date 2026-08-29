@@ -6,11 +6,13 @@ import {
   Button,
   Card,
   CardContent,
+  Checkbox,
   CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
   Grid,
   IconButton,
   InputAdornment,
@@ -46,6 +48,13 @@ import {
   parseAmount,
   type Employee,
 } from "@/app/lib/payroll";
+import {
+  fetchShopPermissionsCatalog,
+  normalizePermissionKeys,
+  permissionTitle,
+  useShopPermissionGate,
+  type ShopPermissionItem,
+} from "@/app/lib/shopPermissions";
 
 const fieldSx = {
   "& .MuiOutlinedInput-root": {
@@ -58,16 +67,31 @@ const fieldSx = {
   "& .MuiInputLabel-root": { color: "var(--admin-text-muted)" },
 } as const;
 
+const checkboxSx = {
+  color: "var(--admin-text-muted)",
+  py: 0.25,
+  "&.Mui-checked": { color: "var(--admin-accent)" },
+} as const;
+
+function employeePermissionKeys(employee: Employee | null | undefined): string[] {
+  if (!employee) return [];
+  return normalizePermissionKeys(employee.permissions ?? employee.shop_permissions);
+}
+
 export default function PayrollEmployeesPage() {
+  const { isOwner: owner } = useShopPermissionGate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [permissionCatalog, setPermissionCatalog] = useState<ShopPermissionItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Employee | null>(null);
   const [employeeName, setEmployeeName] = useState("");
   const [employeePhone, setEmployeePhone] = useState("");
+  const [employeePassword, setEmployeePassword] = useState("");
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [baseSalary, setBaseSalary] = useState("");
   const [baseWorkHours, setBaseWorkHours] = useState("");
   const [hourlyWage, setHourlyWage] = useState("");
@@ -83,15 +107,16 @@ export default function PayrollEmployeesPage() {
     }
     setLoading(true);
     try {
-      const res = await FetchWithJwtClient("GET", "/api/shop-employees", token);
+      const [res, catalog] = await Promise.all([
+        FetchWithJwtClient("GET", "/api/shop-employees", token),
+        fetchShopPermissionsCatalog(),
+      ]);
       if (res?.hasError) {
         toast.error(getApiErrorMessage(res, "خطا در دریافت کارمندها"));
         return;
       }
-      const list = extractList<Employee>(res);
-      console.log("[shop-employees] GET response", res);
-      console.log("[shop-employees] GET first item keys", list[0] ? Object.keys(list[0] as object) : [], list[0]);
-      setEmployees(list);
+      setEmployees(extractList<Employee>(res));
+      setPermissionCatalog(catalog);
       const settingsRes = await FetchWithJwtClient("GET", "/api/settings/payroll", token);
       if (!settingsRes?.hasError) {
         const settings = extractSettings(settingsRes);
@@ -114,7 +139,7 @@ export default function PayrollEmployeesPage() {
 
     return employees.filter((e) => {
       const name = normalizeSearchText(e.name || "");
-      const phone = normalizePhoneDigits(e.phone || "");
+      const phone = normalizePhoneDigits(e.phone || e.username || "");
       const nameMatch = query ? name.includes(query) : false;
       const phoneMatch = phoneQuery ? phone.includes(phoneQuery) : false;
       return nameMatch || phoneMatch;
@@ -125,6 +150,8 @@ export default function PayrollEmployeesPage() {
     setEditing(null);
     setEmployeeName("");
     setEmployeePhone("");
+    setEmployeePassword("");
+    setSelectedPermissions([]);
     setBaseSalary("");
     setBaseWorkHours(defaultHours ? formatNumber(parseAmount(defaultHours)) : "");
     setHourlyWage(defaultHourly ? formatNumber(parseAmount(defaultHourly)) : "");
@@ -134,17 +161,40 @@ export default function PayrollEmployeesPage() {
   const openEdit = (employee: Employee) => {
     setEditing(employee);
     setEmployeeName(employee.name || "");
-    setEmployeePhone(employee.phone || "");
+    setEmployeePhone(employee.phone || employee.username || "");
+    setEmployeePassword("");
+    setSelectedPermissions(employeePermissionKeys(employee));
     setBaseSalary(employee.base_salary != null ? formatNumber(Number(employee.base_salary)) : "");
     setBaseWorkHours(employee.base_work_hours != null ? formatNumber(Number(employee.base_work_hours)) : "");
     setHourlyWage(employee.hourly_wage != null ? formatNumber(Number(employee.hourly_wage)) : "");
     setDialogOpen(true);
   };
 
+  const togglePermission = (key: string) => {
+    setSelectedPermissions((prev) =>
+      prev.includes(key) ? prev.filter((item) => item !== key) : [...prev, key],
+    );
+  };
+
   const saveEmployee = async () => {
     if (!employeeName.trim()) {
       toast.error("نام کارمند الزامی است");
       return;
+    }
+    const phone = normalizePhoneDigits(employeePhone);
+    if (owner) {
+      if (phone.length !== 11 || !phone.startsWith("09")) {
+        toast.error("شماره موبایل ۱۱ رقمی (نام کاربری ورود) را وارد کنید");
+        return;
+      }
+      if (!editing && employeePassword.trim().length < 6) {
+        toast.error("رمز ورود حداقل ۶ کاراکتر است");
+        return;
+      }
+      if (editing && employeePassword.trim() && employeePassword.trim().length < 6) {
+        toast.error("رمز ورود حداقل ۶ کاراکتر است");
+        return;
+      }
     }
     const salary = parseAmount(baseSalary);
     const hours = parseAmount(baseWorkHours);
@@ -164,16 +214,19 @@ export default function PayrollEmployeesPage() {
     setSaving(true);
     try {
       const token = tokenCode();
-      const body = {
+      const body: Record<string, unknown> = {
         name: employeeName.trim(),
-        phone: employeePhone.trim() || null,
+        phone: phone || null,
         base_salary: salary,
         base_work_hours: hours,
         hourly_wage: wage,
       };
+      if (owner) {
+        body.permissions = selectedPermissions;
+        if (employeePassword.trim()) body.password = employeePassword.trim();
+      }
       const method = editing ? "PUT" : "POST";
       const url = editing ? `/api/shop-employees/${editing.id}` : "/api/shop-employees";
-      console.log("[shop-employees] request", method, url, body);
       const res = await FetchWithJwtClient(
         method,
         url,
@@ -181,7 +234,6 @@ export default function PayrollEmployeesPage() {
         {},
         { body: JSON.stringify(body) },
       );
-      console.log("[shop-employees] response", res);
       if (res?.hasError) {
         toast.error(getApiErrorMessage(res, "خطا در ذخیره کارمند"));
         return;
@@ -285,7 +337,8 @@ export default function PayrollEmployeesPage() {
                 <TableHead>
                   <TableRow>
                     <TableCell>نام</TableCell>
-                    <TableCell>تلفن</TableCell>
+                    <TableCell>تلفن / نام کاربری</TableCell>
+                    <TableCell>دسترسی‌ها</TableCell>
                     <TableCell align="center">پایه حقوق</TableCell>
                     <TableCell align="center">ساعات پایه</TableCell>
                     <TableCell align="center">دستمزد ساعتی</TableCell>
@@ -293,29 +346,47 @@ export default function PayrollEmployeesPage() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {filteredEmployees.map((e) => (
-                    <TableRow key={e.id}>
-                      <TableCell>{e.name}</TableCell>
-                      <TableCell sx={{ direction: "ltr" }}>{e.phone || "—"}</TableCell>
-                      <TableCell align="center">
-                        {e.base_salary ? `${formatNumber(Number(e.base_salary))} تومان` : "—"}
-                      </TableCell>
-                      <TableCell align="center">
-                        {e.base_work_hours ? `${formatNumber(Number(e.base_work_hours))} ساعت` : "—"}
-                      </TableCell>
-                      <TableCell align="center">
-                        {e.hourly_wage ? `${formatNumber(Number(e.hourly_wage))} تومان` : "—"}
-                      </TableCell>
-                      <TableCell align="center">
-                        <IconButton size="small" onClick={() => openEdit(e)}>
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton size="small" onClick={() => requestDeleteEmployee(e)}>
-                          <DeleteOutlineIcon fontSize="small" />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {filteredEmployees.map((e) => {
+                    const keys = employeePermissionKeys(e);
+                    return (
+                      <TableRow key={e.id}>
+                        <TableCell>{e.name}</TableCell>
+                        <TableCell sx={{ direction: "ltr" }}>{e.phone || e.username || "—"}</TableCell>
+                        <TableCell
+                          title={keys.length ? keys.map((key) => permissionTitle(key)).join("، ") : undefined}
+                          sx={{
+                            color: "var(--admin-text-muted)",
+                            fontSize: 12,
+                            maxWidth: 180,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {keys.length === 0
+                            ? "بدون دسترسی ورود"
+                            : keys.map((key) => permissionTitle(key)).join("، ")}
+                        </TableCell>
+                        <TableCell align="center">
+                          {e.base_salary ? `${formatNumber(Number(e.base_salary))} تومان` : "—"}
+                        </TableCell>
+                        <TableCell align="center">
+                          {e.base_work_hours ? `${formatNumber(Number(e.base_work_hours))} ساعت` : "—"}
+                        </TableCell>
+                        <TableCell align="center">
+                          {e.hourly_wage ? `${formatNumber(Number(e.hourly_wage))} تومان` : "—"}
+                        </TableCell>
+                        <TableCell align="center">
+                          <IconButton size="small" onClick={() => openEdit(e)}>
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton size="small" onClick={() => requestDeleteEmployee(e)}>
+                            <DeleteOutlineIcon fontSize="small" />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </TableContainer>
@@ -323,7 +394,7 @@ export default function PayrollEmployeesPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={dialogOpen} onClose={() => !saving && setDialogOpen(false)} fullWidth maxWidth="xs">
+      <Dialog open={dialogOpen} onClose={() => !saving && setDialogOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{editing ? "ویرایش کارمند" : "ثبت کارمند"}</DialogTitle>
         <DialogContent>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, pt: 1 }}>
@@ -336,11 +407,29 @@ export default function PayrollEmployeesPage() {
             />
             <TextField
               size="small"
-              label="تلفن"
+              label="تلفن / نام کاربری"
               value={employeePhone}
-              onChange={(e) => setEmployeePhone(e.target.value)}
+              onChange={(e) => setEmployeePhone(normalizePhoneDigits(e.target.value).slice(0, 11))}
               sx={fieldSx}
+              helperText={owner ? "شماره ۱۱ رقمی برای ورود کارمند" : undefined}
+              inputProps={{ inputMode: "numeric", style: { direction: "ltr", textAlign: "right" } }}
             />
+            {owner ? (
+              <TextField
+                size="small"
+                type="password"
+                label={editing ? "رمز ورود (اختیاری)" : "رمز ورود"}
+                value={employeePassword}
+                onChange={(e) => setEmployeePassword(e.target.value)}
+                sx={fieldSx}
+                autoComplete="new-password"
+                helperText={
+                  editing
+                    ? "خالی بگذارید اگر نمی‌خواهید رمز عوض شود"
+                    : "حداقل ۶ کاراکتر — برای اولین ورود لازم است"
+                }
+              />
+            ) : null}
             <TextField
               size="small"
               label="پایه حقوق (تومان)"
@@ -365,6 +454,63 @@ export default function PayrollEmployeesPage() {
               sx={fieldSx}
               inputProps={{ inputMode: "numeric", style: { direction: "ltr", textAlign: "right" } }}
             />
+            {owner ? (
+              <Box>
+                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 0.75 }}>
+                  <Typography sx={{ color: "var(--admin-text)", fontSize: 13, fontWeight: 600 }}>
+                    دسترسی‌های پنل
+                  </Typography>
+                  <Box sx={{ display: "flex", gap: 0.5 }}>
+                    <Button
+                      size="small"
+                      onClick={() => setSelectedPermissions(permissionCatalog.map((item) => item.key))}
+                    >
+                      همه
+                    </Button>
+                    <Button size="small" onClick={() => setSelectedPermissions([])}>
+                      هیچ‌کدام
+                    </Button>
+                  </Box>
+                </Box>
+                <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, mb: 1 }}>
+                  کارمند فقط بخش‌های تیک‌خورده را در منو می‌بیند. کلید دسترسی به API فرستاده می‌شود، نه عنوان فارسی.
+                </Typography>
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+                    gap: 0.25,
+                    maxHeight: 280,
+                    overflowY: "auto",
+                    pr: 0.5,
+                    border: "1px solid var(--admin-border)",
+                    borderRadius: "8px",
+                    p: 1,
+                    backgroundColor: "var(--admin-surface-alt)",
+                  }}
+                >
+                  {permissionCatalog.map((item) => (
+                    <FormControlLabel
+                      key={item.key}
+                      control={
+                        <Checkbox
+                          size="small"
+                          checked={selectedPermissions.includes(item.key)}
+                          onChange={() => togglePermission(item.key)}
+                          sx={checkboxSx}
+                        />
+                      }
+                      label={
+                        <Typography sx={{ color: "var(--admin-text)", fontSize: 12 }}>
+                          {item.title}
+                        </Typography>
+                      }
+                      sx={{ mr: 0, ml: 0 }}
+                    />
+                  ))}
+                </Box>
+              </Box>
+            ) : null}
           </Box>
         </DialogContent>
         <DialogActions>

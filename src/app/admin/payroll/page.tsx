@@ -34,6 +34,8 @@ import SearchIcon from "@mui/icons-material/Search";
 import FilterAltOffIcon from "@mui/icons-material/FilterAltOff";
 import PeopleIcon from "@mui/icons-material/People";
 import SettingsIcon from "@mui/icons-material/Settings";
+import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
+import ShopAccountSelect from "@/app/admin/ShopAccountSelect";
 import { useRouter } from "next/navigation";
 import DateObject from "react-date-object";
 import { ToastContainer, toast } from "react-toastify";
@@ -47,6 +49,7 @@ import PayrollConfirmDialog from "./PayrollConfirmDialog";
 import {
   PAYMENT_TYPE_OPTIONS,
   PERSIAN_MONTHS,
+  buildAdvanceBody,
   buildPayrollBody,
   buildJalaliYearOptions,
   buildPayrollUrl,
@@ -64,6 +67,7 @@ import {
   getPayrollStatus,
   getPayrollTotalPaid,
   getPayrollYear,
+  hasPayrollHours,
   isPayrollPaid,
   normalizePhoneDigits,
   normalizeSearchText,
@@ -123,6 +127,16 @@ export default function PayrollPage() {
   const [paymentType, setPaymentType] = useState("salary");
   const [paymentTitle, setPaymentTitle] = useState("");
   const [paymentNote, setPaymentNote] = useState("");
+  const [paymentShopAccountId, setPaymentShopAccountId] = useState<number | "">("");
+
+  const [advanceDialogOpen, setAdvanceDialogOpen] = useState(false);
+  const [advanceEmployeeId, setAdvanceEmployeeId] = useState<number | "">("");
+  const [advanceMonthValue, setAdvanceMonthValue] = useState<DateObject | null>(
+    createJalaliDateObject(currentJalali.year, currentJalali.month),
+  );
+  const [advanceAmount, setAdvanceAmount] = useState("");
+  const [advanceNote, setAdvanceNote] = useState("");
+  const [advanceShopAccountId, setAdvanceShopAccountId] = useState<number | "">("");
 
   const employeeMap = useMemo(() => {
     const map = new Map<number, Employee>();
@@ -254,8 +268,8 @@ export default function PayrollPage() {
   };
 
   const openEditPayroll = (item: Payroll) => {
-    if (isPayrollPaid(item) || getPayrollTotalPaid(item) > 0) {
-      toast.error("رکوردی که پرداخت دارد قابل ویرایش نیست");
+    if (isPayrollPaid(item) && hasPayrollHours(item)) {
+      toast.error("فیش تسویه‌شده قابل ویرایش نیست");
       return;
     }
     setEditingPayroll(item);
@@ -383,9 +397,10 @@ export default function PayrollPage() {
 
   const openPaymentsDialog = async (item: Payroll) => {
     setPaymentAmount("");
-    setPaymentType("salary");
+    setPaymentType(getPayrollRemaining(item) > 0 ? "salary" : "advance");
     setPaymentTitle("");
     setPaymentNote("");
+    setPaymentShopAccountId("");
     applyPayrollToPaymentsDialog(item);
     await loadPayments(item);
   };
@@ -405,7 +420,8 @@ export default function PayrollPage() {
       toast.error("مبلغ پرداخت را وارد کنید");
       return;
     }
-    if (amount > remaining) {
+    const isAdvance = paymentType === "advance";
+    if (!isAdvance && amount > remaining) {
       toast.error("مبلغ از مانده حقوق بیشتر است");
       return;
     }
@@ -418,6 +434,7 @@ export default function PayrollPage() {
       };
       if (paymentTitle.trim()) body.title = paymentTitle.trim();
       if (paymentNote.trim()) body.note = paymentNote.trim();
+      if (paymentShopAccountId !== "") body.shop_account_id = paymentShopAccountId;
       const res = await FetchWithJwtClient(
         "POST",
         `/api/employee-payrolls/${paymentsPayroll.id}/payments`,
@@ -429,13 +446,69 @@ export default function PayrollPage() {
         toast.error(getApiErrorMessage(res, "خطا در ثبت پرداخت"));
         return;
       }
-      toast.success("پرداخت ثبت شد");
+      toast.success(isAdvance ? "مساعده ثبت شد و در هزینه‌ها هم سند خورد" : "پرداخت ثبت شد و در هزینه‌ها هم سند خورد");
       setPaymentAmount("");
       setPaymentTitle("");
       setPaymentNote("");
+      setPaymentShopAccountId("");
       const list = (await loadPayrolls(filterYear, filterMonth)) || [];
       const updated = list.find((p) => p.id === paymentsPayroll.id);
       if (updated) applyPayrollToPaymentsDialog(updated);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openAdvanceDialog = () => {
+    const jalali = getCurrentJalaliYearMonth();
+    setAdvanceEmployeeId("");
+    setAdvanceMonthValue(createJalaliDateObject(jalali.year, jalali.month));
+    setAdvanceAmount("");
+    setAdvanceNote("");
+    setAdvanceShopAccountId("");
+    setAdvanceDialogOpen(true);
+  };
+
+  const saveAdvance = async () => {
+    if (!advanceEmployeeId) {
+      toast.error("کارمند را انتخاب کنید");
+      return;
+    }
+    const jalali = parseJalaliMonthPicker(advanceMonthValue);
+    if (!jalali) {
+      toast.error("سال و ماه شمسی را انتخاب کنید");
+      return;
+    }
+    const amount = parseAmount(advanceAmount);
+    if (amount <= 0) {
+      toast.error("مبلغ مساعده را وارد کنید");
+      return;
+    }
+    setSaving(true);
+    try {
+      const token = tokenCode();
+      const body = buildAdvanceBody({
+        employeeId: Number(advanceEmployeeId),
+        year: jalali.year,
+        month: jalali.month,
+        amount,
+        note: advanceNote,
+        shopAccountId: advanceShopAccountId,
+      });
+      const res = await FetchWithJwtClient(
+        "POST",
+        "/api/employee-payrolls/advances",
+        token,
+        {},
+        { body: JSON.stringify(body) },
+      );
+      if (res?.hasError) {
+        toast.error(getApiErrorMessage(res, "خطا در ثبت مساعده"));
+        return;
+      }
+      toast.success("مساعده ثبت شد و سند هزینه ساخته شد");
+      setAdvanceDialogOpen(false);
+      await loadPayrolls(filterYear, filterMonth);
     } finally {
       setSaving(false);
     }
@@ -650,11 +723,21 @@ export default function PayrollPage() {
 
       <Card sx={{ border: "1px solid var(--admin-border)" }}>
         <CardContent>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1, gap: 1, flexWrap: "wrap" }}>
             <Typography sx={{ fontWeight: 700 }}>لیست حقوق ماهانه</Typography>
-            <Button size="small" startIcon={<AddIcon />} onClick={openPayrollDialog}>
-              ثبت کارکرد
-            </Button>
+            <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+              <Button size="small" startIcon={<AddIcon />} onClick={openPayrollDialog}>
+                ثبت کارکرد
+              </Button>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<AccountBalanceWalletIcon />}
+                onClick={openAdvanceDialog}
+              >
+                ثبت مساعده
+              </Button>
+            </Box>
           </Box>
           {loading || payrollsLoading ? (
             <Box sx={{ py: 4, display: "flex", justifyContent: "center" }}>
@@ -697,7 +780,9 @@ export default function PayrollPage() {
                         <TableCell sx={{ direction: "ltr" }}>{employeePhone}</TableCell>
                         <TableCell align="center">{formatJalaliYearMonth(payrollYear, payrollMonth)}</TableCell>
                         <TableCell align="center">
-                          {formatNumber(Number(p.hours_worked || 0))} ساعت
+                          {hasPayrollHours(p)
+                            ? `${formatNumber(Number(p.hours_worked || 0))} ساعت`
+                            : "ثبت نشده"}
                         </TableCell>
                         <TableCell align="center">{formatNumber(salary)} تومان</TableCell>
                         <TableCell align="center">{formatNumber(paidAmount)} تومان</TableCell>
@@ -711,24 +796,26 @@ export default function PayrollPage() {
                         </TableCell>
                         <TableCell align="center">
                           <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.25, flexWrap: "wrap", justifyContent: "center" }}>
-                            {!paid && paidAmount === 0 ? (
+                            {!paid || !hasPayrollHours(p) ? (
                               <>
                                 <IconButton
                                   size="small"
-                                  title="ویرایش"
+                                  title={hasPayrollHours(p) ? "ویرایش" : "ثبت کارکرد"}
                                   onClick={() => openEditPayroll(p)}
                                   disabled={saving}
                                 >
                                   <EditIcon fontSize="small" />
                                 </IconButton>
-                                <IconButton
-                                  size="small"
-                                  title="حذف"
-                                  onClick={() => requestDeletePayroll(p)}
-                                  disabled={saving}
-                                >
-                                  <DeleteOutlineIcon fontSize="small" />
-                                </IconButton>
+                                {getPayrollTotalPaid(p) === 0 ? (
+                                  <IconButton
+                                    size="small"
+                                    title="حذف"
+                                    onClick={() => requestDeletePayroll(p)}
+                                    disabled={saving}
+                                  >
+                                    <DeleteOutlineIcon fontSize="small" />
+                                  </IconButton>
+                                ) : null}
                               </>
                             ) : null}
                             <Button
@@ -850,9 +937,16 @@ export default function PayrollPage() {
           {paymentsPayroll ? (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, pt: 1 }}>
               <Typography sx={{ fontSize: 13, color: "var(--admin-text-secondary)" }}>
-                حقوق {formatNumber(getPayrollSalary(paymentsPayroll))} تومان — پرداخت‌شده{" "}
-                {formatNumber(getPayrollTotalPaid(paymentsPayroll))} — مانده{" "}
-                {formatNumber(paymentsRemaining)} تومان
+                {hasPayrollHours(paymentsPayroll)
+                  ? `حقوق ${formatNumber(getPayrollSalary(paymentsPayroll))} تومان — `
+                  : "حقوق هنوز محاسبه نشده — "}
+                پرداخت‌شده {formatNumber(getPayrollTotalPaid(paymentsPayroll))}
+                {hasPayrollHours(paymentsPayroll)
+                  ? ` — مانده ${formatNumber(paymentsRemaining)} تومان`
+                  : ""}
+              </Typography>
+              <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)" }}>
+                مساعده قبل از محاسبه هم قابل ثبت است، سقف ندارد و فیش را تسویه نمی‌کند. بعد از محاسبه از مانده کم می‌شود. هر پرداخت یک سند جدا در هزینه‌ها می‌سازد.
               </Typography>
               {paymentsPayroll.salary_breakdown ? (
                 <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)" }}>
@@ -863,9 +957,7 @@ export default function PayrollPage() {
                 </Typography>
               ) : null}
 
-              {paymentsRemaining > 0 ? (
-                <>
-                  <TextField
+              <TextField
                     select
                     size="small"
                     label="نوع پرداخت"
@@ -873,16 +965,24 @@ export default function PayrollPage() {
                     onChange={(e) => setPaymentType(e.target.value)}
                     sx={fieldSx}
                   >
-                    {PAYMENT_TYPE_OPTIONS.map((opt) => (
+                    {(hasPayrollHours(paymentsPayroll)
+                      ? PAYMENT_TYPE_OPTIONS
+                      : PAYMENT_TYPE_OPTIONS.filter((opt) => opt.value === "advance")
+                    ).map((opt) => (
                       <MenuItem key={opt.value} value={opt.value}>
                         {opt.label}
                       </MenuItem>
                     ))}
                   </TextField>
+                  {paymentType !== "advance" && paymentsRemaining <= 0 && hasPayrollHours(paymentsPayroll) ? (
+                    <Typography sx={{ fontSize: 13, color: "var(--admin-text-muted)" }}>
+                      مانده‌ای برای پرداخت حقوق نیست. می‌توانید فقط مساعده ثبت کنید.
+                    </Typography>
+                  ) : null}
                   {(paymentType === "advance" || paymentType === "other") ? (
                     <TextField
                       size="small"
-                      label={paymentType === "advance" ? "عنوان مساعده" : "عنوان"}
+                      label={paymentType === "advance" ? "عنوان مساعده (اختیاری)" : "عنوان"}
                       value={paymentTitle}
                       onChange={(e) => setPaymentTitle(e.target.value)}
                       sx={fieldSx}
@@ -896,6 +996,13 @@ export default function PayrollPage() {
                     value={paymentAmount}
                     onChange={(e) => setPaymentAmount(formatInputWithSeparator(e.target.value))}
                     sx={fieldSx}
+                    helperText={
+                      paymentType === "advance"
+                        ? "بدون سقف — فیش را تسویه‌شده نمی‌کند"
+                        : paymentsRemaining > 0
+                          ? `حداکثر مانده: ${formatNumber(paymentsRemaining)} تومان`
+                          : undefined
+                    }
                   />
                   <TextField
                     size="small"
@@ -904,15 +1011,22 @@ export default function PayrollPage() {
                     onChange={(e) => setPaymentNote(e.target.value)}
                     sx={fieldSx}
                   />
-                  <Button variant="contained" onClick={savePayment} disabled={saving}>
-                    ثبت پرداخت
+                  <ShopAccountSelect
+                    value={paymentShopAccountId}
+                    onChange={setPaymentShopAccountId}
+                    label="حساب برداشت"
+                    helperText="اختیاری — اگر انتخاب شود موجودی حساب هم عوض می‌شود"
+                  />
+                  <Button
+                    variant="contained"
+                    onClick={savePayment}
+                    disabled={
+                      saving ||
+                      (paymentType !== "advance" && paymentsRemaining <= 0 && hasPayrollHours(paymentsPayroll))
+                    }
+                  >
+                    {paymentType === "advance" ? "ثبت مساعده" : "ثبت پرداخت"}
                   </Button>
-                </>
-              ) : (
-                <Typography sx={{ fontSize: 13, color: "var(--admin-text-muted)" }}>
-                  این حقوق کاملاً تسویه شده است
-                </Typography>
-              )}
 
               {paymentsLoading ? (
                 <Box sx={{ py: 2, display: "flex", justifyContent: "center" }}>
@@ -960,6 +1074,81 @@ export default function PayrollPage() {
         <DialogActions>
           <Button onClick={closePaymentsDialog} disabled={saving}>
             بستن
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={advanceDialogOpen}
+        onClose={() => {
+          if (saving) return;
+          setAdvanceDialogOpen(false);
+        }}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>ثبت مساعده</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, pt: 1 }}>
+            <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)" }}>
+              بدون ثبت کارکرد هم می‌توان مساعده داد. سقف ندارد و فیش را تسویه نمی‌کند؛ بعد از محاسبه حقوق از مانده کم می‌شود و یک سند جدا در هزینه‌ها ثبت می‌گردد.
+            </Typography>
+            <TextField
+              select
+              size="small"
+              label="کارمند"
+              value={advanceEmployeeId}
+              onChange={(e) => setAdvanceEmployeeId(Number(e.target.value))}
+              sx={fieldSx}
+            >
+              {employees.length === 0 ? (
+                <MenuItem disabled value="">
+                  کارمندی ثبت نشده — از بخش کارمندها اضافه کنید
+                </MenuItem>
+              ) : (
+                employees.map((e) => (
+                  <MenuItem key={e.id} value={e.id}>
+                    {e.name}
+                    {e.phone ? ` — ${e.phone}` : ""}
+                  </MenuItem>
+                ))
+              )}
+            </TextField>
+            <JalaliMonthPickerField
+              label="سال و ماه شمسی"
+              value={advanceMonthValue}
+              onChange={setAdvanceMonthValue}
+            />
+            <TextField
+              size="small"
+              type="text"
+              inputMode="numeric"
+              label="مبلغ (تومان)"
+              value={advanceAmount}
+              onChange={(e) => setAdvanceAmount(formatInputWithSeparator(e.target.value))}
+              sx={fieldSx}
+            />
+            <TextField
+              size="small"
+              label="توضیح (اختیاری)"
+              value={advanceNote}
+              onChange={(e) => setAdvanceNote(e.target.value)}
+              sx={fieldSx}
+            />
+            <ShopAccountSelect
+              value={advanceShopAccountId}
+              onChange={setAdvanceShopAccountId}
+              label="حساب برداشت"
+              helperText="اختیاری — حتی بدون حساب هم سند هزینه ثبت می‌شود"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAdvanceDialogOpen(false)} disabled={saving}>
+            انصراف
+          </Button>
+          <Button variant="contained" onClick={saveAdvance} disabled={saving || employees.length === 0}>
+            ثبت مساعده
           </Button>
         </DialogActions>
       </Dialog>

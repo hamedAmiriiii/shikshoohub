@@ -18,7 +18,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import CloseIcon from "@mui/icons-material/Close";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import AddShoppingCartIcon from "@mui/icons-material/AddShoppingCart";
-import type { CachedProduct } from "@/app/lib/productsCache";
+import { getCachedProductDiscount, type CachedProduct } from "@/app/lib/productsCache";
 
 function normalizeSearchText(value: string): string {
   const persianDigits = "۰۱۲۳۴۵۶۷۸۹";
@@ -106,7 +106,9 @@ export default function SaleProductListPanel({
           </Typography>
         </Box>
       ) : (
-        filteredProducts.map((product) => (
+        filteredProducts.map((product) => {
+          const { salePrice, originalPrice, hasDiscount } = getCachedProductDiscount(product);
+          return (
           <ListItem
             key={product.id}
             secondaryAction={
@@ -129,12 +131,36 @@ export default function SaleProductListPanel({
               primary={product.name || "بدون نام"}
               secondary={
                 <Box component="span" sx={{ display: "block", mt: 0.25 }}>
-                  <Typography
-                    component="span"
-                    sx={{ color: "var(--admin-accent)", fontSize: "12px", fontWeight: 600 }}
-                  >
-                    {formatNumber(Number(product.sale_price) || 0)} تومان
-                  </Typography>
+                  {hasDiscount ? (
+                    <Box
+                      component="span"
+                      sx={{ display: "flex", alignItems: "baseline", gap: 0.75, flexWrap: "wrap" }}
+                    >
+                      <Typography
+                        component="span"
+                        sx={{
+                          color: "var(--admin-text-muted)",
+                          fontSize: "11px",
+                          textDecoration: "line-through",
+                        }}
+                      >
+                        {formatNumber(originalPrice)} تومان
+                      </Typography>
+                      <Typography
+                        component="span"
+                        sx={{ color: "var(--admin-accent)", fontSize: "12px", fontWeight: 600 }}
+                      >
+                        {formatNumber(salePrice)} تومان
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <Typography
+                      component="span"
+                      sx={{ color: "var(--admin-accent)", fontSize: "12px", fontWeight: 600 }}
+                    >
+                      {formatNumber(salePrice)} تومان
+                    </Typography>
+                  )}
                   {product.barcode && (
                     <Typography
                       component="span"
@@ -160,7 +186,8 @@ export default function SaleProductListPanel({
               }}
             />
           </ListItem>
-        ))
+          );
+        })
       )}
     </List>
   );

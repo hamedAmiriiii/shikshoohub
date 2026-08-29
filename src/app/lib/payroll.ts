@@ -6,9 +6,12 @@ export type Employee = {
   id: number;
   name: string;
   phone?: string;
+  username?: string;
   base_salary?: number;
   base_work_hours?: number;
   hourly_wage?: number;
+  permissions?: string[] | Array<{ key?: string; name?: string; permission?: string }>;
+  shop_permissions?: string[] | Array<{ key?: string; name?: string; permission?: string }>;
 };
 
 export type PayrollSalaryBreakdown = {
@@ -262,6 +265,31 @@ export function buildPayrollBody(
     payroll_month: month,
     hours_worked: hours,
   };
+}
+
+export function buildAdvanceBody(input: {
+  employeeId: number;
+  year: number;
+  month: number;
+  amount: number;
+  note?: string;
+  shopAccountId?: number | "";
+}): Record<string, unknown> {
+  const body: Record<string, unknown> = {
+    shop_employee_id: input.employeeId,
+    payroll_year: input.year,
+    payroll_month: input.month,
+    amount: input.amount,
+  };
+  if (input.note?.trim()) body.note = input.note.trim();
+  if (input.shopAccountId !== "" && input.shopAccountId != null) {
+    body.shop_account_id = input.shopAccountId;
+  }
+  return body;
+}
+
+export function hasPayrollHours(p: Payroll): boolean {
+  return Number(p.hours_worked) > 0;
 }
 
 export function buildPayrollUrl(year: number | "all", month: number | "all"): string {

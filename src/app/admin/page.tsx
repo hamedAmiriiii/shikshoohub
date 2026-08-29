@@ -70,7 +70,7 @@ import {
   readAdminPosSettings,
   ADMIN_POS_SETTINGS_CHANGED_EVENT,
 } from '@/app/lib/adminPosSettings';
-import { formatAmountInput } from '@/app/lib/amountInput';
+import { formatAmountInput, parseAmountInput as parseMoneyAmount } from '@/app/lib/amountInput';
 import type { PaymentType } from '@/app/lib/paymentTypes';
 import SaleProductListPanel from '@/app/admin/SaleProductListPanel';
 import AdminMenuModeView from '@/app/admin/AdminMenuModeView';
@@ -182,6 +182,8 @@ export default function ShoppingPage() {
   const [calculatingInstallments, setCalculatingInstallments] = useState(false); // وضعیت در حال محاسبه
   const [installmentCreditError, setInstallmentCreditError] = useState<string>(''); // خطای اعتبار ناکافی
   const [registerPhone, setRegisterPhone] = useState('');
+  const [registerName, setRegisterName] = useState('');
+  const [askCustomerName, setAskCustomerName] = useState(false);
   const [todayDashboard, setTodayDashboard] = useState<TodayDashboardSnapshot | null>(null);
   const [salesByDay, setSalesByDay] = useState<SalesByDaySnapshot | null>(null);
   const [isRefreshingDashboard, setIsRefreshingDashboard] = useState(false);
@@ -889,6 +891,7 @@ export default function ShoppingPage() {
       setShowProductListOnMainPage(settings.showProductListOnMainPage);
       setMenuMode(settings.menuMode);
       setClassicPosMode(settings.classicPosMode);
+      setAskCustomerName(settings.askCustomerName);
       setInstallmentPaymentEnabled(settings.installmentPaymentEnabled);
       setDebtPaymentEnabled(settings.debtPaymentEnabled);
       setChequePaymentEnabled(settings.chequePaymentEnabled);
@@ -1024,8 +1027,9 @@ export default function ShoppingPage() {
             {
               ...item,
               quantity: addQty,
+              sale_price: parseMoneyAmount(item.sale_price),
               ...(salePriceEditEnabled
-                ? { default_sale_price: Number(item.sale_price) }
+                ? { default_sale_price: parseMoneyAmount(item.sale_price) }
                 : {}),
             },
           ];
@@ -1689,7 +1693,12 @@ export default function ShoppingPage() {
     setIsRegisteringUser(true);
     try {
       const token = tokenCode() || "";
-      const res = await apiRequestError("Post", {}, { phone: normalizedPhone }, `/api/customers/register`, true, true, token);
+      const payload: Record<string, unknown> = { phone: normalizedPhone };
+      const trimmedName = registerName.trim();
+      if (askCustomerName && trimmedName) {
+        payload.name = trimmedName;
+      }
+      const res = await apiRequestError("Post", {}, payload, `/api/customers/register`, true, true, token);
 
       if (res.hasError) {
         toast.error(res.errorText || "خطا در ثبت کاربر");
@@ -1705,6 +1714,7 @@ export default function ShoppingPage() {
       // بعد از ثبت/یافتن کاربر، شماره را در فرم خرید هم قرار می‌دهیم.
       setPhone(normalizedPhone);
       setRegisterPhone('');
+      setRegisterName('');
     } catch (error) {
       console.error("Error registering user:", error);
       toast.error("خطا در ثبت کاربر");
@@ -2609,7 +2619,38 @@ export default function ShoppingPage() {
                               ثبت مشتری جدید
                             </Typography>
                           </Box>
-                          <Box sx={{ display: "flex", gap: 0.75, alignItems: "center" }}>
+                          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
+                            {askCustomerName ? (
+                              <TextField
+                                value={registerName}
+                                onChange={(e) => setRegisterName(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" && !isRegisteringUser) {
+                                    e.preventDefault();
+                                    handleRegisterUser();
+                                  }
+                                }}
+                                placeholder="نام مشتری"
+                                size="small"
+                                fullWidth
+                                sx={{
+                                  "& .MuiOutlinedInput-root": {
+                                    backgroundColor: "var(--admin-surface-alt)",
+                                    color: "var(--admin-text)",
+                                    borderRadius: "10px",
+                                    height: 36,
+                                    "& fieldset": { borderColor: "var(--admin-border)" },
+                                    "&:hover fieldset": { borderColor: "var(--admin-accent)" },
+                                    "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
+                                  },
+                                  "& .MuiInputBase-input": {
+                                    color: "var(--admin-text)",
+                                    fontSize: "12px",
+                                  },
+                                }}
+                              />
+                            ) : null}
+                            <Box sx={{ display: "flex", gap: 0.75, alignItems: "center" }}>
                             <TextField
                               value={registerPhone}
                               onChange={(e) => {
@@ -2661,6 +2702,7 @@ export default function ShoppingPage() {
                             >
                               {isRegisteringUser ? "..." : "ثبت"}
                             </Button>
+                            </Box>
                           </Box>
                         </CardContent>
                       </Card>

@@ -30,6 +30,7 @@ import { adminButtonStartIconSx, adminPageSx } from "@/app/admin/theme/adminThem
 
 interface Customer {
   phone: string;
+  name?: string | null;
   total_purchases: number;
 }
 
@@ -50,17 +51,20 @@ const fieldSx = {
 
 function PhoneRow({
   phone,
+  name,
   selected,
   manual,
   onToggle,
   onRemove,
 }: {
   phone: string;
+  name?: string | null;
   selected: boolean;
   manual?: boolean;
   onToggle: () => void;
   onRemove?: () => void;
 }) {
+  const displayName = String(name || "").trim();
   return (
     <Box
       sx={{
@@ -83,18 +87,24 @@ function PhoneRow({
           "&.Mui-checked": { color: "var(--admin-accent)" },
         }}
       />
-      <Typography
-        sx={{
-          flex: 1,
-          color: "var(--admin-text)",
-          fontSize: "14px",
-          fontWeight: 500,
-          direction: "ltr",
-          textAlign: "right",
-        }}
-      >
-        {phone}
-      </Typography>
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        {displayName ? (
+          <Typography sx={{ color: "var(--admin-text)", fontSize: "14px", fontWeight: 600 }}>
+            {displayName}
+          </Typography>
+        ) : null}
+        <Typography
+          sx={{
+            color: displayName ? "var(--admin-text-muted)" : "var(--admin-text)",
+            fontSize: displayName ? "12px" : "14px",
+            fontWeight: displayName ? 400 : 500,
+            direction: "ltr",
+            textAlign: "right",
+          }}
+        >
+          {phone}
+        </Typography>
+      </Box>
       {manual && (
         <Chip
           label="دستی"
@@ -152,11 +162,15 @@ export default function BroadcastSMSPage() {
     fetchCustomers();
   }, []);
 
-  const searchNorm = phoneSearch.trim().replace(/\s/g, "");
+  const searchNorm = phoneSearch.trim().toLowerCase().replace(/\s/g, "");
 
   const filteredCustomers = useMemo(() => {
     if (!searchNorm) return customers;
-    return customers.filter((c) => c.phone?.includes(searchNorm));
+    return customers.filter((c) => {
+      const phone = String(c.phone || "").replace(/\s/g, "");
+      const name = String(c.name || "").toLowerCase().replace(/\s/g, "");
+      return phone.includes(searchNorm) || name.includes(searchNorm);
+    });
   }, [customers, searchNorm]);
 
   const filteredManualPhones = useMemo(() => {
@@ -456,6 +470,7 @@ export default function BroadcastSMSPage() {
               <PhoneRow
                 key={customer.phone}
                 phone={customer.phone || "بدون شماره"}
+                name={customer.name}
                 selected={selectedPhones.includes(customer.phone)}
                 onToggle={() => togglePhone(customer.phone)}
               />

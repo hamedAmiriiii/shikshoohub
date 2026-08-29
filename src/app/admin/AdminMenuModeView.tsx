@@ -14,7 +14,10 @@ import {
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
-import type { CachedProduct } from "@/app/lib/productsCache";
+import {
+  getCachedProductDiscount,
+  type CachedProduct,
+} from "@/app/lib/productsCache";
 import {
   MENU_ALL_CATEGORY_ID,
   buildMenuCategories,
@@ -188,13 +191,14 @@ export default function AdminMenuModeView({
         <Grid container spacing={0.75}>
           {filteredProducts.map((product) => {
             const imageUrl = getProductImageUrl(product);
-            const price = Number(product.sale_price) || 0;
+            const { salePrice, originalPrice, hasDiscount } = getCachedProductDiscount(product);
             const inCart = (cartQtyById.get(String(product.id)) || 0) > 0;
 
             return (
               <Grid item xs={4} sm={3} md={2} lg={2} key={product.id}>
                 <Card
                   sx={{
+                    height: "100%",
                     borderRadius: "8px",
                     border: inCart
                       ? "1.5px solid var(--admin-accent)"
@@ -209,7 +213,10 @@ export default function AdminMenuModeView({
                     "&:hover": { borderColor: "var(--admin-accent)" },
                   }}
                 >
-                  <CardActionArea onClick={() => onAddProduct(product)} sx={{ display: "block" }}>
+                  <CardActionArea
+                    onClick={() => onAddProduct(product)}
+                    sx={{ display: "flex", flexDirection: "column", alignItems: "stretch", height: "100%" }}
+                  >
                     {showProductImages ? (
                       <Box
                         sx={{
@@ -220,6 +227,7 @@ export default function AdminMenuModeView({
                           alignItems: "center",
                           justifyContent: "center",
                           overflow: "hidden",
+                          flexShrink: 0,
                         }}
                       >
                         {imageUrl ? (
@@ -236,7 +244,7 @@ export default function AdminMenuModeView({
                         )}
                       </Box>
                     ) : null}
-                    <CardContent sx={{ p: 0.5, "&:last-child": { pb: 0.5 } }}>
+                    <CardContent sx={{ p: 0.5, "&:last-child": { pb: 0.5 }, flex: 1 }}>
                       <Typography
                         sx={{
                           color: inCart ? "var(--admin-accent)" : "var(--admin-text)",
@@ -252,16 +260,45 @@ export default function AdminMenuModeView({
                       >
                         {product.name || "—"}
                       </Typography>
-                      <Typography
+                      <Box
                         sx={{
-                          color: "var(--admin-accent)",
-                          fontWeight: 700,
-                          fontSize: "9px",
                           mt: 0.25,
+                          display: "flex",
+                          flexDirection: "row",
+                          alignItems: "baseline",
+                          gap: 0.5,
+                          minHeight: 14,
+                          overflow: "hidden",
                         }}
                       >
-                        {formatNumber(price)}
-                      </Typography>
+                        <Typography
+                          sx={{
+                            color: "var(--admin-accent)",
+                            fontWeight: 700,
+                            fontSize: "9px",
+                            lineHeight: 1.2,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {formatNumber(salePrice)}
+                        </Typography>
+                        {hasDiscount ? (
+                          <Typography
+                            sx={{
+                              color: "var(--admin-text-muted)",
+                              fontWeight: 500,
+                              fontSize: "8px",
+                              textDecoration: "line-through",
+                              lineHeight: 1.2,
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {formatNumber(originalPrice)}
+                          </Typography>
+                        ) : null}
+                      </Box>
                     </CardContent>
                   </CardActionArea>
                 </Card>
