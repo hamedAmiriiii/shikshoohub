@@ -75,6 +75,7 @@ import { formatAmountInput, parseAmountInput as parseMoneyAmount } from '@/app/l
 import type { PaymentType } from '@/app/lib/paymentTypes';
 import SaleProductListPanel from '@/app/admin/SaleProductListPanel';
 import AdminMenuModeView from '@/app/admin/AdminMenuModeView';
+import AdminClassicPosView from '@/app/admin/AdminClassicPosView';
 import type { AdminMenuModeCartPanelProps } from '@/app/admin/AdminMenuModeCartPanel';
 import { ADMIN_SIDEBAR_WIDTH } from '@/app/admin/AdminHamburgerSidebar';
 import CartQuantityControl from '@/app/admin/CartQuantityControl';
@@ -2145,13 +2146,18 @@ export default function ShoppingPage() {
           </Box>
         )}
 
-        {menuMode || classicPosMode ? (
+        {menuMode ? (
           <AdminMenuModeView
             products={items}
             onAddProduct={addProductToCart}
             formatNumber={formatNumber}
             cartPanel={posCartPanel}
             classicPosMode={classicPosMode}
+            onOpenScanner={handleOpenModal}
+          />
+        ) : classicPosMode ? (
+          <AdminClassicPosView
+            cartPanel={posCartPanel}
             onOpenScanner={handleOpenModal}
           />
         ) : (
@@ -3817,7 +3823,7 @@ export default function ShoppingPage() {
         )}
       </Container>
 
-      {!menuMode && !classicPosMode && showProductListOnMainPage && (
+      {!menuMode && showProductListOnMainPage && (
         <Box sx={{ display: { xs: "none", md: "block" } }}>
           <SaleProductListPanel
             variant="floating"
