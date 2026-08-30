@@ -25,6 +25,7 @@ import {
   Sparkles,
   Gift,
 } from "lucide-react";
+import WebinoChatbot from "@/app/coponent/WebinoChatbot";
 
 const REGISTER_URL = "/admin/register-shop";
 const LOGIN_URL = "/admin/login";
@@ -771,6 +772,7 @@ export default function LandingShopClient() {
         </button>
       </div>
       <div className="h-20 md:hidden" aria-hidden />
+      <WebinoChatbot audience="landing" />
     </div>
   );
 }

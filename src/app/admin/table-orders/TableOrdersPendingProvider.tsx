@@ -68,6 +68,7 @@ export default function TableOrdersPendingProvider({ children }: { children: Rea
   }, []);
 
   const refresh = useCallback(async () => {
+    if (!navigator.onLine) return;
     if (!readAdminPosSettings().restaurantCafeEnabled) return;
     const token = tokenCode();
     if (!token) return;

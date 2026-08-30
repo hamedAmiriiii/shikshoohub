@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import LandingShopClient from "./landing/shop/LandingShopClient";
+import StandaloneAdminRedirect from "./components/StandaloneAdminRedirect";
 
 export const metadata: Metadata = {
   title: "وبینو | نرم‌افزار حسابداری فروشگاهی",
@@ -13,7 +14,12 @@ export const metadata: Metadata = {
   },
 };
 
-/** لندینگ وبینو روی آدرس اصلی سایت — همان صفحه /landing */
+/** لندینگ وبینو روی آدرس اصلی سایت — پنل فروش از /admin */
 export default function HomePage() {
-  return <LandingShopClient />;
+  return (
+    <>
+      <StandaloneAdminRedirect />
+      <LandingShopClient />
+    </>
+  );
 }

@@ -2,7 +2,7 @@
   "id": "/admin",
   "name": "Webino",
   "short_name": "Webino",
-  "description": "پنل مدیریت فروشگاه",
+  "description": "پنل فروش و صندوق وبینو",
   "start_url": "/admin",
   "scope": "/admin",
   "display": "standalone",

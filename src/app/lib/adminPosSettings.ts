@@ -62,6 +62,11 @@ export function writeAdminPosSettings(partial: Partial<AdminPosSettings>): Admin
   if (typeof window !== "undefined") {
     localStorage.setItem(ADMIN_POS_SETTINGS_KEY, JSON.stringify(merged));
     window.dispatchEvent(new CustomEvent(ADMIN_POS_SETTINGS_CHANGED_EVENT));
+    void import("@/app/lib/offline/cache").then(({ savePosSettingsCache }) => {
+      void savePosSettingsCache(merged);
+    }).catch(() => {
+      /* ignore */
+    });
   }
   return merged;
 }

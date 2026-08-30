@@ -75,7 +75,6 @@ import { formatAmountInput, parseAmountInput as parseMoneyAmount } from '@/app/l
 import type { PaymentType } from '@/app/lib/paymentTypes';
 import SaleProductListPanel from '@/app/admin/SaleProductListPanel';
 import AdminMenuModeView from '@/app/admin/AdminMenuModeView';
-import AdminClassicPosView from '@/app/admin/AdminClassicPosView';
 import type { AdminMenuModeCartPanelProps } from '@/app/admin/AdminMenuModeCartPanel';
 import { ADMIN_SIDEBAR_WIDTH } from '@/app/admin/AdminHamburgerSidebar';
 import CartQuantityControl from '@/app/admin/CartQuantityControl';
@@ -170,7 +169,9 @@ export default function ShoppingPage() {
   const [backPrice, setBackPrice] = useState(0);
   const [checkingCredit, setCheckingCredit] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isOnline, setIsOnline] = useState(true);
+  const [isOnline, setIsOnline] = useState(
+    () => typeof navigator === "undefined" || navigator.onLine,
+  );
   const [forcedOffline, setForcedOffline] = useState(false);
   const [isCheckingNetworkSpeed, setIsCheckingNetworkSpeed] = useState(false);
   const [networkWarningOpen, setNetworkWarningOpen] = useState(false);
@@ -712,6 +713,7 @@ export default function ShoppingPage() {
         if (!isActive) return;
         console.log('res : ',res);
         if (res.hasError) {
+          if (!navigator.onLine) return;
           if (!hasCachedData) {
             toast.error("خطا در دریافت محصولات", { toastId: "products-fetch-error" });
           } else {
@@ -749,9 +751,9 @@ export default function ShoppingPage() {
           });
           return;
         }
-        if (!hasCachedData) {
+        if (!hasCachedData && navigator.onLine) {
           toast.error("خطا در دریافت محصولات", { toastId: "products-fetch-error" });
-        } else {
+        } else if (hasCachedData && navigator.onLine) {
           toast.warn("خطا در بروزرسانی محصولات - از cache استفاده می‌شود", {
             toastId: "products-cache-fallback",
           });
@@ -777,8 +779,9 @@ export default function ShoppingPage() {
       }
 
       // 3) پس از مهلت اولیه، refresh از API
+      if (!navigator.onLine) return;
       await new Promise((resolve) => setTimeout(resolve, BOOTSTRAP_NETWORK_DELAY_MS));
-      if (!isActive) return;
+      if (!isActive || !navigator.onLine) return;
       await fetchProducts();
     };
 
@@ -2142,7 +2145,7 @@ export default function ShoppingPage() {
           </Box>
         )}
 
-        {menuMode && (
+        {menuMode || classicPosMode ? (
           <AdminMenuModeView
             products={items}
             onAddProduct={addProductToCart}
@@ -2151,16 +2154,7 @@ export default function ShoppingPage() {
             classicPosMode={classicPosMode}
             onOpenScanner={handleOpenModal}
           />
-        )}
-
-        {classicPosMode && !menuMode && (
-          <AdminClassicPosView
-            cartPanel={posCartPanel}
-            onOpenScanner={handleOpenModal}
-          />
-        )}
-
-        {!menuMode && !classicPosMode && (
+        ) : (
         <Grid container spacing={3} sx={{ maxWidth: { md: "1400px" }, margin: { md: "0 auto" } }}>
           {/* Cart Items */}
           <Grid item xs={12} md={(cart.length > 0 || cartCount > 1) ? 8 : 12}>
@@ -3823,7 +3817,7 @@ export default function ShoppingPage() {
         )}
       </Container>
 
-      {!menuMode && showProductListOnMainPage && (
+      {!menuMode && !classicPosMode && showProductListOnMainPage && (
         <Box sx={{ display: { xs: "none", md: "block" } }}>
           <SaleProductListPanel
             variant="floating"

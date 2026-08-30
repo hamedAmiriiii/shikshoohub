@@ -12,6 +12,7 @@ import Box from '@mui/material/Box';
 import { ADMIN_SIDEBAR_WIDTH } from './AdminHamburgerSidebar';
 import { ADMIN_MENU_CART_WIDTH_VAR } from './adminMenuCartLayout';
 import { canAccessAdminPath, getFirstAllowedAdminPath, isPublicAdminPath } from '@/app/lib/shopPermissions';
+import WebinoChatbot from '@/app/coponent/WebinoChatbot';
 
 // Map pathname to page title
 const getPageTitle = (pathname: string | null): string | undefined => {
@@ -163,6 +164,7 @@ export default function ShikshooLayout({
               {children}
             </Box>
             {!isPrintPage && !isPublicAdminPage && <SimpleBottomNavigationAtelier />}
+            {!isPrintPage && !isPublicAdminPage && <WebinoChatbot audience="admin" />}
           </>
         )}
         </Box>
