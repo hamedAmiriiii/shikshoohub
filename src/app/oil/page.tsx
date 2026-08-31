@@ -1,141 +1,89 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus, Search } from "lucide-react";
-import { toast } from "react-toastify";
-import { isOilApiError, oilListCustomers } from "@/app/lib/oil/api";
-import { getOilToken } from "@/app/lib/oil/auth";
-import { emptyPlateParts, formatKm, parsePlate } from "@/app/lib/oil/plate";
-import type { OilVisit } from "@/app/lib/oil/types";
+import { Droplets, Mail, Plus, ShieldCheck, Users } from "lucide-react";
+import { formatKm } from "@/app/lib/oil/plate";
 import { useOilAuth } from "./OilAuth";
-import IranPlate from "./IranPlate";
+
+const formatNumber = (n: number) => new Intl.NumberFormat("fa-IR").format(n);
 
 export default function OilHomePage() {
-  const { session, ready } = useOilAuth();
-  const [q, setQ] = useState("");
-  const [debounced, setDebounced] = useState("");
-  const [items, setItems] = useState<OilVisit[]>([]);
-  const [page, setPage] = useState(1);
-  const [lastPage, setLastPage] = useState(1);
-  const [loading, setLoading] = useState(false);
+  const { session } = useOilAuth();
   const accessOk = session?.shop_access?.shop_access_active !== false;
-
-  useEffect(() => {
-    const id = setTimeout(() => setDebounced(q.trim()), 350);
-    return () => clearTimeout(id);
-  }, [q]);
-
-  const load = useCallback(
-    async (nextPage: number, replace: boolean) => {
-      if (!ready || !getOilToken()) return;
-      setLoading(true);
-      try {
-        const res = await oilListCustomers(debounced || undefined, nextPage, 30);
-        if (isOilApiError(res)) {
-          toast.error(res.message);
-          return;
-        }
-        setPage(res.current_page);
-        setLastPage(res.last_page);
-        setItems((prev) => (replace ? res.data : [...prev, ...res.data]));
-      } finally {
-        setLoading(false);
-      }
-    },
-    [debounced, ready],
-  );
-
-  useEffect(() => {
-    void load(1, true);
-  }, [load]);
-
-  const emptyText = useMemo(() => {
-    if (loading && items.length === 0) return "در حال بارگذاری…";
-    if (debounced) return "مشتری با این پلاک یا موبایل پیدا نشد.";
-    return "هنوز تعویضی ثبت نشده. از دکمه ایجاد شروع کنید.";
-  }, [debounced, items.length, loading]);
+  const days = session?.shop_access?.shop_access_days_remaining;
+  const smsBalance = session?.sms?.balance;
+  const intervalKm = session?.shop?.oil_interval_km || 5000;
+  const userName = session?.user?.name || "";
+  const shopName = session?.shop?.name || "تعویض روغن";
 
   return (
-    <div className="oil-page" style={{ paddingBottom: 88 }}>
+    <div className="oil-page oil-page-dash">
       {!accessOk && (
         <div className="oil-banner warn">
           دوره دسترسی مغازه تمام شده؛ ثبت تعویض جدید ممکن نیست.
         </div>
       )}
 
-      <div style={{ position: "relative" }}>
-        <Search
-          size={18}
-          style={{
-            position: "absolute",
-            left: 12,
-            top: 14,
-            color: "#9aa3ad",
-            pointerEvents: "none",
-          }}
-        />
-        <input
-          className="oil-search"
-          placeholder="جستجو پلاک یا موبایل"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          style={{ paddingLeft: 36 }}
-        />
+      <div className="oil-dash-hello">
+        <p className="oil-muted" style={{ margin: 0 }}>
+          {userName ? `سلام ${userName}` : "سلام"}
+        </p>
+        <h2>{shopName}</h2>
       </div>
 
-      {items.length === 0 ? (
-        <div className="oil-empty">{emptyText}</div>
-      ) : (
-        items.map((visit) => (
-          <Link
-            key={`${visit.plate}-${visit.id}`}
-            href={`/oil/car/${encodeURIComponent(visit.plate)}`}
-            className="oil-card"
-          >
-            <IranPlate
-              parts={visit.plate_parts || parsePlate(visit.plate) || emptyPlateParts()}
-              readOnly
-              size="sm"
-            />
-            <div className="oil-card-meta">
-              <span dir="ltr">{visit.phone}</span>
-              <span>{visit.created_at_jalali}</span>
-            </div>
-            <div className="oil-card-meta">
-              <span>
-                کیلومتر <span className="oil-km">{formatKm(visit.km)}</span>
-              </span>
-              <span>
-                بعدی <span className="oil-km">{formatKm(visit.next_km)}</span>
-              </span>
-            </div>
-            <div className="oil-card-meta">
-              <span>{visit.visit_count ?? 1} مراجعه</span>
-              {!visit.sms_sent && <span style={{ color: "#ffb4b4" }}>پیامک نرفت</span>}
-            </div>
-          </Link>
-        ))
-      )}
+      <div className="oil-dash-grid">
+        <div className="oil-dash-tile">
+          <span className="oil-dash-icon">
+            <Mail size={18} />
+          </span>
+          <span className="oil-dash-label">موجودی پیامک</span>
+          <span className="oil-dash-value">
+            {typeof smsBalance === "number" ? formatNumber(smsBalance) : "—"}
+          </span>
+        </div>
+        <div className="oil-dash-tile">
+          <span className="oil-dash-icon">
+            <ShieldCheck size={18} />
+          </span>
+          <span className="oil-dash-label">دسترسی</span>
+          <span className="oil-dash-value">
+            {accessOk
+              ? days != null
+                ? `${formatNumber(days)} روز`
+                : "فعال"
+              : "تمام"}
+          </span>
+        </div>
+        <div className="oil-dash-tile oil-dash-tile-wide">
+          <span className="oil-dash-icon">
+            <Droplets size={18} />
+          </span>
+          <span className="oil-dash-label">فاصله تعویض پیشنهادی</span>
+          <span className="oil-dash-value">{formatKm(intervalKm)} کیلومتر</span>
+        </div>
+      </div>
 
-      {page < lastPage && (
-        <button
-          type="button"
-          className="oil-btn oil-btn-ghost"
-          style={{ marginTop: 16 }}
-          disabled={loading}
-          onClick={() => void load(page + 1, false)}
-        >
-          بارگذاری بیشتر
+      {accessOk ? (
+        <Link href="/oil/new" className="oil-btn oil-btn-primary oil-dash-cta">
+          <Plus size={20} />
+          ثبت تعویض جدید
+        </Link>
+      ) : (
+        <button type="button" className="oil-btn oil-btn-primary oil-dash-cta" disabled>
+          ثبت تعویض جدید
         </button>
       )}
 
-      {accessOk && (
-        <Link href="/oil/new" className="oil-fab">
-          <Plus size={20} />
-          ایجاد
+      <div className="oil-dash-shortcuts">
+        <Link href="/oil/customers" className="oil-dash-shortcut">
+          <Users size={18} />
+          مشتریان
         </Link>
-      )}
+        <Link href="/oil/sms" className="oil-dash-shortcut">
+          <Mail size={18} />
+          پیامک‌ها
+        </Link>
+      </div>
     </div>
   );
 }

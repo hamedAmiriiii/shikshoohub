@@ -90,6 +90,14 @@
   cursor: default;
 }
 
+.oil-header-start {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
 .oil-header-actions {
   display: flex;
   align-items: center;
@@ -539,4 +547,219 @@ a.oil-icon-btn {
 .oil-link {
   color: var(--oil-accent);
   font-weight: 700;
+}
+
+.oil-dash-hello {
+  margin-bottom: 16px;
+}
+
+.oil-dash-hello h2 {
+  margin: 4px 0 0;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.oil-dash-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.oil-dash-tile {
+  background: var(--oil-surface);
+  border: 1px solid var(--oil-border);
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  min-height: 108px;
+}
+
+.oil-dash-tile-wide {
+  grid-column: 1 / -1;
+  min-height: 0;
+}
+
+.oil-dash-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: rgba(232, 163, 23, 0.14);
+  color: var(--oil-accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.oil-dash-label {
+  font-size: 12px;
+  color: var(--oil-muted);
+}
+
+.oil-dash-value {
+  margin-top: 4px;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.oil-page-dash {
+  padding-bottom: calc(88px + env(safe-area-inset-bottom));
+}
+
+.oil-dash-cta {
+  position: fixed;
+  left: max(16px, calc(50% - 240px + 16px));
+  right: max(16px, calc(50% - 240px + 16px));
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 30;
+  width: auto;
+  gap: 8px;
+  text-decoration: none;
+  box-shadow: 0 10px 24px rgba(232, 163, 23, 0.28);
+}
+
+.oil-dash-shortcuts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.oil-dash-shortcut {
+  height: 48px;
+  border-radius: 14px;
+  border: 1px solid var(--oil-border);
+  background: var(--oil-surface);
+  color: var(--oil-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.oil-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  border: 0;
+  padding: 0;
+  background: rgba(0, 0, 0, 0.55);
+  cursor: pointer;
+}
+
+.oil-drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  right: max(0px, calc(50% - 240px));
+  z-index: 60;
+  width: min(300px, 86vw);
+  background: #151c23;
+  border-left: 1px solid var(--oil-border);
+  padding: 16px 14px calc(20px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  transform: translateX(110%);
+  transition: transform 0.22s ease;
+  pointer-events: none;
+}
+
+.oil-drawer.open {
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+.oil-drawer-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding-top: env(safe-area-inset-top);
+}
+
+.oil-drawer-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.oil-drawer-brand strong {
+  display: block;
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oil-drawer-brand .oil-muted {
+  margin: 2px 0 0;
+}
+
+.oil-drawer-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(232, 163, 23, 0.16);
+  color: var(--oil-accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.oil-drawer-sms {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  margin-bottom: 12px;
+  border-radius: 999px;
+  background: rgba(232, 163, 23, 0.16);
+  color: var(--oil-accent);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.oil-drawer-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.oil-nav-item {
+  height: 46px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--oil-text);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  width: 100%;
+  font-family: inherit;
+}
+
+.oil-nav-item.active {
+  background: rgba(232, 163, 23, 0.16);
+  color: var(--oil-accent);
+}
+
+.oil-nav-logout {
+  margin-top: 8px;
+  color: #ffb4b4;
+  background: rgba(224, 87, 87, 0.1);
 }

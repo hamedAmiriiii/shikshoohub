@@ -9,7 +9,7 @@ import {
   oilPurchaseSmsPackage,
 } from "@/app/lib/oil/api";
 import type { OilSmsPackage, OilSmsPackageOrder } from "@/app/lib/oil/types";
-import OilSmsQuotaCard from "../OilSmsQuotaCard";
+import OilSmsQuotaCard from "../../OilSmsQuotaCard";
 
 const CARD_NUMBER = "5041721059095506";
 const formatNumber = (n: number) => new Intl.NumberFormat("fa-IR").format(n);
