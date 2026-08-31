@@ -1,4 +1,4 @@
-import { extractPlateFromOcr, OIL_PLATE_LETTERS } from "./plate";
+import { isPlateComplete, OIL_PLATE_LETTERS } from "./plate";
 import type { OilPlateParts } from "./types";
 
 const DIGITS = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
@@ -9,7 +9,7 @@ const FONT =
   'bold 84px Tahoma, IRANSans, "Iranian Sans", "Noto Naskh Arabic", Arial, sans-serif';
 
 type Glyph = { x: number; y: number; w: number; h: number };
-type Match = { label: string; score: number };
+type Match = { label: string; score: number; margin: number };
 
 type Tmpl = { label: string; mat: Float32Array };
 
@@ -330,20 +330,20 @@ function mergeDots(boxes: Glyph[]): Glyph[] {
   return out.sort((a, b) => a.x - b.x);
 }
 
-function filterGlyphs(boxes: Glyph[], w: number, h: number, keep: number): Glyph[] {
+function takeGlyphs(boxes: Glyph[], h: number, want: number): Glyph[] {
   if (boxes.length === 0) return [];
   const heights = boxes.map((b) => b.h).sort((a, b) => a - b);
   const median = heights[Math.floor(heights.length / 2)] || h * 0.5;
-  let next = boxes.filter((b) => b.h >= median * 0.42 && b.h <= median * 1.7);
-  if (next.length < 3) next = boxes.slice();
+  let next = boxes.filter((b) => b.h >= median * 0.4 && b.h <= median * 1.8 && b.w >= 2);
+  if (next.length < Math.min(3, want)) next = boxes.slice();
   next.sort((a, b) => a.x - b.x);
-  while (next.length > keep) {
+  while (next.length > want) {
     let drop = 0;
     let worst = Infinity;
     for (let i = 0; i < next.length; i++) {
-      const score = next[i].h * next[i].w;
-      if (score < worst) {
-        worst = score;
+      const area = next[i].h * next[i].w;
+      if (area < worst) {
+        worst = area;
         drop = i;
       }
     }
@@ -450,60 +450,49 @@ function scoreAgainst(mat: Float32Array, tmpl: Float32Array): number {
 }
 
 function bestMatch(mat: Float32Array, tmpls: Tmpl[]): Match {
-  let label = "";
-  let best = -1;
+  const bestByLabel = new Map<string, number>();
   for (const tmpl of tmpls) {
     const s = scoreAgainst(mat, tmpl.mat);
-    if (s > best) {
-      best = s;
-      label = tmpl.label;
-    }
+    const prev = bestByLabel.get(tmpl.label) ?? -1;
+    if (s > prev) bestByLabel.set(tmpl.label, s);
   }
-  return { label, score: best };
+  const ranked = [...bestByLabel.entries()].sort((a, b) => b[1] - a[1]);
+  const [label, score] = ranked[0] || ["", 0];
+  const second = ranked[1]?.[1] ?? 0;
+  return { label, score, margin: score - second };
 }
 
 function classifyGlyphs(
   ink: Uint8Array,
   w: number,
   boxes: Glyph[],
-  kind: "digit" | "auto",
-): { label: string; score: number; digit: Match; letter: Match }[] {
+): { digit: Match; letter: Match }[] {
   const tmpls = getTemplates();
   return boxes.map((box) => {
     const mat = glyphMatrix(ink, w, box);
-    const digit = bestMatch(mat, tmpls.digits);
-    const letter = bestMatch(mat, tmpls.letters);
-    const useLetter = kind === "auto" && letter.score > digit.score + 0.04;
     return {
-      label: useLetter ? letter.label : digit.label,
-      score: useLetter ? letter.score : digit.score,
-      digit,
-      letter,
+      digit: bestMatch(mat, tmpls.digits),
+      letter: bestMatch(mat, tmpls.letters),
     };
   });
 }
 
 function assemble(
-  main: { label: string; score: number; digit: Match; letter: Match }[],
-  province: { label: string; score: number; digit: Match }[],
-): { parts: OilPlateParts | null; summary: string } {
+  main: { digit: Match; letter: Match }[],
+  province: { digit: Match; letter: Match }[],
+): OilPlateParts | null {
   let glyphs = main;
   let prov = province;
-  if (main.length >= 8 && province.length < 2) {
+  if (main.length >= 7 && province.length < 2) {
     glyphs = main.slice(0, 6);
     prov = main.slice(6, 8);
-  } else if (main.length === 7 && province.length < 2) {
-    glyphs = main.slice(0, 5);
-    prov = main.slice(5, 7);
   }
-  if (glyphs.length < 5) {
-    return { parts: null, summary: `glyphs=${glyphs.length} prov=${prov.length}` };
-  }
+  if (glyphs.length < 5) return null;
 
-  let letterIdx = glyphs.length === 5 ? 1 : 2;
-  if (glyphs.length >= 6) letterIdx = 2;
+  const letterIdx = glyphs.length === 5 ? 1 : 2;
+  const letterSlot = glyphs[letterIdx];
+  if (!letterSlot?.letter.label) return null;
 
-  const letter = glyphs[letterIdx]?.letter.label || "ب";
   const serial = glyphs
     .slice(0, letterIdx)
     .map((g) => g.digit.label)
@@ -514,18 +503,18 @@ function assemble(
     .map((g) => g.digit.label)
     .join("")
     .slice(0, 3);
-  const provDigits = prov.map((g) => g.digit.label).join("").slice(0, 2);
+  const provinceDigits = prov
+    .map((g) => g.digit.label)
+    .join("")
+    .slice(0, 2);
+
   const parts: OilPlateParts = {
     serial,
-    letter,
+    letter: letterSlot.letter.label,
     middle,
-    province: provDigits,
+    province: provinceDigits,
   };
-  const summary = `${serial} ${letter} ${middle} | ${provDigits}`;
-  if (serial.length === 2 && middle.length === 3 && provDigits.length === 2) {
-    return { parts, summary };
-  }
-  return { parts: extractPlateFromOcr(`${serial}${letter}${middle}${provDigits}`), summary };
+  return isPlateComplete(parts) ? parts : null;
 }
 
 function segmentRegion(
@@ -596,32 +585,20 @@ export async function recognizeIranianPlate(
 
     const mainSeg0 = segmentRegion(mainCanvas);
     const provSeg0 = segmentRegion(provCanvas, Math.round(provCanvas.height * 0.28));
-    let mainSeg = mainSeg0;
-    let provSeg = provSeg0;
-    let mainBoxes = filterGlyphs(mainSeg.boxes, mainSeg.w, mainSeg.h, 6);
-    let provBoxes = filterGlyphs(provSeg.boxes, provSeg.w, provSeg.h, 2);
-
-    if (mainBoxes.length < 5) {
-      const full = segmentRegion(canvas);
-      const fullBoxes = filterGlyphs(full.boxes, full.w, full.h, 8);
-      if (fullBoxes.length >= 6) {
-        mainSeg = full;
-        mainBoxes = fullBoxes;
-        provSeg = { boxes: [], ink: new Uint8Array(), w: 0, h: 0 };
-        provBoxes = [];
-      }
-    }
-
-    const mainCls = classifyGlyphs(mainSeg.ink, mainSeg.w, mainBoxes, "auto");
-    const provCls = classifyGlyphs(provSeg.ink, provSeg.w, provBoxes, "digit");
+    const usedMain = takeGlyphs(mainSeg0.boxes, mainSeg0.h, 6);
+    const usedProv = takeGlyphs(provSeg0.boxes, provSeg0.h, 2);
 
     onProgress?.("تطبیق با قالب پلاک ایران…", 0.8);
-    const assembled = assemble(mainCls, provCls);
-    if (assembled.parts) return assembled.parts;
-    const compact = [...mainCls.map((g) => g.label), ...provCls.map((g) => g.digit.label)].join(
-      "",
+    const fromSplit = assemble(
+      classifyGlyphs(mainSeg0.ink, mainSeg0.w, usedMain),
+      classifyGlyphs(provSeg0.ink, provSeg0.w, usedProv),
     );
-    return extractPlateFromOcr(compact);
+    if (fromSplit) return fromSplit;
+
+    const full = segmentRegion(canvas);
+    const fullBoxes = takeGlyphs(full.boxes, full.h, 8);
+    if (fullBoxes.length < 5) return null;
+    return assemble(classifyGlyphs(full.ink, full.w, fullBoxes), []);
   } catch {
     return null;
   }

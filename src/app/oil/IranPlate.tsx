@@ -10,6 +10,7 @@ type Size = "sm" | "md" | "lg";
 type Props = {
   parts: OilPlateParts;
   onChange?: (parts: OilPlateParts) => void;
+  onComplete?: () => void;
   readOnly?: boolean;
   size?: Size;
 };
@@ -45,6 +46,7 @@ function openLetterSelect(el: HTMLSelectElement | null) {
 export default function IranPlate({
   parts,
   onChange,
+  onComplete,
   readOnly = false,
   size = "md",
 }: Props) {
@@ -157,7 +159,14 @@ export default function IranPlate({
             maxLength={2}
             placeholder="22"
             value={parts.province}
-            onChange={(e) => set({ province: onlyDigits(e.target.value, 2) })}
+            onChange={(e) => {
+              const province = onlyDigits(e.target.value, 2);
+              set({ province });
+              const next = { ...parts, province };
+              if (province.length === 2 && isPlateComplete(next)) {
+                onComplete?.();
+              }
+            }}
             onKeyDown={(e) => {
               if (e.key !== "Backspace") return;
               if (parts.province.length > 0) return;
