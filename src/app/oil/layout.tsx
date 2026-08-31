@@ -1,6 +1,8 @@
 import { Metadata } from "next";
 import OilApp from "./OilApp";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "تعویض روغن",
   description: "اپ تعویض روغن وبینو",

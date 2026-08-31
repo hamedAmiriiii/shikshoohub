@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { oilMe, isOilApiError } from "@/app/lib/oil/api";
 import {
   clearOilSession,
@@ -36,7 +36,6 @@ function isPublicOilPath(pathname: string | null) {
 export function OilAuthProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [ready, setReady] = useState(false);
   const [session, setSessionState] = useState<OilSession | null>(null);
 
@@ -104,8 +103,12 @@ export function OilAuthProvider({ children }: { children: React.ReactNode }) {
     if (!ready) return;
     if (isPublicOilPath(pathname)) {
       if (getOilToken()) {
-        const next = searchParams.get("next") || "/oil";
-        router.replace(next.startsWith("/oil") ? next : "/oil");
+        let next = "/oil";
+        if (typeof window !== "undefined") {
+          const q = new URLSearchParams(window.location.search).get("next");
+          if (q && q.startsWith("/oil")) next = q;
+        }
+        router.replace(next);
       }
       return;
     }
@@ -113,7 +116,7 @@ export function OilAuthProvider({ children }: { children: React.ReactNode }) {
       const next = pathname ? `?next=${encodeURIComponent(pathname)}` : "";
       router.replace(`/oil/login${next}`);
     }
-  }, [pathname, ready, router, searchParams]);
+  }, [pathname, ready, router]);
 
   const value = useMemo(
     () => ({ ready, session, setSession, updateSms, logoutLocal, refresh }),

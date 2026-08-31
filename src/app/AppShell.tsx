@@ -6,6 +6,10 @@ import ShopHeader from "./componentsShop/ShopHeader";
 import { ShopProvider, useShopContext } from "./context/ShopContext";
 import { isCustomerAuthPath, isTableReservPath } from "./lib/shopStorefront";
 
+function isOilPath(pathname: string | null) {
+  return pathname === "/oil" || Boolean(pathname?.startsWith("/oil/"));
+}
+
 function AppShellContent({ children }: { children: React.ReactNode }) {
   const { searchQuery, setSearchQuery } = useShopContext();
   const pathname = usePathname();
@@ -16,7 +20,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
   const isCustomerAuth = isCustomerAuthPath(pathname);
   const isReferralPage = pathname?.startsWith("/referrals");
   const isTableReserv = isTableReservPath(pathname);
-  const isOilApp = pathname === "/oil" || pathname?.startsWith("/oil/");
+  const isOilApp = isOilPath(pathname);
 
   if (
     isAdminPage ||
@@ -39,6 +43,10 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
 }
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  if (isOilPath(pathname)) {
+    return <>{children}</>;
+  }
   return (
     <ShopProvider>
       <AppShellContent>{children}</AppShellContent>

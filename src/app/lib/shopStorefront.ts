@@ -1,6 +1,7 @@
 /** مسیرهایی که segment اول URL فروشگاه نیستند */
 export const SHOP_RESERVED_SEGMENTS = new Set([
   "admin",
+  "oil",
   "landing",
   "main",
   "offline",
@@ -10,6 +11,8 @@ export const SHOP_RESERVED_SEGMENTS = new Set([
   "_next",
   "favicon.ico",
   "manifest.json",
+  "manifest-admin.json",
+  "manifest-oil.json",
   "icon-192.png",
   "icon-512.png",
   "pic",

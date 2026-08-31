@@ -20,6 +20,7 @@ import {
   saveLastShopCode,
   shopApiPath,
   shopPath,
+  SHOP_RESERVED_SEGMENTS,
   type ShopInfo,
 } from "@/app/lib/shopStorefront";
 
@@ -43,7 +44,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const params = useParams();
   const paramShop = typeof params?.shop === "string" ? params.shop : null;
-  const shopCode = paramShop ?? getShopCodeFromPathname(pathname);
+  const rawShop = paramShop ?? getShopCodeFromPathname(pathname);
+  const shopCode =
+    rawShop && SHOP_RESERVED_SEGMENTS.has(rawShop) ? null : rawShop;
 
   const [searchQuery, setSearchQuery] = useState("");
   const [shop, setShop] = useState<ShopInfo | null>(null);
