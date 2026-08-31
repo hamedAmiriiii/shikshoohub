@@ -1,58 +1,24 @@
 "use client";
 import React from "react";
-import {
-  Card,
-  CardContent,
-  Typography,
-  Box,
-  IconButton,
-  Chip,
-} from "@mui/material";
+import { Card, CardContent, Typography, Box, IconButton } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import CreditCardIcon from "@mui/icons-material/CreditCard";
+import {
+  formatCreditDate,
+  formatCreditMoney,
+  normalizeInstallmentCredit,
+  type InstallmentCreditRow,
+} from "./creditRow";
 
-interface InstallmentCreditCardProps {
-  props: {
-    data: {
-      phone: string;
-      installment_credit?: number;
-      credit?: number;
-      created_at?: string;
-      updated_at?: string;
-    };
-  };
-  onEdit: (credit: any) => void;
-  onDelete: (phone: string) => void;
-}
+type InstallmentCreditCardProps = {
+  props: { data?: unknown };
+  onEdit: (row: InstallmentCreditRow) => void;
+  onDelete: (row: InstallmentCreditRow) => void;
+};
 
 export default function InstallmentCreditCard({ props, onEdit, onDelete }: InstallmentCreditCardProps) {
-  const { data } = props;
-
-  const formatNumber = (num: number | string) => {
-    const numValue = typeof num === 'string' ? parseFloat(num.replace(/,/g, '')) : num;
-    if (isNaN(numValue)) return '0';
-    return new Intl.NumberFormat('fa-IR').format(numValue);
-  };
-
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "بدون تاریخ";
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) {
-        return dateString;
-      }
-      return new Intl.DateTimeFormat('fa-IR', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      }).format(date);
-    } catch {
-      return dateString;
-    }
-  };
+  const row = normalizeInstallmentCredit(props?.data);
 
   return (
     <Card
@@ -70,7 +36,6 @@ export default function InstallmentCreditCard({ props, onEdit, onDelete }: Insta
       }}
     >
       <CardContent sx={{ padding: { xs: "12px", md: "16px" } }}>
-        {/* Header */}
         <Box
           sx={{
             display: "flex",
@@ -79,42 +44,45 @@ export default function InstallmentCreditCard({ props, onEdit, onDelete }: Insta
             marginBottom: "12px",
           }}
         >
-          <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
             <CreditCardIcon sx={{ color: "var(--admin-accent)", fontSize: "24px" }} />
-            <Typography
-              sx={{
-                fontSize: { xs: "16px", md: "18px" },
-                fontWeight: "600",
-                color: "var(--admin-text)",
-              }}
-            >
-              {data.phone || "بدون شماره"}
-            </Typography>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography
+                sx={{
+                  fontSize: { xs: "16px", md: "18px" },
+                  fontWeight: "600",
+                  color: "var(--admin-text)",
+                }}
+              >
+                {row.name || row.phone || "بدون مشخصات"}
+              </Typography>
+              {row.name && row.phone ? (
+                <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)", direction: "ltr" }}>
+                  {row.phone}
+                </Typography>
+              ) : null}
+            </Box>
           </Box>
-          <Box sx={{ display: "flex", gap: "4px" }}>
+          <Box sx={{ display: "flex", gap: "4px", flexShrink: 0 }}>
             <IconButton
-              onClick={() => onEdit(data)}
+              onClick={() => onEdit(row)}
               sx={{
                 color: "var(--admin-accent)",
                 backgroundColor: "var(--admin-menu-hover)",
                 padding: "6px",
-                "&:hover": {
-                  backgroundColor: "rgba(120, 181, 104, 0.2)",
-                },
+                "&:hover": { backgroundColor: "rgba(120, 181, 104, 0.2)" },
               }}
               size="small"
             >
               <EditIcon sx={{ fontSize: "18px" }} />
             </IconButton>
             <IconButton
-              onClick={() => onDelete(data.phone)}
+              onClick={() => onDelete(row)}
               sx={{
                 color: "#ff4444",
                 backgroundColor: "rgba(255, 68, 68, 0.1)",
                 padding: "6px",
-                "&:hover": {
-                  backgroundColor: "rgba(255, 68, 68, 0.2)",
-                },
+                "&:hover": { backgroundColor: "rgba(255, 68, 68, 0.2)" },
               }}
               size="small"
             >
@@ -123,135 +91,42 @@ export default function InstallmentCreditCard({ props, onEdit, onDelete }: Insta
           </Box>
         </Box>
 
-        {/* Credit Amounts */}
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "8px",
-            marginBottom: "12px",
-          }}
-        >
-          {/* Installment Credit */}
-          <Box
-            sx={{
-              backgroundColor: "var(--admin-surface)",
-              borderRadius: "8px",
-              padding: { xs: "10px", md: "12px" },
-            }}
-          >
-            <Typography
-              sx={{
-                fontSize: { xs: "12px", md: "14px" },
-                color: "var(--admin-text-muted)",
-                marginBottom: "4px",
-              }}
-            >
-              اعتبار اقساطی (تومان)
+        <Box sx={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "12px" }}>
+          <Box sx={{ backgroundColor: "var(--admin-surface)", borderRadius: "8px", padding: { xs: "10px", md: "12px" } }}>
+            <Typography sx={{ fontSize: { xs: "12px", md: "14px" }, color: "var(--admin-text-muted)", marginBottom: "4px" }}>
+              اعتبار اقساطی
             </Typography>
-            <Typography
-              sx={{
-                fontSize: { xs: "18px", md: "22px" },
-                fontWeight: "700",
-                color: "var(--admin-accent)",
-              }}
-            >
-              {formatNumber(data.installment_credit || 0)} تومان
+            <Typography sx={{ fontSize: { xs: "18px", md: "22px" }, fontWeight: "700", color: "var(--admin-accent)" }}>
+              {formatCreditMoney(row.installment_credit)} تومان
             </Typography>
           </Box>
-
-          {/* Regular Credit */}
-          <Box
-            sx={{
-              backgroundColor: "var(--admin-surface)",
-              borderRadius: "8px",
-              padding: { xs: "10px", md: "12px" },
-            }}
-          >
-            <Typography
-              sx={{
-                fontSize: { xs: "12px", md: "14px" },
-                color: "var(--admin-text-muted)",
-                marginBottom: "4px",
-              }}
-            >
-              اعتبار عادی (تومان)
+          <Box sx={{ backgroundColor: "var(--admin-surface)", borderRadius: "8px", padding: { xs: "10px", md: "12px" } }}>
+            <Typography sx={{ fontSize: { xs: "12px", md: "14px" }, color: "var(--admin-text-muted)", marginBottom: "4px" }}>
+              اعتبار عادی
             </Typography>
-            <Typography
-              sx={{
-                fontSize: { xs: "18px", md: "22px" },
-                fontWeight: "700",
-                color: "#2196f3",
-              }}
-            >
-              {formatNumber(data.credit || 0)} تومان
+            <Typography sx={{ fontSize: { xs: "18px", md: "22px" }, fontWeight: "700", color: "#2196f3" }}>
+              {formatCreditMoney(row.credit)} تومان
             </Typography>
           </Box>
         </Box>
 
-        {/* Dates */}
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "8px",
-          }}
-        >
-          {data.created_at && (
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <Typography
-                sx={{
-                  fontSize: { xs: "11px", md: "12px" },
-                  color: "var(--admin-text-muted)",
-                }}
-              >
-                تاریخ ایجاد:
-              </Typography>
-              <Typography
-                sx={{
-                  fontSize: { xs: "11px", md: "12px" },
-                  color: "var(--admin-text)",
-                }}
-              >
-                {formatDate(data.created_at)}
+        <Box sx={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)" }}>تاریخ ایجاد</Typography>
+            <Typography sx={{ fontSize: 12, color: "var(--admin-text)" }}>
+              {formatCreditDate(row.created_at_jalali || row.created_at)}
+            </Typography>
+          </Box>
+          {(row.updated_at_jalali || row.updated_at) ? (
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)" }}>آخرین بروزرسانی</Typography>
+              <Typography sx={{ fontSize: 12, color: "var(--admin-text)" }}>
+                {formatCreditDate(row.updated_at_jalali || row.updated_at)}
               </Typography>
             </Box>
-          )}
-          {data.updated_at && (
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <Typography
-                sx={{
-                  fontSize: { xs: "11px", md: "12px" },
-                  color: "var(--admin-text-muted)",
-                }}
-              >
-                آخرین بروزرسانی:
-              </Typography>
-              <Typography
-                sx={{
-                  fontSize: { xs: "11px", md: "12px" },
-                  color: "var(--admin-text)",
-                }}
-              >
-                {formatDate(data.updated_at)}
-              </Typography>
-            </Box>
-          )}
+          ) : null}
         </Box>
       </CardContent>
     </Card>
   );
 }
-

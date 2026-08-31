@@ -1,5 +1,6 @@
 import {
   ABUSE_REPLIES,
+  CHATBOT_DIDNT_UNDERSTAND,
   CHATBOT_FALLBACK,
   KNOWLEDGE,
   REPEAT_SUPPORT,
@@ -206,6 +207,7 @@ export type ChatReply = {
 };
 
 const REPEAT_LIMIT = 3;
+const UNKNOWN_CLARIFY_LIMIT = 2;
 
 export function answerChat(
   query: string,
@@ -243,14 +245,14 @@ export function answerChat(
   const best = ranked[0];
   if (!best || best.score < 8) {
     const prev = askedConcepts.filter((id) => id === "unknown").length;
-    if (prev >= REPEAT_LIMIT) {
+    if (prev < UNKNOWN_CLARIFY_LIMIT) {
       return {
-        text: formatChatAnswer(pickVariant(REPEAT_SUPPORT[audience], prev)),
+        text: formatChatAnswer(CHATBOT_DIDNT_UNDERSTAND),
         conceptId: "unknown",
       };
     }
     return {
-      text: formatChatAnswer(pickVariant(CHATBOT_FALLBACK[audience], prev)),
+      text: formatChatAnswer(CHATBOT_FALLBACK[audience]),
       conceptId: "unknown",
     };
   }

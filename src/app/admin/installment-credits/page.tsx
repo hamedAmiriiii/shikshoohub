@@ -1,216 +1,207 @@
 "use client";
+
 import List from "@/app/coponent/grid/Grid";
-import React, { useState, Suspense } from "react";
-import { Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, IconButton } from "@mui/material";
-import AddIcon from '@mui/icons-material/Add';
-import { useRouter } from "next/navigation";
+import React, { Suspense, useState } from "react";
+import { Box, Typography, Button, TextField } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
 import InstallmentCreditCard from "./installmentCreditCard";
 import { apiRequestError } from "@/app/lib/apiRequestError/client";
 import tokenCode from "@/app/coponent/tokenCode";
 import { toast, ToastContainer } from "react-toastify";
-import 'react-toastify/dist/ReactToastify.css';
+import "react-toastify/dist/ReactToastify.css";
 import { formatAmountInput, parseAmountInput } from "@/app/lib/amountInput";
+import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
+import BottomSheet from "@/app/coponent/BottomSheet";
+import { adminButtonStartIconSx } from "@/app/admin/theme/adminTheme";
+import {
+  creditDisplayName,
+  formatCreditDate,
+  formatCreditMoney,
+  toCreditRow,
+  type InstallmentCreditRow,
+} from "./creditRow";
+
+const fieldSx = {
+  "& .MuiOutlinedInput-root": {
+    backgroundColor: "var(--admin-surface)",
+    color: "var(--admin-text)",
+    "& fieldset": { borderColor: "var(--admin-border)" },
+    "&:hover fieldset": { borderColor: "var(--admin-accent)" },
+    "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
+  },
+  "& .MuiInputLabel-root": { color: "var(--admin-text-muted)" },
+  "& .MuiInputLabel-root.Mui-focused": { color: "var(--admin-accent)" },
+} as const;
 
 export default function InstallmentCreditsPage() {
-  const router = useRouter();
-  const [dataFilter, setDataFilter] = useState([]);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [editingCredit, setEditingCredit] = useState<any>(null);
-  const [phone, setPhone] = useState('');
-  const [credit, setCredit] = useState('');
-  const [creditDisplay, setCreditDisplay] = useState('');
-  const [isCreditFocused, setIsCreditFocused] = useState(false);
-  const [installmentCredit, setInstallmentCredit] = useState('');
-  const [installmentCreditDisplay, setInstallmentCreditDisplay] = useState('');
-  const [isInstallmentCreditFocused, setIsInstallmentCreditFocused] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<InstallmentCreditRow | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<InstallmentCreditRow | null>(null);
+  const [phone, setPhone] = useState("");
+  const [creditDisplay, setCreditDisplay] = useState("");
+  const [installmentCreditDisplay, setInstallmentCreditDisplay] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  let searchBoxList: any = [
-    { fieldName: "phone", fieldOperation: "MATCH", fieldValue: "", nextConditionOperator: "OR" },
+  const searchBoxList = [
+    { fieldName: "phone", fieldOperation: "MATCH" as const, fieldValue: "", nextConditionOperator: "OR" as const },
+    { fieldName: "user.phone", fieldOperation: "MATCH" as const, fieldValue: "", nextConditionOperator: "OR" as const },
+    { fieldName: "name", fieldOperation: "MATCH" as const, fieldValue: "", nextConditionOperator: "OR" as const },
+    { fieldName: "user.name", fieldOperation: "MATCH" as const, fieldValue: "", nextConditionOperator: "OR" as const },
   ];
-
-  const FilterComponent = () => <h1>ggggggggg</h1>;
-
-  const formatNumber = (num: number | string) => {
-    const numValue = typeof num === 'string' ? parseFloat(num.replace(/,/g, '')) : num;
-    if (isNaN(numValue)) return '';
-    return new Intl.NumberFormat('fa-IR').format(numValue);
-  };
 
   const desktopColumns = [
-    { 
-      label: "شماره تلفن", 
-      field: (item: any) => item?.phone || "بدون شماره",
-      width: "150px"
+    {
+      label: "کاربر",
+      field: (item: unknown) => {
+        const row = toCreditRow(item);
+        if (row.name && row.phone) return `${row.name} — ${row.phone}`;
+        return row.name || row.phone || "بدون مشخصات";
+      },
+      width: "220px",
     },
-    { 
-      label: "اعتبار اقساطی (تومان)", 
-      field: (item: any) => item?.installment_credit ? `${formatNumber(item.installment_credit)} تومان` : "0 تومان"
+    {
+      label: "اعتبار اقساطی",
+      field: (item: unknown) => `${formatCreditMoney(toCreditRow(item).installment_credit)} تومان`,
     },
-    { 
-      label: "اعتبار عادی (تومان)", 
-      field: (item: any) => item?.credit ? `${formatNumber(item.credit)} تومان` : "0 تومان"
+    {
+      label: "اعتبار عادی",
+      field: (item: unknown) => `${formatCreditMoney(toCreditRow(item).credit)} تومان`,
     },
-    { 
-      label: "تاریخ ایجاد", 
-      field: (item: any) => item?.created_at ? new Date(item.created_at).toLocaleDateString('fa-IR') : "بدون تاریخ",
-      width: "150px"
+    {
+      label: "تاریخ ایجاد",
+      field: (item: unknown) => {
+        const row = toCreditRow(item);
+        return formatCreditDate(row.created_at_jalali || row.created_at);
+      },
+      width: "170px",
     },
-    { 
-      label: "تاریخ بروزرسانی", 
-      field: (item: any) => item?.updated_at ? new Date(item.updated_at).toLocaleDateString('fa-IR') : "بدون تاریخ",
-      width: "150px"
+    {
+      label: "تاریخ بروزرسانی",
+      field: (item: unknown) => {
+        const row = toCreditRow(item);
+        return formatCreditDate(row.updated_at_jalali || row.updated_at);
+      },
+      width: "170px",
     },
   ];
 
-  const handleOpenCreateDialog = () => {
-    setEditingCredit(null);
-    setPhone('');
-    setCredit('');
-    setCreditDisplay('');
-    setIsCreditFocused(false);
-    setInstallmentCredit('');
-    setInstallmentCreditDisplay('');
-    setIsInstallmentCreditFocused(false);
-    setCreateDialogOpen(true);
+  const openCreate = () => {
+    setEditing(null);
+    setPhone("");
+    setCreditDisplay("");
+    setInstallmentCreditDisplay("");
+    setFormOpen(true);
   };
 
-  const handleCloseCreateDialog = () => {
-    setCreateDialogOpen(false);
-    setEditingCredit(null);
-    setPhone('');
-    setCredit('');
-    setCreditDisplay('');
-    setIsCreditFocused(false);
-    setInstallmentCredit('');
-    setInstallmentCreditDisplay('');
-    setIsInstallmentCreditFocused(false);
+  const closeForm = () => {
+    if (isSubmitting) return;
+    setFormOpen(false);
+    setEditing(null);
+    setPhone("");
+    setCreditDisplay("");
+    setInstallmentCreditDisplay("");
   };
 
-  const handleEditCredit = (creditData: any) => {
-    setEditingCredit(creditData);
-    setPhone(creditData.phone || '');
-    const creditValue = creditData.credit?.toString() || '0';
-    setCredit(creditValue);
-    setCreditDisplay(formatAmountInput(creditValue));
-    setIsCreditFocused(false);
-    const installmentValue = creditData.installment_credit?.toString() || '0';
-    setInstallmentCredit(installmentValue);
-    setInstallmentCreditDisplay(formatAmountInput(installmentValue));
-    setIsInstallmentCreditFocused(false);
-    setCreateDialogOpen(true);
+  const handleEditCredit = (item: unknown) => {
+    const row = toCreditRow(item);
+    setEditing(row);
+    setPhone(row.phone);
+    setCreditDisplay(row.credit ? formatAmountInput(String(Math.round(row.credit))) : "");
+    setInstallmentCreditDisplay(
+      row.installment_credit ? formatAmountInput(String(Math.round(row.installment_credit))) : "",
+    );
+    setFormOpen(true);
   };
 
-  const handleDeleteCredit = async (phoneNumber: string) => {
-    if (!confirm(`آیا مطمئن هستید که می‌خواهید اعتبار کاربر ${phoneNumber} را حذف کنید؟`)) {
+  const handleAskDelete = (item: unknown) => {
+    const row = toCreditRow(item);
+    if (!row.phone && row.id == null) {
+      toast.error("شماره یا شناسه این اعتبار پیدا نشد");
       return;
     }
+    setDeleteTarget(row);
+  };
 
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    const key = deleteTarget.phone || String(deleteTarget.id ?? "");
+    if (!key) {
+      toast.error("شماره تلفن برای حذف مشخص نیست");
+      return;
+    }
+    setDeleting(true);
     try {
       const token = tokenCode();
       const res = await apiRequestError(
         "Delete",
         {},
         {},
-        `/api/installment-credits/${phoneNumber}`,
+        `/api/installment-credits/${encodeURIComponent(key)}`,
         true,
         true,
-        token
+        token,
       );
-
       if (res.hasError) {
-        const parsedResponse = JSON.parse(res.errorText);
-        toast.error(parsedResponse.message || "خطا در حذف اعتبار");
-      } else {
-        toast.success("اعتبار با موفقیت حذف شد");
-        setRefreshKey(prev => prev + 1);
+        toast.error(getApiErrorMessage(res, "خطا در حذف اعتبار"));
+        return;
       }
-    } catch (error) {
-      console.error("Error deleting credit:", error);
+      toast.success("اعتبار با موفقیت حذف شد");
+      setDeleteTarget(null);
+      setRefreshKey((prev) => prev + 1);
+    } catch {
       toast.error("خطا در حذف اعتبار");
+    } finally {
+      setDeleting(false);
     }
   };
 
   const handleSubmit = async () => {
-    // اعتبارسنجی
-    if (!phone || phone.trim() === '') {
+    if (!phone.trim()) {
       toast.error("لطفاً شماره تلفن را وارد کنید");
       return;
     }
-
     if (phone.length !== 11 || !/^\d+$/.test(phone)) {
-      toast.error("شماره تلفن باید دقیقاً 11 رقم باشد");
+      toast.error("شماره تلفن باید دقیقاً ۱۱ رقم باشد");
       return;
     }
-
-    if (!credit || credit.trim() === '') {
+    if (!creditDisplay.trim()) {
       toast.error("لطفاً مبلغ اعتبار را وارد کنید");
       return;
     }
-
-    if (!installmentCredit || installmentCredit.trim() === '') {
+    if (!installmentCreditDisplay.trim()) {
       toast.error("لطفاً مبلغ اعتبار اقساطی را وارد کنید");
       return;
     }
 
-    const creditValue = parseAmountInput(credit);
-    if (creditValue < 0) {
-      toast.error("مبلغ اعتبار باید یک عدد مثبت باشد");
+    const creditValue = parseAmountInput(creditDisplay);
+    const installmentValue = parseAmountInput(installmentCreditDisplay);
+    if (creditValue < 0 || installmentValue < 0) {
+      toast.error("مبلغ اعتبار نمی‌تواند منفی باشد");
       return;
     }
 
     setIsSubmitting(true);
     try {
       const token = tokenCode();
-      const installmentValue = parseAmountInput(installmentCredit);
-      if (installmentValue < 0) {
-        toast.error("مبلغ اعتبار اقساطی باید یک عدد مثبت باشد");
-        setIsSubmitting(false);
-        return;
-      }
-
       const data = {
         phone: phone.trim(),
         credit: creditValue,
-        installment_credit: installmentValue
+        installment_credit: installmentValue,
       };
-
-      let res;
-      if (editingCredit) {
-        // ویرایش - استفاده از PUT
-        res = await apiRequestError(
-          "Put",
-          {},
-          data,
-          `/api/installment-credits/${phone.trim()}`,
-          true,
-          true,
-          token
-        );
-      } else {
-        // ایجاد - استفاده از POST
-        res = await apiRequestError(
-          "Post",
-          {},
-          data,
-          `/api/installment-credits`,
-          true,
-          true,
-          token
-        );
-      }
+      const res = editing
+        ? await apiRequestError("Put", {}, data, `/api/installment-credits/${phone.trim()}`, true, true, token)
+        : await apiRequestError("Post", {}, data, `/api/installment-credits`, true, true, token);
 
       if (res.hasError) {
-        const parsedResponse = JSON.parse(res.errorText);
-        toast.error(parsedResponse.message || "خطا در ذخیره اعتبار");
-      } else {
-        toast.success(editingCredit ? "اعتبار با موفقیت به‌روزرسانی شد" : "اعتبار با موفقیت ایجاد شد");
-        handleCloseCreateDialog();
-        setRefreshKey(prev => prev + 1);
+        toast.error(getApiErrorMessage(res, "خطا در ذخیره اعتبار"));
+        return;
       }
-    } catch (error) {
-      console.error("Error saving credit:", error);
+      toast.success(editing ? "اعتبار به‌روزرسانی شد" : "اعتبار ایجاد شد");
+      closeForm();
+      setRefreshKey((prev) => prev + 1);
+    } catch {
       toast.error("خطا در ذخیره اعتبار");
     } finally {
       setIsSubmitting(false);
@@ -219,224 +210,157 @@ export default function InstallmentCreditsPage() {
 
   return (
     <Suspense fallback={<div>در حال بارگذاری...</div>}>
-      <Box sx={{width: { xs:"100%", md:"130%" , },  direction: "rtl", padding: "16px", minHeight: "100vh", paddingBottom: "100px", background: "var(--admin-bg-gradient)" }}>
-        {/* Header with Create Button */}
-        <Box sx={{ 
-          display: "flex", 
-          justifyContent: "space-between", 
-          alignItems: "center", 
-          marginBottom: "16px" 
-        }}>
-         
+      <Box
+        sx={{
+          width: { xs: "100%", md: "130%" },
+          direction: "rtl",
+          padding: "16px",
+          minHeight: "100vh",
+          paddingBottom: "100px",
+          background: "var(--admin-bg-gradient)",
+        }}
+      >
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={handleOpenCreateDialog}
+            onClick={openCreate}
             sx={{
+              ...adminButtonStartIconSx,
               backgroundColor: "var(--admin-accent)",
-              color: "var(--admin-text)",
-              "&:hover": {
-                backgroundColor: "var(--admin-accent-hover)",
-              },
-              padding: { xs: "8px 16px", md: "10px 20px" },
-              fontSize: { xs: "12px", md: "14px" }
+              color: "#fff",
+              "&:hover": { backgroundColor: "var(--admin-accent-hover)" },
             }}
           >
             ایجاد اعتبار
           </Button>
         </Box>
-       
-        {/* List Section */}
+
         <div style={{ width: "100%", direction: "rtl" }} className="flex-col items-center justify-center">
           <List
             key={refreshKey}
             disableFilter={true}
             searchBoxList={searchBoxList}
-            filterBoxList={dataFilter}
-            CartComponent={(props: any) => (
-              <InstallmentCreditCard 
-                props={props} 
-                onEdit={handleEditCredit}
-                onDelete={handleDeleteCredit}
-              />
+            filterBoxList={[]}
+            CartComponent={(props: { data?: unknown }) => (
+              <InstallmentCreditCard props={props} onEdit={handleEditCredit} onDelete={handleAskDelete} />
             )}
             url="/api/installment-credits"
-            filterComponent={<FilterComponent />}
+            filterComponent={null}
             showTotal={true}
+            enablePagination
+            compactDesktop
             desktopColumns={desktopColumns}
             onEditItem={handleEditCredit}
-            onDeleteItem={handleDeleteCredit}
+            onDeleteItem={handleAskDelete}
             hidePrintAction
           />
         </div>
 
-        {/* Create/Edit Dialog */}
-        <Dialog
-          open={createDialogOpen}
-          onClose={handleCloseCreateDialog}
-          maxWidth="sm"
-          fullWidth
-          sx={{
-            "& .MuiDialog-paper": {
-              backgroundColor: "var(--admin-surface-alt)",
-              borderRadius: "16px",
-              border: "1px solid var(--admin-border)"
-            }
-          }}
-        >
-          <DialogTitle sx={{ color: "var(--admin-text)", fontSize: "20px", fontWeight: "600" }}>
-            {editingCredit ? "ویرایش اعتبار" : "ایجاد اعتبار جدید"}
-          </DialogTitle>
-          <DialogContent>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "8px" }}>
-              <TextField
-                label="شماره تلفن"
-                value={phone}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/[^0-9]/g, '');
-                  if (value.length <= 11) {
-                    setPhone(value);
-                  }
-                }}
-                disabled={!!editingCredit}
-                inputProps={{
-                  maxLength: 11,
-                  style: { textAlign: "right", direction: "ltr" }
-                }}
-                fullWidth
-                required
+        <BottomSheet open={formOpen} onClose={closeForm} title={editing ? "ویرایش اعتبار" : "ایجاد اعتبار جدید"}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, direction: "rtl" }}>
+            <TextField
+              label="شماره تلفن"
+              value={phone}
+              onChange={(e) => {
+                const value = e.target.value.replace(/[^0-9۰-۹]/g, "").replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)));
+                if (value.length <= 11) setPhone(value);
+              }}
+              disabled={!!editing}
+              inputProps={{ maxLength: 11, style: { textAlign: "right", direction: "ltr" } }}
+              fullWidth
+              required
+              sx={fieldSx}
+            />
+            <TextField
+              label="مبلغ اعتبار عادی (تومان)"
+              value={creditDisplay}
+              onChange={(e) => setCreditDisplay(formatAmountInput(e.target.value))}
+              inputProps={{ inputMode: "numeric", style: { textAlign: "right", direction: "ltr" } }}
+              fullWidth
+              required
+              sx={fieldSx}
+            />
+            <TextField
+              label="مبلغ اعتبار اقساطی (تومان)"
+              value={installmentCreditDisplay}
+              onChange={(e) => setInstallmentCreditDisplay(formatAmountInput(e.target.value))}
+              inputProps={{ inputMode: "numeric", style: { textAlign: "right", direction: "ltr" } }}
+              fullWidth
+              required
+              sx={fieldSx}
+            />
+            <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end", mt: 1 }}>
+              <Button onClick={closeForm} disabled={isSubmitting} sx={{ color: "var(--admin-text-muted)" }}>
+                انصراف
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                variant="contained"
                 sx={{
-                  "& .MuiOutlinedInput-root": {
-                    backgroundColor: "var(--admin-surface)",
-                    color: "var(--admin-text)",
-                    "& fieldset": {
-                      borderColor: "#505669",
-                    },
-                    "&:hover fieldset": {
-                      borderColor: "var(--admin-accent)",
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: "var(--admin-accent)",
-                    },
-                  },
-                  "& .MuiInputLabel-root": {
-                    color: "var(--admin-text-muted)",
-                  },
-                  "& .MuiInputLabel-root.Mui-focused": {
-                    color: "var(--admin-accent)",
-                  },
+                  backgroundColor: "var(--admin-accent)",
+                  color: "#fff",
+                  "&:hover": { backgroundColor: "var(--admin-accent-hover)" },
                 }}
-              />
-              <TextField
-                label="مبلغ اعتبار (تومان)"
-                value={creditDisplay}
-                onChange={(e) => {
-                  const formatted = formatAmountInput(e.target.value);
-                  setCredit(formatted);
-                  setCreditDisplay(formatted);
-                }}
-                inputProps={{
-                  inputMode: "numeric",
-                  style: { textAlign: "right", direction: "ltr" }
-                }}
-                fullWidth
-                required
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    backgroundColor: "var(--admin-surface)",
-                    color: "var(--admin-text)",
-                    "& fieldset": {
-                      borderColor: "#505669",
-                    },
-                    "&:hover fieldset": {
-                      borderColor: "var(--admin-accent)",
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: "var(--admin-accent)",
-                    },
-                  },
-                  "& .MuiInputLabel-root": {
-                    color: "var(--admin-text-muted)",
-                  },
-                  "& .MuiInputLabel-root.Mui-focused": {
-                    color: "var(--admin-accent)",
-                  },
-                }}
-              />
-              <TextField
-                label="مبلغ اعتبار اقساطی (تومان)"
-                value={installmentCreditDisplay}
-                onChange={(e) => {
-                  const formatted = formatAmountInput(e.target.value);
-                  setInstallmentCredit(formatted);
-                  setInstallmentCreditDisplay(formatted);
-                }}
-                inputProps={{
-                  inputMode: "numeric",
-                  style: { textAlign: "right", direction: "ltr" }
-                }}
-                fullWidth
-                required
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    backgroundColor: "var(--admin-surface)",
-                    color: "var(--admin-text)",
-                    "& fieldset": {
-                      borderColor: "#505669",
-                    },
-                    "&:hover fieldset": {
-                      borderColor: "var(--admin-accent)",
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: "var(--admin-accent)",
-                    },
-                  },
-                  "& .MuiInputLabel-root": {
-                    color: "var(--admin-text-muted)",
-                  },
-                  "& .MuiInputLabel-root.Mui-focused": {
-                    color: "var(--admin-accent)",
-                  },
-                }}
-              />
+              >
+                {isSubmitting ? "در حال ذخیره..." : editing ? "به‌روزرسانی" : "ایجاد"}
+              </Button>
             </Box>
-          </DialogContent>
-          <DialogActions sx={{ padding: "16px 24px" }}>
-            <Button
-              onClick={handleCloseCreateDialog}
-              sx={{
-                color: "var(--admin-text-muted)",
-                "&:hover": {
-                  backgroundColor: "var(--admin-divider)",
-                }
-              }}
-            >
-              انصراف
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-              variant="contained"
-              sx={{
-                backgroundColor: "var(--admin-accent)",
-                color: "var(--admin-text)",
-                "&:hover": {
-                  backgroundColor: "var(--admin-accent-hover)",
-                },
-                "&:disabled": {
-                  backgroundColor: "#505669",
-                  color: "var(--admin-text-secondary)",
-                },
-              }}
-            >
-              {isSubmitting ? "در حال ذخیره..." : editingCredit ? "به‌روزرسانی" : "ایجاد"}
-            </Button>
-          </DialogActions>
-        </Dialog>
+          </Box>
+        </BottomSheet>
 
-        <ToastContainer autoClose={3000} style={{ marginBottom: '76px', borderRadius: "15px" }} position={"bottom-right"} />
+        <BottomSheet
+          open={!!deleteTarget}
+          onClose={() => !deleting && setDeleteTarget(null)}
+          title="حذف اعتبار"
+        >
+          <Box sx={{ direction: "rtl" }}>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: 14, mb: 2 }}>
+              مطمئن هستید که می‌خواهید اعتبار {deleteTarget ? creditDisplayName(deleteTarget) : "این کاربر"} را حذف کنید؟
+            </Typography>
+            {deleteTarget ? (
+              <Box
+                sx={{
+                  bgcolor: "var(--admin-surface-alt)",
+                  border: "1px solid var(--admin-border)",
+                  borderRadius: "10px",
+                  p: 1.5,
+                  mb: 2,
+                }}
+              >
+                {deleteTarget.name ? (
+                  <Typography sx={{ fontSize: 13, color: "var(--admin-text)" }}>نام: {deleteTarget.name}</Typography>
+                ) : null}
+                <Typography sx={{ fontSize: 13, color: "var(--admin-text)", direction: "ltr" }}>
+                  شماره: {deleteTarget.phone || "—"}
+                </Typography>
+                <Typography sx={{ fontSize: 13, color: "var(--admin-text-muted)", mt: 0.5 }}>
+                  اعتبار اقساطی: {formatCreditMoney(deleteTarget.installment_credit)} تومان
+                </Typography>
+                <Typography sx={{ fontSize: 13, color: "var(--admin-text-muted)" }}>
+                  اعتبار عادی: {formatCreditMoney(deleteTarget.credit)} تومان
+                </Typography>
+              </Box>
+            ) : null}
+            <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
+              <Button onClick={() => setDeleteTarget(null)} disabled={deleting} sx={{ color: "var(--admin-text-muted)" }}>
+                انصراف
+              </Button>
+              <Button
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+                variant="contained"
+                color="error"
+              >
+                {deleting ? "در حال حذف..." : "حذف"}
+              </Button>
+            </Box>
+          </Box>
+        </BottomSheet>
+
+        <ToastContainer autoClose={3000} style={{ marginBottom: "76px", borderRadius: "15px" }} position="bottom-right" />
       </Box>
     </Suspense>
   );
 }
-

@@ -38,15 +38,11 @@ export const CHATBOT_SUGGESTIONS: Record<ChatAudience, string[]> = {
   ],
 };
 
-export const CHATBOT_FALLBACK: Record<ChatAudience, string[]> = {
-  landing: [
-    `نمی‌تونم توی این مورد کمکت کنم.\nبهتره با پشتیبانی تماس بگیرید.\n${SUPPORT_PHONE}`,
-    `این مورد از دست من خارج است.\nبهتره با پشتیبانی تماس بگیرید.\n${SUPPORT_PHONE}`,
-  ],
-  admin: [
-    `نمی‌تونم توی این مورد کمکت کنم.\nبهتره با پشتیبانی تماس بگیرید.\n${SUPPORT_PHONE}`,
-    `نمی‌تونم اینجا کمکت کنم.\nبا پشتیبانی تماس بگیرید:\n${SUPPORT_PHONE}`,
-  ],
+export const CHATBOT_DIDNT_UNDERSTAND = "منظورتو متوجه نشدم";
+
+export const CHATBOT_FALLBACK: Record<ChatAudience, string> = {
+  landing: `نمی‌تونم توی این مورد کمکت کنم.\nبهتره با پشتیبانی تماس بگیرید.\n${SUPPORT_PHONE}`,
+  admin: `نمی‌تونم توی این مورد کمکت کنم.\nبهتره با پشتیبانی تماس بگیرید.\n${SUPPORT_PHONE}`,
 };
 
 export const REPEAT_SUPPORT: Record<ChatAudience, string[]> = {
