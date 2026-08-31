@@ -11,7 +11,7 @@ import {
   partsPayload,
   suggestedNextKm,
 } from "@/app/lib/oil/api";
-import { recognizeIranianPlate } from "@/app/lib/oil/ocr";
+import { compressPlatePhoto, recognizeIranianPlate } from "@/app/lib/oil/ocr";
 import {
   compactPlate,
   emptyPlateParts,
@@ -80,11 +80,12 @@ export default function OilNewVisitPage() {
     if (!file) return;
     setSmsWarn(null);
     if (preview) URL.revokeObjectURL(preview);
-    setPreview(URL.createObjectURL(file));
     setOcrBusy(true);
-    setOcrStatus("پردازش تصویر روی گوشی…");
+    setOcrStatus("آماده‌سازی عکس…");
     try {
-      const found = await recognizeIranianPlate(file, (status) => setOcrStatus(status));
+      const compact = await compressPlatePhoto(file);
+      setPreview(URL.createObjectURL(compact));
+      const found = await recognizeIranianPlate(compact, (status) => setOcrStatus(status));
       if (found) {
         setParts(found);
         toast.success("پلاک خوانده شد");
