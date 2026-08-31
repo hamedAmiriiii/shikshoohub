@@ -36,6 +36,13 @@ const nextConfig = {
         ],
       },
       {
+        source: '/manifest-oil.json',
+        headers: [
+          { key: 'Content-Type', value: 'application/manifest+json' },
+          { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
+        ],
+      },
+      {
         source: '/sw.js',
         headers: [
           {
@@ -53,5 +60,3 @@ const nextConfig = {
 };
 
 export default nextConfig;
-
-

@@ -57,7 +57,10 @@ export function getSmsPackageCount(pkg: SmsPackage | null | undefined): number {
 
 export function getSmsPackagePrice(pkg: SmsPackage | null | undefined): number {
   if (!pkg) return 0;
-  if (typeof pkg.price_rial === "number") return pkg.price_rial;
+  if (typeof pkg.price === "number") return pkg.price;
+  if (typeof (pkg as { price_rial?: number }).price_rial === "number") {
+    return (pkg as { price_rial: number }).price_rial;
+  }
   if (typeof pkg.amount === "number") return pkg.amount;
   return 0;
 }

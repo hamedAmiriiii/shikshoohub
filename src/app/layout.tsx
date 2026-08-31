@@ -24,16 +24,38 @@ const geistMono = localFont({
 export function generateMetadata(): Metadata {
   const pathname = headers().get("x-pathname") || "";
   const isAdmin = pathname === "/admin" || pathname.startsWith("/admin/");
+  const isOil = pathname === "/oil" || pathname.startsWith("/oil/");
+
+  if (isAdmin) {
+    return {
+      title: "Webino",
+      description: "سیستم مدیریت فروشگاه",
+      manifest: "/manifest-admin.json",
+      applicationName: "Webino",
+      appleWebApp: {
+        capable: true,
+        statusBarStyle: "default",
+        title: "Webino",
+      },
+      icons: {
+        icon: [
+          { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+          { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+        ],
+        apple: [{ url: "/icon-192.png", sizes: "192x192", type: "image/png" }],
+      },
+    };
+  }
 
   return {
-    title: "Webino",
-    description: "سیستم مدیریت فروشگاه",
-    manifest: isAdmin ? "/manifest-admin.json" : "/manifest.json",
-    applicationName: "Webino",
+    title: isOil ? "تعویض روغن" : "Webino",
+    description: isOil ? "اپ تعویض روغن وبینو" : "سیستم مدیریت فروشگاه",
+    manifest: isOil ? "/manifest-oil.json" : "/manifest.json",
+    applicationName: isOil ? "تعویض روغن" : "Webino",
     appleWebApp: {
       capable: true,
       statusBarStyle: "default",
-      title: isAdmin ? "Webino" : "وبینو",
+      title: isOil ? "تعویض روغن" : "وبینو",
     },
     icons: {
       icon: [

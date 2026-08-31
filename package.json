@@ -35,6 +35,7 @@
     "react-player": "^2.16.0",
     "react-qr-barcode-scanner": "^2.0.0",
     "react-toastify": "^10.0.5",
+    "tesseract.js": "^5.1.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

@@ -58,6 +58,14 @@ function isAdminPath(url) {
   return url.pathname === "/admin" || url.pathname.startsWith("/admin/");
 }
 
+function isOilPath(url) {
+  return (
+    url.pathname === "/oil" ||
+    url.pathname.startsWith("/oil/") ||
+    url.pathname === "/manifest-oil.json"
+  );
+}
+
 function isNextStaticAsset(url) {
   return url.pathname.startsWith("/_next/static/");
 }
@@ -132,6 +140,11 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (shouldBypassServiceWorker(url)) {
+    return;
+  }
+
+  // اپ /oil جداست؛ HTML و مانیفست آن وارد کش فروشگاه/ادمین نشود
+  if (isOilPath(url)) {
     return;
   }
 

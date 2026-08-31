@@ -18,6 +18,7 @@ import {
   getFirstAllowedAdminPath,
   mergeUserWithShopPermissions,
 } from "@/app/lib/shopPermissions";
+import { isOilProjectLoginMessage } from "@/app/lib/oilProjectLogin";
 
 type View = "login" | "forgot-phone" | "forgot-reset";
 
@@ -293,16 +294,31 @@ export default function ShikshooLoginPage() {
 
       if (!res || res.hasError) {
         if (res?.statusCode === 403) {
+          const msg = parseErrorMessage(res);
+          if (isOilProjectLoginMessage(msg)) {
+            toast.error(
+              <span>
+                {msg}{" "}
+                <a
+                  href="/oil"
+                  style={{ color: "#fff", fontWeight: 800, textDecoration: "underline" }}
+                >
+                  ورود تعویض روغن
+                </a>
+              </span>,
+            );
+            return;
+          }
           notifyShopAccessIfExpired(res as Record<string, unknown>);
           const end = res.shop_access_ends_at as string | undefined;
           const days = res.shop_access_days_remaining as number | undefined;
-          let msg = parseErrorMessage(res);
+          let accessMsg = msg;
           if (end) {
-            msg = `اعتبار فروشگاه به پایان رسیده است (پایان: ${formatAccessEndDate(end)}`;
-            if (days != null) msg += `، ${days.toLocaleString("fa-IR")} روز`;
-            msg += ")";
+            accessMsg = `اعتبار فروشگاه به پایان رسیده است (پایان: ${formatAccessEndDate(end)}`;
+            if (days != null) accessMsg += `، ${days.toLocaleString("fa-IR")} روز`;
+            accessMsg += ")";
           }
-          toast.error(msg);
+          toast.error(accessMsg);
           return;
         }
         toast.error(parseErrorMessage(res || {}));

@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 
 export default function PWAHead() {
   const pathname = usePathname() || "";
-  const isAdmin = pathname.startsWith("/admin");
+  const isAdmin = pathname === "/admin" || pathname.startsWith("/admin/");
+  const isOil = pathname === "/oil" || pathname.startsWith("/oil/");
 
   useEffect(() => {
     let manifestLink = document.querySelector('link[rel="manifest"]') as HTMLLinkElement | null;
@@ -14,7 +15,6 @@ export default function PWAHead() {
       manifestLink.rel = "manifest";
       document.head.appendChild(manifestLink);
     }
-    manifestLink.href = isAdmin ? "/manifest-admin.json" : "/manifest.json";
 
     let appleTouch = document.querySelector('link[rel="apple-touch-icon"]') as HTMLLinkElement | null;
     if (!appleTouch) {
@@ -30,7 +30,6 @@ export default function PWAHead() {
       themeColor.name = "theme-color";
       document.head.appendChild(themeColor);
     }
-    themeColor.content = "#1f9ad1";
 
     let appleCapable = document.querySelector('meta[name="apple-mobile-web-app-capable"]') as HTMLMetaElement | null;
     if (!appleCapable) {
@@ -54,8 +53,25 @@ export default function PWAHead() {
       appleTitle.name = "apple-mobile-web-app-title";
       document.head.appendChild(appleTitle);
     }
-    appleTitle.content = isAdmin ? "Webino" : "وبینو";
-  }, [isAdmin]);
+
+    if (isAdmin) {
+      manifestLink.href = "/manifest-admin.json";
+      themeColor.content = "#1f9ad1";
+      appleTitle.content = "Webino";
+      return;
+    }
+
+    if (isOil) {
+      manifestLink.href = "/manifest-oil.json";
+      themeColor.content = "#101418";
+      appleTitle.content = "تعویض روغن";
+      return;
+    }
+
+    manifestLink.href = "/manifest.json";
+    themeColor.content = "#1f9ad1";
+    appleTitle.content = "وبینو";
+  }, [isAdmin, isOil]);
 
   return null;
 }

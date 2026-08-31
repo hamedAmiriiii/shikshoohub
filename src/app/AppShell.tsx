@@ -16,6 +16,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
   const isCustomerAuth = isCustomerAuthPath(pathname);
   const isReferralPage = pathname?.startsWith("/referrals");
   const isTableReserv = isTableReservPath(pathname);
+  const isOilApp = pathname === "/oil" || pathname?.startsWith("/oil/");
 
   if (
     isAdminPage ||
@@ -23,7 +24,8 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
     isAgencyRequest ||
     isCustomerAuth ||
     isReferralPage ||
-    isTableReserv
+    isTableReserv ||
+    isOilApp
   ) {
     return <>{children}</>;
   }

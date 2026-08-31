@@ -33,8 +33,24 @@ export default function LoginPagee() {
                 }
                 apiRequestError("Post", {}, data, "/api/auth/login", false, false, "").then((res) => {
                     if (res.hasError) {
-                        const parsedResponse = JSON.parse(res.errorText);
-                        const readableMessage = parsedResponse.message;
+                        let readableMessage = "خطا در ورود";
+                        try {
+                          const parsedResponse = JSON.parse(res.errorText);
+                          readableMessage = parsedResponse.message || readableMessage;
+                        } catch {
+                          readableMessage = res.errorText || readableMessage;
+                        }
+                        if (/\/oil|تعویض روغن/.test(readableMessage)) {
+                          toast.error(
+                            <span>
+                              {readableMessage}{" "}
+                              <a href="/oil" style={{ color: "#fff", fontWeight: 800, textDecoration: "underline" }}>
+                                ورود تعویض روغن
+                              </a>
+                            </span>
+                          );
+                          return;
+                        }
                         toast.error(readableMessage)
                         return
                     }
