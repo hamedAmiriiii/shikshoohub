@@ -38,6 +38,10 @@ import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import ShoppingCartCheckoutIcon from "@mui/icons-material/ShoppingCartCheckout";
 import BadgeIcon from "@mui/icons-material/Badge";
 import PaymentsIcon from "@mui/icons-material/Payments";
+import AccountTreeIcon from "@mui/icons-material/AccountTree";
+import MenuBookIcon from "@mui/icons-material/MenuBook";
+import BalanceIcon from "@mui/icons-material/Balance";
+import CalculateIcon from "@mui/icons-material/Calculate";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import AddBoxIcon from "@mui/icons-material/AddBox";
 import ListAltIcon from "@mui/icons-material/ListAlt";
@@ -80,6 +84,7 @@ type NavLink = {
 function isPathActive(pathname: string | null, href: string): boolean {
   if (!pathname) return false;
   if (href === "/admin") return pathname === "/admin";
+  if (href === "/admin/accounting") return pathname === "/admin/accounting";
   // لیست محصولات نباید صفحهٔ ثبت کالا را فعال کند
   if (href === "/admin/product") {
     return (
@@ -202,6 +207,61 @@ export default function AdminHamburgerSidebar({
         permission: "shop_accounts",
       },
       { id: "profit", label: "سود و ضرر", href: "/admin/profit-loss", icon: <TrendingUpIcon />, permission: "reports" },
+    ],
+    [],
+  );
+
+  const accountingChildren: NavLeaf[] = useMemo(
+    () => [
+      {
+        id: "accounting-home",
+        label: "حسابداری",
+        href: "/admin/accounting",
+        icon: <CalculateIcon />,
+        permission: "accounting",
+      },
+      {
+        id: "accounting-accounts",
+        label: "درخت حساب",
+        href: "/admin/accounting/accounts",
+        icon: <AccountTreeIcon />,
+        permission: "accounting",
+      },
+      {
+        id: "accounting-vouchers",
+        label: "اسناد حسابداری",
+        href: "/admin/accounting/vouchers",
+        icon: <ReceiptLongIcon />,
+        permission: "accounting",
+      },
+      {
+        id: "accounting-trial",
+        label: "تراز آزمایشی",
+        href: "/admin/accounting/trial-balance",
+        icon: <BalanceIcon />,
+        permission: "accounting",
+      },
+      {
+        id: "accounting-ledger",
+        label: "دفتر حساب",
+        href: "/admin/accounting/ledger",
+        icon: <MenuBookIcon />,
+        permission: "accounting",
+      },
+      {
+        id: "accounting-pl",
+        label: "سود و زیان دفتر",
+        href: "/admin/accounting/profit-loss",
+        icon: <TrendingUpIcon />,
+        permission: "accounting",
+      },
+      {
+        id: "accounting-bs",
+        label: "ترازنامه",
+        href: "/admin/accounting/balance-sheet",
+        icon: <AccountBalanceIcon />,
+        permission: "accounting",
+      },
     ],
     [],
   );
@@ -388,6 +448,12 @@ export default function AdminHamburgerSidebar({
         children: filterLeaves(financialChildren),
       },
       {
+        id: "accounting",
+        label: "حسابداری",
+        icon: <CalculateIcon />,
+        children: filterLeaves(accountingChildren),
+      },
+      {
         id: "payroll",
         label: "حقوق دستمزد",
         icon: <PaymentsIcon />,
@@ -415,7 +481,7 @@ export default function AdminHamburgerSidebar({
       });
     }
     return base;
-  }, [adminChildren, can, financialChildren, isSuperAdmin, payrollChildren, productChildren, smsChildren]);
+  }, [accountingChildren, adminChildren, can, financialChildren, isSuperAdmin, payrollChildren, productChildren, smsChildren]);
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -659,14 +725,14 @@ export default function AdminHamburgerSidebar({
         {topLinks.slice(1, 4).filter((link) => can(link.permission)).map((link) =>
           renderLeaf(link, isPathActive(pathname, link.href)),
         )}
-        {groups.filter((g) => g.id === "financial").map(renderGroup)}
+        {groups.filter((g) => g.id === "financial" || g.id === "accounting").map(renderGroup)}
         {topLinks.slice(4).filter((link) =>
           can(link.permission) &&
           (restaurantCafeEnabled || (link.id !== "table-orders" && link.id !== "shop-tables")),
         ).map((link) =>
           renderLeaf(link, isPathActive(pathname, link.href)),
         )}
-        {groups.filter((g) => g.id !== "financial").map(renderGroup)}
+        {groups.filter((g) => g.id !== "financial" && g.id !== "accounting").map(renderGroup)}
       </List>
 
       {can(["settings", "backup"]) ? (

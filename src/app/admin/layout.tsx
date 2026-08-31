@@ -52,6 +52,14 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/installments': 'اقساط',
     '/admin/installment-credits': 'اعتبار اقساطی',
     '/admin/profit-loss': 'سود و ضرر',
+    '/admin/accounting': 'حسابداری',
+    '/admin/accounting/accounts': 'درخت حساب',
+    '/admin/accounting/vouchers': 'اسناد حسابداری',
+    '/admin/accounting/vouchers/new': 'سند دستی',
+    '/admin/accounting/trial-balance': 'تراز آزمایشی',
+    '/admin/accounting/ledger': 'دفتر حساب',
+    '/admin/accounting/profit-loss': 'سود و زیان دفتر',
+    '/admin/accounting/balance-sheet': 'ترازنامه',
     '/admin/daily-reconciliation': 'تطبیق روزانه',
     '/admin/shop-accounts': 'حساب‌های فروشگاه',
     '/admin/petty-cash': 'تنخواه',
@@ -63,6 +71,8 @@ const getPageTitle = (pathname: string | null): string | undefined => {
   };
   
   if (pathname.startsWith("/admin/beneficiaries")) return "ذینفعان خرید";
+  if (pathname.startsWith("/admin/accounting/vouchers/new")) return "سند دستی";
+  if (pathname.startsWith("/admin/accounting/vouchers/")) return "جزئیات سند";
   return titleMap[pathname];
 };
 
