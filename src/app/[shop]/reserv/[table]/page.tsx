@@ -1334,7 +1334,7 @@ export default function TableReservPage() {
           fullWidth
           multiline
           minRows={2}
-          placeholder="یادداشت برای آشپزخانه (اختیاری)"
+          placeholder="یادداشت (اختیاری)"
           value={note}
           onChange={(e) => setNote(e.target.value)}
           sx={{

@@ -43,7 +43,7 @@ const nextConfig = {
         ],
       },
       {
-        source: '/sw.js',
+        source: '/sw-oil.js',
         headers: [
           {
             key: 'Cache-Control',
@@ -51,7 +51,7 @@ const nextConfig = {
           },
           {
             key: 'Service-Worker-Allowed',
-            value: '/',
+            value: '/oil',
           },
         ],
       },

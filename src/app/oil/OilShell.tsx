@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { oilLogout } from "@/app/lib/oil/api";
 import { useOilAuth } from "./OilAuth";
+import { OilInstallButton } from "./OilInstall";
 
 const formatNumber = (n: number) => new Intl.NumberFormat("fa-IR").format(n);
 
@@ -189,6 +190,8 @@ export default function OilShell({ children }: { children: React.ReactNode }) {
             );
           })}
         </nav>
+
+        <OilInstallButton variant="menu" />
 
         <button type="button" className="oil-nav-item oil-nav-logout" onClick={() => void handleLogout()}>
           <LogOut size={18} />

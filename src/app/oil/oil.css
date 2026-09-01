@@ -764,3 +764,21 @@ a.oil-icon-btn {
   color: #ffb4b4;
   background: rgba(224, 87, 87, 0.1);
 }
+
+.oil-install-btn {
+  width: 100%;
+  height: 48px;
+  margin-bottom: 14px;
+  border: 1px solid var(--oil-border);
+  border-radius: 14px;
+  background: var(--oil-surface);
+  color: var(--oil-text);
+  font-size: 15px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  font-family: inherit;
+}

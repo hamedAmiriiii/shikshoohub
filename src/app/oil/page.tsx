@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Droplets, Mail, Plus, ShieldCheck, Users } from "lucide-react";
 import { formatKm } from "@/app/lib/oil/plate";
-import { useOilAuth } from "./OilAuth";
+import { OilInstallButton } from "./OilInstall";
 
 const formatNumber = (n: number) => new Intl.NumberFormat("fa-IR").format(n);
 
@@ -30,6 +30,8 @@ export default function OilHomePage() {
         </p>
         <h2>{shopName}</h2>
       </div>
+
+      <OilInstallButton />
 
       <div className="oil-dash-grid">
         <div className="oil-dash-tile">
