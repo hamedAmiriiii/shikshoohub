@@ -18,6 +18,7 @@ export type OilVisit = {
   created_at: string;
   created_at_jalali: string;
   visit_count?: number;
+  notes?: string | null;
 };
 
 export type OilUser = {

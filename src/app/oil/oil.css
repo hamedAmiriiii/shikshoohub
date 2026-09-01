@@ -540,6 +540,17 @@ a.oil-icon-btn {
   border-bottom: 0;
 }
 
+.oil-visit-desc {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--oil-text);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--oil-border);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
 .oil-muted {
   color: var(--oil-muted);
   font-size: 13px;

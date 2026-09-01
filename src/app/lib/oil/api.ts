@@ -187,6 +187,7 @@ export async function oilCreateVisit(body: {
   phone: string;
   km: number;
   next_km?: number;
+  notes?: string;
 }) {
   return oilFetch<{
     message: string;
@@ -254,4 +255,13 @@ export function partsPayload(parts: OilPlateParts) {
     middle: parts.middle,
     province: parts.province,
   };
+}
+
+export function buildOilVisitDescription(oilType: string, filters: string) {
+  const type = oilType.trim();
+  const parts = filters.trim();
+  if (type && parts) return `نوع روغن: ${type} — فیلترها: ${parts}`;
+  if (type) return `نوع روغن: ${type}`;
+  if (parts) return `فیلترها: ${parts}`;
+  return "";
 }

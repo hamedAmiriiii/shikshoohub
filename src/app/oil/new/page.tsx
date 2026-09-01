@@ -9,6 +9,7 @@ import {
   oilLookup,
   partsPayload,
   suggestedNextKm,
+  buildOilVisitDescription,
 } from "@/app/lib/oil/api";
 // تشخیص خودکار پلاک فعلاً خاموش است؛ فقط ورود دستی.
 // import { compressPlatePhoto, recognizeIranianPlate } from "@/app/lib/oil/ocr";
@@ -54,6 +55,8 @@ export default function OilNewVisitPage() {
   const [km, setKm] = useState("");
   const [nextKm, setNextKm] = useState("");
   const [nextKmDirty, setNextKmDirty] = useState(false);
+  const [oilType, setOilType] = useState("");
+  const [filters, setFilters] = useState("");
   const [saving, setSaving] = useState(false);
   const [smsWarn, setSmsWarn] = useState<string | null>(null);
   const lookupKeyRef = useRef("");
@@ -123,6 +126,7 @@ export default function OilNewVisitPage() {
         phone: string;
         km: number;
         next_km?: number;
+        notes?: string;
       } = {
         ...partsPayload(parts),
         phone,
@@ -132,6 +136,8 @@ export default function OilNewVisitPage() {
         const n = Number(nextKm);
         if (Number.isFinite(n) && n > kmNum) body.next_km = n;
       }
+      const notes = buildOilVisitDescription(oilType, filters);
+      if (notes) body.notes = notes;
       const res = await oilCreateVisit(body);
       if (isOilApiError(res)) {
         toast.error(res.message);
@@ -215,6 +221,27 @@ export default function OilNewVisitPage() {
         />
         <p className="oil-muted" style={{ marginTop: 6 }}>
           اگر خالی بماند، فاصله  ({formatKm(interval)} کیلومتر) استفاده می‌شود.
+        </p>
+      </div>
+      <div className="oil-field">
+        <label>نوع روغن</label>
+        <input
+          type="text"
+          placeholder="مثلاً ۱۰W۴۰ بهران"
+          value={oilType}
+          onChange={(e) => setOilType(e.target.value)}
+        />
+      </div>
+      <div className="oil-field">
+        <label>فیلترها</label>
+        <input
+          type="text"
+          placeholder="مثلاً روغن، هوا، کابین"
+          value={filters}
+          onChange={(e) => setFilters(e.target.value)}
+        />
+        <p className="oil-muted" style={{ marginTop: 6 }}>
+          این موارد به‌صورت توضیحات (نوع روغن — فیلترها) ذخیره می‌شود.
         </p>
       </div>
 

@@ -110,6 +110,9 @@ export default function OilCustomersPage() {
                 بعدی <span className="oil-km">{formatKm(visit.next_km)}</span>
               </span>
             </div>
+            {visit.notes ? (
+              <p className="oil-visit-desc">{visit.notes}</p>
+            ) : null}
             <div className="oil-card-meta">
               <span>{visit.visit_count ?? 1} مراجعه</span>
               {!visit.sms_sent && <span style={{ color: "#ffb4b4" }}>پیامک نرفت</span>}

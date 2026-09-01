@@ -66,6 +66,9 @@ export default function OilCarPage() {
           <span>تعداد مراجعه</span>
           <span>{customer.visit_count ?? visits.length}</span>
         </div>
+        {customer.notes ? (
+          <p className="oil-visit-desc">{customer.notes}</p>
+        ) : null}
       </div>
 
       <h2 style={{ fontSize: 16, margin: "20px 0 8px" }}>سوابق</h2>
@@ -82,6 +85,9 @@ export default function OilCarPage() {
               <span>کیلومتر {formatKm(visit.km)}</span>
               <span>بعدی {formatKm(visit.next_km)}</span>
             </div>
+            {visit.notes ? (
+              <p className="oil-visit-desc">{visit.notes}</p>
+            ) : null}
             {visit.sms_error && (
               <p className="oil-muted" style={{ marginTop: 6 }}>
                 {visit.sms_error}
