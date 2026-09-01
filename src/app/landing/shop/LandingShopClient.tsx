@@ -177,7 +177,7 @@ const FAQS = [
   },
   {
     q: "آیا نسخه آزمایشی رایگان دارد؟",
-    a: "۳۰ روز استفاده رایگان به‌همراه ۲۰ پیامک هدیه برای شروع.",
+    a: "یک هفته استفاده رایگان به‌همراه ۲۰ پیامک هدیه برای شروع.",
   },
 ];
 
@@ -222,6 +222,7 @@ export default function LandingShopClient() {
             وبینو
           </Link>
           <nav className="hidden md:flex items-center gap-8 text-sm text-slate-300">
+            <Link href="/" className="hover:text-cyan-400 transition">همه محصولات</Link>
             <a href="#features" className="hover:text-cyan-400 transition">امکانات</a>
             <a href="#screenshots" className="hover:text-cyan-400 transition">گالری</a>
             <a href="#pricing" className="hover:text-cyan-400 transition">تعرفه</a>
@@ -253,6 +254,7 @@ export default function LandingShopClient() {
         </div>
         {navOpen && (
           <div className="md:hidden border-t border-white/10 bg-[#0b0f1a] px-4 py-3 flex flex-col gap-2 text-sm text-slate-300">
+            <Link href="/" onClick={() => setNavOpen(false)}>همه محصولات</Link>
             <a href="#features" onClick={() => setNavOpen(false)}>امکانات</a>
             <a href="#screenshots" onClick={() => setNavOpen(false)}>گالری</a>
             <a href="#pricing" onClick={() => setNavOpen(false)}>تعرفه</a>
@@ -281,7 +283,7 @@ export default function LandingShopClient() {
         <div className="max-w-6xl mx-auto px-4 grid lg:grid-cols-2 gap-12 items-center relative">
           <motion.div {...fadeUp(0)} className="text-center lg:text-right">
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-cyan-300 text-xs font-medium mb-4">
-              <Sparkles size={14} /> ۳۰ روز تست رایگان — فروش، حسابداری، فروشگاه آنلاین
+              <Sparkles size={14} /> یک هفته تست رایگان — فروش، حسابداری، فروشگاه آنلاین
             </span>
             <h1 className="text-3xl sm:text-4xl lg:text-[1.8rem] font-bold leading-tight">
               <span className="bg-gradient-to-l from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">
@@ -304,8 +306,14 @@ export default function LandingShopClient() {
                 onClick={startFree}
                 className="px-8 py-3.5 rounded-xl bg-gradient-to-l from-violet-600 via-fuchsia-600 to-pink-600 text-white font-semibold hover:opacity-90 transition shadow-xl shadow-fuchsia-900/40"
               >
-                شروع رایگان ۳۰ روزه
+                شروع رایگان یک هفته‌ای
               </button>
+              <Link
+                href={LOGIN_URL}
+                className="px-8 py-3.5 rounded-xl border border-white/15 bg-white/5 text-slate-200 font-medium hover:bg-white/10 transition text-center"
+              >
+                ورود به پنل فروش
+              </Link>
               <a
                 href="#screenshots"
                 className="px-8 py-3.5 rounded-xl border border-white/15 bg-white/5 text-slate-200 font-medium hover:bg-white/10 transition text-center"
@@ -593,7 +601,7 @@ export default function LandingShopClient() {
             ))}
           </div>
           <p className="text-center text-slate-500 text-sm mt-8">
-            ۳۰ روز تست رایگان · ۲۰ پیامک هدیه · بدون نیاز به نصب پیچیده
+            یک هفته تست رایگان · ۲۰ پیامک هدیه · بدون نیاز به نصب پیچیده
           </p>
         </div>
       </section>
@@ -609,7 +617,7 @@ export default function LandingShopClient() {
             <div className="relative">
               <h2 className="text-2xl md:text-3xl font-bold">پیشنهاد ویژه شروع</h2>
               <ul className="mt-6 space-y-2 text-violet-100 text-base md:text-lg">
-                <li>۳۰ روز استفاده رایگان</li>
+                <li>یک هفته استفاده رایگان</li>
                 <li>۲۰ پیامک هدیه</li>
                 <li>پشتیبانی رایگان راه‌اندازی</li>
               </ul>
@@ -650,7 +658,7 @@ export default function LandingShopClient() {
               onClick={startFree}
               className="w-full py-3.5 rounded-xl bg-gradient-to-l from-violet-600 to-fuchsia-600 text-white font-semibold hover:opacity-90 transition"
             >
-              شروع رایگان ۳۰ روزه
+              شروع رایگان یک هفته‌ای
             </button>
           </div>
         </div>
@@ -729,6 +737,7 @@ export default function LandingShopClient() {
           <div>
             <div className="text-white font-medium mb-3">دسترسی سریع</div>
             <ul className="space-y-2">
+              <li><Link href="/" className="hover:text-cyan-400">همه محصولات</Link></li>
               <li><Link href={REGISTER_URL} className="hover:text-cyan-400">ثبت‌نام رایگان</Link></li>
               <li><Link href={LOGIN_URL} className="hover:text-cyan-400">ورود</Link></li>
               <li>
@@ -768,7 +777,7 @@ export default function LandingShopClient() {
           onClick={startFree}
           className="w-full py-3.5 rounded-xl bg-gradient-to-l from-violet-600 to-fuchsia-600 text-white font-semibold shadow-lg"
         >
-          شروع رایگان ۳۰ روزه
+          شروع رایگان یک هفته‌ای
         </button>
       </div>
       <div className="h-20 md:hidden" aria-hidden />

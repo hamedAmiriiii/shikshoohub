@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
-import LandingShopClient from "./landing/shop/LandingShopClient";
+import LandingHubClient from "./landing/LandingHubClient";
 import StandaloneAdminRedirect from "./components/StandaloneAdminRedirect";
 
 export const metadata: Metadata = {
-  title: "وبینو | نرم‌افزار حسابداری فروشگاهی",
+  title: "وبینو | حسابداری، باشگاه مشتریان، طلا، نوبت‌دهی و فروشگاه آنلاین",
   description:
-    "مدیریت فروش، انبار، اقساط و مشتریان در یک نرم‌افزار تحت وب. نصب روی موبایل و ویندوز، ۳۰ روز تست رایگان.",
+    "مجموعه نرم‌افزارهای وبینو: حسابداری و فروش، باشگاه مشتریان، خرید و فروش طلا، نوبت‌دهی، کلاس آنلاین، شبکه اجتماعی و فروشگاه آنلاین. یک هفته تست رایگان.",
   openGraph: {
-    title: "وبینو — حسابداری فروشگاهی",
-    description: "ثبت فروش سریع، گزارش سود، انبار و اقساط. تست رایگان ۳۰ روزه.",
+    title: "وبینو — مجموعه نرم‌افزارهای کسب‌وکار",
+    description:
+      "حسابداری، باشگاه مشتریان، طلا، نوبت‌دهی، کلاس آنلاین، شبکه اجتماعی و فروشگاه آنلاین. تست رایگان یک هفته‌ای.",
     locale: "fa_IR",
     type: "website",
   },
@@ -19,7 +20,7 @@ export default function HomePage() {
   return (
     <>
       <StandaloneAdminRedirect />
-      <LandingShopClient />
+      <LandingHubClient />
     </>
   );
 }

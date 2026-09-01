@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>وبینو | نرم‌افزار حسابداری فروشگاهی</title>
-  <meta name="description" content="مدیریت فروش، انبار، اقساط و مشتریان. نصب روی موبایل و ویندوز. ۳۰ روز تست رایگان." />
+  <title>وبینو | حسابداری، باشگاه مشتریان، طلا، نوبت‌دهی و فروشگاه آنلاین</title>
+  <meta name="description" content="مجموعه نرم‌افزارهای وبینو: حسابداری و فروش، باشگاه مشتریان، خرید و فروش طلا، نوبت‌دهی، کلاس آنلاین، شبکه اجتماعی و فروشگاه آنلاین. یک هفته تست رایگان." />
   <meta name="theme-color" content="#059669" />
   <link rel="stylesheet" href="{{ asset('css/webino-landing.css') }}">
 </head>
@@ -14,8 +14,9 @@
     <div class="wl-header-inner">
       <a href="{{ url('/') }}" class="wl-logo">وبینو</a>
       <nav class="wl-nav">
+        <a href="#products">محصولات</a>
+        <a href="/landing/shop">حسابداری</a>
         <a href="#features">ویژگی‌ها</a>
-        <a href="#steps">شروع سریع</a>
         <a href="#screenshots">دمو</a>
         <a href="#faq">سوالات</a>
         <a data-login href="{{ config('app.shop_login_url', '/admin/login') }}">ورود</a>
@@ -24,6 +25,8 @@
       <button type="button" class="wl-menu-btn" id="menu-btn" aria-label="منو">☰</button>
     </div>
     <div class="wl-mobile-nav" id="mobile-nav">
+      <a href="#products">محصولات</a>
+      <a href="/landing/shop">حسابداری</a>
       <a href="#features">ویژگی‌ها</a>
       <a href="#screenshots">دمو</a>
       <a href="#faq">سوالات</a>
@@ -35,76 +38,73 @@
   <section class="wl-hero">
     <div class="wl-container wl-hero-grid">
       <div class="wl-hero-text">
-        <span class="wl-badge">✓ ۳۰ روز تست رایگان — بدون نصب پیچیده</span>
-        <h1>مدیریت کامل فروشگاه، فروش، انبار و اقساط در یک نرم‌افزار ساده</h1>
-        <p class="wl-hero-lead">نرم‌افزار حسابداری فروشگاهی تحت وب با قابلیت نصب روی موبایل و ویندوز، اتصال کارتخوان، مدیریت مشتریان، انبار و گزارش سود.</p>
+        <span class="wl-badge">✓ ۷ محصول — یک هفته تست رایگان</span>
+        <h1>مجموعه نرم‌افزارهای وبینو برای فروش، خدمات و آموزش</h1>
+        <p class="wl-hero-lead">حسابداری و فروش، باشگاه مشتریان، خرید و فروش طلا، نوبت‌دهی، کلاس آنلاین و اتاق جلسه، شبکه اجتماعی و فروشگاه آنلاین — تحت وب، قابل نصب روی موبایل و ویندوز.</p>
         <div class="wl-hero-actions">
-          <button type="button" class="wl-btn-primary btn-start-free">شروع رایگان ۳۰ روزه</button>
-          <a href="#screenshots" class="wl-btn-secondary">مشاهده دمو</a>
+          <button type="button" class="wl-btn-primary btn-start-free">شروع رایگان یک هفته‌ای</button>
+          <a href="#products" class="wl-btn-secondary">مشاهده محصولات</a>
         </div>
         <ul class="wl-trust">
           <li>۲۰ پیامک رایگان</li>
           <li>پشتیبانی آنلاین</li>
           <li>نصب موبایل و ویندوز</li>
-          <li>مناسب فروشگاه متوسط</li>
+          <li>بدون نصب پیچیده</li>
         </ul>
       </div>
-      <div class="wl-mockup">
-        <div class="wl-mockup-head"><span>داشبورد فروشگاه</span><span class="wl-online">آنلاین</span></div>
-        <div class="wl-stats">
-          <div class="wl-stat-green"><div class="wl-stat-label">فروش امروز</div><div class="wl-stat-val">۸,۲۴۰,۰۰۰</div></div>
-          <div class="wl-stat-gray"><div class="wl-stat-label">سود امروز</div><div class="wl-stat-val">۱,۹۵۰,۰۰۰</div></div>
-        </div>
-        <div class="wl-rows">
-          <div style="font-size:10px;color:#94a3b8;padding:0 4px">لیست کالا — ثبت فروش سریع</div>
-          <div class="wl-row"><span>کتانی نایک</span><span>۱,۲۰۰,۰۰۰</span></div>
-          <div class="wl-row"><span>شلوار جین</span><span>۸۵۰,۰۰۰</span></div>
-        </div>
-        <div class="wl-chart-placeholder">گزارش فروش ۱۰ روز اخیر</div>
-      </div>
+      <div class="wl-apps-mosaic" id="hero-apps" aria-label="محصولات وبینو"></div>
     </div>
   </section>
 
-  <section class="wl-section wl-section-white">
+  <section id="products" class="wl-section wl-section-white">
     <div class="wl-container">
-      <h2 class="wl-title">چرا فروشگاه‌داران وبینو را انتخاب می‌کنند؟</h2>
+      <h2 class="wl-title">محصولات وبینو</h2>
+      <p class="wl-subtitle">هر کسب‌وکار اپ خودش را دارد — همه در یک اکوسیستم</p>
+      <div class="wl-products" id="products-grid"></div>
+    </div>
+  </section>
+
+  <section class="wl-section wl-section-gray">
+    <div class="wl-container">
+      <h2 class="wl-title">چرا کسب‌وکارها وبینو را انتخاب می‌کنند؟</h2>
       <div class="wl-cards-4">
-        <div class="wl-card"><div class="wl-card-icon">⚡</div><h3>ثبت فروش سریع</h3><p>ثبت فاکتور و فروش در چند ثانیه</p></div>
-        <div class="wl-card"><div class="wl-card-icon">📦</div><h3>مدیریت انبار</h3><p>مشاهده موجودی و کنترل قیمت خرید و فروش</p></div>
-        <div class="wl-card"><div class="wl-card-icon">👥</div><h3>مدیریت اقساط و مشتریان</h3><p>ثبت بدهی، اقساط و سوابق خرید مشتری</p></div>
-        <div class="wl-card"><div class="wl-card-icon">📈</div><h3>گزارش سود و فروش</h3><p>مشاهده فروش و سود روزانه و ماهانه</p></div>
+        <div class="wl-card"><div class="wl-card-icon">🧩</div><h3>چند محصول، یک اکوسیستم</h3><p>فروش، خدمات، طلا، نوبت و آموزش کنار هم</p></div>
+        <div class="wl-card"><div class="wl-card-icon">📱</div><h3>موبایل و ویندوز</h3><p>نصب مثل اپ، بدون نصب پیچیده ویندوز</p></div>
+        <div class="wl-card"><div class="wl-card-icon">⚡</div><h3>شروع در چند دقیقه</h3><p>ثبت‌نام، انتخاب محصول و شروع کار</p></div>
+        <div class="wl-card"><div class="wl-card-icon">🎧</div><h3>پشتیبانی راه‌اندازی</h3><p>در تمام مراحل کنار شما هستیم</p></div>
       </div>
     </div>
   </section>
 
-  <section id="features" class="wl-section wl-section-gray">
+  <section id="features" class="wl-section wl-section-white">
     <div class="wl-container">
-      <h2 class="wl-title">ویژگی‌های مهم نرم‌افزار</h2>
-      <p class="wl-subtitle">همه‌چیز برای فروشگاه، بدون شلوغی</p>
+      <h2 class="wl-title">امکانات اکوسیستم وبینو</h2>
+      <p class="wl-subtitle">از صندوق فروش تا کلاس آنلاین</p>
       <div class="wl-features" id="features-grid"></div>
     </div>
   </section>
 
-  <section id="steps" class="wl-section wl-section-white">
+  <section id="steps" class="wl-section wl-section-gray">
     <div class="wl-container">
       <h2 class="wl-title">در ۳ مرحله شروع کنید</h2>
       <div class="wl-steps">
-        <div class="wl-step"><div class="wl-step-num">۱</div><h3>ثبت‌نام رایگان</h3><p>شماره موبایل و نام فروشگاه</p></div>
-        <div class="wl-step"><div class="wl-step-num">۲</div><h3>ثبت کالا و اولین فروش</h3><p>بارکد، قیمت و موجودی</p></div>
-        <div class="wl-step"><div class="wl-step-num">۳</div><h3>مدیریت فروشگاه</h3><p>سود، فروش و گزارش‌ها</p></div>
+        <div class="wl-step"><div class="wl-step-num">۱</div><h3>ثبت‌نام رایگان</h3><p>شماره موبایل و نام کسب‌وکار</p></div>
+        <div class="wl-step"><div class="wl-step-num">۲</div><h3>انتخاب محصول</h3><p>فروش، طلا، نوبت، کلاس یا فروشگاه</p></div>
+        <div class="wl-step"><div class="wl-step-num">۳</div><h3>شروع کار</h3><p>پنل آماده است — پشتیبانی همراهتان</p></div>
       </div>
-      <p class="wl-steps-note">در کمتر از ۵ دقیقه فروشگاهت را دیجیتال کن</p>
+      <p class="wl-steps-note">در کمتر از ۵ دقیقه کسب‌وکارت را دیجیتال کن</p>
     </div>
   </section>
 
-  <section id="screenshots" class="wl-section wl-section-gray">
+  <section id="screenshots" class="wl-section wl-section-white">
     <div class="wl-container">
-      <h2 class="wl-title">نمای نرم‌افزار</h2>
+      <h2 class="wl-title">نمای اپ‌ها</h2>
+      <p class="wl-subtitle">یک نگاه به هر محصول</p>
       <div class="wl-carousel-wrap">
         <div class="wl-carousel-frame" id="carousel-frame">
           <div class="wl-carousel-inner">
             <div class="wl-carousel-head">
-              <span id="slide-title">صفحه فروش</span>
+              <span id="slide-title">حسابداری و فروش</span>
               <span id="slide-desc">ثبت سریع فاکتور</span>
             </div>
             <div class="wl-carousel-body" id="slide-content"></div>
@@ -117,12 +117,12 @@
     </div>
   </section>
 
-  <section class="wl-section wl-section-white">
+  <section class="wl-section wl-section-gray">
     <div class="wl-container">
       <div class="wl-offer">
         <h2>پیشنهاد ویژه شروع</h2>
         <ul>
-          <li>۳۰ روز استفاده رایگان</li>
+          <li>یک هفته استفاده رایگان از محصولات</li>
           <li>۲۰ پیامک هدیه</li>
           <li>پشتیبانی رایگان راه‌اندازی</li>
         </ul>
@@ -131,12 +131,12 @@
     </div>
   </section>
 
-  <section id="signup" class="wl-section wl-section-gray" style="border-top:1px solid #f1f5f9;border-bottom:1px solid #f1f5f9">
+  <section id="signup" class="wl-section wl-section-white" style="border-top:1px solid #f1f5f9;border-bottom:1px solid #f1f5f9">
     <div class="wl-form">
       <h2>ثبت‌نام سریع</h2>
-      <input id="input-shop" class="wl-input" type="text" placeholder="نام فروشگاه" />
+      <input id="input-shop" class="wl-input" type="text" placeholder="نام کسب‌وکار / فروشگاه" />
       <input id="input-phone" class="wl-input wl-input-ltr" type="tel" placeholder="شماره موبایل (۰۹...)" />
-      <button type="button" class="wl-btn-primary btn-start-free" style="width:100%">شروع رایگان ۳۰ روزه</button>
+      <button type="button" class="wl-btn-primary btn-start-free" style="width:100%">شروع رایگان یک هفته‌ای</button>
     </div>
   </section>
 
@@ -164,7 +164,19 @@
     <div class="wl-container wl-footer-grid">
       <div>
         <h3>وبینو</h3>
-        <p>نرم‌افزار حسابداری و مدیریت فروشگاه تحت وب</p>
+        <p>مجموعه نرم‌افزارهای کسب‌وکار تحت وب</p>
+      </div>
+      <div>
+        <h3>محصولات</h3>
+        <ul>
+          <li><a href="/landing/shop">حسابداری و فروش</a></li>
+          <li><a href="/landing/products/club">باشگاه مشتریان</a></li>
+          <li><a href="/landing/products/gold">خرید و فروش طلا</a></li>
+          <li><a href="/landing/products/booking">نوبت‌دهی</a></li>
+          <li><a href="/landing/products/class">کلاس و جلسه</a></li>
+          <li><a href="/landing/products/social">شبکه اجتماعی</a></li>
+          <li><a href="/landing/products/store">فروشگاه آنلاین</a></li>
+        </ul>
       </div>
       <div>
         <h3>دسترسی سریع</h3>
@@ -173,16 +185,12 @@
           <li><a data-login href="{{ config('app.shop_login_url', '/admin/login') }}">ورود</a></li>
         </ul>
       </div>
-      <div>
-        <h3>تماس</h3>
-        <a href="tel:09399166196" dir="ltr">09399166196</a>
-      </div>
     </div>
     <div class="wl-container wl-copy">© {{ date('Y') }} وبینو — تمامی حقوق محفوظ است</div>
   </footer>
 
   <div class="wl-sticky-cta">
-    <button type="button" class="wl-btn-primary btn-start-free">شروع رایگان ۳۰ روزه</button>
+    <button type="button" class="wl-btn-primary btn-start-free">شروع رایگان یک هفته‌ای</button>
   </div>
 
   <script>

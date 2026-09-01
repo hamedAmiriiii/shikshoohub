@@ -1,6 +1,6 @@
-import LandingShopClient from "./shop/LandingShopClient";
+import LandingHubClient from "./LandingHubClient";
 
-/** لندینگ اصلی وبینو — مدیریت فروشگاه */
+/** لندینگ اصلی وبینو — مجموعه محصولات */
 export default function LandingPage() {
-  return <LandingShopClient />;
+  return <LandingHubClient />;
 }
