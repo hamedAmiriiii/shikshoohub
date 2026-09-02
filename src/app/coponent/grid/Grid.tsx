@@ -176,6 +176,8 @@ interface Props {
   desktopColumns?: DesktopColumn[];
   /** جدول دسکتاپ فشرده: سلول‌ها و ستون عملیات باریک‌تر */
   compactDesktop?: boolean;
+  /** عرض ستون عملیات (در غیر این صورت از compactDesktop پیروی می‌کند) */
+  actionsColumnWidth?: string;
   enablePagination?: boolean; // برای فعال کردن pagination بدون desktopColumns
   customActions?: ReactNode; // برای نمایش دکمه‌های اضافی کنار جستجو
   onEditItem?: (item: any) => void; // برای ویرایش آیتم در حالت دسکتاپ
@@ -293,6 +295,7 @@ const List: React.FC<Props> = ({
   showTotal = true,
   desktopColumns,
   compactDesktop = false,
+  actionsColumnWidth,
   enablePagination = false,
   customActions,
   onEditItem,
@@ -304,9 +307,9 @@ const List: React.FC<Props> = ({
   onRowClick,
   hidePrintAction = false,
 }) => {
-  const compactActionWidth = compactDesktop ? "96px" : "280px";
-  const compactCellPad = compactDesktop ? "7px 10px" : "16px 24px";
-  const compactFont = compactDesktop ? "12px" : "16px";
+  const compactActionWidth = actionsColumnWidth || (compactDesktop ? "96px" : "280px");
+  const compactCellPad = compactDesktop ? "4px 8px" : "16px 24px";
+  const compactFont = compactDesktop ? "11px" : "16px";
 
   const actionsHeaderCellSx = {
     fontWeight: "600",
@@ -325,7 +328,7 @@ const List: React.FC<Props> = ({
 
   const actionsBodyCellSx = {
     color: "var(--admin-text)",
-    fontSize: compactDesktop ? 12 : 16,
+    fontSize: compactDesktop ? 11 : 16,
     padding: compactDesktop ? "6px 8px" : "12px",
     minWidth: compactActionWidth,
     width: compactActionWidth,
@@ -687,9 +690,9 @@ const List: React.FC<Props> = ({
                       sx={{ 
                         width: "100%",
                         maxWidth: "100%",
-                        mt: 2,
+                        mt: compactDesktop ? 1 : 2,
                         backgroundColor: 'var(--admin-surface)',
-                        borderRadius: '16px',
+                        borderRadius: compactDesktop ? '8px' : '16px',
                         border: '1px solid var(--admin-border)',
                         overflowX: 'auto',
                       }}
@@ -768,7 +771,7 @@ const List: React.FC<Props> = ({
                                   align="right"
                                   sx={{
                                     color: "var(--admin-text)",
-                                    fontSize: compactDesktop ? 12 : 16,
+                                    fontSize: compactDesktop ? 11 : 16,
                                     padding: compactCellPad,
                                     whiteSpace: compactDesktop ? "nowrap" : undefined,
                                     ...columnWidthSx(column, colIdx),

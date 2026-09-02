@@ -22,6 +22,8 @@ const formatNumber = (n: number) => new Intl.NumberFormat("fa-IR").format(n);
 function getBalance(item: ShopSmsQuotaRow): number {
   if (typeof item.balance === "number") return item.balance;
   if (typeof item.shop_sms_quota === "number") return item.shop_sms_quota;
+  if (typeof item.sms_count === "number") return item.sms_count;
+  if (typeof item.quota === "number") return item.quota;
   return 0;
 }
 
@@ -131,13 +133,13 @@ export default function AdminShopSmsQuotaPage() {
         align: "center" as const,
       },
       {
-        label: "پیامک",
+        label: "تعداد پیامک",
         field: (item: ShopSmsQuotaRow) => (
-          <Typography component="span" sx={{ color: "var(--admin-accent)", fontWeight: 700, fontSize: "14px" }}>
+          <Typography component="span" sx={{ color: "var(--admin-accent)", fontWeight: 700, fontSize: "12px" }}>
             {formatNumber(getBalance(item))}
           </Typography>
         ),
-        width: "8%",
+        width: "10%",
         align: "center" as const,
       },
     ],
@@ -172,23 +174,25 @@ export default function AdminShopSmsQuotaPage() {
         width: "100%",
         minHeight: "100vh",
         background: "var(--admin-bg-gradient)",
-        py: 3,
-        px: { xs: 2, sm: 3, md: 4 },
+        py: 1.5,
+        px: { xs: 1.5, sm: 2, md: 2.5 },
         direction: "rtl",
         pb: 12,
         boxSizing: "border-box",
       }}
     >
       <Box sx={{ width: "100%", maxWidth: "100%" }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
-          <StorefrontIcon sx={{ color: "#ff9800", fontSize: 32 }} />
-          <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: "22px" }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
+          <StorefrontIcon sx={{ color: "#ff9800", fontSize: 20 }} />
+          <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: "16px" }}>
             مدیریت فروشگاه‌ها
           </Typography>
         </Box>
 
         <List
           disableFilter
+          compactDesktop
+          actionsColumnWidth="168px"
           searchBoxList={searchBoxList}
           filterBoxList={[]}
           filterComponent={<></>}

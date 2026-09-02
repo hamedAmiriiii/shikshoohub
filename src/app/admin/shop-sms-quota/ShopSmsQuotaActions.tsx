@@ -10,7 +10,9 @@ import {
   DialogContent,
   DialogActions,
   GlobalStyles,
+  IconButton,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
@@ -44,6 +46,8 @@ export interface ShopSmsQuotaRow {
   phone?: string;
   balance?: number;
   shop_sms_quota?: number;
+  sms_count?: number;
+  quota?: number;
   products_count?: number;
   shop_access_starts_at?: string;
   shop_access_ends_at?: string;
@@ -65,6 +69,8 @@ function getShopId(item: ShopSmsQuotaRow): number | null {
 function getBalance(item: ShopSmsQuotaRow): number {
   if (typeof item.balance === "number") return item.balance;
   if (typeof item.shop_sms_quota === "number") return item.shop_sms_quota;
+  if (typeof item.sms_count === "number") return item.sms_count;
+  if (typeof item.quota === "number") return item.quota;
   return 0;
 }
 
@@ -275,17 +281,13 @@ export default function ShopSmsQuotaActions({ item, onSuccess, variant = "row" }
     setPaidPlanOpen(true);
   };
 
-  const isCard = variant === "card";
-  const btnSx = isCard
-    ? { flex: 1, py: 1, minWidth: "120px", fontSize: "12px" }
-    : {
-        px: 1.25,
-        py: 0.5,
-        fontSize: "12px",
-        lineHeight: 1.3,
-        whiteSpace: "nowrap",
-        minWidth: 0,
-      };
+  const iconBtnSx = {
+    p: 0.35,
+    width: 26,
+    height: 26,
+    border: "1px solid",
+    borderRadius: "6px",
+  };
 
   const datePickerFieldSx = {
     width: "100%",
@@ -328,73 +330,69 @@ export default function ShopSmsQuotaActions({ item, onSuccess, variant = "row" }
         sx={{
           display: "flex",
           flexDirection: "row",
-          gap: isCard ? 1 : 0.75,
-          flexWrap: "wrap",
+          gap: 0.4,
+          flexWrap: "nowrap",
           justifyContent: "center",
           alignItems: "center",
           width: "100%",
         }}
       >
         {!isPaidPlan(item) && (
-          <Button
-            size="small"
-            variant="contained"
-            startIcon={<VerifiedIcon sx={{ fontSize: 16 }} />}
-            onClick={openPaidPlan}
-            sx={{
-              ...btnSx,
-              backgroundColor: "#9c27b0",
-              "&:hover": { backgroundColor: "#7b1fa2" },
-            }}
-          >
-            {isCard ? "تأیید پلن پولی" : "تأیید پلن"}
-          </Button>
+          <Tooltip title="تأیید پلن پولی" arrow>
+            <IconButton
+              size="small"
+              onClick={openPaidPlan}
+              sx={{ ...iconBtnSx, borderColor: "#9c27b0", color: "#ce93d8" }}
+            >
+              <VerifiedIcon sx={{ fontSize: 15 }} />
+            </IconButton>
+          </Tooltip>
         )}
-        <Button
-          size="small"
-          variant="outlined"
-          startIcon={<EventIcon sx={{ fontSize: 16 }} />}
-          onClick={openAccess}
-          sx={{ ...btnSx, borderColor: "#2196f3", color: "#2196f3" }}
-        >
-          {isCard ? "تاریخ اعتبار" : "اعتبار"}
-        </Button>
-        <Button
-          size="small"
-          variant="outlined"
-          startIcon={<ContentCopyIcon sx={{ fontSize: 16 }} />}
-          onClick={() => void copyReferralDashboardLink()}
-          sx={{ ...btnSx, borderColor: "#26a69a", color: "#26a69a" }}
-        >
-          {isCard ? "کپی لینک معرفی" : "لینک معرفی"}
-        </Button>
-        <Button
-          size="small"
-          variant="outlined"
-          startIcon={<OpenInNewIcon sx={{ fontSize: 16 }} />}
-          onClick={openReferralDashboard}
-          sx={{ ...btnSx, borderColor: "#00897b", color: "#00897b" }}
-        >
-          مشاهده داشبورد
-        </Button>
-        <Button
-          size="small"
-          variant="outlined"
-          startIcon={<EditIcon sx={{ fontSize: 16 }} />}
-          onClick={openEdit}
-          sx={{ ...btnSx, borderColor: "var(--admin-accent)", color: "var(--admin-accent)" }}
-        >
-          {isCard ? "تنظیم موجودی" : "موجودی"}
-        </Button>
-        <Button
-          size="small"
-          variant="contained"
-          startIcon={<AddCircleOutlineIcon sx={{ fontSize: 16 }} />}
-          onClick={() => setChargeOpen(true)}
-          sx={{ ...btnSx, backgroundColor: "#ff9800", "&:hover": { backgroundColor: "#f57c00" } }}
-        >
-          شارژ
-        </Button>
+        <Tooltip title="تاریخ اعتبار" arrow>
+          <IconButton
+            size="small"
+            onClick={openAccess}
+            sx={{ ...iconBtnSx, borderColor: "#2196f3", color: "#64b5f6" }}
+          >
+            <EventIcon sx={{ fontSize: 15 }} />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="کپی لینک معرفی" arrow>
+          <IconButton
+            size="small"
+            onClick={() => void copyReferralDashboardLink()}
+            sx={{ ...iconBtnSx, borderColor: "#26a69a", color: "#4db6ac" }}
+          >
+            <ContentCopyIcon sx={{ fontSize: 15 }} />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="مشاهده داشبورد" arrow>
+          <IconButton
+            size="small"
+            onClick={openReferralDashboard}
+            sx={{ ...iconBtnSx, borderColor: "#00897b", color: "#26a69a" }}
+          >
+            <OpenInNewIcon sx={{ fontSize: 15 }} />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="تنظیم موجودی پیامک" arrow>
+          <IconButton
+            size="small"
+            onClick={openEdit}
+            sx={{ ...iconBtnSx, borderColor: "var(--admin-accent)", color: "var(--admin-accent)" }}
+          >
+            <EditIcon sx={{ fontSize: 15 }} />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="شارژ پیامک" arrow>
+          <IconButton
+            size="small"
+            onClick={() => setChargeOpen(true)}
+            sx={{ ...iconBtnSx, borderColor: "#ff9800", color: "#ffb74d" }}
+          >
+            <AddCircleOutlineIcon sx={{ fontSize: 15 }} />
+          </IconButton>
+        </Tooltip>
       </Box>
 
       <Dialog
@@ -609,29 +607,31 @@ export default function ShopSmsQuotaActions({ item, onSuccess, variant = "row" }
 }
 
 function AccessStatusChip({ item }: { item: ShopSmsQuotaRow }) {
+  const chipSx = { height: 20, fontSize: "10px", "& .MuiChip-label": { px: 0.75 } };
   if (item.shop_access_suspended) {
-    return <Chip size="small" label="تعلیق" sx={{ bgcolor: "rgba(244,67,54,0.2)", color: "#f44336" }} />;
+    return <Chip size="small" label="تعلیق" sx={{ ...chipSx, bgcolor: "rgba(244,67,54,0.2)", color: "#f44336" }} />;
   }
   if (item.shop_access_active === false || (item.shop_access_days_remaining ?? 1) <= 0) {
-    return <Chip size="small" label="منقضی" sx={{ bgcolor: "rgba(244,67,54,0.15)", color: "#ef5350" }} />;
+    return <Chip size="small" label="منقضی" sx={{ ...chipSx, bgcolor: "rgba(244,67,54,0.15)", color: "#ef5350" }} />;
   }
   return (
     <Chip
       size="small"
       label="فعال"
-      sx={{ bgcolor: "rgba(120,181,104,0.2)", color: "var(--admin-accent)" }}
+      sx={{ ...chipSx, bgcolor: "rgba(120,181,104,0.2)", color: "var(--admin-accent)" }}
     />
   );
 }
 
 function SubscriptionStatusChip({ item }: { item: ShopSmsQuotaRow }) {
   const status = getSubscriptionStatus(item);
+  const chipSx = { height: 20, fontSize: "10px", fontWeight: 700, "& .MuiChip-label": { px: 0.75 } };
   if (status === "paid") {
     return (
       <Chip
         size="small"
         label="پولی"
-        sx={{ bgcolor: "rgba(156,39,176,0.2)", color: "#ce93d8", fontWeight: 700 }}
+        sx={{ ...chipSx, bgcolor: "rgba(156,39,176,0.2)", color: "#ce93d8" }}
       />
     );
   }
@@ -639,7 +639,7 @@ function SubscriptionStatusChip({ item }: { item: ShopSmsQuotaRow }) {
     <Chip
       size="small"
       label="رایگان"
-      sx={{ bgcolor: "rgba(255,152,0,0.2)", color: "#ffb74d", fontWeight: 700 }}
+      sx={{ ...chipSx, bgcolor: "rgba(255,152,0,0.2)", color: "#ffb74d" }}
     />
   );
 }
@@ -656,32 +656,32 @@ export function ShopSmsQuotaMobileCard({
   return (
     <Box
       sx={{
-        p: 2,
-        mb: 2,
-        borderRadius: "16px",
+        p: 1.25,
+        mb: 1,
+        borderRadius: "10px",
         backgroundColor: "var(--admin-surface)",
         border: "1px solid var(--admin-border)",
       }}
     >
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 0.5 }}>
-        <Typography sx={{ color: "var(--admin-text)", fontWeight: 700 }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 0.25 }}>
+        <Typography sx={{ color: "var(--admin-text)", fontWeight: 600, fontSize: "13px" }}>
           {getShopName(data) || "—"}
         </Typography>
-        <Box sx={{ display: "flex", gap: 0.5 }}>
+        <Box sx={{ display: "flex", gap: 0.4 }}>
           <SubscriptionStatusChip item={data} />
           <AccessStatusChip item={data} />
         </Box>
       </Box>
-      <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "13px", mb: 0.5 }}>
+      <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "11px", mb: 0.25 }}>
         شناسه: {data.atelier_id ?? data.id ?? "—"} | تلفن: {data.phone || "—"}
       </Typography>
-      <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "13px", mb: 0.5 }}>
+      <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "11px", mb: 0.25 }}>
         اعتبار تا {formatAccessEndDate(data.shop_access_ends_at)}
         {data.shop_access_days_remaining != null &&
           ` · ${data.shop_access_days_remaining.toLocaleString("fa-IR")} روز`}
       </Typography>
-      <Typography sx={{ color: "var(--admin-accent)", fontWeight: 700, fontSize: "18px", mb: 1.5 }}>
-        {formatNumber(getBalance(data))} واحد پیامک
+      <Typography sx={{ color: "var(--admin-accent)", fontWeight: 700, fontSize: "13px", mb: 1 }}>
+        تعداد پیامک: {formatNumber(getBalance(data))}
       </Typography>
       <ShopSmsQuotaActions item={data} onSuccess={onSuccess} variant="card" />
     </Box>
