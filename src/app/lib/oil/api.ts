@@ -209,30 +209,9 @@ export function normalizeOilPublicHistory(
   res: OilPublicHistoryResponse,
   phone: string,
 ) {
-  const nested =
-    res.data && !Array.isArray(res.data) ? res.data : null;
-  const shopName =
-    res.shop_name ||
-    res.shop?.name ||
-    res.shop?.shop_name ||
-    nested?.shop_name ||
-    nested?.shop?.name ||
-    "";
-  let visits: OilVisit[] =
-    res.visits ||
-    res.history ||
-    nested?.visits ||
-    nested?.history ||
-    (Array.isArray(res.data) ? res.data : []) ||
-    [];
-  if (!visits.length && (res.customer || nested?.customer)) {
-    const one = res.customer || nested?.customer;
-    if (one) visits = [one];
-  }
   return {
-    shopName,
-    phone: res.phone || nested?.phone || phone,
-    visits,
+    phone: res.phone || phone,
+    cars: Array.isArray(res.cars) ? res.cars : [],
   };
 }
 
@@ -392,11 +371,15 @@ export function idsFromOilVisitItems(items?: OilVisitItem[] | null) {
   return next;
 }
 
-export function formatOilVisitItems(items?: OilVisitItem[] | null) {
+export function formatOilVisitItems(
+  items?: Array<Pick<OilVisitItem, "name"> & { kind?: string; kind_label?: string }> | null,
+) {
   return oilVisitItemLines(items).join(" — ");
 }
 
-export function oilVisitItemLines(items?: OilVisitItem[] | null) {
+export function oilVisitItemLines(
+  items?: Array<{ name?: string; kind?: string; kind_label?: string }> | OilPublicVisitItem[] | null,
+) {
   if (!items?.length) return [];
   return items
     .filter((item) => item.name)
@@ -404,7 +387,8 @@ export function oilVisitItemLines(items?: OilVisitItem[] | null) {
       const label =
         item.kind_label ||
         OIL_PRODUCT_KINDS.find((k) => k.kind === item.kind)?.kind_label ||
-        item.kind;
+        item.kind ||
+        "قلم";
       return `${label}: ${item.name}`;
     });
 }

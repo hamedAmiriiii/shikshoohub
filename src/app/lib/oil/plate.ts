@@ -121,6 +121,7 @@ export function isPlateComplete(parts: OilPlateParts): boolean {
 export function parsePlate(input: string | null | undefined): OilPlateParts | null {
   if (!input) return null;
   let text = toEnglishDigits(input)
+    .replace(/ایران/g, " ")
     .replace(/[|،,.\-_]/g, " ")
     .replace(/[^\dA-Za-zآ-یالف\s]/g, " ")
     .replace(/\s+/g, " ")

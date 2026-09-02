@@ -134,24 +134,31 @@ export type OilLookupResponse =
   | { found: true; visit: OilVisit; items?: OilVisitItem[] }
   | { found: false };
 
-export type OilPublicHistoryResponse = {
+export type OilPublicVisitItem = {
+  kind?: string;
+  kind_label?: string;
+  name: string;
+};
+
+export type OilPublicVisit = {
   shop_name?: string;
-  shop?: { name?: string; shop_name?: string };
-  phone?: string;
-  visits?: OilVisit[];
-  history?: OilVisit[];
-  customer?: OilVisit;
-  items?: OilVisitItem[];
-  data?:
-    | OilVisit[]
-    | {
-        shop_name?: string;
-        shop?: { name?: string };
-        phone?: string;
-        visits?: OilVisit[];
-        history?: OilVisit[];
-        customer?: OilVisit;
-      };
+  km: number;
+  next_km?: number | null;
+  notes?: string | null;
+  items?: OilPublicVisitItem[];
+  created_at_jalali?: string;
+};
+
+export type OilPublicCar = {
+  plate_display: string;
+  plate?: string;
+  plate_parts?: OilPlateParts;
+  visits: OilPublicVisit[];
+};
+
+export type OilPublicHistoryResponse = {
+  phone: string;
+  cars: OilPublicCar[];
 };
 
 export type OilReminderSms = {
