@@ -10,9 +10,11 @@ import {
   LogOut,
   Mail,
   Menu,
+  Package,
   Plus,
   Settings,
   ShoppingBag,
+  TrendingUp,
   Users,
   X,
 } from "lucide-react";
@@ -25,6 +27,8 @@ const formatNumber = (n: number) => new Intl.NumberFormat("fa-IR").format(n);
 const MENU_ITEMS = [
   { href: "/oil", label: "داشبورد", icon: LayoutDashboard },
   { href: "/oil/new", label: "ثبت تعویض", icon: Plus },
+  { href: "/oil/products", label: "محصولات", icon: Package },
+  { href: "/oil/reports", label: "گزارش", icon: TrendingUp },
   { href: "/oil/customers", label: "مشتریان", icon: Users },
   { href: "/oil/sms", label: "پیامک‌ها", icon: Mail },
   { href: "/oil/sms/packages", label: "خرید بسته پیامک", icon: ShoppingBag },
@@ -64,6 +68,8 @@ export default function OilShell({ children }: { children: React.ReactNode }) {
   if (isHome) title = "داشبورد";
   else if (pathname?.startsWith("/oil/customers")) title = "مشتریان";
   else if (pathname?.startsWith("/oil/new")) title = "ثبت تعویض";
+  else if (pathname?.startsWith("/oil/products")) title = "محصولات";
+  else if (pathname?.startsWith("/oil/reports")) title = "گزارش";
   else if (pathname?.startsWith("/oil/settings")) title = "تنظیمات";
   else if (pathname?.startsWith("/oil/sms/packages")) title = "خرید بسته پیامک";
   else if (pathname === "/oil/sms" || pathname?.startsWith("/oil/sms/")) {

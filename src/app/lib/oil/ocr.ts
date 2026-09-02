@@ -423,6 +423,7 @@ function getTemplates() {
     digits.push({ label: d, mat: renderChar(d) });
   });
   OIL_PLATE_LETTERS.forEach((letter) => {
+    if (letter.length > 3) return;
     letters.push({ label: letter, mat: renderChar(letter) });
   });
   templateCache = { digits, letters };

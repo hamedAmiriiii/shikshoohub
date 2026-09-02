@@ -55,6 +55,25 @@ function focusEnd(el: HTMLInputElement | null) {
   }
 }
 
+function productOptionLabel(product: OilProduct) {
+  const sale = Number(product.sale_price);
+  if (Number.isFinite(sale) && sale > 0) {
+    return `${product.name} — ${new Intl.NumberFormat("fa-IR").format(sale)}`;
+  }
+  return product.name;
+}
+
+function productSaleAmount(product?: OilProduct) {
+  if (!product) return 0;
+  const sale = Number(product.sale_price);
+  return Number.isFinite(sale) && sale > 0 ? sale : 0;
+}
+
+function findProduct(list: OilProduct[], id: number | "") {
+  if (id === "") return undefined;
+  return list.find((product) => product.id === id);
+}
+
 function comboOptions(
   groups: OilProductKindGroup[],
   kind: OilProductKind,
@@ -117,6 +136,23 @@ export default function OilNewVisitPage() {
     () => comboOptions(catalog, "oil_filter", lastItems),
     [catalog, lastItems],
   );
+
+  const saleTotal = useMemo(() => {
+    return (
+      productSaleAmount(findProduct(oilOptions, oilProductId)) +
+      productSaleAmount(findProduct(airFilterOptions, airFilterProductId)) +
+      productSaleAmount(findProduct(oilFilterOptions, oilFilterProductId))
+    );
+  }, [
+    airFilterOptions,
+    airFilterProductId,
+    oilFilterOptions,
+    oilFilterProductId,
+    oilOptions,
+    oilProductId,
+  ]);
+
+  const saleTotalLabel = new Intl.NumberFormat("fa-IR").format(saleTotal);
 
   useEffect(() => {
     void oilListProducts(false).then((res) => {
@@ -305,7 +341,7 @@ export default function OilNewVisitPage() {
           <option value="">بدون محصول</option>
           {oilOptions.map((product) => (
             <option key={product.id} value={product.id}>
-              {product.name}
+              {productOptionLabel(product)}
             </option>
           ))}
         </select>
@@ -321,7 +357,7 @@ export default function OilNewVisitPage() {
           <option value="">بدون محصول</option>
           {airFilterOptions.map((product) => (
             <option key={product.id} value={product.id}>
-              {product.name}
+              {productOptionLabel(product)}
             </option>
           ))}
         </select>
@@ -337,19 +373,31 @@ export default function OilNewVisitPage() {
           <option value="">بدون محصول</option>
           {oilFilterOptions.map((product) => (
             <option key={product.id} value={product.id}>
-              {product.name}
+              {productOptionLabel(product)}
             </option>
           ))}
         </select>
       </div>
 
+      <p className="oil-muted" style={{ marginTop: 4 }}>
+        قیمت از محصول خوانده می‌شود. اگر فروش صفر باشد فاکتور ساخته نمی‌شود.
+      </p>
       <button
         type="button"
-        className="oil-btn oil-btn-primary"
+        className={`oil-btn oil-btn-primary${saleTotal > 0 && !saving ? " oil-btn-stack" : ""}`}
         disabled={saving || !accessOk}
         onClick={handleSubmit}
       >
-        {saving ? "در حال ثبت…" : "ثبت تعویض و پیامک"}
+        {saving ? (
+          "در حال ثبت…"
+        ) : saleTotal > 0 ? (
+          <>
+            <span>ثبت تعویض و پیامک</span>
+            <span className="oil-btn-amount">{saleTotalLabel} تومان</span>
+          </>
+        ) : (
+          "ثبت تعویض و پیامک"
+        )}
       </button>
     </div>
   );

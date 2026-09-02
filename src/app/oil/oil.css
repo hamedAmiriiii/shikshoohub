@@ -152,6 +152,29 @@ a.oil-icon-btn {
   padding: 18px;
 }
 
+.oil-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.oil-modal-head h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.oil-modal .oil-field input,
+.oil-modal .oil-field select {
+  background: var(--oil-surface-2);
+}
+
+.oil-modal .oil-field select:disabled {
+  opacity: 0.7;
+}
+
 .oil-page {
   padding: 16px;
 }
@@ -239,6 +262,20 @@ a.oil-icon-btn {
 .oil-btn-primary:disabled {
   opacity: 0.55;
   cursor: default;
+}
+
+.oil-btn-stack {
+  height: auto;
+  min-height: 48px;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  line-height: 1.3;
+}
+
+.oil-btn-amount {
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .oil-btn-ghost {
@@ -358,49 +395,68 @@ a.oil-icon-btn {
   direction: ltr;
   display: flex;
   width: 100%;
-  background: #fff;
-  color: #111;
-  border: 2px solid #111;
-  border-radius: 8px;
-  overflow: hidden;
+  align-items: stretch;
+  gap: 6px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
   min-height: 64px;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
-  font-family: Tahoma, Arial, sans-serif;
+  box-shadow: none;
+  color: #d5dbe2;
+  font-family: inherit;
 }
 
 .iran-plate.sm {
   min-height: 52px;
+  gap: 4px;
 }
 
 .iran-plate.lg {
-  min-height: 78px;
+  min-height: 76px;
+  gap: 7px;
 }
 
 .iran-plate-blue {
-  width: 42px;
-  flex: 0 0 42px;
-  background: var(--oil-plate-blue);
+  width: 46px;
+  flex: 0 0 46px;
+  background: #1a56b8;
   color: #fff;
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-  padding: 4px 2px 6px;
-  gap: 2px;
+  padding: 5px 2px 7px;
+  gap: 1px;
 }
 
 .iran-plate.sm .iran-plate-blue {
   width: 34px;
   flex-basis: 34px;
+  border-radius: 10px;
+  padding: 4px 1px 5px;
+}
+
+.iran-plate.lg .iran-plate-blue {
+  width: 50px;
+  flex-basis: 50px;
+  border-radius: 14px;
 }
 
 .iran-flag {
   width: 22px;
   height: 14px;
-  border-radius: 1px;
+  border-radius: 2px;
   overflow: hidden;
   margin-bottom: auto;
   margin-top: 4px;
+}
+
+.iran-plate.sm .iran-flag {
+  width: 16px;
+  height: 10px;
+  margin-top: 3px;
 }
 
 .iran-flag span {
@@ -420,85 +476,296 @@ a.oil-icon-btn {
 
 .iran-plate-blue small {
   font-size: 8px;
-  letter-spacing: 0.4px;
-  line-height: 1.1;
-  font-weight: 700;
+  letter-spacing: 0.2px;
+  line-height: 1.15;
+  font-weight: 800;
 }
 
-.iran-plate-main {
-  flex: 1;
+.iran-plate.sm .iran-plate-blue small {
+  font-size: 6px;
+}
+
+.iran-plate-cell {
+  flex: 0 0 auto;
+  min-width: 0;
+  background: #2a333c;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 4px 6px;
-  background: #fff;
+  color: #d5dbe2;
+}
+
+.iran-plate.sm .iran-plate-cell {
+  border-radius: 10px;
+}
+
+.iran-plate.lg .iran-plate-cell {
+  border-radius: 14px;
+}
+
+.iran-plate-cell:focus-within {
+  box-shadow: inset 0 -2px 0 #fff;
+}
+
+.iran-plate-middle {
+  flex: 1 1 auto;
 }
 
 .iran-plate input,
-.iran-plate select {
+.iran-plate select,
+.iran-plate button.iran-letter {
   border: 0;
   background: transparent;
-  color: #111;
+  color: inherit;
   font-weight: 800;
   text-align: center;
   outline: none;
   padding: 0;
-  height: 40px;
+  height: 100%;
+  min-height: 64px;
+  font-family: inherit;
+}
+
+.iran-plate.sm input,
+.iran-plate.sm button.iran-letter {
+  min-height: 52px;
+}
+
+.iran-plate.lg input,
+.iran-plate.lg button.iran-letter {
+  min-height: 76px;
 }
 
 .iran-serial,
-.iran-middle {
-  width: 42px;
+.iran-middle,
+.iran-province,
+.iran-letter {
+  width: 100%;
   font-size: 22px;
 }
 
 .iran-plate.sm .iran-serial,
-.iran-plate.sm .iran-middle {
-  font-size: 18px;
-  width: 36px;
+.iran-plate.sm .iran-middle,
+.iran-plate.sm .iran-province,
+.iran-plate.sm .iran-letter {
+  font-size: 16px;
 }
 
-.iran-middle {
+.iran-plate.lg .iran-serial,
+.iran-plate.lg .iran-middle,
+.iran-plate.lg .iran-province,
+.iran-plate.lg .iran-letter {
+  font-size: 26px;
+}
+
+.iran-plate-cell:has(.iran-serial) {
+  width: 52px;
+  flex-basis: 52px;
+}
+
+.iran-plate.sm .iran-plate-cell:has(.iran-serial) {
+  width: 42px;
+  flex-basis: 42px;
+}
+
+.iran-plate.lg .iran-plate-cell:has(.iran-serial) {
   width: 58px;
+  flex-basis: 58px;
 }
 
-.iran-letter {
-  min-width: 44px;
-  font-size: 20px;
+.iran-plate-cell:has(.iran-letter) {
+  width: 58px;
+  flex-basis: 58px;
+}
+
+.iran-plate.sm .iran-plate-cell:has(.iran-letter) {
+  width: 46px;
+  flex-basis: 46px;
+}
+
+.iran-plate.lg .iran-plate-cell:has(.iran-letter) {
+  width: 64px;
+  flex-basis: 64px;
+}
+
+.iran-plate-cell.wide-letter {
+  width: auto;
+  flex: 1 1 80px;
+}
+
+.iran-plate span.iran-serial,
+.iran-plate span.iran-middle,
+.iran-plate span.iran-letter,
+.iran-plate span.iran-province {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
   font-weight: 800;
-  appearance: none;
+}
+
+.iran-plate input::placeholder {
+  color: #6b7580;
+  font-weight: 700;
+}
+
+button.iran-letter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  direction: ltr;
+}
+
+button.iran-letter svg {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.iran-letter.wide {
+  font-size: 12px;
+  letter-spacing: -0.3px;
+  padding: 0 4px;
+}
+
+.iran-plate.sm .iran-letter.wide {
+  font-size: 9px;
 }
 
 .iran-plate-right {
   width: 58px;
   flex: 0 0 58px;
-  border-left: 2px solid #111;
-  display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
-  background: #fff;
+  gap: 2px;
+  padding: 6px 4px 8px;
 }
 
 .iran-plate.sm .iran-plate-right {
-  width: 48px;
-  flex-basis: 48px;
+  width: 46px;
+  flex-basis: 46px;
+  padding: 4px 2px 6px;
+}
+
+.iran-plate.lg .iran-plate-right {
+  width: 64px;
+  flex-basis: 64px;
 }
 
 .iran-iran {
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1;
+  color: #c5ccd4;
+}
+
+.iran-plate.sm .iran-iran {
+  font-size: 8px;
 }
 
 .iran-province {
-  width: 40px;
+  width: 100%;
   font-size: 20px;
   font-weight: 800;
   text-align: center;
   border: 0;
   background: transparent;
+  min-height: 0;
+  height: auto;
+}
+
+.iran-plate.sm .iran-province {
+  font-size: 16px;
+}
+
+.iran-plate.lg .iran-province {
+  font-size: 24px;
+}
+
+.iran-plate-right input.iran-province {
+  min-height: 0;
+  height: 28px;
+}
+
+.iran-letter-backdrop {
+  z-index: 60;
+  align-items: flex-end;
+}
+
+.iran-letter-sheet {
+  width: 100%;
+  max-width: 448px;
+  max-height: min(86vh, 680px);
+  overflow: auto;
+  background: #1c232b;
+  border: 1px solid var(--oil-border);
+  border-radius: 18px 18px 12px 12px;
+  padding: 10px 14px 18px;
+}
+
+.iran-letter-handle {
+  width: 42px;
+  height: 4px;
+  border-radius: 999px;
+  background: #5b6570;
+  margin: 2px auto 12px;
+}
+
+.iran-letter-sheet-head {
+  display: grid;
+  grid-template-columns: 40px 1fr 40px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.iran-letter-sheet-head h3 {
+  margin: 0;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.iran-letter-close {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: #2a333c;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.iran-letter-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  direction: rtl;
+}
+
+.iran-letter-pick {
+  min-height: 48px;
+  border: 0;
+  border-radius: 12px;
+  background: #2f3943;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.iran-letter-pick.wide {
+  font-size: 13px;
+}
+
+.iran-letter-pick.active {
+  background: var(--oil-accent);
+  color: #1a1408;
 }
 
 .oil-preview {
@@ -586,6 +853,8 @@ a.oil-icon-btn {
   display: flex;
   flex-direction: column;
   min-height: 108px;
+  color: inherit;
+  text-decoration: none;
 }
 
 .oil-dash-tile-wide {
@@ -800,6 +1069,64 @@ a.oil-icon-btn {
   margin: 28px 0 8px;
 }
 
+.oil-product-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--oil-surface);
+  border: 1px solid var(--oil-border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.oil-product-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--oil-border);
+}
+
+.oil-product-row:last-child {
+  border-bottom: 0;
+}
+
+.oil-product-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.oil-product-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.oil-product-title span {
+  font-size: 15px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.oil-kind-badge {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  font-style: normal;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(232, 163, 23, 0.14);
+  color: var(--oil-accent);
+}
+
 .oil-catalog-block {
   margin-bottom: 16px;
   padding: 12px;
@@ -822,7 +1149,7 @@ a.oil-icon-btn {
 
 .oil-catalog-list li {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
   padding: 8px 0;
@@ -832,8 +1159,9 @@ a.oil-icon-btn {
 
 .oil-catalog-name {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
   min-width: 0;
   flex: 1;
 }
@@ -842,6 +1170,7 @@ a.oil-icon-btn {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 100%;
 }
 
 .oil-catalog-name input {
@@ -853,6 +1182,11 @@ a.oil-icon-btn {
   padding: 8px 10px;
   font-size: 14px;
   outline: none;
+}
+
+.oil-catalog-price-meta {
+  font-size: 12px;
+  color: var(--oil-muted);
 }
 
 .oil-catalog-actions {
@@ -893,6 +1227,20 @@ a.oil-icon-btn {
   color: var(--oil-muted);
 }
 
+.oil-catalog-edit,
+.oil-catalog-add-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.oil-catalog-prices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
 .oil-catalog-add {
   display: flex;
   gap: 8px;
@@ -914,9 +1262,44 @@ a.oil-icon-btn {
   border-color: var(--oil-accent);
 }
 
-.oil-catalog-add .oil-btn {
-  width: auto;
-  flex-shrink: 0;
-  padding: 0 14px;
-  margin: 0;
+.oil-catalog-add-stack .oil-btn {
+  width: 100%;
+}
+
+.oil-report-card {
+  background: var(--oil-surface);
+  border: 1px solid var(--oil-border);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 10px;
+}
+
+.oil-report-card h3 {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.oil-report-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 6px 0;
+  color: var(--oil-muted);
+  font-size: 14px;
+}
+
+.oil-report-row strong {
+  color: var(--oil-text);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.oil-report-profit {
+  color: var(--oil-ok);
+}
+
+.oil-report-profit strong {
+  color: var(--oil-ok);
 }

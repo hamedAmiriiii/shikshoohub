@@ -11,6 +11,8 @@ import type {
   OilProductKindGroup,
   OilReminderListResponse,
   OilReminderRun,
+  OilReportsResponse,
+  OilReportPeriod,
   OilSession,
   OilSmsPackage,
   OilSmsPackageOrder,
@@ -241,6 +243,33 @@ export async function oilCreateVisit(body: {
   }>("POST", "/api/oil/visits", { body });
 }
 
+export function oilGetReports() {
+  return oilFetch<OilReportsResponse>("GET", "/api/oil/reports", { auth: true });
+}
+
+function asReportPeriod(value: unknown): OilReportPeriod {
+  const src = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  const n = (v: unknown) => {
+    const num = Number(v);
+    return Number.isFinite(num) ? num : 0;
+  };
+  return {
+    sales: n(src.sales),
+    cost: n(src.cost),
+    profit: n(src.profit),
+  };
+}
+
+export function normalizeOilReports(res: OilReportsResponse | null | undefined) {
+  const src =
+    res?.data && (res.data.today || res.data.week || res.data.month) ? res.data : res;
+  return {
+    today: asReportPeriod(src?.today),
+    week: asReportPeriod(src?.week),
+    month: asReportPeriod(src?.month),
+  };
+}
+
 export async function oilRunReminders() {
   return oilFetch<OilReminderRun>("POST", "/api/oil/reminders/run");
 }
@@ -308,21 +337,46 @@ export function oilListProducts(includeInactive = false) {
   });
 }
 
-export function oilCreateProduct(body: { kind: OilProductKind; name: string }) {
+export function oilCreateProduct(body: {
+  kind: OilProductKind;
+  name: string;
+  purchase_price?: number;
+  sale_price?: number;
+}) {
+  const payload: {
+    kind: OilProductKind;
+    name: string;
+    purchase_price?: number;
+    sale_price?: number;
+  } = { kind: body.kind, name: body.name.trim() };
+  payload.purchase_price = body.purchase_price ?? 0;
+  payload.sale_price = body.sale_price ?? 0;
   return oilFetch<{ data?: OilProduct; product?: OilProduct; message?: string }>(
     "POST",
     "/api/oil/products",
-    { auth: true, body: { kind: body.kind, name: body.name.trim() } },
+    { auth: true, body: payload },
   );
 }
 
 export function oilPatchProduct(
   id: number,
-  body: { name?: string; is_active?: boolean },
+  body: {
+    name?: string;
+    is_active?: boolean;
+    purchase_price?: number;
+    sale_price?: number;
+  },
 ) {
-  const payload: { name?: string; is_active?: boolean } = {};
+  const payload: {
+    name?: string;
+    is_active?: boolean;
+    purchase_price?: number;
+    sale_price?: number;
+  } = {};
   if (body.name !== undefined) payload.name = body.name.trim();
   if (body.is_active !== undefined) payload.is_active = body.is_active;
+  if (body.purchase_price !== undefined) payload.purchase_price = body.purchase_price;
+  if (body.sale_price !== undefined) payload.sale_price = body.sale_price;
   return oilFetch<{ data?: OilProduct; message?: string }>(
     "PATCH",
     `/api/oil/products/${id}`,

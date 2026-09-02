@@ -8,10 +8,13 @@ export const OIL_PLATE_LETTERS = [
   "ث",
   "ج",
   "د",
+  "ز",
   "س",
+  "ش",
   "ص",
   "ط",
   "ع",
+  "ف",
   "ق",
   "ک",
   "گ",
@@ -21,6 +24,9 @@ export const OIL_PLATE_LETTERS = [
   "و",
   "ه",
   "ی",
+  "معلولین",
+  "D",
+  "S",
 ] as const;
 
 const LETTER_SET = new Set<string>(OIL_PLATE_LETTERS);
@@ -48,7 +54,8 @@ const LATIN_TO_FA: Record<string, string> = {
   G: "گ",
   E: "ع",
   U: "ع",
-  F: "ق",
+  F: "ف",
+  Z: "ز",
 };
 
 const FA_LETTER_ALIASES: Record<string, string> = {
@@ -77,12 +84,22 @@ const FA_LETTER_ALIASES: Record<string, string> = {
   ل: "ل",
   م: "م",
   ن: "ن",
+  ز: "ز",
+  ش: "ش",
+  ف: "ف",
+  ژ: "معلولین",
+  معلول: "معلولین",
+  معلولین: "معلولین",
 };
 
 export function toEnglishDigits(value: string): string {
   return String(value ?? "")
     .replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)))
     .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+}
+
+export function toPersianDigits(value: string): string {
+  return String(value ?? "").replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)] ?? d);
 }
 
 export function emptyPlateParts(): OilPlateParts {
@@ -128,13 +145,13 @@ export function parsePlate(input: string | null | undefined): OilPlateParts | nu
     .trim();
 
   const compact = text.replace(/\s+/g, "");
-  const alef = compact.match(/^(\d{2})(الف)(\d{3})(\d{2})$/);
-  if (alef) {
+  const longLetter = compact.match(/^(\d{2})(معلولین|الف)(\d{3})(\d{2})$/);
+  if (longLetter) {
     return {
-      serial: alef[1],
-      letter: "الف",
-      middle: alef[3],
-      province: alef[4],
+      serial: longLetter[1],
+      letter: longLetter[2],
+      middle: longLetter[3],
+      province: longLetter[4],
     };
   }
 
@@ -151,7 +168,7 @@ export function parsePlate(input: string | null | undefined): OilPlateParts | nu
   }
 
   const spaced = text.match(
-    /(\d{2})\s+(الف|[A-Za-z\u0600-\u06FF])\s+(\d{3})\s+(\d{2})/,
+    /(\d{2})\s+(معلولین|الف|[A-Za-z\u0600-\u06FF])\s+(\d{3})\s+(\d{2})/,
   );
   if (spaced) {
     const letter = normalizePlateLetter(spaced[2]);
@@ -174,7 +191,7 @@ export function extractPlateFromOcr(raw: string): OilPlateParts | null {
 
   const text = toEnglishDigits(raw).replace(/[|]/g, " ");
   const re =
-    /(\d{2})\s*([A-Za-zآ-ی]{1,3}|الف)\s*(\d{3})\s*(\d{2})/g;
+    /(\d{2})\s*(معلولین|الف|[A-Za-zآ-ی]{1,3})\s*(\d{3})\s*(\d{2})/g;
   let match: RegExpExecArray | null;
   while ((match = re.exec(text))) {
     const letter = normalizePlateLetter(match[2]);

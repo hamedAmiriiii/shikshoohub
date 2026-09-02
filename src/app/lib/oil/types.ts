@@ -20,6 +20,8 @@ export type OilProduct = {
   name: string;
   is_active: boolean;
   sort_order?: number;
+  purchase_price?: number | string | null;
+  sale_price?: number | string | null;
 };
 
 export type OilProductKindGroup = {
@@ -31,6 +33,23 @@ export type OilProductKindGroup = {
 export type OilProductCatalogResponse = {
   kinds?: OilProductKindGroup[];
   data?: OilProduct[];
+};
+
+export type OilReportPeriod = {
+  sales: number;
+  cost: number;
+  profit: number;
+};
+
+export type OilReportsResponse = {
+  today?: OilReportPeriod;
+  week?: OilReportPeriod;
+  month?: OilReportPeriod;
+  data?: {
+    today?: OilReportPeriod;
+    week?: OilReportPeriod;
+    month?: OilReportPeriod;
+  };
 };
 
 export type OilVisitItem = {
