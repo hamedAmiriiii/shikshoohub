@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Droplets, Mail, Plus, ShieldCheck, Users } from "lucide-react";
 import { formatKm } from "@/app/lib/oil/plate";
+import { useOilAuth } from "./OilAuth";
 import { OilInstallButton } from "./OilInstall";
 
 const formatNumber = (n: number) => new Intl.NumberFormat("fa-IR").format(n);
