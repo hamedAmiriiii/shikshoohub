@@ -57,7 +57,7 @@ type OilFetchOptions = {
 };
 
 async function oilFetch<T>(
-  method: "GET" | "POST" | "PATCH",
+  method: "GET" | "POST" | "PATCH" | "DELETE",
   path: string,
   options: OilFetchOptions = {},
 ): Promise<T | OilApiError> {
@@ -84,6 +84,10 @@ async function oilFetch<T>(
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
+    if (response.status === 204) {
+      return {} as T;
+    }
+
     const text = await response.text();
     let json: unknown = {};
     if (text) {
@@ -299,15 +303,38 @@ export function partsPayload(parts: OilPlateParts) {
 
 export function oilListProducts(includeInactive = false) {
   return oilFetch<OilProductCatalogResponse>("GET", "/api/oil/products", {
+    auth: true,
     params: includeInactive ? { include_inactive: 1 } : undefined,
   });
 }
 
 export function oilCreateProduct(body: { kind: OilProductKind; name: string }) {
-  return oilFetch<{ product?: OilProduct; message?: string }>(
+  return oilFetch<{ data?: OilProduct; product?: OilProduct; message?: string }>(
     "POST",
     "/api/oil/products",
-    { body },
+    { auth: true, body: { kind: body.kind, name: body.name.trim() } },
+  );
+}
+
+export function oilPatchProduct(
+  id: number,
+  body: { name?: string; is_active?: boolean },
+) {
+  const payload: { name?: string; is_active?: boolean } = {};
+  if (body.name !== undefined) payload.name = body.name.trim();
+  if (body.is_active !== undefined) payload.is_active = body.is_active;
+  return oilFetch<{ data?: OilProduct; message?: string }>(
+    "PATCH",
+    `/api/oil/products/${id}`,
+    { auth: true, body: payload },
+  );
+}
+
+export function oilDeleteProduct(id: number) {
+  return oilFetch<{ message?: string; data?: OilProduct }>(
+    "DELETE",
+    `/api/oil/products/${id}`,
+    { auth: true },
   );
 }
 
@@ -318,13 +345,15 @@ export function normalizeOilProductCatalog(
   const flat = Array.isArray(res?.data) ? res.data : [];
   return OIL_PRODUCT_KINDS.map((def) => {
     const found = kinds?.find((k) => k.kind === def.kind);
-    const products = found?.products?.length
-      ? found.products
+    const products = found
+      ? found.products || []
       : flat.filter((p) => p.kind === def.kind);
     return {
       kind: def.kind,
       kind_label: found?.kind_label || def.kind_label,
-      products: products || [],
+      products: [...products].sort(
+        (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id - b.id,
+      ),
     };
   });
 }

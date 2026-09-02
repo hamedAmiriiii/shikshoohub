@@ -2,17 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Check, Pencil, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
 import {
   isOilApiError,
   oilCreateProduct,
+  oilDeleteProduct,
   oilListProducts,
   oilLogout,
+  oilPatchProduct,
   oilPatchShop,
   normalizeOilProductCatalog,
 } from "@/app/lib/oil/api";
 import { formatKm, toEnglishDigits } from "@/app/lib/oil/plate";
-import type { OilProductKind, OilProductKindGroup } from "@/app/lib/oil/types";
+import type { OilProduct, OilProductKind, OilProductKindGroup } from "@/app/lib/oil/types";
 import { OIL_PRODUCT_KINDS } from "@/app/lib/oil/types";
 import { useOilAuth } from "../OilAuth";
 import OilSmsQuotaCard from "../OilSmsQuotaCard";
@@ -22,6 +25,12 @@ const emptyDrafts: Record<OilProductKind, string> = {
   air_filter: "",
   oil_filter: "",
 };
+
+function productPlaceholder(kind: OilProductKind) {
+  if (kind === "oil") return "مثلاً بهران ۱۰W۴۰";
+  if (kind === "air_filter") return "مثلاً سرکان";
+  return "مثلاً فولکس";
+}
 
 export default function OilSettingsPage() {
   const router = useRouter();
@@ -35,6 +44,9 @@ export default function OilSettingsPage() {
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [drafts, setDrafts] = useState(emptyDrafts);
   const [addingKind, setAddingKind] = useState<OilProductKind | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+  const [busyId, setBusyId] = useState<number | null>(null);
 
   const days = session?.shop_access?.shop_access_days_remaining;
   const active = session?.shop_access?.shop_access_active !== false;
@@ -61,8 +73,9 @@ export default function OilSettingsPage() {
   }, [session]);
 
   useEffect(() => {
+    if (!session) return;
     void loadCatalog();
-  }, []);
+  }, [session]);
 
   const handleSave = async () => {
     const km = Number(toEnglishDigits(intervalKm).replace(/\D/g, ""));
@@ -105,10 +118,76 @@ export default function OilSettingsPage() {
         return;
       }
       setDrafts((prev) => ({ ...prev, [kind]: "" }));
-      toast.success(res.message || "محصول اضافه شد");
+      toast.success(res.message || "محصول اضافه شد.");
       await loadCatalog();
     } finally {
       setAddingKind(null);
+    }
+  };
+
+  const handleSaveName = async (product: OilProduct) => {
+    const name = editName.trim();
+    if (!name) {
+      toast.error("نام محصول را وارد کنید");
+      return;
+    }
+    setBusyId(product.id);
+    try {
+      const res = await oilPatchProduct(product.id, {
+        name,
+        is_active: product.is_active,
+      });
+      if (isOilApiError(res)) {
+        toast.error(res.message);
+        return;
+      }
+      setEditingId(null);
+      toast.success(res.message || "محصول ویرایش شد.");
+      await loadCatalog();
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleToggleActive = async (product: OilProduct) => {
+    setBusyId(product.id);
+    try {
+      const res = await oilPatchProduct(product.id, { is_active: !product.is_active });
+      if (isOilApiError(res)) {
+        toast.error(res.message);
+        return;
+      }
+      toast.success(res.message || (product.is_active ? "غیرفعال شد." : "فعال شد."));
+      await loadCatalog();
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleDelete = async (product: OilProduct) => {
+    if (
+      !window.confirm(
+        `«${product.name}» حذف شود؟ اگر در سابقه استفاده شده باشد فقط غیرفعال می‌شود.`,
+      )
+    ) {
+      return;
+    }
+    setBusyId(product.id);
+    try {
+      const res = await oilDeleteProduct(product.id);
+      if (isOilApiError(res)) {
+        toast.error(res.message);
+        return;
+      }
+      toast.success(
+        res.message ||
+          (res.data && res.data.is_active === false
+            ? "چون در سابقه استفاده شده، فقط غیرفعال شد."
+            : "حذف شد."),
+      );
+      await loadCatalog();
+    } finally {
+      setBusyId(null);
     }
   };
 
@@ -166,7 +245,7 @@ export default function OilSettingsPage() {
 
       <h2 className="oil-section-title">روغن و فیلترها</h2>
       <p className="oil-muted" style={{ marginTop: 0, marginBottom: 12 }}>
-        برای هر تعویض سه نوع قلم دارید. زیر هر کدام محصول بگذارید تا در ثبت تعویض انتخاب شود.
+        محصول را اینجا تعریف کنید. موقع ثبت تعویض فقط از همین لیست انتخاب می‌شود.
       </p>
       {catalogLoading && catalog.every((g) => g.products.length === 0) ? (
         <p className="oil-muted">در حال بارگذاری محصولات…</p>
@@ -178,24 +257,85 @@ export default function OilSettingsPage() {
               <p className="oil-muted">هنوز محصولی نیست.</p>
             ) : (
               <ul className="oil-catalog-list">
-                {group.products.map((product) => (
-                  <li key={product.id}>
-                    <span>{product.name}</span>
-                    {!product.is_active && <em>غیرفعال</em>}
-                  </li>
-                ))}
+                {group.products.map((product) => {
+                  const busy = busyId === product.id;
+                  const editing = editingId === product.id;
+                  return (
+                    <li key={product.id}>
+                      <div className="oil-catalog-name">
+                        {editing ? (
+                          <input
+                            value={editName}
+                            autoFocus
+                            onChange={(e) => setEditName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                void handleSaveName(product);
+                              }
+                              if (e.key === "Escape") setEditingId(null);
+                            }}
+                          />
+                        ) : (
+                          <>
+                            <span>{product.name}</span>
+                            {!product.is_active && <em>غیرفعال</em>}
+                          </>
+                        )}
+                      </div>
+                      <div className="oil-catalog-actions">
+                        {editing ? (
+                          <button
+                            type="button"
+                            title="ذخیره"
+                            disabled={busy}
+                            onClick={() => void handleSaveName(product)}
+                          >
+                            <Check size={16} />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            title="ویرایش"
+                            disabled={busy}
+                            onClick={() => {
+                              setEditingId(product.id);
+                              setEditName(product.name);
+                            }}
+                          >
+                            <Pencil size={16} />
+                          </button>
+                        )}
+                        {product.is_active ? (
+                          <button
+                            type="button"
+                            className="danger"
+                            title="حذف"
+                            disabled={busy}
+                            onClick={() => void handleDelete(product)}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            title="فعال‌سازی"
+                            disabled={busy}
+                            onClick={() => void handleToggleActive(product)}
+                          >
+                            <RotateCcw size={16} />
+                          </button>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
             <div className="oil-catalog-add">
               <input
                 value={drafts[group.kind]}
-                placeholder={
-                  group.kind === "oil"
-                    ? "مثلاً بهران ۱۰W۴۰"
-                    : group.kind === "air_filter"
-                      ? "مثلاً فیلتر هوای سرکان"
-                      : "مثلاً فیلتر روغن سرکان"
-                }
+                placeholder={productPlaceholder(group.kind)}
                 onChange={(e) =>
                   setDrafts((prev) => ({ ...prev, [group.kind]: e.target.value }))
                 }

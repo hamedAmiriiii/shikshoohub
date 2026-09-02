@@ -830,6 +830,59 @@ a.oil-icon-btn {
   font-size: 14px;
 }
 
+.oil-catalog-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.oil-catalog-name span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oil-catalog-name input {
+  width: 100%;
+  border: 1px solid var(--oil-border);
+  background: var(--oil-surface-2);
+  color: var(--oil-text);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 14px;
+  outline: none;
+}
+
+.oil-catalog-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+}
+
+.oil-catalog-actions button {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--oil-surface-2);
+  color: var(--oil-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.oil-catalog-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.oil-catalog-actions button.danger {
+  color: #ffb4b4;
+}
+
 .oil-catalog-list li:last-child {
   border-bottom: 0;
 }
