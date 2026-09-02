@@ -11,7 +11,6 @@ import {
   Mail,
   Menu,
   Package,
-  Plus,
   Settings,
   ShoppingBag,
   TrendingUp,
@@ -26,7 +25,6 @@ const formatNumber = (n: number) => new Intl.NumberFormat("fa-IR").format(n);
 
 const MENU_ITEMS = [
   { href: "/oil", label: "داشبورد", icon: LayoutDashboard },
-  { href: "/oil/new", label: "ثبت تعویض", icon: Plus },
   { href: "/oil/products", label: "محصولات", icon: Package },
   { href: "/oil/reports", label: "گزارش", icon: TrendingUp },
   { href: "/oil/customers", label: "مشتریان", icon: Users },
@@ -63,6 +61,8 @@ export default function OilShell({ children }: { children: React.ReactNode }) {
   const shopName = session?.shop?.name || "تعویض روغن";
   const smsBalance = session?.sms?.balance;
   const userName = session?.user?.name || "";
+  const accessOk = session?.shop_access?.shop_access_active !== false;
+  const accessDays = session?.shop_access?.shop_access_days_remaining;
 
   let title = "سوابق ماشین";
   if (isHome) title = "داشبورد";
@@ -114,7 +114,7 @@ export default function OilShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="oil-wrap">
+    <div className={`oil-wrap${isHome ? " oil-wrap-home" : ""}`}>
       <header className="oil-header">
         <div className="oil-header-start">
           <button
@@ -173,11 +173,29 @@ export default function OilShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
 
-        {typeof smsBalance === "number" && (
-          <Link href="/oil/sms" className="oil-drawer-sms" onClick={() => setMenuOpen(false)}>
-            {formatNumber(smsBalance)} پیامک
-          </Link>
-        )}
+        <div className="oil-drawer-stats">
+          {typeof smsBalance === "number" ? (
+            <Link href="/oil/sms" className="oil-drawer-stat" onClick={() => setMenuOpen(false)}>
+              <small>پیامک</small>
+              <strong>{formatNumber(smsBalance)}</strong>
+            </Link>
+          ) : (
+            <span className="oil-drawer-stat">
+              <small>پیامک</small>
+              <strong>—</strong>
+            </span>
+          )}
+          <span className={`oil-drawer-stat${accessOk ? "" : " warn"}`}>
+            <small>دسترسی</small>
+            <strong>
+              {accessOk
+                ? accessDays != null
+                  ? `${formatNumber(accessDays)} روز`
+                  : "فعال"
+                : "تمام"}
+            </strong>
+          </span>
+        </div>
 
         <nav className="oil-drawer-nav">
           {MENU_ITEMS.map((item) => {

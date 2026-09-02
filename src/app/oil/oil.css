@@ -13,7 +13,7 @@
   --oil-plate-blue: #0a3d91;
   min-height: 100vh;
   min-height: 100dvh;
-  background: radial-gradient(1200px 600px at 80% -10%, #1c2833 0%, #101418 55%);
+  background: #101418;
   color: var(--oil-text);
   direction: rtl;
 }
@@ -39,6 +39,15 @@
   min-height: 100dvh;
   position: relative;
   padding-bottom: calc(24px + env(safe-area-inset-bottom));
+}
+
+.oil-wrap-home {
+  background: #1a2233;
+}
+
+.oil-wrap-home .oil-header {
+  background: rgba(16, 22, 40, 0.62);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
 .oil-header {
@@ -236,7 +245,6 @@ a.oil-icon-btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 10px 24px rgba(232, 163, 23, 0.28);
   cursor: pointer;
   text-decoration: none;
 }
@@ -857,6 +865,16 @@ button.iran-letter svg {
   text-decoration: none;
 }
 
+.oil-wrap-home .oil-dash-tile {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.oil-wrap-home .oil-dash-tile-ok {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(52, 211, 153, 0.22);
+}
+
 .oil-dash-tile-wide {
   grid-column: 1 / -1;
   min-height: 0;
@@ -872,6 +890,16 @@ button.iran-letter svg {
   align-items: center;
   justify-content: center;
   margin-bottom: 10px;
+}
+
+.oil-wrap-home .oil-dash-icon {
+  background: rgba(34, 211, 238, 0.14);
+  color: #67e8f9;
+}
+
+.oil-wrap-home .oil-dash-tile-ok .oil-dash-icon {
+  background: rgba(52, 211, 153, 0.16);
+  color: #6ee7b7;
 }
 
 .oil-dash-label {
@@ -898,7 +926,11 @@ button.iran-letter svg {
   width: auto;
   gap: 8px;
   text-decoration: none;
-  box-shadow: 0 10px 24px rgba(232, 163, 23, 0.28);
+}
+
+.oil-wrap-home .oil-dash-cta {
+  background: #7c3aed;
+  color: #fff;
 }
 
 .oil-dash-shortcuts {
@@ -921,6 +953,11 @@ button.iran-letter svg {
   font-weight: 700;
   font-size: 14px;
   text-decoration: none;
+}
+
+.oil-wrap-home .oil-dash-shortcut {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .oil-drawer-backdrop {
@@ -1007,6 +1044,47 @@ button.iran-letter svg {
   font-size: 13px;
   font-weight: 700;
   text-decoration: none;
+}
+
+.oil-drawer-stats {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.oil-drawer-stat {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 6px;
+  border-radius: 14px;
+  background: rgba(232, 163, 23, 0.12);
+  color: var(--oil-accent);
+  text-decoration: none;
+  text-align: center;
+}
+
+.oil-drawer-stat small {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--oil-muted);
+}
+
+.oil-drawer-stat strong {
+  font-size: 14px;
+  font-weight: 800;
+  color: inherit;
+}
+
+.oil-drawer-stat.warn {
+  background: rgba(224, 87, 87, 0.14);
+  color: #ffb4b4;
 }
 
 .oil-drawer-nav {

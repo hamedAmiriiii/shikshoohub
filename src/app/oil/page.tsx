@@ -2,19 +2,16 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Droplets, Mail, Package, Plus, ShieldCheck, TrendingUp, Users } from "lucide-react";
+import { Droplets, Mail, Package, Plus, TrendingUp, Users } from "lucide-react";
 import { formatKm } from "@/app/lib/oil/plate";
 import { isOilApiError, oilGetReports, normalizeOilReports } from "@/app/lib/oil/api";
 import { useOilAuth } from "./OilAuth";
-import { OilInstallButton } from "./OilInstall";
 
 const formatNumber = (n: number) => new Intl.NumberFormat("fa-IR").format(n);
 
 export default function OilHomePage() {
   const { session } = useOilAuth();
   const accessOk = session?.shop_access?.shop_access_active !== false;
-  const days = session?.shop_access?.shop_access_days_remaining;
-  const smsBalance = session?.sms?.balance;
   const intervalKm = session?.shop?.oil_interval_km || 5000;
   const userName = session?.user?.name || "";
   const shopName = session?.shop?.name || "تعویض روغن";
@@ -49,31 +46,7 @@ export default function OilHomePage() {
         <h2>{shopName}</h2>
       </div>
 
-      <OilInstallButton />
-
       <div className="oil-dash-grid">
-        <div className="oil-dash-tile">
-          <span className="oil-dash-icon">
-            <Mail size={18} />
-          </span>
-          <span className="oil-dash-label">موجودی پیامک</span>
-          <span className="oil-dash-value">
-            {typeof smsBalance === "number" ? formatNumber(smsBalance) : "—"}
-          </span>
-        </div>
-        <div className="oil-dash-tile">
-          <span className="oil-dash-icon">
-            <ShieldCheck size={18} />
-          </span>
-          <span className="oil-dash-label">دسترسی</span>
-          <span className="oil-dash-value">
-            {accessOk
-              ? days != null
-                ? `${formatNumber(days)} روز`
-                : "فعال"
-              : "تمام"}
-          </span>
-        </div>
         <Link href="/oil/reports" className="oil-dash-tile">
           <span className="oil-dash-icon">
             <TrendingUp size={18} />
@@ -81,20 +54,20 @@ export default function OilHomePage() {
           <span className="oil-dash-label">فروش امروز</span>
           <span className="oil-dash-value">{today ? formatNumber(today.sales) : "…"}</span>
         </Link>
-        <Link href="/oil/reports" className="oil-dash-tile">
+        <Link href="/oil/reports" className="oil-dash-tile oil-dash-tile-ok">
           <span className="oil-dash-icon">
             <TrendingUp size={18} />
           </span>
           <span className="oil-dash-label">سود امروز</span>
           <span className="oil-dash-value">{today ? formatNumber(today.profit) : "…"}</span>
         </Link>
-        <div className="oil-dash-tile oil-dash-tile-wide">
+        {/* <div className="oil-dash-tile oil-dash-tile-wide">
           <span className="oil-dash-icon">
             <Droplets size={18} />
           </span>
           <span className="oil-dash-label">فاصله تعویض پیشنهادی</span>
           <span className="oil-dash-value">{formatKm(intervalKm)} کیلومتر</span>
-        </div>
+        </div> */}
       </div>
 
       {accessOk ? (
