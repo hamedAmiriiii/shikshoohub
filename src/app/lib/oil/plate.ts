@@ -196,3 +196,14 @@ export function formatKm(n: number | string | null | undefined): string {
   if (!Number.isFinite(num)) return "—";
   return new Intl.NumberFormat("fa-IR").format(Math.floor(num));
 }
+
+export function normalizeOilPublicPhone(raw: string): string {
+  let digits = toEnglishDigits(decodeURIComponent(raw || "")).replace(/\D/g, "");
+  if (digits.startsWith("98") && digits.length >= 12) {
+    digits = `0${digits.slice(2)}`;
+  }
+  if (digits.startsWith("9") && digits.length === 10) {
+    digits = `0${digits}`;
+  }
+  return digits.slice(0, 11);
+}

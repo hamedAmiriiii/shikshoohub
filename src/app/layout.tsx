@@ -25,6 +25,9 @@ export function generateMetadata(): Metadata {
   const pathname = headers().get("x-pathname") || "";
   const isAdmin = pathname === "/admin" || pathname.startsWith("/admin/");
   const isOil = pathname === "/oil" || pathname.startsWith("/oil/");
+  const isOilPublic =
+    pathname === "/oilservice" || pathname.startsWith("/oilservice/");
+  const oilChrome = isOil || isOilPublic;
 
   if (isAdmin) {
     return {
@@ -48,14 +51,18 @@ export function generateMetadata(): Metadata {
   }
 
   return {
-    title: isOil ? "تعویض روغن" : "Webino",
-    description: isOil ? "اپ تعویض روغن وبینو" : "سیستم مدیریت فروشگاه",
+    title: oilChrome ? (isOilPublic ? "سوابق تعویض روغن" : "تعویض روغن") : "Webino",
+    description: oilChrome
+      ? isOilPublic
+        ? "مشاهده پلاک، کیلومتر و روغن بدون ورود"
+        : "اپ تعویض روغن وبینو"
+      : "سیستم مدیریت فروشگاه",
     manifest: isOil ? "/manifest-oil.json" : "/manifest.json",
-    applicationName: isOil ? "تعویض روغن" : "Webino",
+    applicationName: oilChrome ? "تعویض روغن" : "Webino",
     appleWebApp: {
       capable: true,
       statusBarStyle: "default",
-      title: isOil ? "تعویض روغن" : "وبینو",
+      title: oilChrome ? "تعویض روغن" : "وبینو",
     },
     icons: {
       icon: [

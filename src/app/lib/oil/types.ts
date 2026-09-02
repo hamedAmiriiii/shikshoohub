@@ -5,6 +5,42 @@ export type OilPlateParts = {
   province: string;
 };
 
+export const OIL_PRODUCT_KINDS = [
+  { kind: "oil", kind_label: "روغن" },
+  { kind: "air_filter", kind_label: "فیلتر هوا" },
+  { kind: "oil_filter", kind_label: "فیلتر روغن" },
+] as const;
+
+export type OilProductKind = (typeof OIL_PRODUCT_KINDS)[number]["kind"];
+
+export type OilProduct = {
+  id: number;
+  kind: OilProductKind;
+  kind_label: string;
+  name: string;
+  is_active: boolean;
+  sort_order?: number;
+};
+
+export type OilProductKindGroup = {
+  kind: OilProductKind;
+  kind_label: string;
+  products: OilProduct[];
+};
+
+export type OilProductCatalogResponse = {
+  kinds?: OilProductKindGroup[];
+  data?: OilProduct[];
+};
+
+export type OilVisitItem = {
+  kind: OilProductKind;
+  kind_label: string;
+  oil_product_id?: number;
+  id?: number;
+  name: string;
+};
+
 export type OilVisit = {
   id: number;
   plate: string;
@@ -19,6 +55,7 @@ export type OilVisit = {
   created_at_jalali: string;
   visit_count?: number;
   notes?: string | null;
+  items?: OilVisitItem[] | null;
 };
 
 export type OilUser = {
@@ -94,8 +131,28 @@ export type OilApiError = {
 };
 
 export type OilLookupResponse =
-  | { found: true; visit: OilVisit }
+  | { found: true; visit: OilVisit; items?: OilVisitItem[] }
   | { found: false };
+
+export type OilPublicHistoryResponse = {
+  shop_name?: string;
+  shop?: { name?: string; shop_name?: string };
+  phone?: string;
+  visits?: OilVisit[];
+  history?: OilVisit[];
+  customer?: OilVisit;
+  items?: OilVisitItem[];
+  data?:
+    | OilVisit[]
+    | {
+        shop_name?: string;
+        shop?: { name?: string };
+        phone?: string;
+        visits?: OilVisit[];
+        history?: OilVisit[];
+        customer?: OilVisit;
+      };
+};
 
 export type OilReminderSms = {
   id: number;

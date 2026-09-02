@@ -10,6 +10,12 @@ function isOilPath(pathname: string | null) {
   return pathname === "/oil" || Boolean(pathname?.startsWith("/oil/"));
 }
 
+function isOilPublicPath(pathname: string | null) {
+  return (
+    pathname === "/oilservice" || Boolean(pathname?.startsWith("/oilservice/"))
+  );
+}
+
 function AppShellContent({ children }: { children: React.ReactNode }) {
   const { searchQuery, setSearchQuery } = useShopContext();
   const pathname = usePathname();
@@ -21,6 +27,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
   const isReferralPage = pathname?.startsWith("/referrals");
   const isTableReserv = isTableReservPath(pathname);
   const isOilApp = isOilPath(pathname);
+  const isOilPublic = isOilPublicPath(pathname);
 
   if (
     isAdminPage ||
@@ -29,7 +36,8 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
     isCustomerAuth ||
     isReferralPage ||
     isTableReserv ||
-    isOilApp
+    isOilApp ||
+    isOilPublic
   ) {
     return <>{children}</>;
   }
@@ -44,7 +52,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  if (isOilPath(pathname)) {
+  if (isOilPath(pathname) || isOilPublicPath(pathname)) {
     return <>{children}</>;
   }
   return (

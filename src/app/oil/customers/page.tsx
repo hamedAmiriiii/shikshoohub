@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Plus, Search } from "lucide-react";
 import { toast } from "react-toastify";
-import { isOilApiError, oilListCustomers } from "@/app/lib/oil/api";
+import { isOilApiError, oilListCustomers, oilVisitSummary } from "@/app/lib/oil/api";
 import { getOilToken } from "@/app/lib/oil/auth";
 import { emptyPlateParts, formatKm, parsePlate } from "@/app/lib/oil/plate";
 import type { OilVisit } from "@/app/lib/oil/types";
@@ -87,7 +87,9 @@ export default function OilCustomersPage() {
       {items.length === 0 ? (
         <div className="oil-empty">{emptyText}</div>
       ) : (
-        items.map((visit) => (
+        items.map((visit) => {
+          const summary = oilVisitSummary(visit);
+          return (
           <Link
             key={`${visit.plate}-${visit.id}`}
             href={`/oil/car/${encodeURIComponent(visit.plate)}`}
@@ -110,15 +112,14 @@ export default function OilCustomersPage() {
                 بعدی <span className="oil-km">{formatKm(visit.next_km)}</span>
               </span>
             </div>
-            {visit.notes ? (
-              <p className="oil-visit-desc">{visit.notes}</p>
-            ) : null}
+            {summary ? <p className="oil-visit-desc">{summary}</p> : null}
             <div className="oil-card-meta">
               <span>{visit.visit_count ?? 1} مراجعه</span>
               {!visit.sms_sent && <span style={{ color: "#ffb4b4" }}>پیامک نرفت</span>}
             </div>
           </Link>
-        ))
+          );
+        })
       )}
 
       {page < lastPage && (

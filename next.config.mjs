@@ -19,6 +19,17 @@ const nextConfig = {
     ],
   },
   // PWA configuration
+  async rewrites() {
+    const api = (
+      process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoplus.ir"
+    ).replace(/\/$/, "");
+    return [
+      {
+        source: "/api/oil/public/history/:phone",
+        destination: `${api}/api/oil/public/history/:phone`,
+      },
+    ];
+  },
   async headers() {
     return [
       {

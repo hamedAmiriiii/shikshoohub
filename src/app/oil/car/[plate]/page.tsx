@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { toast } from "react-toastify";
-import { isOilApiError, oilGetCustomer } from "@/app/lib/oil/api";
+import { isOilApiError, oilGetCustomer, oilVisitSummary } from "@/app/lib/oil/api";
 import { emptyPlateParts, formatKm } from "@/app/lib/oil/plate";
 import type { OilVisit } from "@/app/lib/oil/types";
 import IranPlate from "../../IranPlate";
@@ -66,8 +66,8 @@ export default function OilCarPage() {
           <span>تعداد مراجعه</span>
           <span>{customer.visit_count ?? visits.length}</span>
         </div>
-        {customer.notes ? (
-          <p className="oil-visit-desc">{customer.notes}</p>
+        {oilVisitSummary(customer) ? (
+          <p className="oil-visit-desc">{oilVisitSummary(customer)}</p>
         ) : null}
       </div>
 
@@ -85,8 +85,8 @@ export default function OilCarPage() {
               <span>کیلومتر {formatKm(visit.km)}</span>
               <span>بعدی {formatKm(visit.next_km)}</span>
             </div>
-            {visit.notes ? (
-              <p className="oil-visit-desc">{visit.notes}</p>
+            {oilVisitSummary(visit) ? (
+              <p className="oil-visit-desc">{oilVisitSummary(visit)}</p>
             ) : null}
             {visit.sms_error && (
               <p className="oil-muted" style={{ marginTop: 6 }}>

@@ -11,9 +11,10 @@ interface TextInput {
   label: string;
   type:string;
   onKeyPress?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  onBlur?: () => void;
 }
 
-const TextInput: React.FC<TextInput> = ({ name, defaultValue, onChange, label, value, type, onKeyPress }) => {
+const TextInput: React.FC<TextInput> = ({ name, defaultValue, onChange, label, value, type, onKeyPress, onBlur }) => {
   const [isFocused, setIsFocused] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -42,13 +43,9 @@ const TextInput: React.FC<TextInput> = ({ name, defaultValue, onChange, label, v
     return val;
   };
 
-  // برای type="number" همیشه فرمت را نشان بده (حتی وقتی focus است)
-  const displayValue = 
-    type === "number" && (/^\d+\.?\d*$/.test(value || ''))
-      ? formatNumber(value || '')
-      : isFocused
-      ? value ?? ''
-      : ((/^\d+\.?\d*$/.test(value || '')) ? formatNumber(value || '') : value ?? '');
+  const displayValue = isFocused
+    ? value ?? ''
+    : ((/^\d+\.?\d*$/.test(value || '')) ? formatNumber(value || '') : value ?? '');
 
   return (
     <Box sx={{ marginTop: "10px" }}>
@@ -63,7 +60,10 @@ const TextInput: React.FC<TextInput> = ({ name, defaultValue, onChange, label, v
             value={displayValue}
             onChange={handleInputChange}
             onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
+            onBlur={() => {
+              setIsFocused(false);
+              onBlur?.();
+            }}
             onKeyPress={onKeyPress}
             name={name}
             defaultValue={defaultValue}

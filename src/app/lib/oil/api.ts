@@ -3,7 +3,12 @@ import type {
   OilApiError,
   OilCustomerListResponse,
   OilLookupResponse,
+  OilPublicHistoryResponse,
   OilPlateParts,
+  OilProduct,
+  OilProductCatalogResponse,
+  OilProductKind,
+  OilProductKindGroup,
   OilReminderListResponse,
   OilReminderRun,
   OilSession,
@@ -11,7 +16,9 @@ import type {
   OilSmsPackageOrder,
   OilSmsQuota,
   OilVisit,
+  OilVisitItem,
 } from "./types";
+import { OIL_PRODUCT_KINDS } from "./types";
 
 const BASE_URL = (
   process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoplus.ir"
@@ -178,6 +185,57 @@ export async function oilLookup(query: { plate?: string; phone?: string }) {
   });
 }
 
+export function oilPublicBaseUrl() {
+  return (
+    process.env.NEXT_PUBLIC_OIL_PUBLIC_BASE_URL ||
+    process.env.OIL_PUBLIC_BASE_URL ||
+    "https://webinoo-plus.ir"
+  ).replace(/\/$/, "");
+}
+
+export function oilPublicHistoryUrl(phone: string) {
+  return `${oilPublicBaseUrl()}/oilservice/${phone}`;
+}
+
+export function oilPublicHistory(phone: string) {
+  return oilFetch<OilPublicHistoryResponse>(
+    "GET",
+    `/api/oil/public/history/${encodeURIComponent(phone)}`,
+    { auth: false, redirectOn401: false },
+  );
+}
+
+export function normalizeOilPublicHistory(
+  res: OilPublicHistoryResponse,
+  phone: string,
+) {
+  const nested =
+    res.data && !Array.isArray(res.data) ? res.data : null;
+  const shopName =
+    res.shop_name ||
+    res.shop?.name ||
+    res.shop?.shop_name ||
+    nested?.shop_name ||
+    nested?.shop?.name ||
+    "";
+  let visits: OilVisit[] =
+    res.visits ||
+    res.history ||
+    nested?.visits ||
+    nested?.history ||
+    (Array.isArray(res.data) ? res.data : []) ||
+    [];
+  if (!visits.length && (res.customer || nested?.customer)) {
+    const one = res.customer || nested?.customer;
+    if (one) visits = [one];
+  }
+  return {
+    shopName,
+    phone: res.phone || nested?.phone || phone,
+    visits,
+  };
+}
+
 export async function oilCreateVisit(body: {
   serial?: string;
   letter?: string;
@@ -188,6 +246,9 @@ export async function oilCreateVisit(body: {
   km: number;
   next_km?: number;
   notes?: string;
+  oil_product_id?: number;
+  air_filter_product_id?: number;
+  oil_filter_product_id?: number;
 }) {
   return oilFetch<{
     message: string;
@@ -257,11 +318,97 @@ export function partsPayload(parts: OilPlateParts) {
   };
 }
 
-export function buildOilVisitDescription(oilType: string, filters: string) {
-  const type = oilType.trim();
-  const parts = filters.trim();
-  if (type && parts) return `نوع روغن: ${type} — فیلترها: ${parts}`;
-  if (type) return `نوع روغن: ${type}`;
-  if (parts) return `فیلترها: ${parts}`;
-  return "";
+export function oilListProducts(includeInactive = false) {
+  return oilFetch<OilProductCatalogResponse>("GET", "/api/oil/products", {
+    params: includeInactive ? { include_inactive: 1 } : undefined,
+  });
+}
+
+export function oilCreateProduct(body: { kind: OilProductKind; name: string }) {
+  return oilFetch<{ product?: OilProduct; message?: string }>(
+    "POST",
+    "/api/oil/products",
+    { body },
+  );
+}
+
+export function normalizeOilProductCatalog(
+  res: OilProductCatalogResponse | null | undefined,
+): OilProductKindGroup[] {
+  const kinds = res?.kinds;
+  const flat = Array.isArray(res?.data) ? res.data : [];
+  return OIL_PRODUCT_KINDS.map((def) => {
+    const found = kinds?.find((k) => k.kind === def.kind);
+    const products = found?.products?.length
+      ? found.products
+      : flat.filter((p) => p.kind === def.kind);
+    return {
+      kind: def.kind,
+      kind_label: found?.kind_label || def.kind_label,
+      products: products || [],
+    };
+  });
+}
+
+export function activeOilProducts(
+  groups: OilProductKindGroup[],
+  kind: OilProductKind,
+): OilProduct[] {
+  const group = groups.find((g) => g.kind === kind);
+  return (group?.products || [])
+    .filter((p) => p.is_active)
+    .slice()
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id - b.id);
+}
+
+export function oilVisitItemProductId(item: OilVisitItem): number | "" {
+  const rec = item as OilVisitItem & {
+    air_filter_product_id?: number;
+    oil_filter_product_id?: number;
+    product_id?: number;
+  };
+  const id =
+    rec.oil_product_id ??
+    rec.air_filter_product_id ??
+    rec.oil_filter_product_id ??
+    rec.product_id ??
+    rec.id;
+  return typeof id === "number" && Number.isFinite(id) ? id : "";
+}
+
+export function idsFromOilVisitItems(items?: OilVisitItem[] | null) {
+  const next = {
+    oil_product_id: "" as number | "",
+    air_filter_product_id: "" as number | "",
+    oil_filter_product_id: "" as number | "",
+  };
+  for (const item of items || []) {
+    const id = oilVisitItemProductId(item);
+    if (id === "") continue;
+    if (item.kind === "oil") next.oil_product_id = id;
+    if (item.kind === "air_filter") next.air_filter_product_id = id;
+    if (item.kind === "oil_filter") next.oil_filter_product_id = id;
+  }
+  return next;
+}
+
+export function formatOilVisitItems(items?: OilVisitItem[] | null) {
+  return oilVisitItemLines(items).join(" — ");
+}
+
+export function oilVisitItemLines(items?: OilVisitItem[] | null) {
+  if (!items?.length) return [];
+  return items
+    .filter((item) => item.name)
+    .map((item) => {
+      const label =
+        item.kind_label ||
+        OIL_PRODUCT_KINDS.find((k) => k.kind === item.kind)?.kind_label ||
+        item.kind;
+      return `${label}: ${item.name}`;
+    });
+}
+
+export function oilVisitSummary(visit: Pick<OilVisit, "items" | "notes">) {
+  return formatOilVisitItems(visit.items) || visit.notes?.trim() || "";
 }

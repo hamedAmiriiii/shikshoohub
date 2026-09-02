@@ -1,18 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import {
   isOilApiError,
   oilCreateVisit,
   oilLookup,
+  oilListProducts,
   partsPayload,
   suggestedNextKm,
-  buildOilVisitDescription,
+  normalizeOilProductCatalog,
+  activeOilProducts,
+  idsFromOilVisitItems,
+  oilVisitItemProductId,
 } from "@/app/lib/oil/api";
-// تشخیص خودکار پلاک فعلاً خاموش است؛ فقط ورود دستی.
-// import { compressPlatePhoto, recognizeIranianPlate } from "@/app/lib/oil/ocr";
 import {
   compactPlate,
   emptyPlateParts,
@@ -20,7 +22,13 @@ import {
   isPlateComplete,
   toEnglishDigits,
 } from "@/app/lib/oil/plate";
-import type { OilPlateParts } from "@/app/lib/oil/types";
+import type {
+  OilPlateParts,
+  OilProduct,
+  OilProductKind,
+  OilProductKindGroup,
+  OilVisitItem,
+} from "@/app/lib/oil/types";
 import { useOilAuth } from "../OilAuth";
 import IranPlate from "../IranPlate";
 
@@ -47,6 +55,30 @@ function focusEnd(el: HTMLInputElement | null) {
   }
 }
 
+function comboOptions(
+  groups: OilProductKindGroup[],
+  kind: OilProductKind,
+  extraItems: OilVisitItem[],
+): OilProduct[] {
+  const list = activeOilProducts(groups, kind);
+  const extra = extraItems.find((item) => item.kind === kind);
+  const extraId = extra ? oilVisitItemProductId(extra) : "";
+  if (extraId !== "" && !list.some((p) => p.id === extraId)) {
+    const group = groups.find((g) => g.kind === kind);
+    const known = group?.products.find((p) => p.id === extraId);
+    list.push(
+      known || {
+        id: extraId,
+        kind,
+        kind_label: extra?.kind_label || kind,
+        name: extra?.name || `محصول ${extraId}`,
+        is_active: false,
+      },
+    );
+  }
+  return list;
+}
+
 export default function OilNewVisitPage() {
   const router = useRouter();
   const { session } = useOilAuth();
@@ -55,8 +87,11 @@ export default function OilNewVisitPage() {
   const [km, setKm] = useState("");
   const [nextKm, setNextKm] = useState("");
   const [nextKmDirty, setNextKmDirty] = useState(false);
-  const [oilType, setOilType] = useState("");
-  const [filters, setFilters] = useState("");
+  const [catalog, setCatalog] = useState<OilProductKindGroup[]>([]);
+  const [oilProductId, setOilProductId] = useState<number | "">("");
+  const [airFilterProductId, setAirFilterProductId] = useState<number | "">("");
+  const [oilFilterProductId, setOilFilterProductId] = useState<number | "">("");
+  const [lastItems, setLastItems] = useState<OilVisitItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [smsWarn, setSmsWarn] = useState<string | null>(null);
   const lookupKeyRef = useRef("");
@@ -69,6 +104,26 @@ export default function OilNewVisitPage() {
   const plateOk = isPlateComplete(parts);
   const phoneOk = phone.length === 11 && phone.startsWith("09");
   const kmOk = Number.isFinite(kmNum) && kmNum > 0;
+
+  const oilOptions = useMemo(
+    () => comboOptions(catalog, "oil", lastItems),
+    [catalog, lastItems],
+  );
+  const airFilterOptions = useMemo(
+    () => comboOptions(catalog, "air_filter", lastItems),
+    [catalog, lastItems],
+  );
+  const oilFilterOptions = useMemo(
+    () => comboOptions(catalog, "oil_filter", lastItems),
+    [catalog, lastItems],
+  );
+
+  useEffect(() => {
+    void oilListProducts(false).then((res) => {
+      if (isOilApiError(res)) return;
+      setCatalog(normalizeOilProductCatalog(res));
+    });
+  }, []);
 
   useEffect(() => {
     if (nextKmDirty) return;
@@ -85,7 +140,14 @@ export default function OilNewVisitPage() {
     if (lookupKeyRef.current === key) return;
     lookupKeyRef.current = key;
     void oilLookup({ plate: key }).then((res) => {
-      if (isOilApiError(res) || !res.found) return;
+      if (isOilApiError(res)) return;
+      if (!res.found) {
+        setOilProductId("");
+        setAirFilterProductId("");
+        setOilFilterProductId("");
+        setLastItems([]);
+        return;
+      }
       setPhone((current) => {
         if (current) return current;
         const filled = parsePhone(res.visit.phone);
@@ -95,6 +157,12 @@ export default function OilNewVisitPage() {
         return filled || current;
       });
       setKm((current) => current || String(res.visit.km));
+      const items = res.visit.items?.length ? res.visit.items : res.items || [];
+      const ids = idsFromOilVisitItems(items);
+      setLastItems(items);
+      setOilProductId(ids.oil_product_id);
+      setAirFilterProductId(ids.air_filter_product_id);
+      setOilFilterProductId(ids.oil_filter_product_id);
     });
   }, [parts, plateOk]);
 
@@ -126,7 +194,9 @@ export default function OilNewVisitPage() {
         phone: string;
         km: number;
         next_km?: number;
-        notes?: string;
+        oil_product_id?: number;
+        air_filter_product_id?: number;
+        oil_filter_product_id?: number;
       } = {
         ...partsPayload(parts),
         phone,
@@ -136,8 +206,9 @@ export default function OilNewVisitPage() {
         const n = Number(nextKm);
         if (Number.isFinite(n) && n > kmNum) body.next_km = n;
       }
-      const notes = buildOilVisitDescription(oilType, filters);
-      if (notes) body.notes = notes;
+      if (oilProductId !== "") body.oil_product_id = oilProductId;
+      if (airFilterProductId !== "") body.air_filter_product_id = airFilterProductId;
+      if (oilFilterProductId !== "") body.oil_filter_product_id = oilFilterProductId;
       const res = await oilCreateVisit(body);
       if (isOilApiError(res)) {
         toast.error(res.message);
@@ -224,25 +295,52 @@ export default function OilNewVisitPage() {
         </p>
       </div>
       <div className="oil-field">
-        <label>نوع روغن</label>
-        <input
-          type="text"
-          placeholder="مثلاً ۱۰W۴۰ بهران"
-          value={oilType}
-          onChange={(e) => setOilType(e.target.value)}
-        />
+        <label>روغن (اختیاری)</label>
+        <select
+          value={oilProductId}
+          onChange={(e) =>
+            setOilProductId(e.target.value ? Number(e.target.value) : "")
+          }
+        >
+          <option value="">بدون محصول</option>
+          {oilOptions.map((product) => (
+            <option key={product.id} value={product.id}>
+              {product.name}
+            </option>
+          ))}
+        </select>
       </div>
       <div className="oil-field">
-        <label>فیلترها</label>
-        <input
-          type="text"
-          placeholder="مثلاً روغن، هوا، کابین"
-          value={filters}
-          onChange={(e) => setFilters(e.target.value)}
-        />
-        <p className="oil-muted" style={{ marginTop: 6 }}>
-          این موارد به‌صورت توضیحات (نوع روغن — فیلترها) ذخیره می‌شود.
-        </p>
+        <label>فیلتر هوا (اختیاری)</label>
+        <select
+          value={airFilterProductId}
+          onChange={(e) =>
+            setAirFilterProductId(e.target.value ? Number(e.target.value) : "")
+          }
+        >
+          <option value="">بدون محصول</option>
+          {airFilterOptions.map((product) => (
+            <option key={product.id} value={product.id}>
+              {product.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="oil-field">
+        <label>فیلتر روغن (اختیاری)</label>
+        <select
+          value={oilFilterProductId}
+          onChange={(e) =>
+            setOilFilterProductId(e.target.value ? Number(e.target.value) : "")
+          }
+        >
+          <option value="">بدون محصول</option>
+          {oilFilterOptions.map((product) => (
+            <option key={product.id} value={product.id}>
+              {product.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       <button
