@@ -154,9 +154,6 @@ export function OilInstallButton({
   }
 
   return (
-    <button type="button" className="oil-install-btn" onClick={() => void install()}>
-      <Download size={18} />
-      نصب برنامه روی گوشی
-    </button>
+   <></>
   );
 }
