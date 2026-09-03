@@ -9,6 +9,7 @@ import {
   CalendarClock,
   CheckCircle2,
   Coins,
+  Droplets,
   Gift,
   Headphones,
   Puzzle,
@@ -31,6 +32,7 @@ import {
 
 const ICONS: Record<ProductIconName, LucideIcon> = {
   calculator: Calculator,
+  droplets: Droplets,
   gift: Gift,
   coins: Coins,
   calendar: CalendarClock,
@@ -40,7 +42,7 @@ const ICONS: Record<ProductIconName, LucideIcon> = {
 };
 
 const BENEFITS = [
-  { icon: Puzzle, title: "چند محصول، یک اکوسیستم", desc: "فروش، خدمات، طلا، نوبت و آموزش کنار هم", color: "from-violet-500 to-fuchsia-500" },
+  { icon: Puzzle, title: "چند محصول، یک اکوسیستم", desc: "فروش، تعویض روغن، طلا، نوبت و آموزش کنار هم", color: "from-violet-500 to-fuchsia-500" },
   { icon: Smartphone, title: "موبایل و ویندوز", desc: "نصب مثل اپ، بدون نصب پیچیده ویندوز", color: "from-cyan-500 to-blue-500" },
   { icon: Zap, title: "شروع در چند دقیقه", desc: "ثبت‌نام، انتخاب محصول و شروع کار", color: "from-amber-500 to-orange-500" },
   { icon: Headphones, title: "پشتیبانی راه‌اندازی", desc: "در تمام مراحل کنار شما هستیم", color: "from-emerald-500 to-teal-500" },
@@ -48,14 +50,14 @@ const BENEFITS = [
 
 const STEPS = [
   { n: "۱", title: "ثبت‌نام رایگان", desc: "شماره موبایل و نام کسب‌وکار" },
-  { n: "۲", title: "انتخاب محصول", desc: "فروش، طلا، نوبت، کلاس یا فروشگاه" },
+  { n: "۲", title: "انتخاب محصول", desc: "فروش، تعویض روغن، طلا، نوبت یا فروشگاه" },
   { n: "۳", title: "شروع کار", desc: "پنل آماده است — پشتیبانی همراهتان" },
 ];
 
 const FAQS = [
   {
     q: "وبینو چند محصول دارد؟",
-    a: "هفت محصول: حسابداری و فروش، باشگاه مشتریان، خرید و فروش طلا، نوبت‌دهی، کلاس آنلاین و اتاق جلسه، شبکه اجتماعی و فروشگاه آنلاین.",
+    a: "هشت محصول: حسابداری و فروش، تعویض روغن، باشگاه مشتریان، خرید و فروش طلا، نوبت‌دهی، کلاس آنلاین و اتاق جلسه، شبکه اجتماعی و فروشگاه آنلاین.",
   },
   {
     q: "آیا روی موبایل نصب می‌شود؟",
@@ -63,7 +65,7 @@ const FAQS = [
   },
   {
     q: "کدام محصول را انتخاب کنم؟",
-    a: "اگر فروشگاه دارید از حسابداری و فروش شروع کنید. طلافروشی، نوبت‌دهی، آموزش آنلاین و فروش اینترنتی هم صفحه جدا دارند.",
+    a: "اگر فروشگاه دارید از حسابداری و فروش شروع کنید. تعویض روغنی، طلافروشی، نوبت‌دهی، آموزش آنلاین و فروش اینترنتی هم صفحه جدا دارند.",
   },
   {
     q: "آیا نسخه آزمایشی رایگان دارد؟",
@@ -114,7 +116,7 @@ export default function LandingHubClient() {
               </span>
             </h2>
             <p className="mt-4 text-slate-400 text-base md:text-lg leading-relaxed max-w-xl mx-auto lg:mx-0">
-              حسابداری و فروش، باشگاه مشتریان، خرید و فروش طلا، نوبت‌دهی، کلاس آنلاین، شبکه اجتماعی و فروشگاه آنلاین —
+              حسابداری و فروش، تعویض روغن، باشگاه مشتریان، طلا، نوبت‌دهی، کلاس آنلاین، شبکه اجتماعی و فروشگاه آنلاین —
               قابل نصب روی موبایل و ویندوز.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 mt-8 justify-center lg:justify-start">

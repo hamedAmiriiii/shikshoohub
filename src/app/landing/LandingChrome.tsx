@@ -58,6 +58,9 @@ export default function LandingChrome({
             <Link href="/landing/shop" className="hover:text-cyan-400 transition">
               حسابداری
             </Link>
+            <Link href="/landing/products/oil" className="hover:text-cyan-400 transition">
+              تعویض روغن
+            </Link>
             <Link href="/#faq" className="hover:text-cyan-400 transition">
               سوالات
             </Link>
@@ -95,6 +98,9 @@ export default function LandingChrome({
             </Link>
             <Link href="/landing/shop" onClick={() => setNavOpen(false)}>
               حسابداری
+            </Link>
+            <Link href="/landing/products/oil" onClick={() => setNavOpen(false)}>
+              تعویض روغن
             </Link>
             <Link href="/#faq" onClick={() => setNavOpen(false)}>
               سوالات

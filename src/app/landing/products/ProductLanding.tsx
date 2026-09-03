@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Coins,
+  Droplets,
   Gift,
   LogIn,
   Share2,
@@ -30,6 +31,7 @@ import {
 
 const ICONS: Record<ProductIconName, LucideIcon> = {
   calculator: Calculator,
+  droplets: Droplets,
   gift: Gift,
   coins: Coins,
   calendar: CalendarClock,

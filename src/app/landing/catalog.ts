@@ -11,10 +11,11 @@ export const ENAMAD_HTML =
 
 export const TRIAL_SHORT = "یک هفته";
 export const TRIAL_CTA = "شروع رایگان یک هفته‌ای";
-export const TRIAL_BADGE = "۷ محصول — یک هفته تست رایگان";
+export const TRIAL_BADGE = "۸ محصول — یک هفته تست رایگان";
 
 export type ProductIconName =
   | "calculator"
+  | "droplets"
   | "gift"
   | "coins"
   | "calendar"
@@ -63,6 +64,21 @@ export const LANDING_PRODUCTS: LandingProduct[] = [
       { src: "/landing/9.png", title: "چاپ فاکتور" },
       { src: "/landing/10.png", title: "داشبورد" },
     ],
+  },
+  {
+    slug: "oil",
+    href: "/landing/products/oil",
+    title: "تعویض روغن",
+    tag: "جدید",
+    icon: "droplets",
+    color: "from-yellow-500 to-amber-600",
+    desc: "مخصوص تعویض روغنی: پلاک، پیامک یادآوری، روغن و فیلتر، فروش و سود.",
+    lead: "ثبت تعویض با پلاک ایران، پیامک نوبت بعدی، محصولات روغن و فیلتر با قیمت خرید و فروش، و گزارش ساده سود. قابل نصب روی موبایل.",
+    items: ["ثبت تعویض با پلاک", "پیامک یادآوری", "روغن و فیلتر", "گزارش فروش و سود"],
+    loginUrl: OIL_LOGIN_URL,
+    registerUrl: OIL_LOGIN_URL,
+    loginLabel: "ورود تعویض روغن",
+    screenshots: [],
   },
   {
     slug: "club",
