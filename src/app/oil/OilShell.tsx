@@ -17,9 +17,10 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { oilLogout } from "@/app/lib/oil/api";
+import { oilListProducts, oilLogout } from "@/app/lib/oil/api";
 import { useOilAuth } from "./OilAuth";
 import { OilInstallButton } from "./OilInstall";
+import { OilOfflineIcon } from "./OilOffline";
 
 const formatNumber = (n: number) => new Intl.NumberFormat("fa-IR").format(n);
 
@@ -79,6 +80,11 @@ export default function OilShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!session) return;
+    void oilListProducts(false);
+  }, [session]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -141,6 +147,7 @@ export default function OilShell({ children }: { children: React.ReactNode }) {
             <p className="oil-sub">{shopName}</p>
           </div>
         </div>
+        <OilOfflineIcon />
       </header>
       {children}
 

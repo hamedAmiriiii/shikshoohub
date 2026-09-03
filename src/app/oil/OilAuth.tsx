@@ -91,6 +91,10 @@ export function OilAuthProvider({ children }: { children: React.ReactNode }) {
       setReady(true);
       return;
     }
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      setReady(true);
+      return;
+    }
     void refresh().finally(() => {
       if (!cancelled) setReady(true);
     });

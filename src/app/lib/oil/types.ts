@@ -7,6 +7,7 @@ export type OilPlateParts = {
 
 export const OIL_PRODUCT_KINDS = [
   { kind: "oil", kind_label: "روغن" },
+  { kind: "gearbox_oil", kind_label: "روغن گیربکس" },
   { kind: "air_filter", kind_label: "فیلتر هوا" },
   { kind: "oil_filter", kind_label: "فیلتر روغن" },
 ] as const;
@@ -147,6 +148,8 @@ export type OilApiError = {
   statusCode: number;
   message: string;
   retry_after_seconds?: number;
+  already_exists?: boolean;
+  code?: string;
 };
 
 export type OilLookupResponse =

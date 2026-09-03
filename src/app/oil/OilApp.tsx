@@ -9,6 +9,7 @@ import { OilAuthProvider } from "./OilAuth";
 import OilShell from "./OilShell";
 import OilDailyReminderRunner from "./OilDailyReminderRunner";
 import { OilInstallProvider } from "./OilInstall";
+import { OilOfflineProvider } from "./OilOffline";
 import "./oil.css";
 
 const oilMuiTheme = createTheme({
@@ -27,6 +28,7 @@ function OilProviders({ children }: { children: React.ReactNode }) {
       <OilAuthProvider>
         <div className="oil-app">
           <OilInstallProvider>
+          <OilOfflineProvider>
           <OilDailyReminderRunner />
           <OilShell>{children}</OilShell>
           <ToastContainer
@@ -37,6 +39,7 @@ function OilProviders({ children }: { children: React.ReactNode }) {
             rtl
             theme="dark"
           />
+          </OilOfflineProvider>
           </OilInstallProvider>
         </div>
       </OilAuthProvider>

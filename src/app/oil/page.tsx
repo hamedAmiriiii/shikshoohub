@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Droplets, Mail, Package, Plus, TrendingUp, Users } from "lucide-react";
 import { formatKm } from "@/app/lib/oil/plate";
-import { isOilApiError, oilGetReports, normalizeOilReports } from "@/app/lib/oil/api";
+import { isOilApiError, oilGetReports, oilReadCachedReports, normalizeOilReports } from "@/app/lib/oil/api";
 import { useOilAuth } from "./OilAuth";
 
 const formatNumber = (n: number) => new Intl.NumberFormat("fa-IR").format(n);
@@ -21,6 +21,9 @@ export default function OilHomePage() {
     if (!session) return;
     let cancelled = false;
     void (async () => {
+      const cached = await oilReadCachedReports();
+      if (cancelled) return;
+      if (cached) setToday(normalizeOilReports(cached).today);
       const res = await oilGetReports();
       if (cancelled) return;
       if (isOilApiError(res)) return;

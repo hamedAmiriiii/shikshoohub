@@ -9,6 +9,8 @@ import {
   oilDeleteProduct,
   oilListProducts,
   oilPatchProduct,
+  oilPeekCachedCatalog,
+  oilReadCachedCatalog,
   normalizeOilProductCatalog,
 } from "@/app/lib/oil/api";
 import { toEnglishDigits } from "@/app/lib/oil/plate";
@@ -36,6 +38,7 @@ function kindLabel(kind: OilProductKind, fallback?: string) {
 
 function productPlaceholder(kind: OilProductKind) {
   if (kind === "oil") return "مثلاً بهران ۱۰W۴۰";
+  if (kind === "gearbox_oil") return "مثلاً بهران ATF";
   if (kind === "air_filter") return "مثلاً سرکان";
   return "مثلاً فولکس";
 }
@@ -68,16 +71,24 @@ export default function OilProductsPage() {
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
 
+  const applyCatalog = (res: Parameters<typeof normalizeOilProductCatalog>[0]) => {
+    setProducts(normalizeOilProductCatalog(res).flatMap((group) => group.products));
+  };
+
   const loadCatalog = async () => {
     setCatalogLoading(true);
     try {
+      const cached = await oilReadCachedCatalog(true);
+      if (cached) applyCatalog(cached);
       const res = await oilListProducts(true);
       if (isOilApiError(res)) {
-        toast.error(res.message);
-        setProducts([]);
+        if (!cached) {
+          toast.error(res.message);
+          setProducts([]);
+        }
         return;
       }
-      setProducts(normalizeOilProductCatalog(res).flatMap((group) => group.products));
+      applyCatalog(res);
     } finally {
       setCatalogLoading(false);
     }
@@ -85,6 +96,8 @@ export default function OilProductsPage() {
 
   useEffect(() => {
     if (!session) return;
+    const peek = oilPeekCachedCatalog(true) || oilPeekCachedCatalog(false);
+    if (peek) applyCatalog(peek);
     void loadCatalog();
   }, [session]);
 

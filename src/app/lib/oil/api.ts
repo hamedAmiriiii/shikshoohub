@@ -1,4 +1,4 @@
-import { clearOilSession, getOilToken } from "./auth";
+import { clearOilSession, getOilSession, getOilToken, saveOilSession } from "./auth";
 import type {
   OilApiError,
   OilCustomerListResponse,
@@ -19,8 +19,22 @@ import type {
   OilSmsQuota,
   OilVisit,
   OilVisitItem,
+  OilPublicVisitItem,
 } from "./types";
 import { OIL_PRODUCT_KINDS } from "./types";
+import {
+  enqueueOilVisit,
+  freezeOilVisitBody,
+  isOilDuplicateVisit,
+  isOilNetworkError,
+  isOilVisitCreated,
+  peekOilCatalogCache,
+  readOilCatalogCache,
+  readOilReportsCache,
+  saveOilCatalogCache,
+  saveOilReportsCache,
+  type OilVisitQueueBody,
+} from "./offline";
 
 const BASE_URL = (
   process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoplus.ir"
@@ -41,6 +55,8 @@ function parseError(status: number, text: string): OilApiError {
         typeof j.retry_after_seconds === "number"
           ? j.retry_after_seconds
           : undefined,
+      already_exists: j.already_exists === true,
+      code: typeof j.code === "string" ? j.code : undefined,
     };
   } catch {
     return {
@@ -221,30 +237,193 @@ export function normalizeOilPublicHistory(
   };
 }
 
-export async function oilCreateVisit(body: {
-  serial?: string;
-  letter?: string;
-  middle?: string;
-  province?: string;
-  plate?: string;
-  phone: string;
-  km: number;
-  next_km?: number;
-  notes?: string;
-  oil_product_id?: number;
-  air_filter_product_id?: number;
-  oil_filter_product_id?: number;
-}) {
-  return oilFetch<{
-    message: string;
-    visit: OilVisit;
-    sms_sent: boolean;
-    sms_error: string | null;
-  }>("POST", "/api/oil/visits", { body });
+export async function oilRefreshAuth() {
+  const current = getOilToken();
+  if (!current) return false;
+
+  const refreshed = await oilFetch<OilSession & { token?: string }>(
+    "POST",
+    "/api/oil/refresh",
+    { auth: true, redirectOn401: false },
+  );
+  if (!isOilApiError(refreshed)) {
+    const token = refreshed.token;
+    if (token && refreshed.user) {
+      saveOilSession(refreshed, token);
+      return true;
+    }
+    if (token) {
+      const prev = getOilSession();
+      if (prev) {
+        saveOilSession(prev, token);
+        return true;
+      }
+    }
+    if (refreshed.user) {
+      saveOilSession(refreshed, current);
+      return true;
+    }
+  }
+
+  const me = await oilMe();
+  if (isOilApiError(me)) return false;
+  saveOilSession(me, current);
+  return true;
 }
 
-export function oilGetReports() {
-  return oilFetch<OilReportsResponse>("GET", "/api/oil/reports", { auth: true });
+export type OilVisitPostResult = {
+  statusCode: number;
+  already_exists?: boolean;
+  code?: string;
+  message?: string;
+  visit?: OilVisit;
+  sms_sent?: boolean;
+  sms_error?: string | null;
+  hasError?: true;
+};
+
+export async function oilPostVisit(
+  body: OilVisitQueueBody,
+  options: { redirectOn401?: boolean } = {},
+): Promise<OilVisitPostResult> {
+  const { redirectOn401 = false } = options;
+  const url = `${BASE_URL}/api/oil/visits`;
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    "Content-Type": "application/json",
+  };
+  const token = getOilToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    });
+    const text = await response.text();
+    let json: Record<string, unknown> = {};
+    if (text) {
+      try {
+        json = JSON.parse(text) as Record<string, unknown>;
+      } catch {
+        json = { message: text };
+      }
+    }
+    const nested =
+      json.data && typeof json.data === "object"
+        ? (json.data as Record<string, unknown>)
+        : json;
+
+    if (response.status === 401) {
+      if (redirectOn401) {
+        clearOilSession();
+        if (
+          typeof window !== "undefined" &&
+          !window.location.pathname.startsWith("/oil/login")
+        ) {
+          const next = encodeURIComponent(
+            window.location.pathname + window.location.search,
+          );
+          window.location.replace(`/oil/login?next=${next}`);
+        }
+      }
+      return {
+        hasError: true,
+        statusCode: 401,
+        message: typeof json.message === "string" ? json.message : "ورود منقضی شده",
+      };
+    }
+
+    if (!response.ok && response.status !== 200 && response.status !== 201) {
+      return {
+        hasError: true,
+        statusCode: response.status,
+        message: typeof json.message === "string" ? json.message : `خطای ${response.status}`,
+        already_exists: nested.already_exists === true,
+        code: typeof nested.code === "string" ? nested.code : undefined,
+      };
+    }
+
+    return {
+      statusCode: response.status,
+      already_exists: nested.already_exists === true,
+      code: typeof nested.code === "string" ? nested.code : undefined,
+      message: typeof nested.message === "string" ? nested.message : undefined,
+      visit: (nested.visit as OilVisit | undefined) || (json.visit as OilVisit | undefined),
+      sms_sent: Boolean(nested.sms_sent ?? json.sms_sent),
+      sms_error: (nested.sms_error ?? json.sms_error) as string | null | undefined,
+    };
+  } catch {
+    return {
+      hasError: true,
+      statusCode: 0,
+      message: "خطا در اتصال به سرور",
+    };
+  }
+}
+
+export async function oilCreateVisit(
+  body: Omit<OilVisitQueueBody, "client_id" | "occurred_at"> & {
+    client_id?: string;
+    occurred_at?: string;
+  },
+) {
+  return oilPostVisit(freezeOilVisitBody(body));
+}
+
+export type OilSubmitVisitResult =
+  | { queued: true; client_id: string }
+  | { queued: false; duplicate: boolean; res: OilVisitPostResult };
+
+export async function oilSubmitVisit(
+  body: Omit<OilVisitQueueBody, "client_id" | "occurred_at"> & {
+    client_id?: string;
+    occurred_at?: string;
+  },
+): Promise<OilSubmitVisitResult> {
+  const payload = freezeOilVisitBody(body);
+  const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+  if (offline) {
+    enqueueOilVisit(payload);
+    return { queued: true, client_id: payload.client_id };
+  }
+
+  let res = await oilPostVisit(payload);
+  if (res.statusCode === 401) {
+    const ok = await oilRefreshAuth();
+    if (ok) res = await oilPostVisit(payload);
+  }
+
+  if (isOilVisitCreated(res) || isOilDuplicateVisit(res)) {
+    return { queued: false, duplicate: isOilDuplicateVisit(res), res };
+  }
+  if (res.statusCode === 401) {
+    enqueueOilVisit(payload);
+    return { queued: true, client_id: payload.client_id };
+  }
+  if (res.hasError && isOilNetworkError(res)) {
+    enqueueOilVisit(payload);
+    return { queued: true, client_id: payload.client_id };
+  }
+  return { queued: false, duplicate: false, res };
+}
+
+export async function oilReadCachedReports() {
+  return readOilReportsCache();
+}
+
+export async function oilGetReports() {
+  const res = await oilFetch<OilReportsResponse>("GET", "/api/oil/reports", { auth: true });
+  if (!isOilApiError(res)) {
+    await saveOilReportsCache(res);
+    return res;
+  }
+  if (isOilNetworkError(res) || (typeof navigator !== "undefined" && navigator.onLine === false)) {
+    const cached = await readOilReportsCache();
+    if (cached) return cached;
+  }
+  return res;
 }
 
 function asReportPeriod(value: unknown): OilReportPeriod {
@@ -330,11 +509,26 @@ export function partsPayload(parts: OilPlateParts) {
   };
 }
 
-export function oilListProducts(includeInactive = false) {
-  return oilFetch<OilProductCatalogResponse>("GET", "/api/oil/products", {
+export async function oilListProducts(includeInactive = false) {
+  const res = await oilFetch<OilProductCatalogResponse>("GET", "/api/oil/products", {
     auth: true,
     params: includeInactive ? { include_inactive: 1 } : undefined,
   });
+  if (!isOilApiError(res)) {
+    await saveOilCatalogCache(res, includeInactive);
+    return res;
+  }
+  const cached = await readOilCatalogCache(includeInactive);
+  if (cached) return cached;
+  return res;
+}
+
+export function oilPeekCachedCatalog(includeInactive = false) {
+  return peekOilCatalogCache(includeInactive);
+}
+
+export async function oilReadCachedCatalog(includeInactive = false) {
+  return readOilCatalogCache(includeInactive);
 }
 
 export function oilCreateProduct(body: {
@@ -392,16 +586,27 @@ export function oilDeleteProduct(id: number) {
   );
 }
 
+export function canonicalOilProductKind(kind: string | undefined | null): OilProductKind | null {
+  if (!kind) return null;
+  if (kind === "gear_oil" || kind === "gearbox_oil") return "gearbox_oil";
+  if (OIL_PRODUCT_KINDS.some((item) => item.kind === kind)) return kind as OilProductKind;
+  return null;
+}
+
 export function normalizeOilProductCatalog(
   res: OilProductCatalogResponse | null | undefined,
 ): OilProductKindGroup[] {
   const kinds = res?.kinds;
   const flat = Array.isArray(res?.data) ? res.data : [];
   return OIL_PRODUCT_KINDS.map((def) => {
-    const found = kinds?.find((k) => k.kind === def.kind);
-    const products = found
+    const found = kinds?.find((k) => canonicalOilProductKind(k.kind) === def.kind);
+    const raw = found
       ? found.products || []
-      : flat.filter((p) => p.kind === def.kind);
+      : flat.filter((p) => canonicalOilProductKind(p.kind) === def.kind);
+    const products = raw.map((product) => ({
+      ...product,
+      kind: canonicalOilProductKind(product.kind) || def.kind,
+    }));
     return {
       kind: def.kind,
       kind_label: found?.kind_label || def.kind_label,
@@ -418,7 +623,7 @@ export function activeOilProducts(
 ): OilProduct[] {
   const group = groups.find((g) => g.kind === kind);
   return (group?.products || [])
-    .filter((p) => p.is_active)
+    .filter((p) => p.is_active !== false)
     .slice()
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id - b.id);
 }
@@ -427,12 +632,16 @@ export function oilVisitItemProductId(item: OilVisitItem): number | "" {
   const rec = item as OilVisitItem & {
     air_filter_product_id?: number;
     oil_filter_product_id?: number;
+    gearbox_oil_product_id?: number;
+    gear_oil_product_id?: number;
     product_id?: number;
   };
   const id =
     rec.oil_product_id ??
     rec.air_filter_product_id ??
     rec.oil_filter_product_id ??
+    rec.gearbox_oil_product_id ??
+    rec.gear_oil_product_id ??
     rec.product_id ??
     rec.id;
   return typeof id === "number" && Number.isFinite(id) ? id : "";
@@ -443,13 +652,16 @@ export function idsFromOilVisitItems(items?: OilVisitItem[] | null) {
     oil_product_id: "" as number | "",
     air_filter_product_id: "" as number | "",
     oil_filter_product_id: "" as number | "",
+    gearbox_oil_product_id: "" as number | "",
   };
   for (const item of items || []) {
     const id = oilVisitItemProductId(item);
     if (id === "") continue;
-    if (item.kind === "oil") next.oil_product_id = id;
-    if (item.kind === "air_filter") next.air_filter_product_id = id;
-    if (item.kind === "oil_filter") next.oil_filter_product_id = id;
+    const kind = canonicalOilProductKind(item.kind);
+    if (kind === "oil") next.oil_product_id = id;
+    if (kind === "gearbox_oil") next.gearbox_oil_product_id = id;
+    if (kind === "air_filter") next.air_filter_product_id = id;
+    if (kind === "oil_filter") next.oil_filter_product_id = id;
   }
   return next;
 }
@@ -467,9 +679,9 @@ export function oilVisitItemLines(
   return items
     .filter((item) => item.name)
     .map((item) => {
-      const label =
+        const label =
         item.kind_label ||
-        OIL_PRODUCT_KINDS.find((k) => k.kind === item.kind)?.kind_label ||
+        OIL_PRODUCT_KINDS.find((k) => k.kind === canonicalOilProductKind(item.kind))?.kind_label ||
         item.kind ||
         "قلم";
       return `${label}: ${item.name}`;
