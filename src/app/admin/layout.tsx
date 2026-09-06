@@ -174,7 +174,7 @@ export default function ShikshooLayout({
               {children}
             </Box>
             {!isPrintPage && !isPublicAdminPage && <SimpleBottomNavigationAtelier />}
-            {!isPrintPage && !isPublicAdminPage && <WebinoChatbot audience="admin" />}
+            {!isPrintPage && !isPublicAdminPage && <WebinoChatbot audience="admin" hideLauncher />}
           </>
         )}
         </Box>

@@ -350,6 +350,7 @@ export default function AdminMenuModeCartPanel({
       >
         <MultiCartToolbar
           compact
+          hideCaptions
           cartCount={cartCount}
           activeIndex={activeCartIndex}
           onSwitch={onSwitchCart}

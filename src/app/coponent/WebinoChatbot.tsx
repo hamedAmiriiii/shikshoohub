@@ -20,8 +20,11 @@ type Message = {
   path?: string;
 };
 
+export const WEBINO_CHATBOT_TOGGLE_EVENT = "webino-chatbot-toggle";
+
 type WebinoChatbotProps = {
   audience: ChatAudience;
+  hideLauncher?: boolean;
 };
 
 const THINK_MS = 1000;
@@ -67,7 +70,7 @@ function ThinkingDots() {
   );
 }
 
-export default function WebinoChatbot({ audience }: WebinoChatbotProps) {
+export default function WebinoChatbot({ audience, hideLauncher = false }: WebinoChatbotProps) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
@@ -121,6 +124,12 @@ export default function WebinoChatbot({ audience }: WebinoChatbotProps) {
     };
   }, []);
 
+  useEffect(() => {
+    const onToggle = () => setOpen((value) => !value);
+    window.addEventListener(WEBINO_CHATBOT_TOGGLE_EVENT, onToggle);
+    return () => window.removeEventListener(WEBINO_CHATBOT_TOGGLE_EVENT, onToggle);
+  }, []);
+
   const ask = (raw: string) => {
     const text = raw.trim();
     if (!text || busyRef.current) return;
@@ -167,6 +176,8 @@ export default function WebinoChatbot({ audience }: WebinoChatbotProps) {
     fontSize: 12.5,
     lineHeight: 1.85,
   });
+
+  if (!open && hideLauncher) return null;
 
   return (
     <Box

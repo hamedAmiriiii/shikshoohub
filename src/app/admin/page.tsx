@@ -2184,7 +2184,6 @@ export default function ShoppingPage() {
             formatNumber={formatNumber}
             cartPanel={posCartPanel}
             classicPosMode={classicPosMode}
-            onOpenScanner={handleOpenModal}
           />
         ) : classicPosMode ? (
           <AdminClassicPosView
@@ -3866,7 +3865,7 @@ export default function ShoppingPage() {
       )}
 
       {/* Floating Action Button — کنار سایدبار راست تا روی منو نرود */}
-      {(!menuMode || classicPosMode) && (
+      {!menuMode && (
       <Button
         data-admin-tour="scan-product"
         onClick={handleOpenModal}

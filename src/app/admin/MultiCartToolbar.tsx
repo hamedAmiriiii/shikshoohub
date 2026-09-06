@@ -15,6 +15,8 @@ export type MultiCartToolbarProps = {
   compact?: boolean;
   /** اگر false باشد عرض را پر نمی‌کند (مثلاً کنار فیلدهای هدر کلاسیک) */
   fullWidth?: boolean;
+  /** فقط آیکون و شماره سبد — مناسب پنل باریک حالت منو */
+  hideCaptions?: boolean;
 };
 
 export default function MultiCartToolbar({
@@ -25,6 +27,7 @@ export default function MultiCartToolbar({
   onClearOrRemove,
   compact = false,
   fullWidth = true,
+  hideCaptions = false,
 }: MultiCartToolbarProps) {
   const canAdd = cartCount < MAX_MULTI_CARTS;
   const tabMinWidth = compact ? 34 : 40;
@@ -48,17 +51,19 @@ export default function MultiCartToolbar({
       }}
     >
       <Box sx={{ display: "flex", alignItems: "center", gap: compact ? 0.5 : 0.75, minWidth: 0 }}>
-        <Typography
-          sx={{
-            fontSize: compact ? "10px" : "12px",
-            fontWeight: 700,
-            color: "var(--admin-text-muted)",
-            whiteSpace: "nowrap",
-            flexShrink: 0,
-          }}
-        >
-          سبد فعال
-        </Typography>
+        {!hideCaptions ? (
+          <Typography
+            sx={{
+              fontSize: compact ? "10px" : "12px",
+              fontWeight: 700,
+              color: "var(--admin-text-muted)",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+            }}
+          >
+            سبد فعال
+          </Typography>
+        ) : null}
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.4 }}>
           {Array.from({ length: cartCount }, (_, index) => {
@@ -113,8 +118,34 @@ export default function MultiCartToolbar({
           })}
         </Box>
 
-        <Tooltip title={canAdd ? "یک سبد فاکتور جدید بساز" : "حداکثر ۴ سبد مجاز است"}>
+        <Tooltip title={canAdd ? "سبد جدید" : "حداکثر ۴ سبد مجاز است"}>
           <span>
+            {hideCaptions ? (
+              <IconButton
+                size="small"
+                onClick={onAdd}
+                disabled={!canAdd}
+                aria-label="سبد جدید"
+                sx={{
+                  width: tabHeight,
+                  height: tabHeight,
+                  p: 0,
+                  borderRadius: "6px",
+                  border: "1px solid var(--admin-accent)",
+                  color: canAdd ? "var(--admin-accent)" : "var(--admin-text-muted)",
+                  bgcolor: "var(--admin-surface)",
+                  "&:hover": {
+                    bgcolor: "rgba(120, 181, 104, 0.1)",
+                  },
+                  "&.Mui-disabled": {
+                    borderColor: "var(--admin-border)",
+                    color: "var(--admin-text-muted)",
+                  },
+                }}
+              >
+                <AddIcon sx={{ fontSize: compact ? 16 : 18 }} />
+              </IconButton>
+            ) : (
             <Button
               size="small"
               variant="outlined"
@@ -152,6 +183,7 @@ export default function MultiCartToolbar({
             >
               سبد جدید
             </Button>
+            )}
           </span>
         </Tooltip>
       </Box>

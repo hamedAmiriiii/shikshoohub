@@ -8,10 +8,10 @@ import PersonIcon from "@mui/icons-material/Person";
 import LogoutIcon from "@mui/icons-material/Logout";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import LightModeIcon from "@mui/icons-material/LightMode";
-import ShareIcon from "@mui/icons-material/Share";
+import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 import { useRouter, usePathname } from "next/navigation";
 import { isSuperAdminUser, getUserPhoneFromRecord } from "@/app/lib/superAdmin";
-import { hasShopPermission } from "@/app/lib/shopPermissions";
+import { WEBINO_CHATBOT_TOGGLE_EVENT } from "@/app/coponent/WebinoChatbot";
 import {
   getShopAccessFromUser,
   getAccessMenuSummary,
@@ -104,21 +104,12 @@ export default function Header({
   const displayPhone = user
     ? getUserPhoneFromRecord(user as Record<string, unknown>)
     : "";
-  const hasShop = Boolean(
-    (user as any)?.atelier || (user as any)?.atelier_id || (user as any)?.shop_code,
-  );
-
   const shopDisplayName =
     user?.atelier?.name ||
     user?.atelier_name ||
     user?.shop_name ||
     user?.name ||
     "فروشگاه";
-
-  const copyReferralLink = async () => {
-    handleMenuClose();
-    router.push("/admin/referral");
-  };
 
   const handleBuySubscription = () => {
     handleMenuClose();
@@ -486,32 +477,6 @@ export default function Header({
                 {rightAction}
               </Box>
             )}
-            {hasShop && hasShopPermission("referral") && (
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={() => void copyReferralLink()}
-                startIcon={<ShareIcon sx={{ fontSize: { xs: 18, md: 20 } }} />}
-                sx={{
-                  borderColor: "#26a69a",
-                  color: "#26a69a",
-                  minWidth: { xs: 36, md: "auto" },
-                  px: { xs: 0.8, md: 1.4 },
-                  py: { xs: 0.45, md: 0.65 },
-                  "&:hover": {
-                    borderColor: "#00897b",
-                    backgroundColor: "rgba(38,166,154,0.08)",
-                  },
-                }}
-              >
-                <Box
-                  component="span"
-                  sx={{ display: { xs: "none", md: "inline" }, whiteSpace: "nowrap" }}
-                >
-                  معرفی دوستان
-                </Box>
-              </Button>
-            )}
             {user && (
               <>
                 <Box
@@ -562,6 +527,21 @@ export default function Header({
                     )}
                   </Box>
                 </Box>
+                <IconButton
+                  onClick={() => window.dispatchEvent(new Event(WEBINO_CHATBOT_TOGGLE_EVENT))}
+                  aria-label="دستیار وبینو"
+                  sx={{
+                    color: "var(--admin-accent)",
+                    backgroundColor: "var(--admin-icon-bg)",
+                    padding: { xs: "6px", md: "8px" },
+                    flexShrink: 0,
+                    "&:hover": {
+                      backgroundColor: "var(--admin-icon-bg-hover)",
+                    },
+                  }}
+                >
+                  <ChatBubbleOutlineIcon sx={{ fontSize: { xs: "18px", md: "24px" } }} />
+                </IconButton>
                 <IconButton
                   onClick={() => setMode(mode === "light" ? "dark" : "light")}
                   aria-label={mode === "light" ? "حالت تیره" : "حالت روشن"}

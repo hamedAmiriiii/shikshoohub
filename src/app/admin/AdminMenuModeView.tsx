@@ -69,7 +69,6 @@ type AdminMenuModeViewProps = {
   formatNumber: (num: number) => string;
   cartPanel: AdminMenuModeCartPanelProps;
   classicPosMode?: boolean;
-  onOpenScanner?: () => void;
 };
 
 type MenuDialogMode = "stock" | "price";
@@ -81,7 +80,6 @@ export default function AdminMenuModeView({
   formatNumber,
   cartPanel,
   classicPosMode = false,
-  onOpenScanner,
 }: AdminMenuModeViewProps) {
   const [selectedCategoryId, setSelectedCategoryId] = useState(MENU_ALL_CATEGORY_ID);
   const [search, setSearch] = useState("");
@@ -632,7 +630,6 @@ export default function AdminMenuModeView({
             <AdminClassicPosView
               cartPanel={cartPanel}
               compact
-              onOpenScanner={onOpenScanner}
             />
           </Box>
         </Box>

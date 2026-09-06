@@ -9,7 +9,6 @@ import {
   Switch,
   TextField,
   Button,
-  Divider,
   CircularProgress,
 } from "@mui/material";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
@@ -36,7 +35,6 @@ import "react-toastify/dist/ReactToastify.css";
 import { useRouter } from "next/navigation";
 import { apiRequestError } from "@/app/lib/apiRequestError/client";
 import tokenCode from "@/app/coponent/tokenCode";
-import ShopSmsQuotaCard from "@/app/coponent/ShopSmsQuotaCard";
 import { adminButtonStartIconSx, adminPageSx } from "@/app/admin/theme/adminTheme";
 import { startAdminOnboarding } from "@/app/admin/onboarding/AdminOnboardingProvider";
 import {
@@ -79,6 +77,21 @@ const fieldSx = {
     "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
   },
   "& .MuiInputBase-input": { py: 0.5, textAlign: "center" },
+};
+
+const viewBtnSx = {
+  ...adminButtonStartIconSx,
+  minWidth: 72,
+  py: 0.35,
+  px: 1.25,
+  fontSize: "12px",
+  fontWeight: 700,
+  color: "var(--admin-accent)",
+  borderColor: "var(--admin-accent)",
+  "&:hover": {
+    borderColor: "var(--admin-accent-hover)",
+    bgcolor: "var(--admin-menu-hover)",
+  },
 };
 
 const saveBtnSx = {
@@ -229,7 +242,12 @@ export default function SettingsPage() {
   const [loyaltyCreditEnabled, setLoyaltyCreditEnabled] = useState(true);
   const [creditExpiryDays, setCreditExpiryDays] = useState<number>(60);
   const [installmentInterestRate, setInstallmentInterestRate] = useState<number>(0);
-  const [loading, setLoading] = useState(true);
+  const [loyaltyOpen, setLoyaltyOpen] = useState(false);
+  const [loyaltyLoaded, setLoyaltyLoaded] = useState(false);
+  const [loyaltyLoading, setLoyaltyLoading] = useState(false);
+  const [shopCardOpen, setShopCardOpen] = useState(false);
+  const [shopCardLoaded, setShopCardLoaded] = useState(false);
+  const [shopCardLoading, setShopCardLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isSavingExpiry, setIsSavingExpiry] = useState(false);
   const [isSavingInterestRate, setIsSavingInterestRate] = useState(false);
@@ -428,6 +446,93 @@ export default function SettingsPage() {
     );
   };
 
+  const applyLoyaltyResponse = (loyaltyRes: Record<string, unknown> | boolean) => {
+    if (typeof loyaltyRes === "boolean") {
+      setLoyaltyCreditEnabled(loyaltyRes);
+      return;
+    }
+    if (loyaltyRes?.enabled !== undefined) {
+      setLoyaltyCreditEnabled(Boolean(loyaltyRes.enabled));
+    } else if ((loyaltyRes?.data as { enabled?: boolean } | undefined)?.enabled !== undefined) {
+      setLoyaltyCreditEnabled(Boolean((loyaltyRes.data as { enabled?: boolean }).enabled));
+    }
+  };
+
+  const applyShopCardResponse = (raw: unknown) => {
+    if (!raw || typeof raw !== "object") return;
+    const rows = raw as Record<string, unknown>;
+    const list = Array.isArray(raw)
+      ? raw
+      : Array.isArray(rows.data)
+        ? rows.data
+        : Array.isArray(rows.settings)
+          ? rows.settings
+          : null;
+    const fromList = (key: string) => {
+      if (!list) return "";
+      const row = list.find((item) => (item as { key?: string })?.key === key) as
+        | { value?: string }
+        | undefined;
+      return typeof row?.value === "string" ? row.value : "";
+    };
+    const number = typeof rows.shop_card_number === "string" ? rows.shop_card_number : fromList("shop_card_number");
+    const holder = typeof rows.shop_card_holder === "string" ? rows.shop_card_holder : fromList("shop_card_holder");
+    const bank = typeof rows.shop_bank_name === "string" ? rows.shop_bank_name : fromList("shop_bank_name");
+    if (number) setShopCardNumber(number);
+    if (holder) setShopCardHolder(holder);
+    if (bank) setShopBankName(bank);
+  };
+
+  const openLoyaltyClub = async () => {
+    setLoyaltyOpen(true);
+    if (loyaltyLoaded) return;
+    const token = tokenCode();
+    if (!token) return;
+    setLoyaltyLoading(true);
+    try {
+      const loyaltyRes = await apiRequestError(
+        "Get",
+        {},
+        {},
+        `/api/settings/loyalty-credit`,
+        true,
+        true,
+        token,
+      );
+      if (!loyaltyRes.hasError) {
+        applyLoyaltyResponse(loyaltyRes as Record<string, unknown> | boolean);
+      }
+      setLoyaltyLoaded(true);
+    } finally {
+      setLoyaltyLoading(false);
+    }
+  };
+
+  const openShopCard = async () => {
+    setShopCardOpen(true);
+    if (shopCardLoaded) return;
+    const token = tokenCode();
+    if (!token) return;
+    setShopCardLoading(true);
+    try {
+      const allSettings = await apiRequestError(
+        "Get",
+        {},
+        {},
+        `/api/settings`,
+        true,
+        true,
+        token,
+      );
+      if (!allSettings?.hasError) {
+        applyShopCardResponse(allSettings);
+      }
+      setShopCardLoaded(true);
+    } finally {
+      setShopCardLoading(false);
+    }
+  };
+
   const handleSaveShopCard = async () => {
     const token = tokenCode();
     if (!token) return;
@@ -460,90 +565,6 @@ export default function SettingsPage() {
       setIsSavingShopCard(false);
     }
   };
-
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        setLoading(true);
-        const token = tokenCode();
-
-        const loyaltyRes = await apiRequestError(
-          "Get",
-          {},
-          {},
-          `/api/settings/loyalty-credit`,
-          true,
-          true,
-          token,
-        );
-        if (!loyaltyRes.hasError) {
-          if (loyaltyRes?.enabled !== undefined) {
-            setLoyaltyCreditEnabled(loyaltyRes.enabled);
-          } else if (typeof loyaltyRes === "boolean") {
-            setLoyaltyCreditEnabled(loyaltyRes);
-          } else if (loyaltyRes?.data?.enabled !== undefined) {
-            setLoyaltyCreditEnabled(loyaltyRes.data.enabled);
-          }
-        }
-
-        const expiryRes = await apiRequestError(
-          "Get",
-          {},
-          {},
-          `/api/settings/credit_expiry_days`,
-          true,
-          true,
-          token,
-        );
-        if (!expiryRes.hasError) {
-          if (expiryRes?.value) {
-            setCreditExpiryDays(parseInt(expiryRes.value, 10));
-          } else if (expiryRes?.days) {
-            setCreditExpiryDays(expiryRes.days);
-          } else if (expiryRes?.data?.value) {
-            setCreditExpiryDays(parseInt(expiryRes.data.value, 10));
-          }
-        }
-
-        const interestRateRes = await apiRequestError(
-          "Get",
-          {},
-          {},
-          `/api/settings/installment-interest-rate`,
-          true,
-          true,
-          token,
-        );
-        if (!interestRateRes.hasError) {
-          if (interestRateRes?.rate !== undefined) {
-            setInstallmentInterestRate(parseFloat(interestRateRes.rate));
-          } else if (interestRateRes?.data?.rate !== undefined) {
-            setInstallmentInterestRate(parseFloat(interestRateRes.data.rate));
-          } else if (interestRateRes?.value !== undefined) {
-            setInstallmentInterestRate(parseFloat(interestRateRes.value));
-          }
-        }
-        const allSettings = await apiRequestError(
-          "Get",
-          {},
-          {},
-          `/api/settings`,
-          true,
-          true,
-          token,
-        );
-        if (!allSettings?.hasError && allSettings && typeof allSettings === "object") {
-          const rows = allSettings as Record<string, unknown>;
-          if (typeof rows.shop_card_number === "string") setShopCardNumber(rows.shop_card_number);
-          if (typeof rows.shop_card_holder === "string") setShopCardHolder(rows.shop_card_holder);
-          if (typeof rows.shop_bank_name === "string") setShopBankName(rows.shop_bank_name);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSettings();
-  }, []);
 
   const handleToggleLoyaltyCredit = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = event.target.checked;
@@ -659,8 +680,6 @@ export default function SettingsPage() {
 
   return (
     <Box sx={{ ...adminPageSx, p: 1.5, pb: 12 }}>
-      <ShopSmsQuotaCard compact />
-
       <Card
         sx={{
           ...settingsCardSx,
@@ -690,7 +709,7 @@ export default function SettingsPage() {
         <CardContent sx={{ py: 0.5, px: 1.25, "&:last-child": { pb: 0.5 } }}>
           <SettingsToggleRow
             icon={<TableRestaurantIcon sx={{ fontSize: 18 }} />}
-            title="رستوران و کافه"
+            title="سفارش حضوری"
             hint="میز و سفارش حضوری در منو"
             checked={restaurantCafeEnabled}
             onChange={handleToggleRestaurantCafe}
@@ -705,30 +724,7 @@ export default function SettingsPage() {
               onChange={handleToggleMenuTableOrdersPopup}
             />
           ) : null}
-          {restaurantCafeEnabled ? (
-            <Box
-              onClick={() => router.push("/admin/shop-tables")}
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 0.75,
-                py: 0.7,
-                cursor: "pointer",
-                "&:hover": { opacity: 0.85 },
-              }}
-            >
-              <TableRestaurantIcon sx={{ color: "var(--admin-accent)", fontSize: 18 }} />
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography sx={{ color: "var(--admin-text)", fontSize: "13px", fontWeight: 600 }}>
-                  میزها و سفارش پای میز
-                </Typography>
-                <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "11px" }}>
-                  تعریف میز، لینک QR و سفارش‌ها
-                </Typography>
-              </Box>
-              <ChevronRightIcon sx={{ color: "var(--admin-text-muted)", fontSize: 18 }} />
-            </Box>
-          ) : null}
+          
         </CardContent>
       </Card>
 
@@ -828,7 +824,16 @@ export default function SettingsPage() {
         icon={<CreditCardIcon sx={{ fontSize: 18 }} />}
         title="کارت فروشگاه"
         hint="پرداخت کارت‌به‌کارت سفارش پای میز"
+        loading={shopCardOpen && shopCardLoading}
+        action={
+          shopCardOpen ? undefined : (
+            <Button size="small" variant="outlined" onClick={() => void openShopCard()} sx={viewBtnSx}>
+              مشاهده
+            </Button>
+          )
+        }
       >
+        {shopCardOpen && !shopCardLoading ? (
         <Box sx={{ mt: 1, display: "flex", flexDirection: "column", gap: 1 }}>
           <TextField
             size="small"
@@ -889,6 +894,7 @@ export default function SettingsPage() {
             {isSavingShopCard ? "…" : "ذخیره"}
           </Button>
         </Box>
+        ) : null}
       </SettingsSectionCard>
 
       {can("backup") ? (
@@ -905,9 +911,9 @@ export default function SettingsPage() {
         icon={<LoyaltyIcon sx={{ fontSize: 18 }} />}
         title="باشگاه مشتریان"
         hint="اعتبار و امتیاز مشتری بر اساس مبلغ خرید"
-        loading={loading}
+        loading={loyaltyOpen && loyaltyLoading}
         action={
-          !loading ? (
+          loyaltyOpen && !loyaltyLoading ? (
             <Switch
               size="small"
               checked={loyaltyCreditEnabled}
@@ -915,10 +921,16 @@ export default function SettingsPage() {
               disabled={isUpdating}
               sx={switchSx}
             />
-          ) : undefined
+          ) : loyaltyOpen ? undefined : (
+            <Button size="small" variant="outlined" onClick={() => void openLoyaltyClub()} sx={viewBtnSx}>
+              مشاهده
+            </Button>
+          )
         }
       >
-        <LoyaltyCreditTiersSettings disabled={!loyaltyCreditEnabled} />
+        {loyaltyOpen && !loyaltyLoading ? (
+          <LoyaltyCreditTiersSettings disabled={!loyaltyCreditEnabled} />
+        ) : null}
       </SettingsSectionCard>
 
       <ToastContainer
