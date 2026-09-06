@@ -9,6 +9,7 @@ import queryClient from "./lib/queryClient";
 import ServiceWorkerRegistration from "./components/ServiceWorkerRegistration";
 import PWAHead from "./components/PWAHead";
 import AppShell from "./AppShell";
+import { LEGACY_BROWSER_BOOTSTRAP } from "./legacyBrowserBootstrap";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -91,8 +92,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-       
-        
+        <script dangerouslySetInnerHTML={{ __html: LEGACY_BROWSER_BOOTSTRAP }} />
         <PWAHead />
         <QueryClientProvider client={queryClient}>
         {/* <AuthProvider > */}

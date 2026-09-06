@@ -133,7 +133,7 @@ export default function AdminMenuModeView({
     setSaving(true);
     try {
       const res = await updateMenuProductFields(product, patch);
-      if (!res.ok) {
+      if (res.ok === false) {
         toast.error(res.message);
         return false;
       }

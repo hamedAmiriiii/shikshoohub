@@ -5,6 +5,13 @@ const nextConfig = {
       bodySizeLimit: '10mb', // 👈 افزایش حجم مجاز تا 10 مگابایت
     },
   },
+  transpilePackages: [
+    "framer-motion",
+    "lucide-react",
+    "@mui/material",
+    "@mui/icons-material",
+    "@nextui-org/react",
+  ],
     typescript: {
         ignoreBuildErrors: true,
   },

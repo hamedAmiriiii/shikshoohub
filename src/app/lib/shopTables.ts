@@ -147,7 +147,7 @@ export function extractPaymentMethods(res: unknown): TablePaymentMethod[] {
         bank_name: typeof row.bank_name === "string" ? row.bank_name : undefined,
       };
     })
-    .filter((item): item is TablePaymentMethod => item != null);
+    .filter((item) => item != null);
 }
 
 export function extractShopTableInfo(res: unknown, fallbackNumber: number): ShopTableInfo {

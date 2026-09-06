@@ -1,5 +1,5 @@
-const CACHE_NAME = "webino-pwa-v7";
-const ADMIN_CACHE_NAME = "webino-admin-shell-v5";
+const CACHE_NAME = "webino-pwa-v8";
+const ADMIN_CACHE_NAME = "webino-admin-shell-v6";
 const OFFLINE_URL = "/offline.html";
 const PRECACHE_URLS = [
   OFFLINE_URL,
@@ -84,21 +84,37 @@ async function matchAdminShell(request) {
   );
 }
 
+function isCacheableStaticResponse(response) {
+  if (!response || !response.ok) return false;
+  const type = (response.headers.get("content-type") || "").toLowerCase();
+  if (type.indexOf("text/html") !== -1) return false;
+  return true;
+}
+
 async function networkThenAdminCache(request) {
   const url = new URL(request.url);
   const path = url.pathname;
   const isAdminHome = path === "/admin" || path === "/admin/";
+  const isNavigate = request.mode === "navigate";
   try {
-    const response = await fetch(request);
-    if (response && response.status === 200 && response.type === "basic") {
+    const response = await fetch(request, { cache: "no-store" });
+    if (
+      response &&
+      response.status === 200 &&
+      response.type === "basic" &&
+      !isNavigate
+    ) {
       const cache = await caches.open(ADMIN_CACHE_NAME);
       await cache.put(request, response.clone());
-      if (request.mode === "navigate" && isAdminHome) {
+      if (isAdminHome) {
         await cache.put("/admin", response.clone());
       }
     }
     return response;
   } catch {
+    if (isNavigate) {
+      return (await caches.match(OFFLINE_URL)) || matchAdminShell(request);
+    }
     return matchAdminShell(request);
   }
 }
@@ -116,15 +132,14 @@ self.addEventListener("fetch", (event) => {
   if (isNextStaticAsset(url)) {
     event.respondWith(
       caches.open(CACHE_NAME).then(async (cache) => {
-        const cached = await cache.match(event.request);
-        if (cached) return cached;
         try {
           const response = await fetch(event.request);
-          if (response.ok) {
+          if (isCacheableStaticResponse(response)) {
             await cache.put(event.request, response.clone());
           }
           return response;
         } catch {
+          const cached = await cache.match(event.request);
           return (
             cached ||
             new Response("Offline", {

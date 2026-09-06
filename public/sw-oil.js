@@ -1,4 +1,4 @@
-const CACHE_NAME = "oil-pwa-v2";
+const CACHE_NAME = "oil-pwa-v3";
 const PRECACHE_URLS = [
   "/oil",
   "/oil/new",
@@ -51,15 +51,26 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+function isCacheableStaticResponse(response) {
+  if (!response || !response.ok) return false;
+  const type = (response.headers.get("content-type") || "").toLowerCase();
+  if (type.indexOf("text/html") !== -1) return false;
+  return true;
+}
+
 async function cacheFirst(request) {
   const cache = await caches.open(CACHE_NAME);
-  const cached = await cache.match(request);
-  if (cached) return cached;
-  const response = await fetch(request);
-  if (response && response.ok) {
-    await cache.put(request, response.clone());
+  try {
+    const response = await fetch(request);
+    if (isCacheableStaticResponse(response)) {
+      await cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    const cached = await cache.match(request);
+    if (cached) return cached;
+    throw new Error("offline");
   }
-  return response;
 }
 
 async function networkFirst(request) {
