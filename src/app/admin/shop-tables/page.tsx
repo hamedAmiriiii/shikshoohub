@@ -13,12 +13,15 @@ import {
   DialogTitle,
   IconButton,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import DownloadIcon from "@mui/icons-material/Download";
 import QrCode2Icon from "@mui/icons-material/QrCode2";
 import TableRestaurantIcon from "@mui/icons-material/TableRestaurant";
 import { ToastContainer, toast } from "react-toastify";
@@ -30,10 +33,16 @@ import { adminButtonStartIconSx, adminPageSx } from "@/app/admin/theme/adminThem
 import {
   extractShopTables,
   getAdminShopCode,
+  getAdminRestaurantName,
   shopTableDisplayName,
   tableQrImageUrl,
   tableReservAbsoluteUrl,
+  composeTableQrPoster,
+  downloadDataUrl,
+  readTableQrPosterTheme,
+  writeTableQrPosterTheme,
   type ShopTable,
+  type TableQrPosterTheme,
 } from "@/app/lib/shopTables";
 
 export default function ShopTablesPage() {
@@ -48,6 +57,9 @@ export default function ShopTablesPage() {
   const [defaultsCount, setDefaultsCount] = useState("2");
   const [creatingDefaults, setCreatingDefaults] = useState(false);
   const [qrTable, setQrTable] = useState<ShopTable | null>(null);
+  const [qrPoster, setQrPoster] = useState("");
+  const [qrPosterLoading, setQrPosterLoading] = useState(false);
+  const [qrTheme, setQrTheme] = useState<TableQrPosterTheme>(() => readTableQrPosterTheme());
 
   const loadTables = useCallback(async () => {
     const token = tokenCode();
@@ -158,6 +170,41 @@ export default function ShopTablesPage() {
     }
     toast.success("میز حذف شد");
     await loadTables();
+  };
+
+  useEffect(() => {
+    if (!qrTable || !shopCode.trim()) {
+      setQrPoster("");
+      setQrPosterLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setQrPoster("");
+    setQrPosterLoading(true);
+    const title = shopTableDisplayName(qrTable);
+    const url = tableReservAbsoluteUrl(shopCode.trim(), qrTable.number);
+    void composeTableQrPoster(url, title, getAdminRestaurantName(), 240, qrTheme)
+      .then((dataUrl) => {
+        if (!cancelled) setQrPoster(dataUrl);
+      })
+      .catch(() => {
+        if (!cancelled) setQrPoster("");
+      })
+      .finally(() => {
+        if (!cancelled) setQrPosterLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [qrTable, shopCode, qrTheme]);
+
+  const downloadQr = () => {
+    if (!qrTable || !qrPoster) {
+      toast.error("تصویر QR آماده نیست");
+      return;
+    }
+    downloadDataUrl(qrPoster, `${shopTableDisplayName(qrTable)}.png`);
+    toast.success("دانلود شد");
   };
 
   const copyLink = async (table: ShopTable) => {
@@ -311,21 +358,75 @@ export default function ShopTablesPage() {
         <DialogContent sx={{ textAlign: "center" }}>
           {qrTable && shopCode.trim() ? (
             <>
-              <Box
-                component="img"
-                alt="QR"
-                src={tableQrImageUrl(tableReservAbsoluteUrl(shopCode.trim(), qrTable.number), 240)}
-                sx={{ width: 240, height: 240, mx: "auto", display: "block" }}
-              />
+              {qrPosterLoading ? (
+                <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+                  <CircularProgress size={28} sx={{ color: "var(--admin-accent)" }} />
+                </Box>
+              ) : (
+                <Box
+                  component="img"
+                  alt={qrTable ? shopTableDisplayName(qrTable) : "QR"}
+                  src={
+                    qrPoster ||
+                    tableQrImageUrl(tableReservAbsoluteUrl(shopCode.trim(), qrTable.number), 240)
+                  }
+                  sx={{
+                    width: qrPoster ? 280 : 240,
+                    height: "auto",
+                    mx: "auto",
+                    display: "block",
+                    bgcolor: qrPoster ? "transparent" : "#fff",
+                    borderRadius: 2,
+                  }}
+                />
+              )}
               <Typography sx={{ mt: 1.5, fontSize: 13, direction: "ltr" }}>
                 {tableReservAbsoluteUrl(shopCode.trim(), qrTable.number)}
               </Typography>
+              <Typography sx={{ mt: 2, mb: 1, fontSize: 12, color: "var(--admin-text-secondary)" }}>
+                تم
+              </Typography>
+              <ToggleButtonGroup
+                exclusive
+                fullWidth
+                size="small"
+                value={qrTheme}
+                onChange={(_, value: TableQrPosterTheme | null) => {
+                  if (!value) return;
+                  setQrTheme(value);
+                  writeTableQrPosterTheme(value);
+                }}
+                sx={{
+                  "& .MuiToggleButton-root": {
+                    color: "var(--admin-text)",
+                    borderColor: "var(--admin-border)",
+                    "&.Mui-selected": {
+                      bgcolor: "var(--admin-accent)",
+                      color: "#fff",
+                      "&:hover": { bgcolor: "var(--admin-accent-hover)" },
+                    },
+                  },
+                }}
+              >
+                <ToggleButton value="luxury">لوکس</ToggleButton>
+                <ToggleButton value="simple">ساده</ToggleButton>
+              </ToggleButtonGroup>
             </>
           ) : (
             <Typography>ابتدا کد فروشگاه را وارد کنید.</Typography>
           )}
         </DialogContent>
         <DialogActions>
+          {qrTable && shopCode.trim() ? (
+            <Button
+              startIcon={<DownloadIcon />}
+              onClick={downloadQr}
+              disabled={!qrPoster}
+              sx={adminButtonStartIconSx}
+            >
+              دانلود
+            </Button>
+          ) : null}
           {qrTable && <Button onClick={() => copyLink(qrTable)}>کپی لینک</Button>}
           <Button onClick={() => setQrTable(null)}>بستن</Button>
         </DialogActions>

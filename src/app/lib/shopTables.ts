@@ -297,6 +297,290 @@ export function tableReservAbsoluteUrl(shopCode: string, tableNumber: number): s
   return `${window.location.origin}${path}`;
 }
 
+export function getAdminRestaurantName(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    const user = JSON.parse(localStorage.getItem("user") || "{}") as Record<string, unknown>;
+    const atelier = asRecord(user.atelier);
+    const candidates = [
+      user.atelier_name,
+      user.shop_name,
+      atelier?.name,
+      atelier?.atelier_name,
+      atelier?.shop_name,
+    ];
+    for (const value of candidates) {
+      if (typeof value === "string" && value.trim()) return value.trim();
+    }
+  } catch {
+    // ignore
+  }
+  return "";
+}
+
+export type TableQrPosterTheme = "luxury" | "simple";
+
+const TABLE_QR_POSTER_THEME_KEY = "table_qr_poster_theme";
+
+export function readTableQrPosterTheme(): TableQrPosterTheme {
+  if (typeof window === "undefined") return "luxury";
+  return localStorage.getItem(TABLE_QR_POSTER_THEME_KEY) === "simple" ? "simple" : "luxury";
+}
+
+export function writeTableQrPosterTheme(theme: TableQrPosterTheme) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(TABLE_QR_POSTER_THEME_KEY, theme);
+}
+
 export function tableQrImageUrl(url: string, size = 220): string {
-  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(url)}`;
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=8&data=${encodeURIComponent(url)}`;
+}
+
+async function loadQrImage(link: string, qrSize: number): Promise<CanvasImageSource> {
+  const qrUrl = tableQrImageUrl(link, qrSize);
+  try {
+    const res = await fetch(qrUrl);
+    if (!res.ok) throw new Error("qr fetch failed");
+    return await createImageBitmap(await res.blob());
+  } catch {
+    return await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("qr load failed"));
+      img.src = qrUrl;
+    });
+  }
+}
+
+const GOLD = "#d4af37";
+const GOLD_LIGHT = "#f0d77a";
+const GOLD_DARK = "#8a6d1f";
+const INK = "#14110c";
+const BG = "#161616";
+const DISPLAY_FONT = '"Vazirmatn", "IRANSans", Tahoma, sans-serif';
+const FANCY_FONT = '"Lalezar", "Vazirmatn", "IRANSans", Tahoma, sans-serif';
+
+let qrPosterFontsReady: Promise<void> | null = null;
+
+function waitMs(ms: number) {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+async function ensureQrPosterFonts() {
+  if (typeof document === "undefined") return;
+  if (!qrPosterFontsReady) {
+    qrPosterFontsReady = (async () => {
+      let link = document.getElementById("qr-poster-fonts") as HTMLLinkElement | null;
+      if (!link) {
+        link = document.createElement("link");
+        link.id = "qr-poster-fonts";
+        link.rel = "stylesheet";
+        link.href =
+          "https://fonts.googleapis.com/css2?family=Lalezar&family=Vazirmatn:wght@400;600;700&display=swap";
+        document.head.appendChild(link);
+        await Promise.race([
+          new Promise<void>((resolve) => {
+            link!.onload = () => resolve();
+            link!.onerror = () => resolve();
+          }),
+          waitMs(2500),
+        ]);
+      }
+      try {
+        const local = new FontFace("IRANSans", "url(/fonts/Iranian%20Sans.ttf)");
+        document.fonts.add(await local.load());
+      } catch {
+        /* optional */
+      }
+      await document.fonts.ready;
+      await Promise.allSettled([
+        document.fonts.load("700 14px Vazirmatn"),
+        document.fonts.load("400 16px Lalezar"),
+      ]);
+    })();
+  }
+  await qrPosterFontsReady;
+}
+
+function roundedRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+) {
+  const radius = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + w, y, x + w, y + h, radius);
+  ctx.arcTo(x + w, y + h, x, y + h, radius);
+  ctx.arcTo(x, y + h, x, y, radius);
+  ctx.arcTo(x, y, x + w, y, radius);
+  ctx.closePath();
+}
+
+function goldFill(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
+  const g = ctx.createLinearGradient(x, y, x, y + h);
+  g.addColorStop(0, GOLD_LIGHT);
+  g.addColorStop(0.45, GOLD);
+  g.addColorStop(1, GOLD_DARK);
+  ctx.fillStyle = g;
+}
+
+function fitCanvasFont(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+  maxSize: number,
+  minSize: number,
+  family: string,
+  weight = "700",
+) {
+  for (let size = maxSize; size >= minSize; size -= 1) {
+    ctx.font = `${weight} ${size}px ${family}`;
+    if (ctx.measureText(text).width <= maxWidth) return size;
+  }
+  ctx.font = `${weight} ${minSize}px ${family}`;
+  return minSize;
+}
+
+function drawSideOrnament(ctx: CanvasRenderingContext2D, x: number, y: number, flip: boolean) {
+  ctx.save();
+  ctx.strokeStyle = "rgba(212,175,55,0.32)";
+  ctx.lineWidth = 1;
+  const dir = flip ? -1 : 1;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.bezierCurveTo(x + 18 * dir, y + 28, x + 6 * dir, y + 88, x + 16 * dir, y + 150);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x + 4 * dir, y + 40);
+  ctx.quadraticCurveTo(x + 22 * dir, y + 52, x + 8 * dir, y + 72);
+  ctx.stroke();
+  ctx.restore();
+}
+
+async function composeSimpleQrPoster(link: string, qrSize: number): Promise<string> {
+  const source = await loadQrImage(link, qrSize);
+  const scale = 2;
+  const card = 340;
+  const canvas = document.createElement("canvas");
+  canvas.width = card * scale;
+  canvas.height = card * scale;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("canvas");
+  ctx.scale(scale, scale);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, card, card);
+  ctx.drawImage(source, 0, 0, card, card);
+  return canvas.toDataURL("image/png");
+}
+
+export async function composeTableQrPoster(
+  link: string,
+  tableTitle: string,
+  restaurantName = "",
+  qrSize = 220,
+  theme: TableQrPosterTheme = "luxury",
+): Promise<string> {
+  if (theme === "simple") return composeSimpleQrPoster(link, qrSize);
+
+  await ensureQrPosterFonts();
+  const source = await loadQrImage(link, qrSize);
+
+  const scale = 2;
+  const cardW = 340;
+  const cardH = 340;
+  const canvas = document.createElement("canvas");
+  canvas.width = cardW * scale;
+  canvas.height = cardH * scale;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("canvas");
+  ctx.scale(scale, scale);
+
+  ctx.fillStyle = BG;
+  roundedRect(ctx, 0, 0, cardW, cardH, 22);
+  ctx.fill();
+  ctx.strokeStyle = GOLD;
+  ctx.lineWidth = 1.6;
+  roundedRect(ctx, 7, 7, cardW - 14, cardH - 14, 16);
+  ctx.stroke();
+
+  const shop = restaurantName.trim() || "رستوران";
+  const table = tableTitle.trim() || "میز";
+
+  const plaqueW = cardW - 48;
+  const plaqueH = 40;
+  const plaqueX = 24;
+  const plaqueY = 18;
+  goldFill(ctx, plaqueX, plaqueY, plaqueW, plaqueH);
+  roundedRect(ctx, plaqueX, plaqueY, plaqueW, plaqueH, 8);
+  ctx.fill();
+
+  const colW = plaqueW / 2 - 16;
+  ctx.textBaseline = "middle";
+  ctx.direction = "ltr";
+  ctx.fillStyle = INK;
+  ctx.textAlign = "right";
+  fitCanvasFont(ctx, shop, colW, 13, 9, DISPLAY_FONT, "700");
+  ctx.fillText(shop, plaqueX + plaqueW - 14, plaqueY + plaqueH / 2, colW);
+
+  ctx.textAlign = "left";
+  fitCanvasFont(ctx, table, colW, 12, 9, DISPLAY_FONT, "600");
+  ctx.fillText(table, plaqueX + 14, plaqueY + plaqueH / 2, colW);
+
+  const qrBox = 208;
+  const qrX = (cardW - qrBox) / 2;
+  const qrY = plaqueY + plaqueH + 10;
+  drawSideOrnament(ctx, qrX - 10, qrY + 12, true);
+  drawSideOrnament(ctx, qrX + qrBox + 10, qrY + 12, false);
+
+  ctx.fillStyle = "#ffffff";
+  roundedRect(ctx, qrX, qrY, qrBox, qrBox, 10);
+  ctx.fill();
+  ctx.strokeStyle = GOLD;
+  ctx.lineWidth = 1.25;
+  roundedRect(ctx, qrX, qrY, qrBox, qrBox, 10);
+  ctx.stroke();
+  const inner = 10;
+  ctx.drawImage(source, qrX + inner, qrY + inner, qrBox - inner * 2, qrBox - inner * 2);
+
+  const footerY = qrY + qrBox + 16;
+  ctx.textAlign = "center";
+  ctx.fillStyle = GOLD_LIGHT;
+  fitCanvasFont(ctx, "اسکن کنید و سفارش ثبت کنید", cardW - 48, 13, 10, FANCY_FONT, "400");
+  ctx.fillText("اسکن کنید و سفارش ثبت کنید", cardW / 2, footerY, cardW - 48);
+
+  ctx.strokeStyle = GOLD_DARK;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cardW / 2 - 52, footerY + 18);
+  ctx.lineTo(cardW / 2 - 8, footerY + 18);
+  ctx.moveTo(cardW / 2 + 8, footerY + 18);
+  ctx.lineTo(cardW / 2 + 52, footerY + 18);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cardW / 2, footerY + 14);
+  ctx.lineTo(cardW / 2 + 5, footerY + 18);
+  ctx.lineTo(cardW / 2, footerY + 22);
+  ctx.lineTo(cardW / 2 - 5, footerY + 18);
+  ctx.closePath();
+  ctx.fillStyle = GOLD;
+  ctx.fill();
+
+  return canvas.toDataURL("image/png");
+}
+
+export function downloadDataUrl(dataUrl: string, filename: string) {
+  const a = document.createElement("a");
+  a.href = dataUrl;
+  a.download = filename;
+  a.rel = "noopener";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
