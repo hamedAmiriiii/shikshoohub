@@ -245,12 +245,20 @@ export function paymentTypeLabel(type?: PayrollPaymentType): string {
 }
 
 export function estimateSalaryFromEmployee(employee: Employee | undefined, hoursWorked: number): number {
-  if (!employee) return 0;
+  if (!employee || hoursWorked <= 0) return 0;
   const baseSalary = Number(employee.base_salary) || 0;
   const baseHours = Number(employee.base_work_hours) || 0;
-  const hourly = Number(employee.hourly_wage) || 0;
-  const overtime = Math.max(0, hoursWorked - baseHours);
-  return baseSalary + overtime * hourly;
+  const overtimeHourly = Number(employee.hourly_wage) || 0;
+
+  if (baseHours > 0 && baseSalary > 0) {
+    const regularHours = Math.min(hoursWorked, baseHours);
+    const overtimeHours = Math.max(0, hoursWorked - baseHours);
+    const regularPay = (baseSalary / baseHours) * regularHours;
+    return Math.round(regularPay + overtimeHours * overtimeHourly);
+  }
+
+  if (overtimeHourly > 0) return Math.round(hoursWorked * overtimeHourly);
+  return 0;
 }
 
 export function buildPayrollBody(
@@ -290,6 +298,130 @@ export function buildAdvanceBody(input: {
 
 export function hasPayrollHours(p: Payroll): boolean {
   return Number(p.hours_worked) > 0;
+}
+
+export type PayrollPayslip = {
+  shopName: string;
+  employeeName: string;
+  employeePhone: string;
+  periodLabel: string;
+  statusLabel: string;
+  hoursWorked: number;
+  baseHours: number;
+  overtimeHours: number;
+  shortageHours: number;
+  hourlyRate: number;
+  overtimeHourly: number;
+  regularPay: number;
+  overtimePay: number;
+  shortageAmount: number;
+  salary: number;
+  advances: number;
+  salaryPayments: number;
+  otherPayments: number;
+  totalPaid: number;
+  remaining: number;
+  hasHours: boolean;
+  payments: Array<{
+    typeLabel: string;
+    amount: number;
+    title?: string;
+    note?: string;
+  }>;
+};
+
+export function formatPayrollHours(n: number): string {
+  return new Intl.NumberFormat("fa-IR", {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+  }).format(n || 0);
+}
+
+export function readPayrollShopName(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    return (
+      user.atelier_name ||
+      user.shop_name ||
+      user.shop?.name ||
+      ""
+    );
+  } catch {
+    return "";
+  }
+}
+
+export function buildPayrollPayslip(
+  payroll: Payroll,
+  employee?: Employee | null,
+  shopName = "",
+): PayrollPayslip {
+  const emp = employee || payroll.employee;
+  const breakdown = payroll.salary_breakdown;
+  const hoursWorked = Number(payroll.hours_worked) || 0;
+  const baseHours =
+    Number(breakdown?.base_work_hours) || Number(emp?.base_work_hours) || 0;
+  const baseSalary =
+    Number(breakdown?.base_salary) || Number(emp?.base_salary) || 0;
+  const overtimeHourly =
+    Number(emp?.hourly_wage) || Number(payroll.hourly_wage) || 0;
+  const hourlyRate = baseHours > 0 && baseSalary > 0 ? baseSalary / baseHours : 0;
+  const overtimeHours =
+    Number(breakdown?.overtime_hours) ||
+    (baseHours > 0 ? Math.max(0, hoursWorked - baseHours) : 0);
+  const shortageHours =
+    hoursWorked > 0 && baseHours > 0 ? Math.max(0, baseHours - hoursWorked) : 0;
+  const regularHours =
+    hoursWorked > 0 && baseHours > 0
+      ? Math.min(hoursWorked, baseHours)
+      : hoursWorked;
+  const overtimePay =
+    Number(breakdown?.overtime_amount) || Math.round(overtimeHours * overtimeHourly);
+  const regularPay = Math.round(hourlyRate * regularHours);
+  const shortageAmount = Math.round(hourlyRate * shortageHours);
+  const salary = getPayrollSalary(payroll);
+  const payments = getPayrollPayments(payroll).map((payment) => ({
+    typeLabel: paymentTypeLabel(payment.payment_type),
+    amount: parseAmount(payment.amount),
+    title: payment.title || undefined,
+    note: payment.note || undefined,
+  }));
+  const advances = payments
+    .filter((p) => p.typeLabel === "مساعده")
+    .reduce((sum, p) => sum + p.amount, 0);
+  const salaryPayments = payments
+    .filter((p) => p.typeLabel === "پرداخت حقوق")
+    .reduce((sum, p) => sum + p.amount, 0);
+  const otherPayments = payments
+    .filter((p) => p.typeLabel === "سایر")
+    .reduce((sum, p) => sum + p.amount, 0);
+
+  return {
+    shopName: shopName || readPayrollShopName(),
+    employeeName:
+      payroll.employee_name || emp?.name || "—",
+    employeePhone: emp?.phone || "—",
+    periodLabel: formatJalaliYearMonth(getPayrollYear(payroll), getPayrollMonth(payroll)),
+    statusLabel: payrollStatusLabel(getPayrollStatus(payroll)),
+    hoursWorked,
+    baseHours,
+    overtimeHours,
+    shortageHours,
+    hourlyRate: Math.round(hourlyRate),
+    overtimeHourly,
+    regularPay,
+    overtimePay,
+    shortageAmount,
+    salary,
+    advances,
+    salaryPayments,
+    otherPayments,
+    totalPaid: getPayrollTotalPaid(payroll),
+    remaining: getPayrollRemaining(payroll),
+    hasHours: hoursWorked > 0,
+    payments,
+  };
 }
 
 export function buildPayrollUrl(year: number | "all", month: number | "all"): string {

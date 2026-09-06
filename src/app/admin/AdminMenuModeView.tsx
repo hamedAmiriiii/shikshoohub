@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Box,
   Typography,
@@ -11,14 +11,31 @@ import {
   CardActionArea,
   CardContent,
   Grid,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  CircularProgress,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
+import BlockIcon from "@mui/icons-material/Block";
+import AddBoxOutlinedIcon from "@mui/icons-material/AddBoxOutlined";
+import SellOutlinedIcon from "@mui/icons-material/SellOutlined";
+import { toast } from "react-toastify";
 import {
   getCachedProductDiscount,
   type CachedProduct,
 } from "@/app/lib/productsCache";
-import { catalogItemKey } from "@/app/lib/catalogItems";
+import { catalogItemKey, isProducedGoodItem } from "@/app/lib/catalogItems";
+import { formatAmountInput, parseAmountInput } from "@/app/lib/amountInput";
+import { isKgProduct } from "@/app/lib/productUnits";
+import { updateMenuProductFields } from "@/app/lib/menuModeProductUpdate";
 import {
   MENU_ALL_CATEGORY_ID,
   buildMenuCategories,
@@ -48,15 +65,19 @@ function normalizeSearchText(value: string): string {
 type AdminMenuModeViewProps = {
   products: CachedProduct[];
   onAddProduct: (product: CachedProduct) => void;
+  onProductUpdated?: (product: CachedProduct) => void;
   formatNumber: (num: number) => string;
   cartPanel: AdminMenuModeCartPanelProps;
   classicPosMode?: boolean;
   onOpenScanner?: () => void;
 };
 
+type MenuDialogMode = "stock" | "price";
+
 export default function AdminMenuModeView({
   products,
   onAddProduct,
+  onProductUpdated,
   formatNumber,
   cartPanel,
   classicPosMode = false,
@@ -65,6 +86,14 @@ export default function AdminMenuModeView({
   const [selectedCategoryId, setSelectedCategoryId] = useState(MENU_ALL_CATEGORY_ID);
   const [search, setSearch] = useState("");
   const [showProductImages, setShowProductImages] = useState(true);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const [menuProduct, setMenuProduct] = useState<CachedProduct | null>(null);
+  const [dialogMode, setDialogMode] = useState<MenuDialogMode | null>(null);
+  const [dialogProduct, setDialogProduct] = useState<CachedProduct | null>(null);
+  const [dialogValue, setDialogValue] = useState("");
+  const [saving, setSaving] = useState(false);
+  const suppressClickRef = useRef(false);
+  const longPressRef = useRef<number | null>(null);
 
   useEffect(() => {
     const apply = () => {
@@ -74,6 +103,234 @@ export default function AdminMenuModeView({
     window.addEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, apply);
     return () => window.removeEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, apply);
   }, []);
+
+  const clearLongPress = () => {
+    if (longPressRef.current != null) {
+      window.clearTimeout(longPressRef.current);
+      longPressRef.current = null;
+    }
+  };
+
+  const closeContextMenu = () => {
+    setMenuPos(null);
+  };
+
+  const openContextMenu = (
+    point: { top: number; left: number },
+    product: CachedProduct,
+  ) => {
+    if (isProducedGoodItem(product)) {
+      toast.info("کالای تولیدی از اینجا ویرایش نمی‌شود");
+      return;
+    }
+    setMenuProduct(product);
+    setMenuPos(point);
+  };
+
+  const applyProductUpdate = async (
+    product: CachedProduct,
+    patch: { quantity?: number; sale_price?: number },
+    successMessage: string,
+  ) => {
+    setSaving(true);
+    try {
+      const res = await updateMenuProductFields(product, patch);
+      if (!res.ok) {
+        toast.error(res.message);
+        return false;
+      }
+      onProductUpdated?.(res.product);
+      toast.success(successMessage);
+      return true;
+    } catch {
+      toast.error("خطا در ویرایش کالا");
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleOutOfStock = async () => {
+    if (!menuProduct) return;
+    closeContextMenu();
+    await applyProductUpdate(menuProduct, { quantity: 0 }, "موجودی صفر شد");
+    setMenuProduct(null);
+  };
+
+  const openStockDialog = () => {
+    if (!menuProduct) return;
+    setDialogProduct(menuProduct);
+    setDialogValue(String(Number(menuProduct.quantity) || 0));
+    setDialogMode("stock");
+    closeContextMenu();
+  };
+
+  const openPriceDialog = () => {
+    if (!menuProduct) return;
+    const { salePrice } = getCachedProductDiscount(menuProduct);
+    setDialogProduct(menuProduct);
+    setDialogValue(formatAmountInput(String(salePrice)));
+    setDialogMode("price");
+    closeContextMenu();
+  };
+
+  const submitDialog = async () => {
+    if (!dialogProduct || !dialogMode) return;
+    if (dialogMode === "stock") {
+      const qty = parseAmountInput(dialogValue);
+      if (!Number.isFinite(qty) || qty < 0) {
+        toast.error("موجودی معتبر نیست");
+        return;
+      }
+      const nextQty = isKgProduct(dialogProduct) ? qty : Math.floor(qty);
+      const ok = await applyProductUpdate(
+        dialogProduct,
+        { quantity: nextQty },
+        "موجودی به‌روز شد",
+      );
+      if (ok) {
+        setDialogMode(null);
+        setDialogProduct(null);
+      }
+      return;
+    }
+    const price = Math.floor(parseAmountInput(dialogValue));
+    if (!Number.isFinite(price) || price < 0) {
+      toast.error("قیمت معتبر نیست");
+      return;
+    }
+    const ok = await applyProductUpdate(
+      dialogProduct,
+      { sale_price: price },
+      "قیمت به‌روز شد",
+    );
+    if (ok) {
+      setDialogMode(null);
+      setDialogProduct(null);
+    }
+  };
+
+  const contextUi = (
+    <>
+      <Menu
+        open={Boolean(menuPos)}
+        onClose={() => {
+          closeContextMenu();
+          setMenuProduct(null);
+        }}
+        anchorReference="anchorPosition"
+        anchorPosition={menuPos || { top: 0, left: 0 }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+        slotProps={{
+          paper: {
+            sx: {
+              bgcolor: "var(--admin-surface)",
+              color: "var(--admin-text)",
+              border: "1px solid var(--admin-border)",
+              minWidth: 200,
+              direction: "rtl",
+            },
+          },
+        }}
+      >
+        <MenuItem onClick={() => void handleOutOfStock()} disabled={saving} sx={{ fontSize: 13 }}>
+          <ListItemIcon sx={{ minWidth: 32 }}>
+            <BlockIcon fontSize="small" sx={{ color: "#e57373" }} />
+          </ListItemIcon>
+          <ListItemText primary="اتمام موجودی" />
+        </MenuItem>
+        <MenuItem onClick={openStockDialog} disabled={saving} sx={{ fontSize: 13 }}>
+          <ListItemIcon sx={{ minWidth: 32 }}>
+            <AddBoxOutlinedIcon fontSize="small" sx={{ color: "var(--admin-accent)" }} />
+          </ListItemIcon>
+          <ListItemText primary="افزایش موجودی" />
+        </MenuItem>
+        <MenuItem onClick={openPriceDialog} disabled={saving} sx={{ fontSize: 13 }}>
+          <ListItemIcon sx={{ minWidth: 32 }}>
+            <SellOutlinedIcon fontSize="small" sx={{ color: "var(--admin-accent)" }} />
+          </ListItemIcon>
+          <ListItemText primary="تغییر قیمت" />
+        </MenuItem>
+      </Menu>
+      <Dialog
+        open={Boolean(dialogMode)}
+        onClose={() => {
+          if (saving) return;
+          setDialogMode(null);
+          setDialogProduct(null);
+        }}
+        fullWidth
+        maxWidth="xs"
+        PaperProps={{
+          sx: {
+            bgcolor: "var(--admin-surface)",
+            color: "var(--admin-text)",
+            borderRadius: "16px",
+            direction: "rtl",
+          },
+        }}
+      >
+        <DialogTitle sx={{ fontSize: 16 }}>
+          {dialogMode === "price" ? "تغییر قیمت" : "افزایش موجودی"}
+        </DialogTitle>
+        <DialogContent>
+          <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, mb: 1.5 }}>
+            {dialogProduct?.name || ""}
+          </Typography>
+          <TextField
+            autoFocus
+            fullWidth
+            label={dialogMode === "price" ? "قیمت فروش جدید (تومان)" : "موجودی جدید"}
+            value={dialogValue}
+            onChange={(e) =>
+              setDialogValue(
+                dialogMode === "price"
+                  ? formatAmountInput(e.target.value)
+                  : e.target.value,
+              )
+            }
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                void submitDialog();
+              }
+            }}
+            inputMode="decimal"
+            InputLabelProps={{ sx: { color: "var(--admin-text-muted)" } }}
+            sx={{
+              mt: 0.5,
+              "& .MuiOutlinedInput-root": {
+                color: "var(--admin-text)",
+                "& fieldset": { borderColor: "var(--admin-border)" },
+                "&:hover fieldset": { borderColor: "var(--admin-accent)" },
+                "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
+              },
+            }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => {
+              setDialogMode(null);
+              setDialogProduct(null);
+            }}
+            disabled={saving}
+            sx={{ color: "var(--admin-text)" }}
+          >
+            انصراف
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => void submitDialog()}
+            disabled={saving}
+            startIcon={saving ? <CircularProgress size={16} color="inherit" /> : undefined}
+          >
+            ذخیره
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
 
   const cartQtyById = useMemo(() => {
     const map = new Map<string, number>();
@@ -210,12 +467,37 @@ export default function AdminMenuModeView({
                     overflow: "hidden",
                     outline: inCart ? "2px solid var(--admin-accent-border)" : "none",
                     outlineOffset: 0,
+                    userSelect: "none",
                     transition: "background-color 120ms ease, border-color 120ms ease",
                     "&:hover": { borderColor: "var(--admin-accent)" },
                   }}
                 >
                   <CardActionArea
-                    onClick={() => onAddProduct(product)}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      clearLongPress();
+                      openContextMenu({ top: e.clientY, left: e.clientX }, product);
+                    }}
+                    onTouchStart={(e) => {
+                      clearLongPress();
+                      const touch = e.touches[0];
+                      if (!touch) return;
+                      longPressRef.current = window.setTimeout(() => {
+                        suppressClickRef.current = true;
+                        openContextMenu({ top: touch.clientY, left: touch.clientX }, product);
+                      }, 550);
+                    }}
+                    onTouchEnd={clearLongPress}
+                    onTouchMove={clearLongPress}
+                    onTouchCancel={clearLongPress}
+                    onClick={() => {
+                      if (suppressClickRef.current) {
+                        suppressClickRef.current = false;
+                        return;
+                      }
+                      onAddProduct(product);
+                    }}
                     sx={{ display: "flex", flexDirection: "column", alignItems: "stretch", height: "100%" }}
                   >
                     {showProductImages ? (
@@ -354,6 +636,7 @@ export default function AdminMenuModeView({
             />
           </Box>
         </Box>
+        {contextUi}
       </Box>
     );
   }
@@ -363,6 +646,7 @@ export default function AdminMenuModeView({
       <AdminMenuTableOrdersPopup />
       <AdminMenuModeCartPanel {...cartPanel} />
       {productBrowser}
+      {contextUi}
     </Box>
   );
 }

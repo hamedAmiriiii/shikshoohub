@@ -28,7 +28,6 @@ const BALE_PROFILE_URL = "https://ble.ir/AmiriWebino";
 const RUBIKA_PROFILE_URL = "https://rubika.ir/WebinoPlus";
 const NETWORK_TIMEOUT_MS = 8000;
 const NETWORK_GOOD_MS = 4000;
-const BOOTSTRAP_NETWORK_DELAY_MS = 8000;
 const NETWORK_TIMEOUT_ERROR = "NETWORK_TIMEOUT";
 const SLOW_NETWORK_TOAST_ID = "slow-network-offline";
 import { styled } from '@mui/material/styles';
@@ -763,7 +762,6 @@ export default function ShoppingPage() {
     };
 
     const bootstrapProducts = async () => {
-      // 1) سریع‌ترین مسیر: cache هم‌زمان localStorage
       try {
         const localCached = readProductsFromCache();
         applyCachedProducts(localCached as any[], "localStorage");
@@ -771,19 +769,21 @@ export default function ShoppingPage() {
         console.error("خطا در خواندن cache localStorage:", error);
       }
 
-      // 2) سپس cache یکپارچه IndexedDB
-      try {
-        const idbCached = await readProductsCacheAsync();
-        applyCachedProducts(idbCached as any[], "indexedDB");
-      } catch (error) {
-        console.error("خطا در خواندن cache indexedDB:", error);
+      const apiPromise =
+        navigator.onLine && isActive ? fetchProducts() : Promise.resolve();
+
+      if (!hasCachedData) {
+        try {
+          const idbCached = await readProductsCacheAsync();
+          if (!hasCachedData) {
+            applyCachedProducts(idbCached as any[], "indexedDB");
+          }
+        } catch (error) {
+          console.error("خطا در خواندن cache indexedDB:", error);
+        }
       }
 
-      // 3) پس از مهلت اولیه، refresh از API
-      if (!navigator.onLine) return;
-      await new Promise((resolve) => setTimeout(resolve, BOOTSTRAP_NETWORK_DELAY_MS));
-      if (!isActive || !navigator.onLine) return;
-      await fetchProducts();
+      await apiPromise;
     };
 
     void bootstrapProducts();
@@ -1007,6 +1007,36 @@ export default function ShoppingPage() {
   const clearMenuCart = useCallback(() => {
     clearOrRemoveActiveCart();
   }, [clearOrRemoveActiveCart]);
+
+  const handleMenuProductUpdated = useCallback((updated: any) => {
+    const key = catalogItemKey(updated);
+    setItems((prev: any[]) => {
+      const next = prev.map((item) => (catalogItemKey(item) === key ? { ...item, ...updated } : item));
+      void saveProductsCache(next);
+      return next;
+    });
+    setCart((prevCart) => {
+      if (updated.sale_price == null) return prevCart;
+      let changed = false;
+      const price = parseMoneyAmount(updated.sale_price);
+      const newCart = prevCart.map((item) => {
+        if (catalogItemKey(item) !== key) return item;
+        changed = true;
+        return {
+          ...item,
+          sale_price: price,
+          ...(salePriceEditEnabled ? { default_sale_price: price } : {}),
+        };
+      });
+      if (!changed) return prevCart;
+      const newTotal = newCart.reduce(
+        (sum, cartItem) => sum + Number(cartItem.sale_price) * cartItem.quantity,
+        0,
+      );
+      setTotal(newTotal);
+      return newCart;
+    });
+  }, [salePriceEditEnabled]);
 
   const addProductToCart = useCallback((item: any) => {
     setCart((prevCart) => {
@@ -2150,6 +2180,7 @@ export default function ShoppingPage() {
           <AdminMenuModeView
             products={items}
             onAddProduct={addProductToCart}
+            onProductUpdated={handleMenuProductUpdated}
             formatNumber={formatNumber}
             cartPanel={posCartPanel}
             classicPosMode={classicPosMode}

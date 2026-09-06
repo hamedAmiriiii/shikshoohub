@@ -49,7 +49,6 @@ import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
 import { formatAmountInput, parseAmountInput } from "@/app/lib/amountInput";
 import ShopAccountSelect from "@/app/admin/ShopAccountSelect";
 import BeneficiarySelect from "@/app/admin/BeneficiarySelect";
-import DocumentPaymentFields from "@/app/admin/DocumentPaymentFields";
 import { DocumentPaymentChips, documentNeedsSettle } from "@/app/admin/DocumentPaymentBadge";
 import DocumentPaymentSettleDialog from "@/app/admin/DocumentPaymentSettleDialog";
 import BottomSheet from "@/app/coponent/BottomSheet";
@@ -196,7 +195,6 @@ export default function ExpensesPage() {
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
   const [userName, setUserName] = useState("");
-  const [shopAccountId, setShopAccountId] = useState<number | "">("");
   const [paymentForm, setPaymentForm] = useState<DocumentPaymentFormState>(emptyDocumentPaymentForm);
   const [settleExpense, setSettleExpense] = useState<Expense | null>(null);
   const [beneficiaryId, setBeneficiaryId] = useState<number | "">("");
@@ -302,7 +300,6 @@ export default function ExpensesPage() {
     setType("جاری");
     setTitle("");
     setAmount("");
-    setShopAccountId("");
     setPaymentForm(emptyDocumentPaymentForm());
     setBeneficiaryId("");
     setBeneficiaryOption(null);
@@ -326,8 +323,10 @@ export default function ExpensesPage() {
     setTitle(expense.title || "");
     setAmount(formatNumber(expenseAmount(expense)));
     setUserName(expense.user_name || "");
-    setShopAccountId(resolveShopAccountId(expense));
-    setPaymentForm(formFromDocumentPayment(expense));
+    setPaymentForm({
+      ...formFromDocumentPayment(expense),
+      shopAccountId: resolveShopAccountId(expense),
+    });
     const beneficiary = beneficiaryFromRecord(expense);
     setBeneficiaryId(beneficiary?.id ?? "");
     setBeneficiaryOption(beneficiary);
@@ -746,7 +745,11 @@ export default function ExpensesPage() {
                 fullWidth
                 sx={fieldSx}
               />
-              <ShopAccountSelect value={shopAccountId} onChange={setShopAccountId} />
+              <ShopAccountSelect
+                value={paymentForm.shopAccountId}
+                onChange={(id) => setPaymentForm((prev) => ({ ...prev, shopAccountId: id }))}
+                required
+              />
               <BeneficiarySelect
                 value={beneficiaryId}
                 initialOption={beneficiaryOption}

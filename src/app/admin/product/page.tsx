@@ -461,6 +461,26 @@ export default function ListData() {
       { label: "موجودی", field: (item: any) => item?.quantity ? formatNumber(item.quantity) : '-' },
     ];
 
+    const parsePriceNumber = (value: string | number | null | undefined) => {
+      const n = parseFloat(
+        String(value ?? "")
+          .replace(/,/g, "")
+          .replace(/٬/g, "")
+          .replace(/\s/g, ""),
+      );
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    const profitPercentFromPrices = (
+      purchaseValue: string | number | null | undefined,
+      saleValue: string | number | null | undefined,
+    ) => {
+      const purchase = parsePriceNumber(purchaseValue);
+      const sale = parsePriceNumber(saleValue);
+      if (purchase <= 0) return null;
+      return Math.round(((sale - purchase) / purchase) * 1000) / 10;
+    };
+
     // تابع محاسبه قیمت فروش بر اساس قیمت خرید و درصد سود
     const calculateSalePrice = (purchasePrice: string, profitPercent: number) => {
       const value = parseFloat(purchasePrice.replace(/,/g, ''));
@@ -671,7 +691,9 @@ export default function ListData() {
       setPurchase_price(product.purchase_price?.toString() || "");
       setSale_price(product.sale_price?.toString() || "");
       setQuantity(product.quantity?.toString() || "");
-      setProfitPercentage(45);
+      setProfitPercentage(
+        profitPercentFromPrices(product.purchase_price, product.sale_price) ?? 45,
+      );
       setDiscountPercent(product.discount_percent?.toString() || "");
       // بارگذاری دسته‌بندی‌های موجود محصول
       if (product.categories && Array.isArray(product.categories)) {
@@ -1105,7 +1127,11 @@ export default function ListData() {
             <TextInput
               value={sale_price}
               label="قیمت فروش"
-              onChange={(e) => setSale_price(e)}
+              onChange={(e) => {
+                setSale_price(e);
+                const pct = profitPercentFromPrices(purchase_price, e);
+                if (pct != null) setProfitPercentage(pct);
+              }}
               name="sale_price"
               type="number"
             />

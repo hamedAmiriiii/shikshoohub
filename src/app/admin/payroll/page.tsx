@@ -35,6 +35,7 @@ import FilterAltOffIcon from "@mui/icons-material/FilterAltOff";
 import PeopleIcon from "@mui/icons-material/People";
 import SettingsIcon from "@mui/icons-material/Settings";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
+import PrintIcon from "@mui/icons-material/Print";
 import ShopAccountSelect from "@/app/admin/ShopAccountSelect";
 import { useRouter } from "next/navigation";
 import DateObject from "react-date-object";
@@ -43,14 +44,16 @@ import "react-toastify/dist/ReactToastify.css";
 import tokenCode from "@/app/coponent/tokenCode";
 import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
 import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
-import { adminPageSx } from "@/app/admin/theme/adminTheme";
+import { adminButtonStartIconSx, adminPageSx } from "@/app/admin/theme/adminTheme";
 import JalaliMonthPickerField from "./JalaliMonthPickerField";
 import PayrollConfirmDialog from "./PayrollConfirmDialog";
+import PayrollPayslipDialog from "./PayrollPayslipDialog";
 import {
   PAYMENT_TYPE_OPTIONS,
   PERSIAN_MONTHS,
   buildAdvanceBody,
   buildPayrollBody,
+  buildPayrollPayslip,
   buildJalaliYearOptions,
   buildPayrollUrl,
   createJalaliDateObject,
@@ -80,6 +83,7 @@ import {
   type Employee,
   type Payroll,
   type PayrollPayment,
+  type PayrollPayslip,
 } from "@/app/lib/payroll";
 
 const fieldSx = {
@@ -137,6 +141,7 @@ export default function PayrollPage() {
   const [advanceAmount, setAdvanceAmount] = useState("");
   const [advanceNote, setAdvanceNote] = useState("");
   const [advanceShopAccountId, setAdvanceShopAccountId] = useState<number | "">("");
+  const [payslip, setPayslip] = useState<PayrollPayslip | null>(null);
 
   const employeeMap = useMemo(() => {
     const map = new Map<number, Employee>();
@@ -286,6 +291,25 @@ export default function PayrollPage() {
 
   const getEmployeePhone = (p: Payroll) =>
     p.employee?.phone || employeeMap.get(getPayrollEmployeeId(p))?.phone || "—";
+
+  const openPayslip = async (item: Payroll) => {
+    const employee = item.employee || employeeMap.get(getPayrollEmployeeId(item));
+    let withPayments = item;
+    if (getPayrollPayments(item).length === 0) {
+      const token = tokenCode();
+      if (token) {
+        const res = await FetchWithJwtClient(
+          "GET",
+          `/api/employee-payrolls/${item.id}/payments`,
+          token,
+        );
+        if (!res?.hasError) {
+          withPayments = { ...item, payments: extractList<PayrollPayment>(res) };
+        }
+      }
+    }
+    setPayslip(buildPayrollPayslip(withPayments, employee));
+  };
 
   const savePayroll = async () => {
     if (!payrollEmployeeId) {
@@ -574,20 +598,59 @@ export default function PayrollPage() {
 
   return (
     <Box sx={{ ...adminPageSx, p: 2, pb: 12 }}>
-      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          mb: 2,
+          gap: 1,
+          flexWrap: "wrap",
+        }}
+      >
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
           <BadgeIcon sx={{ color: "var(--admin-accent)", fontSize: 30 }} />
           <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: "20px" }}>
             مدیریت حقوق
           </Typography>
         </Box>
-        <Box sx={{ display: "flex", gap: 1 }}>
+        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+          <Button
+            size="small"
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={openPayrollDialog}
+            sx={{
+              ...adminButtonStartIconSx,
+              backgroundColor: "var(--admin-accent)",
+              "&:hover": { backgroundColor: "var(--admin-accent-hover)" },
+            }}
+          >
+            ثبت کارکرد
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<AccountBalanceWalletIcon />}
+            onClick={openAdvanceDialog}
+            sx={{
+              ...adminButtonStartIconSx,
+              borderColor: "var(--admin-accent)",
+              color: "var(--admin-accent)",
+            }}
+          >
+            ثبت مساعده
+          </Button>
           <Button
             size="small"
             variant="outlined"
             startIcon={<PeopleIcon />}
             onClick={() => router.push("/admin/payroll/employees")}
-            sx={{ borderColor: "var(--admin-border)", color: "var(--admin-text-secondary)" }}
+            sx={{
+              ...adminButtonStartIconSx,
+              borderColor: "var(--admin-border)",
+              color: "var(--admin-text-secondary)",
+            }}
           >
             کارمندها
           </Button>
@@ -596,7 +659,11 @@ export default function PayrollPage() {
             variant="outlined"
             startIcon={<SettingsIcon />}
             onClick={() => router.push("/admin/payroll/settings")}
-            sx={{ borderColor: "var(--admin-border)", color: "var(--admin-text-secondary)" }}
+            sx={{
+              ...adminButtonStartIconSx,
+              borderColor: "var(--admin-border)",
+              color: "var(--admin-text-secondary)",
+            }}
           >
             تنظیمات
           </Button>
@@ -723,22 +790,7 @@ export default function PayrollPage() {
 
       <Card sx={{ border: "1px solid var(--admin-border)" }}>
         <CardContent>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1, gap: 1, flexWrap: "wrap" }}>
-            <Typography sx={{ fontWeight: 700 }}>لیست حقوق ماهانه</Typography>
-            <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-              <Button size="small" startIcon={<AddIcon />} onClick={openPayrollDialog}>
-                ثبت کارکرد
-              </Button>
-              <Button
-                size="small"
-                variant="outlined"
-                startIcon={<AccountBalanceWalletIcon />}
-                onClick={openAdvanceDialog}
-              >
-                ثبت مساعده
-              </Button>
-            </Box>
-          </Box>
+          <Typography sx={{ fontWeight: 700, mb: 1 }}>لیست حقوق ماهانه</Typography>
           {loading || payrollsLoading ? (
             <Box sx={{ py: 4, display: "flex", justifyContent: "center" }}>
               <CircularProgress size={26} />
@@ -818,6 +870,13 @@ export default function PayrollPage() {
                                 ) : null}
                               </>
                             ) : null}
+                            <IconButton
+                              size="small"
+                              title="فیش حقوقی"
+                              onClick={() => void openPayslip(p)}
+                            >
+                              <PrintIcon fontSize="small" />
+                            </IconButton>
                             <Button
                               size="small"
                               variant={paid ? "outlined" : "contained"}
@@ -879,6 +938,13 @@ export default function PayrollPage() {
               <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>
                 پایه {formatNumber(Number(selectedEmployee.base_salary || 0))} تومان برای{" "}
                 {formatNumber(Number(selectedEmployee.base_work_hours || 0))} ساعت
+                {Number(selectedEmployee.base_salary) > 0 && Number(selectedEmployee.base_work_hours) > 0
+                  ? ` — هر ساعت ${formatNumber(
+                      Math.round(
+                        Number(selectedEmployee.base_salary) / Number(selectedEmployee.base_work_hours),
+                      ),
+                    )} تومان`
+                  : ""}
                 {selectedEmployee.hourly_wage
                   ? ` — اضافه‌کار ${formatNumber(Number(selectedEmployee.hourly_wage))} تومان`
                   : ""}
@@ -1163,6 +1229,8 @@ export default function PayrollPage() {
         onConfirm={handleConfirmAction}
         onCancel={() => setConfirmState(null)}
       />
+
+      <PayrollPayslipDialog slip={payslip} onClose={() => setPayslip(null)} />
 
       <ToastContainer position="bottom-right" rtl autoClose={3000} style={{ marginBottom: "76px" }} />
     </Box>
