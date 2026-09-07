@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   ArrowRight,
+  CreditCard,
   Droplets,
   LayoutDashboard,
   LogOut,
@@ -31,6 +32,7 @@ const MENU_ITEMS = [
   { href: "/oil/customers", label: "مشتریان", icon: Users },
   { href: "/oil/sms", label: "پیامک‌ها", icon: Mail },
   { href: "/oil/sms/packages", label: "خرید بسته پیامک", icon: ShoppingBag },
+  { href: "/oil/plans", label: "تمدید اشتراک", icon: CreditCard },
   { href: "/oil/settings", label: "تنظیمات", icon: Settings },
 ];
 
@@ -73,6 +75,7 @@ export default function OilShell({ children }: { children: React.ReactNode }) {
   else if (pathname?.startsWith("/oil/reports")) title = "گزارش";
   else if (pathname?.startsWith("/oil/settings")) title = "تنظیمات";
   else if (pathname?.startsWith("/oil/sms/packages")) title = "خرید بسته پیامک";
+  else if (pathname?.startsWith("/oil/plans")) title = "تمدید اشتراک";
   else if (pathname === "/oil/sms" || pathname?.startsWith("/oil/sms/")) {
     title = "پیامک‌ها";
   }

@@ -36,6 +36,7 @@ import ShareIcon from "@mui/icons-material/Share";
 import StorefrontIcon from "@mui/icons-material/Storefront";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import ShoppingCartCheckoutIcon from "@mui/icons-material/ShoppingCartCheckout";
+import CardMembershipIcon from "@mui/icons-material/CardMembership";
 import BadgeIcon from "@mui/icons-material/Badge";
 import PaymentsIcon from "@mui/icons-material/Payments";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
@@ -359,6 +360,12 @@ export default function AdminHamburgerSidebar({
         icon: <ShoppingCartCheckoutIcon />,
         permission: "shop_sms",
       },
+      {
+        id: "shop-plans",
+        label: "تمدید اشتراک",
+        href: "/admin/shop-plans",
+        icon: <CardMembershipIcon />,
+      },
     ],
     [],
   );
@@ -376,6 +383,12 @@ export default function AdminHamburgerSidebar({
         label: "درخواست‌های بسته پیامک",
         href: "/admin/sms-package-orders",
         icon: <ReceiptLongIcon />,
+      },
+      {
+        id: "shop-plans-admin",
+        label: "پلن‌های اکانت",
+        href: "/admin/shop-plans/manage",
+        icon: <CardMembershipIcon />,
       },
       {
         id: "agency-requests",

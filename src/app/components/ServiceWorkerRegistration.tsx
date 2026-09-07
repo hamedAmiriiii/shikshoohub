@@ -9,16 +9,18 @@ function isOilPath(pathname: string) {
 
 export default function ServiceWorkerRegistration() {
   const pathname = usePathname() || "";
+  const isOil = isOilPath(pathname);
 
   useEffect(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
       return;
     }
 
-    // اپ /oil نباید SW فروشگاه/ادمین را ثبت، به‌روز یا unregister کند
-    if (isOilPath(pathname)) {
+    if (isOil) {
       return;
     }
+
+    const hadController = Boolean(navigator.serviceWorker.controller);
 
     const registerSW = async () => {
       try {
@@ -50,12 +52,11 @@ export default function ServiceWorkerRegistration() {
 
     if (process.env.NODE_ENV === "production") {
       if (document.readyState === "complete") {
-        registerSW();
+        void registerSW();
       } else {
         window.addEventListener("load", registerSW, { once: true });
       }
     } else {
-      // در dev، SW باعث کش شدن chunkهای _next و خطای 404 می‌شود
       void navigator.serviceWorker.getRegistrations().then((registrations) => {
         registrations.forEach((registration) => registration.unregister());
       });
@@ -65,7 +66,7 @@ export default function ServiceWorkerRegistration() {
     }
 
     const onControllerChange = () => {
-      window.location.reload();
+      if (hadController) window.location.reload();
     };
     navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
 
@@ -75,7 +76,7 @@ export default function ServiceWorkerRegistration() {
         onControllerChange,
       );
     };
-  }, [pathname]);
+  }, [isOil]);
 
   return null;
 }

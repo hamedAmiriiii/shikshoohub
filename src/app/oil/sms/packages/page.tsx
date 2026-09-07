@@ -2,16 +2,22 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import {
-  isOilApiError,
-  oilListSmsPackageOrders,
-  oilListSmsPackages,
-  oilPurchaseSmsPackage,
-} from "@/app/lib/oil/api";
-import type { OilSmsPackage, OilSmsPackageOrder } from "@/app/lib/oil/types";
+import { isOilApiError, oilGetSmsQuota, oilListSmsPackageOrders } from "@/app/lib/oil/api";
+import { getOilToken } from "@/app/lib/oil/auth";
+import { useOilAuth } from "../../OilAuth";
 import OilSmsQuotaCard from "../../OilSmsQuotaCard";
+import {
+  OIL_PAYMENTS_API_BASE,
+  consumePaymentReturn,
+  fetchPaymentsCatalog,
+  formatToman,
+  isPaymentsError,
+  parseCatalogItem,
+  startZarinpalPayment,
+  type PaymentsCatalogItem,
+} from "@/app/lib/atelierZarinpal";
+import type { OilSmsPackageOrder } from "@/app/lib/oil/types";
 
-const CARD_NUMBER = "5041721059095506";
 const formatNumber = (n: number) => new Intl.NumberFormat("fa-IR").format(n);
 
 function formatOrderDate(value?: string | null): string {
@@ -28,21 +34,42 @@ function formatOrderDate(value?: string | null): string {
 }
 
 export default function OilSmsPackagesPage() {
+  const { updateSms } = useOilAuth();
   const [loading, setLoading] = useState(true);
-  const [packages, setPackages] = useState<OilSmsPackage[]>([]);
+  const [packages, setPackages] = useState<PaymentsCatalogItem[]>([]);
   const [orders, setOrders] = useState<OilSmsPackageOrder[]>([]);
   const [page, setPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
-  const [selected, setSelected] = useState<OilSmsPackage | null>(null);
-  const [purchasing, setPurchasing] = useState(false);
+  const [quotaKey, setQuotaKey] = useState(0);
+  const [buyingId, setBuyingId] = useState<number | null>(null);
 
   const loadPackages = useCallback(async () => {
+    const token = getOilToken();
+    if (!token) return;
+    const catalog = await fetchPaymentsCatalog({ apiBase: OIL_PAYMENTS_API_BASE, token });
+    if (!isPaymentsError(catalog) && catalog.sms_packages.length > 0) {
+      setPackages(catalog.sms_packages);
+      return;
+    }
+    const { oilListSmsPackages } = await import("@/app/lib/oil/api");
     const res = await oilListSmsPackages();
     if (isOilApiError(res)) {
       toast.error(res.message);
       return;
     }
-    setPackages(res.data || []);
+    setPackages(
+      (res.data || [])
+        .map((pkg) =>
+          parseCatalogItem({
+            id: pkg.id,
+            name: pkg.name,
+            sms_count: pkg.sms_count,
+            price_toman: pkg.price_toman,
+            price_rial: pkg.price_rial,
+          }),
+        )
+        .filter((item): item is PaymentsCatalogItem => Boolean(item)),
+    );
   }, []);
 
   const loadOrders = useCallback(async (nextPage: number, replace: boolean) => {
@@ -66,32 +93,44 @@ export default function OilSmsPackagesPage() {
   }, [loadOrders, loadPackages]);
 
   useEffect(() => {
-    void loadData();
-  }, [loadData]);
-
-  const handlePurchase = async () => {
-    if (!selected) return;
-    setPurchasing(true);
-    try {
-      const res = await oilPurchaseSmsPackage(selected.id);
-      if (isOilApiError(res)) {
-        toast.error(res.message);
-        return;
+    const result = consumePaymentReturn();
+    if (result) {
+      if (result.ok) {
+        toast.success("پرداخت موفق بود. اعتبار پیامک شارژ شد.");
+        setQuotaKey((n) => n + 1);
+        void oilGetSmsQuota().then((res) => {
+          if (!isOilApiError(res)) updateSms(res);
+        });
+      } else {
+        toast.error("پرداخت انجام نشد یا لغو شد.");
       }
-      toast.success(
-        res.message ||
-          "درخواست خرید ثبت شد. پس از تأیید ادمین، اعتبار پیامک شما شارژ می‌شود.",
-      );
-      setSelected(null);
-      await loadOrders(1, true);
+    }
+    void loadData();
+  }, [loadData, updateSms]);
+
+  const handlePurchase = async (pkg: PaymentsCatalogItem) => {
+    const token = getOilToken();
+    if (!token) return;
+    setBuyingId(pkg.id);
+    try {
+      const res = await startZarinpalPayment({
+        apiBase: OIL_PAYMENTS_API_BASE,
+        token,
+        type: "sms_package",
+        itemId: pkg.id,
+        returnUrl: typeof window !== "undefined" ? window.location.href.split("#")[0] : "",
+      });
+      if (isPaymentsError(res)) {
+        toast.error(res.message);
+      }
     } finally {
-      setPurchasing(false);
+      setBuyingId(null);
     }
   };
 
   return (
     <div className="oil-page">
-      <OilSmsQuotaCard showBuy={false} />
+      <OilSmsQuotaCard showBuy={false} refreshKey={quotaKey} />
 
       {loading ? (
         <div className="oil-empty">در حال بارگذاری بسته‌ها…</div>
@@ -102,28 +141,29 @@ export default function OilSmsPackagesPage() {
           <article key={pkg.id} className="oil-card">
             <div className="oil-card-meta" style={{ marginTop: 0 }}>
               <span className="oil-km">{pkg.name}</span>
-              <span>{formatNumber(pkg.sms_count)} پیامک</span>
+              {pkg.sms_count ? <span>{formatNumber(pkg.sms_count)} پیامک</span> : null}
             </div>
             {pkg.price_toman > 0 && (
               <p className="oil-km" style={{ margin: "8px 0 0", fontSize: 20 }}>
-                {formatNumber(pkg.price_toman)} تومان
+                {formatToman(pkg.price_toman)}
               </p>
             )}
             <button
               type="button"
               className="oil-btn oil-btn-primary"
               style={{ marginTop: 12 }}
-              onClick={() => setSelected(pkg)}
+              disabled={buyingId === pkg.id}
+              onClick={() => void handlePurchase(pkg)}
             >
-              ثبت درخواست خرید
+              {buyingId === pkg.id ? "در حال انتقال…" : "پرداخت آنلاین"}
             </button>
           </article>
         ))
       )}
 
-      <h2 style={{ fontSize: 16, margin: "24px 0 8px" }}>تاریخچه درخواست‌ها</h2>
+      <h2 style={{ fontSize: 16, margin: "24px 0 8px" }}>تاریخچه خریدها</h2>
       {orders.length === 0 ? (
-        <p className="oil-muted">هنوز درخواستی ثبت نشده است.</p>
+        <p className="oil-muted">هنوز خریدی ثبت نشده است.</p>
       ) : (
         orders.map((order) => (
           <article key={order.id} className="oil-card">
@@ -155,48 +195,6 @@ export default function OilSmsPackagesPage() {
         >
           بارگذاری بیشتر
         </button>
-      )}
-
-      {selected && (
-        <div
-          className="oil-modal-backdrop"
-          onClick={() => !purchasing && setSelected(null)}
-        >
-          <div className="oil-modal" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ margin: "0 0 8px" }}>ثبت درخواست خرید</h3>
-            <p className="oil-km" style={{ margin: "0 0 8px" }}>
-              {selected.name}
-            </p>
-            <p style={{ margin: "0 0 12px" }}>
-              {formatNumber(selected.sms_count)} پیامک —{" "}
-              {formatNumber(selected.price_toman)} تومان
-            </p>
-            <p className="oil-muted" style={{ margin: "0 0 16px", lineHeight: 1.8 }}>
-              لطفا مبلغ بسته را به شماره کارت{" "}
-              <span dir="ltr" className="oil-km">
-                {CARD_NUMBER}
-              </span>{" "}
-              واریز کنید سپس ثبت درخواست کنید. موجودی تا تأیید ادمین عوض نمی‌شود.
-            </p>
-            <button
-              type="button"
-              className="oil-btn oil-btn-primary"
-              disabled={purchasing}
-              onClick={handlePurchase}
-            >
-              {purchasing ? "در حال ثبت…" : "ثبت درخواست"}
-            </button>
-            <button
-              type="button"
-              className="oil-btn oil-btn-ghost"
-              style={{ marginTop: 8 }}
-              disabled={purchasing}
-              onClick={() => setSelected(null)}
-            >
-              انصراف
-            </button>
-          </div>
-        </div>
       )}
     </div>
   );

@@ -39,7 +39,7 @@ export default function OilSmsQuotaCard({
         </span>
       </div>
       <p className="oil-muted" style={{ margin: "8px 0 0" }}>
-        هر ۷۰ کاراکتر یک پیامک است. خرید تا تأیید ادمین به موجودی اضافه نمی‌شود.
+        هر ۷۰ کاراکتر یک پیامک است. خرید آنلاین بعد از پرداخت موفق به موجودی اضافه می‌شود.
       </p>
       {showBuy && (
         <Link

@@ -157,6 +157,12 @@ html[data-admin-theme="light"] .MuiBottomNavigationAction-root.Mui-selected .Mui
   color: var(--admin-accent);
 }
 
+/* مودال MUI روی body پدینگ اسکرول می‌گذارد و در RTL صفحه از راست می‌پرد */
+html[data-admin-theme] body {
+  padding-right: 0 !important;
+  padding-left: 0 !important;
+}
+
 /* فونت فارسی در کل پنل ادمین (مودال‌ها، پورتال MUI، آموزش) */
 .admin-app,
 .admin-app .MuiTypography-root,

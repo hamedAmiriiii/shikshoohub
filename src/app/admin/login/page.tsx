@@ -310,6 +310,19 @@ export default function ShikshooLoginPage() {
             return;
           }
           notifyShopAccessIfExpired(res as Record<string, unknown>);
+          if (res.user && res.token) {
+            localStorage.setItem("token", res.token);
+            const payload = res as Record<string, unknown>;
+            const user = mergeUserWithShopPermissions(
+              mergeUserWithShopAccess(res.user as Record<string, unknown>, payload),
+              payload,
+            );
+            localStorage.setItem("user", JSON.stringify(user));
+            syncShopAccessFromLogin(payload);
+            toast.success("برای تمدید اعتبار وارد شدید");
+            router.push("/admin/shop-plans");
+            return;
+          }
           const end = res.shop_access_ends_at as string | undefined;
           const days = res.shop_access_days_remaining as number | undefined;
           let accessMsg = msg;

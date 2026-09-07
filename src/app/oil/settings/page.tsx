@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { toast } from "react-toastify";
 import { isOilApiError, oilLogout, oilPatchShop } from "@/app/lib/oil/api";
 import { formatKm, toEnglishDigits } from "@/app/lib/oil/plate";
@@ -66,6 +67,9 @@ export default function OilSettingsPage() {
           ? `دسترسی فعال است${days != null ? ` — ${days} روز مانده` : ""}`
           : "دوره دسترسی مغازه تمام شده است."}
       </div>
+      <Link href="/oil/plans" className="oil-btn oil-btn-primary" style={{ textDecoration: "none", marginBottom: 12 }}>
+        {active ? "تمدید اشتراک" : "خرید اشتراک"}
+      </Link>
 
       <OilSmsQuotaCard />
 

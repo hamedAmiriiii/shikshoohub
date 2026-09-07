@@ -19,7 +19,6 @@ import {
   isShopAccessExpiredInfo,
   SHOP_ACCESS_EXPIRED_EVENT,
   SHOP_ACCESS_CLEARED_EVENT,
-  SHOP_SUBSCRIPTION_URL,
   formatAccessEndDate,
 } from "@/app/lib/shopAccess";
 import EventAvailableIcon from "@mui/icons-material/EventAvailable";
@@ -113,7 +112,7 @@ export default function Header({
 
   const handleBuySubscription = () => {
     handleMenuClose();
-    window.open(SHOP_SUBSCRIPTION_URL, "_self");
+    router.push("/admin/shop-plans");
   };
 
   const handleLogout = () => {

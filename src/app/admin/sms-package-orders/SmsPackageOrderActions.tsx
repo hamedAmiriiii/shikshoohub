@@ -49,7 +49,11 @@ type Props = {
 export function SmsPackageOrderStatusChip({ status }: { status?: string }) {
   const label = formatSmsPackageOrderStatus(status);
   const color =
-    status === "approved" ? "success" : status === "rejected" ? "error" : "warning";
+    status === "approved" || status === "paid"
+      ? "success"
+      : status === "rejected" || status === "failed" || status === "cancelled"
+        ? "error"
+        : "warning";
 
   return (
     <Chip

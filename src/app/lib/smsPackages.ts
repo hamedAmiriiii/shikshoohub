@@ -30,9 +30,12 @@ export type SmsPackageOrder = {
 };
 
 export const SMS_PACKAGE_ORDER_STATUS_LABELS: Record<string, string> = {
-  pending: "در انتظار تأیید",
+  pending: "در انتظار پرداخت",
+  paid: "پرداخت شده",
   approved: "تأیید شده",
   rejected: "رد شده",
+  failed: "ناموفق",
+  cancelled: "لغو شده",
 };
 
 export function extractApiList<T>(res: unknown): T[] {
@@ -57,9 +60,12 @@ export function getSmsPackageCount(pkg: SmsPackage | null | undefined): number {
 
 export function getSmsPackagePrice(pkg: SmsPackage | null | undefined): number {
   if (!pkg) return 0;
+  if (typeof (pkg as { price_toman?: number }).price_toman === "number") {
+    return (pkg as { price_toman: number }).price_toman;
+  }
   if (typeof pkg.price === "number") return pkg.price;
   if (typeof (pkg as { price_rial?: number }).price_rial === "number") {
-    return (pkg as { price_rial: number }).price_rial;
+    return Math.round((pkg as { price_rial: number }).price_rial / 10);
   }
   if (typeof pkg.amount === "number") return pkg.amount;
   return 0;

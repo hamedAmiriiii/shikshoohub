@@ -1,4 +1,4 @@
-const CACHE_NAME = "webino-pwa-v8";
+const CACHE_NAME = "webino-pwa-v9";
 const ADMIN_CACHE_NAME = "webino-admin-shell-v6";
 const OFFLINE_URL = "/offline.html";
 const PRECACHE_URLS = [
@@ -126,6 +126,10 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  if (url.searchParams.has("_rsc") || event.request.headers.get("RSC") === "1") {
     return;
   }
 

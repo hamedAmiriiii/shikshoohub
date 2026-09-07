@@ -14,7 +14,7 @@ function toEnglishDigits(value: string): string {
 export const SHOP_ACCESS_EXPIRED_EVENT = "shop-access-expired";
 export const SHOP_ACCESS_CLEARED_EVENT = "shop-access-cleared";
 export const SHOP_ACCESS_EXPIRED_STORAGE_KEY = "shop_access_expired";
-export const SHOP_SUBSCRIPTION_URL = "/landing#pricing";
+export const SHOP_SUBSCRIPTION_URL = "/admin/shop-plans";
 
 export interface ShopAccessInfo {
   shop_access_starts_at?: string;

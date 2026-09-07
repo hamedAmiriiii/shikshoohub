@@ -15,6 +15,7 @@ import {
   Chip,
   InputAdornment,
   Divider,
+  MenuItem,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -49,9 +50,33 @@ const fieldSx = {
   },
 };
 
+function purchaseCount(customer: Customer): number {
+  const n = Number(customer.total_purchases);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+function extractCustomers(res: unknown): Customer[] {
+  const obj = res && typeof res === "object" ? (res as Record<string, unknown>) : null;
+  const nested = obj?.data && typeof obj.data === "object" ? (obj.data as Record<string, unknown>) : null;
+  const raw = obj?.customers ?? nested?.customers;
+  if (!Array.isArray(raw)) return [];
+  return raw.map((item) => {
+    const row = item && typeof item === "object" ? (item as Record<string, unknown>) : {};
+    const purchases = Number(
+      row.total_purchases ?? row.purchase_count ?? row.purchases_count ?? row.orders_count ?? 0,
+    );
+    return {
+      phone: typeof row.phone === "string" ? row.phone : String(row.phone ?? ""),
+      name: typeof row.name === "string" ? row.name : null,
+      total_purchases: Number.isFinite(purchases) ? purchases : 0,
+    };
+  });
+}
+
 function PhoneRow({
   phone,
   name,
+  purchases,
   selected,
   manual,
   onToggle,
@@ -59,6 +84,7 @@ function PhoneRow({
 }: {
   phone: string;
   name?: string | null;
+  purchases?: number;
   selected: boolean;
   manual?: boolean;
   onToggle: () => void;
@@ -105,6 +131,19 @@ function PhoneRow({
           {phone}
         </Typography>
       </Box>
+      {typeof purchases === "number" ? (
+        <Chip
+          label={`${purchases} خرید`}
+          size="small"
+          sx={{
+            height: 20,
+            fontSize: "10px",
+            bgcolor: "var(--admin-surface-alt)",
+            color: "var(--admin-text-muted)",
+            border: "1px solid var(--admin-border)",
+          }}
+        />
+      ) : null}
       {manual && (
         <Chip
           label="دستی"
@@ -135,6 +174,8 @@ export default function BroadcastSMSPage() {
   const [manualPhoneInput, setManualPhoneInput] = useState("");
   const [message, setMessage] = useState("");
   const [phoneSearch, setPhoneSearch] = useState("");
+  const [minPurchases, setMinPurchases] = useState(0);
+  const [purchaseSort, setPurchaseSort] = useState<"desc" | "asc">("desc");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -147,11 +188,7 @@ export default function BroadcastSMSPage() {
           toast.error(getApiErrorMessage(res, "خطا در دریافت لیست مشتریان"));
           return;
         }
-        if (res?.customers && Array.isArray(res.customers)) {
-          setCustomers(res.customers);
-        } else {
-          setCustomers([]);
-        }
+        setCustomers(extractCustomers(res));
       } catch (error) {
         console.error("Error fetching customers:", error);
         toast.error("خطا در دریافت لیست مشتریان");
@@ -165,13 +202,19 @@ export default function BroadcastSMSPage() {
   const searchNorm = phoneSearch.trim().toLowerCase().replace(/\s/g, "");
 
   const filteredCustomers = useMemo(() => {
-    if (!searchNorm) return customers;
-    return customers.filter((c) => {
+    const min = Number(minPurchases) || 0;
+    const list = customers.filter((c) => {
+      if (purchaseCount(c) < min) return false;
+      if (!searchNorm) return true;
       const phone = String(c.phone || "").replace(/\s/g, "");
       const name = String(c.name || "").toLowerCase().replace(/\s/g, "");
       return phone.includes(searchNorm) || name.includes(searchNorm);
     });
-  }, [customers, searchNorm]);
+    return [...list].sort((a, b) => {
+      const diff = purchaseCount(a) - purchaseCount(b);
+      return purchaseSort === "desc" ? -diff : diff;
+    });
+  }, [customers, searchNorm, minPurchases, purchaseSort]);
 
   const filteredManualPhones = useMemo(() => {
     if (!searchNorm) return manualPhones;
@@ -399,6 +442,34 @@ export default function BroadcastSMSPage() {
             inputProps={{ style: { direction: "ltr" } }}
             sx={fieldSx}
           />
+          <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
+            <TextField
+              size="small"
+              type="number"
+              label="حداقل خرید"
+              placeholder="مثلاً ۵"
+              value={minPurchases || ""}
+              onChange={(e) => {
+                const n = Number(e.target.value);
+                setMinPurchases(Number.isFinite(n) && n > 0 ? n : 0);
+              }}
+              inputProps={{ min: 0, step: 1 }}
+              sx={{ ...fieldSx, flex: 1, minWidth: 0 }}
+              InputLabelProps={{ sx: { color: "var(--admin-text-muted)", fontSize: "13px" } }}
+            />
+            <TextField
+              size="small"
+              select
+              label="مرتب‌سازی"
+              value={purchaseSort}
+              onChange={(e) => setPurchaseSort(e.target.value as "desc" | "asc")}
+              sx={{ ...fieldSx, flex: 1, minWidth: 0 }}
+              InputLabelProps={{ sx: { color: "var(--admin-text-muted)", fontSize: "13px" } }}
+            >
+              <MenuItem value="desc">بیشترین خرید</MenuItem>
+              <MenuItem value="asc">کمترین خرید</MenuItem>
+            </TextField>
+          </Box>
           <Box
             sx={{
               display: "flex",
@@ -422,11 +493,11 @@ export default function BroadcastSMSPage() {
                 }}
               />
               <Typography sx={{ fontSize: "13px", color: "var(--admin-text-muted)" }}>
-                {searchNorm ? "انتخاب نتایج" : "انتخاب همه"}
+              {searchNorm ? "انتخاب نتایج" : minPurchases > 0 ? "انتخاب فیلترشده" : "انتخاب همه"}
               </Typography>
             </Box>
             <Typography sx={{ fontSize: "12px", color: "var(--admin-text-secondary)" }}>
-              {selectedPhones.length} انتخاب · {customers.length + manualPhones.length} کل
+              {selectedPhones.length} انتخاب · {filteredCustomers.length + filteredManualPhones.length} نمایش
             </Typography>
           </Box>
         </Box>
@@ -445,7 +516,9 @@ export default function BroadcastSMSPage() {
               fontSize: "14px",
             }}
           >
-            {searchNorm ? "شماره‌ای با این جستجو یافت نشد" : "مشتریی یافت نشد"}
+            {searchNorm || minPurchases > 0
+              ? "مشتری‌ای با این فیلتر یافت نشد"
+              : "مشتریی یافت نشد"}
           </Typography>
         ) : (
           <Box
@@ -471,6 +544,7 @@ export default function BroadcastSMSPage() {
                 key={customer.phone}
                 phone={customer.phone || "بدون شماره"}
                 name={customer.name}
+                purchases={purchaseCount(customer)}
                 selected={selectedPhones.includes(customer.phone)}
                 onToggle={() => togglePhone(customer.phone)}
               />

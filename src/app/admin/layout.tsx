@@ -47,6 +47,8 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/shop-sms-quota': 'مدیریت فروشگاه‌ها',
     '/admin/referral': 'پنل معرفی',
     '/admin/sms-packages': 'خرید بسته پیامک',
+    '/admin/shop-plans': 'تمدید اشتراک',
+    '/admin/shop-plans/manage': 'پلن‌های اکانت',
     '/admin/sms-package-orders': 'درخواست‌های بسته پیامک',
     '/admin/agency-requests': 'نمایندگی‌ها',
     '/admin/installments': 'اقساط',

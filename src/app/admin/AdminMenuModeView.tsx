@@ -211,6 +211,7 @@ export default function AdminMenuModeView({
   const contextUi = (
     <>
       <Menu
+        disableScrollLock
         open={Boolean(menuPos)}
         onClose={() => {
           closeContextMenu();
@@ -251,6 +252,7 @@ export default function AdminMenuModeView({
         </MenuItem>
       </Menu>
       <Dialog
+        disableScrollLock
         open={Boolean(dialogMode)}
         onClose={() => {
           if (saving) return;

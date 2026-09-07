@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -23,6 +23,17 @@ const oilMuiTheme = createTheme({
 });
 
 function OilProviders({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    const origin = (
+      process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoplus.ir"
+    ).replace(/\/$/, "");
+    const w = window as Window & {
+      WEBINO_API_ORIGIN?: string;
+      OIL?: { api?: string };
+    };
+    w.WEBINO_API_ORIGIN = origin;
+    w.OIL = { ...(w.OIL || {}), api: `${origin}/api/oil` };
+  }, []);
   return (
     <ThemeProvider theme={oilMuiTheme}>
       <OilAuthProvider>

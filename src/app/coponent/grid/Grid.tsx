@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { Box, Grid, LinearProgress, Typography, CircularProgress, Pagination, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Tooltip } from "@mui/material";
+import { Box, Grid, LinearProgress, Typography, CircularProgress, Pagination, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Tooltip, useMediaQuery, useTheme } from "@mui/material";
 import PrintIcon from '@mui/icons-material/Print';
 import EditIcon from '@mui/icons-material/Edit';
 import PaletteIcon from '@mui/icons-material/Palette';
@@ -14,7 +14,6 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { FetchWithJwtClient } from "../fetchWithJwtClient";
 import CustomizedInputBase from "../CustomizedInputBase";
 import BottomSheetModal from "../BottomSheetModal";
-import { useResponsive } from "../useResponsive";
 import { appendProductLabelPrintParams } from "@/app/lib/productLabelPrint";
 import { isProducedGoodItem } from "@/app/lib/catalogItems";
 
@@ -363,7 +362,8 @@ const List: React.FC<Props> = ({
   const pageParam = searchParams.get("page");
   
   // Detect mobile/desktop
-  const isMobile = useResponsive("down", "md");
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"), { noSsr: true });
   const isDesktop = !isMobile && desktopColumns && desktopColumns.length > 0;
   const usePagination = enablePagination || isDesktop;
   
@@ -524,13 +524,14 @@ const List: React.FC<Props> = ({
     }
   }, [query, isDesktop, pathname, router, searchParams]);
 
-  // Refetch when queryState or refreshGrid changes
+  // refreshGrid از والد فقط وقتی مقدارش عوض شود لیست را دوباره می‌گیرد
+  const prevRefreshGrid = useRef(refreshGrid);
   useEffect(() => {
-    if (queryState !== undefined) {
-      setIsPageLoading(true);
-      refetch().finally(() => setIsPageLoading(false));
-    }
-  }, [queryState, refreshGrid, refetch]);
+    if (prevRefreshGrid.current === refreshGrid) return;
+    prevRefreshGrid.current = refreshGrid;
+    setIsPageLoading(true);
+    refetch().finally(() => setIsPageLoading(false));
+  }, [refreshGrid, refetch]);
 
   // Infinite scroll trigger for mobile
   useEffect(() => {

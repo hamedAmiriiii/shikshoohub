@@ -1,6 +1,7 @@
 "use client";
 
 import { Box } from "@mui/material";
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import ShopHeader from "./componentsShop/ShopHeader";
 import { ShopProvider, useShopContext } from "./context/ShopContext";
@@ -19,6 +20,12 @@ function isOilPublicPath(pathname: string | null) {
 function AppShellContent({ children }: { children: React.ReactNode }) {
   const { searchQuery, setSearchQuery } = useShopContext();
   const pathname = usePathname();
+
+  useEffect(() => {
+    (window as Window & { WEBINO_API_ORIGIN?: string }).WEBINO_API_ORIGIN = (
+      process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoplus.ir"
+    ).replace(/\/$/, "");
+  }, []);
 
   const isAdminPage = pathname?.startsWith("/admin");
   const isLandingPage = pathname === "/" || pathname?.startsWith("/landing");
