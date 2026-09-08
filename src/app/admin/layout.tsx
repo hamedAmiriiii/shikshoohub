@@ -55,6 +55,8 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/product-plans': 'پلن‌های یادینو',
     '/admin/sms-package-orders': 'درخواست‌های بسته پیامک',
     '/admin/agency-requests': 'نمایندگی‌ها',
+    '/admin/desktop-licenses': 'لایسنس دسکتاپ',
+    '/admin/desktop-licenses/logs': 'لاگ اتصال دسکتاپ',
     '/admin/installments': 'اقساط',
     '/admin/installment-credits': 'اعتبار اقساطی',
     '/admin/profit-loss': 'سود و ضرر',

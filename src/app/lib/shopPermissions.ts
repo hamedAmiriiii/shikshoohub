@@ -51,6 +51,7 @@ const SUPER_ADMIN_PATHS = [
   "/admin/agency-requests",
   "/admin/shop-plans/manage",
   "/admin/product-plans",
+  "/admin/desktop-licenses",
 ];
 
 /** طولانی‌ترین پیشوند اول اعمال می‌شود */
