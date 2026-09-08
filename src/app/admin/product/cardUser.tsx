@@ -381,15 +381,43 @@ export default function CardUser(props: any) {
     }
   };
 
+  const compactFieldSx = {
+    "& .MuiOutlinedInput-root": {
+      backgroundColor: "var(--admin-surface-alt)",
+      color: "var(--admin-text)",
+      "& fieldset": {
+        borderColor: "#505669",
+      },
+      "&:hover fieldset": {
+        borderColor: "var(--admin-accent)",
+      },
+      "&.Mui-focused fieldset": {
+        borderColor: "var(--admin-accent)",
+      },
+    },
+    "& .MuiInputBase-input": {
+      color: "var(--admin-text)",
+      fontSize: "12px",
+      padding: "4px 8px",
+    },
+  };
+
+  const compactActionBtnSx = {
+    width: 28,
+    height: 28,
+    p: 0.35,
+    "& .MuiSvgIcon-root": { fontSize: 16, color: "#fff" },
+  };
+
   return load ? (
     <Box 
       data-product-id={productId}
       sx={{
         backgroundColor: "var(--admin-surface)",
-        borderRadius: "15px",
+        borderRadius: "10px",
         border: "1px solid var(--admin-border)",
-        margin: 1,
-        padding: 2,
+        margin: 0.5,
+        padding: 1,
         transition: 'all 0.3s ease',
         '&.highlight-card': {
           border: '2px solid var(--admin-accent)',
@@ -397,13 +425,13 @@ export default function CardUser(props: any) {
         }
       }}
     >
-      <Grid container spacing={1}>
+      <Grid container spacing={0.5}>
         {/* نام کالا - full width */}
         <Grid xs={12} sx={{ paddingBottom: 0 }}>
-          <Box sx={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "8px" }}>
-            <Typography sx={{ color: "var(--admin-text)", fontSize: "14px", minWidth: "80px" }}>کالا:</Typography>
+          <Box sx={{ marginTop: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: "11px", minWidth: "36px" }}>کالا:</Typography>
             {isProduced ? (
-              <Chip label="تولیدی" size="small" sx={{ height: 22, fontSize: "11px", backgroundColor: "rgba(120, 181, 104, 0.18)", color: "var(--admin-accent)" }} />
+              <Chip label="تولیدی" size="small" sx={{ height: 18, fontSize: "9px", backgroundColor: "rgba(120, 181, 104, 0.18)", color: "var(--admin-accent)" }} />
             ) : null}
             <TextField
               value={name}
@@ -412,67 +440,29 @@ export default function CardUser(props: any) {
               size="small"
               fullWidth
               disabled={isProduced}
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  backgroundColor: "var(--admin-surface-alt)",
-                  color: "var(--admin-text)",
-                  "& fieldset": {
-                    borderColor: "#505669",
-                  },
-                  "&:hover fieldset": {
-                    borderColor: "var(--admin-accent)",
-                  },
-                  "&.Mui-focused fieldset": {
-                    borderColor: "var(--admin-accent)",
-                  },
-                },
-                "& .MuiInputBase-input": {
-                  color: "var(--admin-text)",
-                  fontSize: "14px",
-                  padding: "8px 12px"
-                }
-              }}
+              sx={compactFieldSx}
             />
           </Box>
         </Grid>
 
         {/* بارکد و قیمت خرید - دو ستون */}
         <Grid xs={6} sx={{ paddingBottom: 0 }}>
-          <Box sx={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "4px" }}>
-            <Typography sx={{ color: "var(--admin-text)", fontSize: "12px" }}>بارکد:</Typography>
+          <Box sx={{ marginTop: "4px", display: "flex", flexDirection: "column", gap: "2px" }}>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: "10px" }}>بارکد:</Typography>
             <TextField
               value={barcode}
               onChange={(e) => setBarcode(e.target.value)}
               onBlur={handleUpdate}
               size="small"
               fullWidth
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  backgroundColor: "var(--admin-surface-alt)",
-                  color: "var(--admin-text)",
-                  "& fieldset": {
-                    borderColor: "#505669",
-                  },
-                  "&:hover fieldset": {
-                    borderColor: "var(--admin-accent)",
-                  },
-                  "&.Mui-focused fieldset": {
-                    borderColor: "var(--admin-accent)",
-                  },
-                },
-                "& .MuiInputBase-input": {
-                  color: "var(--admin-text)",
-                  fontSize: "14px",
-                  padding: "8px 12px"
-                }
-              }}
+              sx={compactFieldSx}
             />
           </Box>
         </Grid>
 
         <Grid xs={6} sx={{ paddingBottom: 0 }}>
-          <Box sx={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "4px" }}>
-            <Typography sx={{ color: "var(--admin-text)", fontSize: "12px" }}>قیمت خرید:</Typography>
+          <Box sx={{ marginTop: "4px", display: "flex", flexDirection: "column", gap: "2px" }}>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: "10px" }}>قیمت خرید:</Typography>
             <TextField
               value={formatAmountInput(purchasePrice)}
               onChange={(e) => {
@@ -484,34 +474,15 @@ export default function CardUser(props: any) {
               fullWidth
               type="text"
               inputMode="numeric"
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  backgroundColor: "var(--admin-surface-alt)",
-                  color: "var(--admin-text)",
-                  "& fieldset": {
-                    borderColor: "#505669",
-                  },
-                  "&:hover fieldset": {
-                    borderColor: "var(--admin-accent)",
-                  },
-                  "&.Mui-focused fieldset": {
-                    borderColor: "var(--admin-accent)",
-                  },
-                },
-                "& .MuiInputBase-input": {
-                  color: "var(--admin-text)",
-                  fontSize: "14px",
-                  padding: "8px 12px"
-                }
-              }}
+              sx={compactFieldSx}
             />
           </Box>
         </Grid>
 
         {/* قیمت فروش و درصد تخفیف - دو ستون */}
         <Grid xs={6} sx={{ paddingBottom: 0 }}>
-          <Box sx={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "4px" }}>
-            <Typography sx={{ color: "var(--admin-text)", fontSize: "12px" }}>قیمت فروش:</Typography>
+          <Box sx={{ marginTop: "4px", display: "flex", flexDirection: "column", gap: "2px" }}>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: "10px" }}>قیمت فروش:</Typography>
             <TextField
               value={formatAmountInput(salePrice)}
               onChange={(e) => {
@@ -523,33 +494,14 @@ export default function CardUser(props: any) {
               fullWidth
               type="text"
               inputMode="numeric"
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  backgroundColor: "var(--admin-surface-alt)",
-                  color: "var(--admin-text)",
-                  "& fieldset": {
-                    borderColor: "#505669",
-                  },
-                  "&:hover fieldset": {
-                    borderColor: "var(--admin-accent)",
-                  },
-                  "&.Mui-focused fieldset": {
-                    borderColor: "var(--admin-accent)",
-                  },
-                },
-                "& .MuiInputBase-input": {
-                  color: "var(--admin-text)",
-                  fontSize: "14px",
-                  padding: "8px 12px"
-                }
-              }}
+              sx={compactFieldSx}
             />
           </Box>
         </Grid>
 
         <Grid xs={6} sx={{ paddingBottom: 0 }}>
-          <Box sx={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "4px" }}>
-            <Typography sx={{ color: "var(--admin-text)", fontSize: "12px" }}>درصد تخفیف:</Typography>
+          <Box sx={{ marginTop: "4px", display: "flex", flexDirection: "column", gap: "2px" }}>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: "10px" }}>درصد تخفیف:</Typography>
             <TextField
               value={discountPercent}
               onChange={(e) => {
@@ -564,12 +516,9 @@ export default function CardUser(props: any) {
               type="text"
               placeholder="0"
               sx={{
+                ...compactFieldSx,
                 "& .MuiOutlinedInput-root": {
-                  backgroundColor: "var(--admin-surface-alt)",
-                  color: "var(--admin-text)",
-                  "& fieldset": {
-                    borderColor: "#505669",
-                  },
+                  ...compactFieldSx["& .MuiOutlinedInput-root"],
                   "&:hover fieldset": {
                     borderColor: "#ff9100",
                   },
@@ -577,11 +526,6 @@ export default function CardUser(props: any) {
                     borderColor: "#ff9100",
                   },
                 },
-                "& .MuiInputBase-input": {
-                  color: "var(--admin-text)",
-                  fontSize: "14px",
-                  padding: "8px 12px"
-                }
               }}
             />
           </Box>
@@ -589,8 +533,8 @@ export default function CardUser(props: any) {
 
         {/* موجودی و سود - دو ستون */}
         <Grid xs={6} sx={{ paddingBottom: 0 }}>
-          <Box sx={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "4px" }}>
-            <Typography sx={{ color: "var(--admin-text)", fontSize: "12px" }}>موجودی:</Typography>
+          <Box sx={{ marginTop: "4px", display: "flex", flexDirection: "column", gap: "2px" }}>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: "10px" }}>موجودی:</Typography>
             <TextField
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
@@ -598,34 +542,15 @@ export default function CardUser(props: any) {
               size="small"
               fullWidth
               type="number"
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  backgroundColor: "var(--admin-surface-alt)",
-                  color: "var(--admin-text)",
-                  "& fieldset": {
-                    borderColor: "#505669",
-                  },
-                  "&:hover fieldset": {
-                    borderColor: "var(--admin-accent)",
-                  },
-                  "&.Mui-focused fieldset": {
-                    borderColor: "var(--admin-accent)",
-                  },
-                },
-                "& .MuiInputBase-input": {
-                  color: "var(--admin-text)",
-                  fontSize: "14px",
-                  padding: "8px 12px"
-                }
-              }}
+              sx={compactFieldSx}
             />
           </Box>
         </Grid>
 
         {/* درصد سود */}
         <Grid xs={6} sx={{ paddingBottom: 0 }}>
-          <Box sx={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "4px" }}>
-            <Typography sx={{ color: "var(--admin-text)", fontSize: "12px" }}>سود:</Typography>
+          <Box sx={{ marginTop: "4px", display: "flex", flexDirection: "column", gap: "2px" }}>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: "10px" }}>سود:</Typography>
             <Box sx={{
               backgroundColor: (() => {
                 const purchase = parseFloat(purchasePrice) || 0;
@@ -646,7 +571,7 @@ export default function CardUser(props: any) {
                 return "1px solid var(--admin-accent)";
               })(),
               borderRadius: "4px",
-              padding: "8px 12px",
+              padding: "4px 8px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -661,7 +586,7 @@ export default function CardUser(props: any) {
                   if (profitPercent < 40) return "#ff9100";
                   return "var(--admin-accent)";
                 })(),
-                fontSize: "14px",
+                fontSize: "12px",
                 fontWeight: "600",
               }}>
                 {(() => {
@@ -679,14 +604,14 @@ export default function CardUser(props: any) {
         {/* نمایش اطلاعات تخفیف (اگر تخفیف دارد) - full width */}
         {props.props.data?.has_discount && (
           <Grid xs={12} sx={{ paddingBottom: 0 }}>
-            <Box sx={{ marginTop: "10px", padding: "8px", backgroundColor: "rgba(255, 145, 0, 0.1)", borderRadius: "8px" }}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "12px", textDecoration: "line-through" }}>
+            <Box sx={{ marginTop: "4px", padding: "6px", backgroundColor: "rgba(255, 145, 0, 0.1)", borderRadius: "8px" }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "2px" }}>
+                <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "10px", textDecoration: "line-through" }}>
                   قیمت اصلی: {formatNumber(props.props.data.original_sale_price)} تومان
                 </Typography>
               </Box>
-              <Box sx={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "space-between" }}>
-                <Typography sx={{ color: "var(--admin-accent)", fontSize: "14px", fontWeight: "600" }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: "6px", justifyContent: "space-between" }}>
+                <Typography sx={{ color: "var(--admin-accent)", fontSize: "11px", fontWeight: "600" }}>
                   قیمت با تخفیف: {formatNumber(props.props.data.sale_price)} تومان
                 </Typography>
               </Box>
@@ -696,21 +621,21 @@ export default function CardUser(props: any) {
 
         {/* Image Display Section */}
         {images.length > 0 && (
-          <Grid xs={12} sx={{ paddingBottom: 0, marginTop: "10px" }}>
+          <Grid xs={12} sx={{ paddingBottom: 0, marginTop: "6px" }}>
             <Box>
-              <Typography sx={{ color: "var(--admin-text)", fontSize: "12px", marginBottom: "8px" }}>
+              <Typography sx={{ color: "var(--admin-text)", fontSize: "10px", marginBottom: "4px" }}>
                 تصاویر محصول:
               </Typography>
-              <Box sx={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <Box sx={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                 {images.map((image, index) => (
                   <Card
                     key={index}
                     sx={{
                       position: 'relative',
-                      borderRadius: '8px',
+                      borderRadius: '6px',
                       overflow: 'hidden',
-                      width: '80px',
-                      height: '80px',
+                      width: '48px',
+                      height: '48px',
                       flexShrink: 0,
                     }}
                   >
@@ -719,8 +644,8 @@ export default function CardUser(props: any) {
                       image={image}
                       alt={`تصویر ${index + 1}`}
                       sx={{
-                        width: '80px',
-                        height: '80px',
+                        width: '48px',
+                        height: '48px',
                         objectFit: 'cover',
                       }}
                     />
@@ -732,16 +657,17 @@ export default function CardUser(props: any) {
         )}
 
         {/* دکمه‌های عملیات */}
-        <Grid xs={12} sx={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", marginTop: "16px" }}>
+        <Grid xs={12} sx={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "6px", marginTop: "8px" }}>
           {onEdit && (
             <Tooltip title={isProduced ? "ویرایش در تولید" : "ویرایش"} arrow placement="top">
               <IconButton
+                size="small"
                 onClick={() => onEdit(props.props.data)}
                 sx={{
                   backgroundColor: "#ff9100",
                   color: "#fff",
-                  "& .MuiSvgIcon-root": { color: "#fff" },
                   "&:hover": { backgroundColor: "#e68000", color: "#fff" },
+                  ...compactActionBtnSx,
                 }}
               >
                 <EditIcon />
@@ -751,6 +677,7 @@ export default function CardUser(props: any) {
           {!isProduced ? (
           <Tooltip title="سایز و رنگ" arrow placement="top">
             <IconButton
+              size="small"
               onClick={() => {
                 const data = props.props.data;
                 if (data?.sizes && Array.isArray(data.sizes)) {
@@ -768,8 +695,8 @@ export default function CardUser(props: any) {
               sx={{
                 backgroundColor: "#9c27b0",
                 color: "#fff",
-                "& .MuiSvgIcon-root": { color: "#fff" },
                 "&:hover": { backgroundColor: "#7b1fa2", color: "#fff" },
+                ...compactActionBtnSx,
               }}
             >
               <PaletteIcon />
@@ -778,12 +705,13 @@ export default function CardUser(props: any) {
           ) : null}
           <Tooltip title="چاپ برچسب" arrow placement="top">
             <IconButton
+              size="small"
               onClick={handlePrint}
               sx={{
                 backgroundColor: "var(--admin-accent)",
                 color: "#fff",
-                "& .MuiSvgIcon-root": { color: "#fff" },
                 "&:hover": { backgroundColor: "var(--admin-accent-hover)", color: "#fff" },
+                ...compactActionBtnSx,
               }}
             >
               <PrintIcon />
@@ -792,6 +720,7 @@ export default function CardUser(props: any) {
           {!isProduced ? (
           <Tooltip title="تولیدکننده" arrow placement="top">
             <IconButton
+              size="small"
               onClick={() => {
                 const data = props.props.data;
                 if (data?.manufacturer_id) {
@@ -804,8 +733,8 @@ export default function CardUser(props: any) {
               sx={{
                 backgroundColor: "#2196f3",
                 color: "#fff",
-                "& .MuiSvgIcon-root": { color: "#fff" },
                 "&:hover": { backgroundColor: "#1976d2", color: "#fff" },
+                ...compactActionBtnSx,
               }}
             >
               <FactoryIcon />
@@ -815,12 +744,13 @@ export default function CardUser(props: any) {
           {onDelete && (
             <Tooltip title="حذف محصول" arrow placement="top">
               <IconButton
+                size="small"
                 onClick={() => onDelete(props.props.data)}
                 sx={{
                   backgroundColor: "#ff4444",
                   color: "#fff",
-                  "& .MuiSvgIcon-root": { color: "#fff" },
                   "&:hover": { backgroundColor: "#cc0000", color: "#fff" },
+                  ...compactActionBtnSx,
                 }}
               >
                 <DeleteIcon />

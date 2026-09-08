@@ -30,6 +30,7 @@ import SellOutlinedIcon from "@mui/icons-material/SellOutlined";
 import { toast } from "react-toastify";
 import {
   getCachedProductDiscount,
+  isCatalogItemOutOfStock,
   type CachedProduct,
 } from "@/app/lib/productsCache";
 import { catalogItemKey, isProducedGoodItem } from "@/app/lib/catalogItems";
@@ -451,6 +452,7 @@ export default function AdminMenuModeView({
             const imageUrl = getProductImageUrl(product);
             const { salePrice, originalPrice, hasDiscount } = getCachedProductDiscount(product);
             const inCart = (cartQtyById.get(catalogItemKey(product)) || 0) > 0;
+            const outOfStock = isCatalogItemOutOfStock(product);
 
             return (
               <Grid item xs={4} sm={3} md={2} lg={2} key={catalogItemKey(product)}>
@@ -458,18 +460,22 @@ export default function AdminMenuModeView({
                   sx={{
                     height: "100%",
                     borderRadius: "8px",
-                    border: inCart
+                    border: outOfStock
+                      ? "1px solid var(--admin-border)"
+                      : inCart
                       ? "1.5px solid var(--admin-accent)"
                       : "1px solid var(--admin-accent-border)",
                     bgcolor: inCart
                       ? "var(--admin-surface-alt)"
                       : "var(--admin-surface)",
                     overflow: "hidden",
-                    outline: inCart ? "2px solid var(--admin-accent-border)" : "none",
+                    outline: inCart && !outOfStock ? "2px solid var(--admin-accent-border)" : "none",
                     outlineOffset: 0,
                     userSelect: "none",
+                    opacity: outOfStock ? 0.72 : 1,
+                    filter: outOfStock ? "grayscale(0.85)" : "none",
                     transition: "background-color 120ms ease, border-color 120ms ease",
-                    "&:hover": { borderColor: "var(--admin-accent)" },
+                    "&:hover": { borderColor: outOfStock ? "var(--admin-border)" : "var(--admin-accent)" },
                   }}
                 >
                   <CardActionArea
@@ -496,6 +502,7 @@ export default function AdminMenuModeView({
                         suppressClickRef.current = false;
                         return;
                       }
+                      if (outOfStock) return;
                       onAddProduct(product);
                     }}
                     sx={{ display: "flex", flexDirection: "column", alignItems: "stretch", height: "100%" }}
@@ -503,6 +510,7 @@ export default function AdminMenuModeView({
                     {showProductImages ? (
                       <Box
                         sx={{
+                          position: "relative",
                           width: "100%",
                           height: 52,
                           bgcolor: "var(--admin-surface-alt)",
@@ -528,12 +536,43 @@ export default function AdminMenuModeView({
                             sx={{ fontSize: 22, color: "var(--admin-text-muted)" }}
                           />
                         )}
+                        {outOfStock ? (
+                          <Box
+                            sx={{
+                              position: "absolute",
+                              inset: 0,
+                              bgcolor: "rgba(26, 23, 18, 0.45)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            <Typography
+                              sx={{
+                                color: "#fff",
+                                fontSize: "8px",
+                                fontWeight: 800,
+                                bgcolor: "rgba(80,80,80,0.85)",
+                                px: 0.5,
+                                py: 0.15,
+                                borderRadius: "4px",
+                                lineHeight: 1.2,
+                              }}
+                            >
+                              ناموجود
+                            </Typography>
+                          </Box>
+                        ) : null}
                       </Box>
                     ) : null}
                     <CardContent sx={{ p: 0.5, "&:last-child": { pb: 0.5 }, flex: 1 }}>
                       <Typography
                         sx={{
-                          color: inCart ? "var(--admin-accent)" : "var(--admin-text)",
+                          color: outOfStock
+                            ? "var(--admin-text-muted)"
+                            : inCart
+                              ? "var(--admin-accent)"
+                              : "var(--admin-text)",
                           fontWeight: inCart ? 700 : 600,
                           fontSize: "9px",
                           lineHeight: 1.25,
@@ -546,6 +585,18 @@ export default function AdminMenuModeView({
                       >
                         {product.name || "—"}
                       </Typography>
+                      {!showProductImages && outOfStock ? (
+                        <Typography
+                          sx={{
+                            color: "var(--admin-text-muted)",
+                            fontSize: "8px",
+                            fontWeight: 800,
+                            mt: 0.15,
+                          }}
+                        >
+                          ناموجود
+                        </Typography>
+                      ) : null}
                       <Box
                         sx={{
                           mt: 0.25,

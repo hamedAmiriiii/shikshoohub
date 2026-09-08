@@ -84,6 +84,9 @@ export function qzErrorMessage(error: unknown): string {
   if (text.includes("qz_load")) {
     return "بارگذاری پل چاپ ناموفق بود. صفحه را رفرش کنید.";
   }
+  if (text.includes("qz_credentials_missing")) {
+    return "گواهی و کلید خصوصی QZ را در تنظیمات پرینتر وارد کنید.";
+  }
   return raw || "چاپ بی‌صدا ناموفق بود.";
 }
 

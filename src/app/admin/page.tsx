@@ -51,7 +51,7 @@ import {
   type SalesByDaySnapshot,
 } from '@/app/lib/shopSalesByDay';
 import SalesByDayChart from '@/app/coponent/SalesByDayChart';
-import { readProductsCountFromCache, readProductsFromCache } from '@/app/lib/productsCache';
+import { readProductsCountFromCache, readProductsFromCache, isCatalogItemOutOfStock } from '@/app/lib/productsCache';
 import { catalogItemKey, isProducedGoodItem } from '@/app/lib/catalogItems';
 import {
   OUTBOX_CHANGED_EVENT,
@@ -1039,6 +1039,10 @@ export default function ShoppingPage() {
   }, [salePriceEditEnabled]);
 
   const addProductToCart = useCallback((item: any) => {
+    if (isCatalogItemOutOfStock(item)) {
+      toast.warning("این کالا ناموجود است و به سبد اضافه نمی‌شود");
+      return;
+    }
     setCart((prevCart) => {
       const addQty = kgSalesEnabled && item.unit_type === "kg"
         ? getDefaultCartQuantity(item)

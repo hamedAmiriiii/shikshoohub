@@ -267,9 +267,6 @@ export default function SettingsPage() {
   const [askCustomerName, setAskCustomerName] = useState(false);
   const [restaurantCafeEnabled, setRestaurantCafeEnabled] = useState(false);
   const [menuTableOrdersPopupEnabled, setMenuTableOrdersPopupEnabled] = useState(false);
-  const [directPrintEnabled, setDirectPrintEnabled] = useState(false);
-  const [printKitchenEnabled, setPrintKitchenEnabled] = useState(true);
-  const [printExtraEnabled, setPrintExtraEnabled] = useState(false);
   const [receiptPrintSettings, setReceiptPrintSettings] = useState<SaleReceiptPrintSettings>(
     DEFAULT_SALE_RECEIPT_PRINT_SETTINGS,
   );
@@ -277,6 +274,7 @@ export default function SettingsPage() {
   const [shopCardHolder, setShopCardHolder] = useState("");
   const [shopBankName, setShopBankName] = useState("");
   const [isSavingShopCard, setIsSavingShopCard] = useState(false);
+  const [printerOpen, setPrinterOpen] = useState(false);
 
   useEffect(() => {
     const settings = readAdminPosSettings();
@@ -294,9 +292,6 @@ export default function SettingsPage() {
     setRestaurantCafeEnabled(settings.restaurantCafeEnabled);
     setMenuTableOrdersPopupEnabled(settings.menuTableOrdersPopupEnabled);
     const printSettings = readSaleReceiptPrintSettings();
-    setDirectPrintEnabled(printSettings.autoPrint);
-    setPrintKitchenEnabled(Boolean(printSettings.printKitchen));
-    setPrintExtraEnabled(Boolean(printSettings.printExtra));
     setReceiptPrintSettings(printSettings);
   }, []);
 
@@ -445,31 +440,6 @@ export default function SettingsPage() {
         ? "در ثبت مشتری، فیلد نام هم نمایش داده می‌شود"
         : "ثبت مشتری فقط با شماره تلفن انجام می‌شود",
     );
-  };
-
-  const handleToggleDirectPrint = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const enabled = event.target.checked;
-    setDirectPrintEnabled(enabled);
-    writeSaleReceiptPrintSettings({ autoPrint: enabled });
-    toast.success(
-      enabled
-        ? "حالت چاپ مستقیم فعال شد؛ پیش‌نمایش چاپ نمایش داده نمی‌شود"
-        : "حالت پیش‌نمایش چاپ فعال شد",
-    );
-  };
-
-  const handleToggleKitchenPrint = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const enabled = event.target.checked;
-    setPrintKitchenEnabled(enabled);
-    setReceiptPrintSettings(writeSaleReceiptPrintSettings({ printKitchen: enabled }));
-    toast.success(enabled ? "فیش آشپزخانه همراه چاپ فعال شد" : "فیش آشپزخانه خاموش شد");
-  };
-
-  const handleToggleExtraPrint = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const enabled = event.target.checked;
-    setPrintExtraEnabled(enabled);
-    setReceiptPrintSettings(writeSaleReceiptPrintSettings({ printExtra: enabled }));
-    toast.success(enabled ? "فیش سوم (بار) همراه چاپ فعال شد" : "فیش سوم خاموش شد");
   };
 
   const applyLoyaltyResponse = (loyaltyRes: Record<string, unknown> | boolean) => {
@@ -834,27 +804,6 @@ export default function SettingsPage() {
             hint="علاوه بر تلفن، نام هم گرفته شود"
             checked={askCustomerName}
             onChange={handleToggleAskCustomerName}
-          />
-          <SettingsToggleRow
-            icon={<PrintIcon sx={{ fontSize: 18 }} />}
-            title="چاپ مستقیم فاکتور"
-            hint="بدون پیش‌نمایش چاپ"
-            checked={directPrintEnabled}
-            onChange={handleToggleDirectPrint}
-          />
-          <SettingsToggleRow
-            icon={<KitchenIcon sx={{ fontSize: 18 }} />}
-            title="فیش آشپزخانه"
-            hint="با چاپ سالن، یک فیش بدون قیمت هم چاپ می‌شود"
-            checked={printKitchenEnabled}
-            onChange={handleToggleKitchenPrint}
-          />
-          <SettingsToggleRow
-            icon={<RestaurantMenuIcon sx={{ fontSize: 18 }} />}
-            title="فیش سوم (بار)"
-            hint="ایستگاه جدا با پرینتر مستقل"
-            checked={printExtraEnabled}
-            onChange={handleToggleExtraPrint}
             last
           />
         </CardContent>
@@ -862,12 +811,21 @@ export default function SettingsPage() {
 
       <SettingsSectionCard
         icon={<PrintIcon sx={{ fontSize: 18 }} />}
-        title="پرینتر سالن و آشپزخانه"
-        hint="انتخاب پرینتر هر فیش و ارسال بدون پنجره تأیید"
+        title="تنظیمات پرینتر"
+        hint="چاپ مستقیم، فیش‌ها، انتخاب پرینتر و اتصال QZ"
+        action={
+          printerOpen ? undefined : (
+            <Button size="small" variant="outlined" onClick={() => setPrinterOpen(true)} sx={viewBtnSx}>
+              مشاهده
+            </Button>
+          )
+        }
       >
+        {printerOpen ? (
         <Box sx={{ mt: 1 }}>
           <StationPrinterSettings
             compact
+            showReceiptToggles
             settings={receiptPrintSettings}
             onChange={(partial) => {
               const next = writeSaleReceiptPrintSettings(partial);
@@ -875,6 +833,7 @@ export default function SettingsPage() {
             }}
           />
         </Box>
+        ) : null}
       </SettingsSectionCard>
 
       <SettingsSectionCard

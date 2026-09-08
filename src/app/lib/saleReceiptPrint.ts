@@ -75,6 +75,8 @@ export type SaleReceiptPrintSettings = {
   hallPrinter: string;
   kitchenPrinter: string;
   extraPrinter: string;
+  qzCertificate: string;
+  qzPrivateKey: string;
 };
 
 export const DEFAULT_SALE_RECEIPT_PRINT_SETTINGS: SaleReceiptPrintSettings = {
@@ -102,6 +104,8 @@ export const DEFAULT_SALE_RECEIPT_PRINT_SETTINGS: SaleReceiptPrintSettings = {
   hallPrinter: "",
   kitchenPrinter: "",
   extraPrinter: "",
+  qzCertificate: "",
+  qzPrivateKey: "",
 };
 
 function normalizeSaleReceiptPrintSettings(
@@ -133,6 +137,8 @@ function normalizeSaleReceiptPrintSettings(
   merged.hallPrinter = String(merged.hallPrinter || "").slice(0, 120);
   merged.kitchenPrinter = String(merged.kitchenPrinter || "").slice(0, 120);
   merged.extraPrinter = String(merged.extraPrinter || "").slice(0, 120);
+  merged.qzCertificate = String(merged.qzCertificate || "").slice(0, 32000);
+  merged.qzPrivateKey = String(merged.qzPrivateKey || "").slice(0, 32000);
 
   return merged;
 }

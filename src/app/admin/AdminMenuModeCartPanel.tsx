@@ -231,7 +231,7 @@ export default function AdminMenuModeCartPanel({
         top: 0,
         bottom: 0,
         width: ADMIN_MENU_CART_WIDTH,
-        zIndex: (theme) => theme.zIndex.drawer,
+        zIndex: (theme) => theme.zIndex.drawer + 3,
         display: "flex",
         flexDirection: "column",
         bgcolor: "var(--admin-surface)",

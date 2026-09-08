@@ -11,6 +11,7 @@ interface BottomSheetProps {
   icon?: React.ReactNode;
   title?: React.ReactNode | string;
   children: React.ReactNode;
+  dense?: boolean;
 }
 
 const StyledModal = styled(Modal)(({theme}) => ({
@@ -29,7 +30,7 @@ const Transition = React.forwardRef(function Transition(
   return <Slide direction="up" ref={ref} {...props}  />;
 });
 
-const BottomSheet: React.FC<BottomSheetProps> = ({open, onClose, icon, title, children}) => {
+const BottomSheet: React.FC<BottomSheetProps> = ({open, onClose, icon, title, children, dense}) => {
   return (
     <StyledModal
       open={open}
@@ -84,7 +85,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({open, onClose, icon, title, ch
                 <Typography
                   id="bottom-sheet-title"
                   sx={{
-                    fontSize: "1rem",
+                    fontSize: dense ? "0.875rem" : "1rem",
                     fontWeight: 600,
                     color: "var(--admin-text)",
                   }}>
@@ -95,8 +96,8 @@ const BottomSheet: React.FC<BottomSheetProps> = ({open, onClose, icon, title, ch
             <Grid item xs={12}
                   sx={{
                     overflowY: "auto",
-                    maxHeight: "calc(100vh - 100px)",
-                    padding: "16px"
+                    maxHeight: dense ? "calc(100vh - 72px)" : "calc(100vh - 100px)",
+                    padding: dense ? "8px 10px 12px" : "16px"
                   }}>
               {children}
             </Grid>

@@ -29,7 +29,8 @@ const DesktopActionsCell: React.FC<{
   onPayInstallment?: (item: any) => void;
   onDelete?: (item: any) => void;
   hidePrint?: boolean;
-}> = ({ item, CartComponent, onCheck, refetch, onEdit, onSizeColor, onManufacturer, onPayInstallment, onDelete, hidePrint }) => {
+  compact?: boolean;
+}> = ({ item, CartComponent, onCheck, refetch, onEdit, onSizeColor, onManufacturer, onPayInstallment, onDelete, hidePrint, compact }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -54,16 +55,25 @@ const DesktopActionsCell: React.FC<{
     router.push(`/admin/printCustom?${params.toString()}`);
   };
 
+  const actionBtnSx = {
+    p: compact ? 0.35 : 1,
+    width: compact ? 26 : 40,
+    height: compact ? 26 : 40,
+    "& .MuiSvgIcon-root": { fontSize: compact ? 15 : 24 },
+  } as const;
+
   return (
-    <Box sx={{ display: "flex", justifyContent: "center", gap: 1, flexWrap: "wrap" }}>
+    <Box sx={{ display: "flex", justifyContent: "center", gap: compact ? 0.35 : 1, flexWrap: "nowrap" }}>
       {onEdit && (
         <Tooltip title={isProducedGoodItem(item) ? "ویرایش در تولید" : "ویرایش"} arrow placement="top">
           <IconButton
+            size="small"
             onClick={() => onEdit(item)}
             sx={{
               backgroundColor: "#ff9100",
               color: "#fff",
               "&:hover": { backgroundColor: "#e68100" },
+              ...actionBtnSx,
             }}
           >
             <EditIcon />
@@ -73,11 +83,13 @@ const DesktopActionsCell: React.FC<{
       {onSizeColor && !isProducedGoodItem(item) && (
         <Tooltip title="سایز و رنگ" arrow placement="top">
           <IconButton
+            size="small"
             onClick={() => onSizeColor(item)}
             sx={{
               backgroundColor: "#9c27b0",
               color: "#fff",
               "&:hover": { backgroundColor: "#7b1fa2" },
+              ...actionBtnSx,
             }}
           >
             <PaletteIcon />
@@ -87,11 +99,13 @@ const DesktopActionsCell: React.FC<{
       {onManufacturer && !isProducedGoodItem(item) && (
         <Tooltip title="تولیدکننده" arrow placement="top">
           <IconButton
+            size="small"
             onClick={() => onManufacturer(item)}
             sx={{
               backgroundColor: "#2196f3",
               color: "#fff",
               "&:hover": { backgroundColor: "#1976d2" },
+              ...actionBtnSx,
             }}
           >
             <FactoryIcon />
@@ -101,11 +115,13 @@ const DesktopActionsCell: React.FC<{
       {onPayInstallment && !item.is_paid && (
         <Tooltip title="پرداخت قسط" arrow placement="top">
           <IconButton
+            size="small"
             onClick={() => onPayInstallment(item)}
             sx={{
               backgroundColor: "var(--admin-accent)",
               color: "#fff",
               "&:hover": { backgroundColor: "var(--admin-accent-hover)" },
+              ...actionBtnSx,
             }}
           >
             <PaymentIcon />
@@ -115,11 +131,13 @@ const DesktopActionsCell: React.FC<{
       {onDelete && (
         <Tooltip title="حذف" arrow placement="top">
           <IconButton
+            size="small"
             onClick={() => onDelete(item)}
             sx={{
               backgroundColor: "#ff4444",
               color: "#fff",
               "&:hover": { backgroundColor: "#cc0000" },
+              ...actionBtnSx,
             }}
           >
             <DeleteIcon />
@@ -129,11 +147,13 @@ const DesktopActionsCell: React.FC<{
       {!hidePrint && (
         <Tooltip title="چاپ برچسب" arrow placement="top">
           <IconButton
+            size="small"
             onClick={handlePrint}
             sx={{
               backgroundColor: "var(--admin-accent)",
               color: "#fff",
               "&:hover": { backgroundColor: "var(--admin-accent-hover)" },
+              ...actionBtnSx,
             }}
           >
             <PrintIcon />
@@ -306,8 +326,8 @@ const List: React.FC<Props> = ({
   onRowClick,
   hidePrintAction = false,
 }) => {
-  const compactActionWidth = actionsColumnWidth || (compactDesktop ? "96px" : "280px");
-  const compactCellPad = compactDesktop ? "4px 8px" : "16px 24px";
+  const compactActionWidth = actionsColumnWidth || (compactDesktop ? "148px" : "280px");
+  const compactCellPad = compactDesktop ? "3px 6px" : "16px 24px";
   const compactFont = compactDesktop ? "11px" : "16px";
 
   const actionsHeaderCellSx = {
@@ -616,7 +636,7 @@ const List: React.FC<Props> = ({
         maxWidth: "100%",
         boxSizing: "border-box",
         overflowX: "hidden",
-        p: isDesktop ? 0 : 2,
+        p: isDesktop ? 0 : 1,
       }}
     >
       <Grid
@@ -698,7 +718,7 @@ const List: React.FC<Props> = ({
                         overflowX: 'auto',
                       }}
                     >
-                      <Table sx={{ minWidth: compactDesktop ? 560 : 650, direction: "rtl" }} aria-label="simple table">
+                      <Table sx={{ minWidth: compactDesktop ? "100%" : 650, width: "100%", direction: "rtl" }} aria-label="simple table">
                         <TableHead>
                           <TableRow>
                             {(CartComponent || renderRowActions) && (
@@ -762,6 +782,7 @@ const List: React.FC<Props> = ({
                                       onPayInstallment={onPayInstallmentItem}
                                       onDelete={onDeleteItem}
                                       hidePrint={hidePrintAction}
+                                      compact={compactDesktop}
                                     />
                                   )}
                                 </TableCell>

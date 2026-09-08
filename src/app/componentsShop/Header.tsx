@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Badge, Box, Typography, IconButton, Container, Button, Drawer, useMediaQuery } from "@mui/material";
 import { useTableOrdersPending } from "@/app/admin/table-orders/TableOrdersPendingProvider";
 import MenuIcon from "@mui/icons-material/Menu";
@@ -67,6 +67,7 @@ export default function Header({
   const [expiredAccessInfo, setExpiredAccessInfo] =
     useState<ReturnType<typeof getShopAccessFromUser>>(null);
   const compactIdentity = useMediaQuery("(max-width:600px)");
+  const headerRef = useRef<HTMLDivElement>(null);
 
   const syncAccessState = () => {
     const userData = localStorage.getItem("user");
@@ -149,6 +150,21 @@ export default function Header({
   const handleMenuClose = () => {
     setMenuOpen(false);
   };
+
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const apply = () => {
+      document.documentElement.style.setProperty("--admin-header-height", `${el.offsetHeight}px`);
+    };
+    apply();
+    const observer = new ResizeObserver(apply);
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      document.documentElement.style.removeProperty("--admin-header-height");
+    };
+  }, [shopAccessExpired, title, compactIdentity, showBack]);
 
   const handleMenuClick = (path: string) => {
     router.push(path);
@@ -253,6 +269,7 @@ export default function Header({
 
   return (
     <Box
+      ref={headerRef}
       sx={{
         position: "sticky",
         top: 0,
@@ -262,8 +279,7 @@ export default function Header({
         paddingBottom: { xs: "8px", md: "16px" },
         marginBottom: { xs: "8px", md: "16px" },
         minWidth: 0,
-        // روی موبایل هدر تمام‌عرض روی سبد می‌ماند؛ فاصله سبد فقط از md
-        pl: { xs: 0, md: `var(${ADMIN_MENU_CART_WIDTH_VAR}, 0px)` },
+        pl: `var(${ADMIN_MENU_CART_WIDTH_VAR}, 0px)`,
         pr: { md: `${ADMIN_SIDEBAR_WIDTH}px` },
       }}
     >

@@ -18,7 +18,11 @@ import SearchIcon from "@mui/icons-material/Search";
 import CloseIcon from "@mui/icons-material/Close";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import AddShoppingCartIcon from "@mui/icons-material/AddShoppingCart";
-import { getCachedProductDiscount, type CachedProduct } from "@/app/lib/productsCache";
+import {
+  getCachedProductDiscount,
+  isCatalogItemOutOfStock,
+  type CachedProduct,
+} from "@/app/lib/productsCache";
 import { catalogItemKey, isProducedGoodItem } from "@/app/lib/catalogItems";
 
 function normalizeSearchText(value: string): string {
@@ -109,32 +113,61 @@ export default function SaleProductListPanel({
       ) : (
         filteredProducts.map((product) => {
           const { salePrice, originalPrice, hasDiscount } = getCachedProductDiscount(product);
+          const outOfStock = isCatalogItemOutOfStock(product);
           return (
           <ListItem
             key={catalogItemKey(product)}
             secondaryAction={
               <IconButton
                 edge="end"
-                onClick={() => onAddProduct(product)}
+                disabled={outOfStock}
+                onClick={() => {
+                  if (outOfStock) return;
+                  onAddProduct(product);
+                }}
                 sx={{
-                  color: "var(--admin-accent)",
-                  bgcolor: "rgba(120, 181, 104, 0.12)",
-                  "&:hover": { bgcolor: "rgba(120, 181, 104, 0.22)" },
+                  color: outOfStock ? "var(--admin-text-muted)" : "var(--admin-accent)",
+                  bgcolor: outOfStock ? "var(--admin-surface-alt)" : "rgba(120, 181, 104, 0.12)",
+                  "&:hover": {
+                    bgcolor: outOfStock ? "var(--admin-surface-alt)" : "rgba(120, 181, 104, 0.22)",
+                  },
                 }}
                 aria-label="افزودن به سبد"
               >
                 <AddShoppingCartIcon fontSize="small" />
               </IconButton>
             }
-            sx={{ alignItems: "flex-start", py: 1 }}
+            sx={{
+              alignItems: "flex-start",
+              py: 1,
+              opacity: outOfStock ? 0.62 : 1,
+              filter: outOfStock ? "grayscale(0.7)" : "none",
+            }}
           >
             <ListItemText
               primary={
-                <Box component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
+                <Box component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, flexWrap: "wrap" }}>
                   {product.name || "بدون نام"}
                   {isProducedGoodItem(product) ? (
                     <Typography component="span" sx={{ color: "var(--admin-accent)", fontSize: "10px", fontWeight: 700 }}>
                       تولیدی
+                    </Typography>
+                  ) : null}
+                  {outOfStock ? (
+                    <Typography
+                      component="span"
+                      sx={{
+                        color: "#fff",
+                        bgcolor: "var(--admin-text-muted)",
+                        fontSize: "9px",
+                        fontWeight: 800,
+                        px: 0.6,
+                        py: 0.1,
+                        borderRadius: "6px",
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      ناموجود
                     </Typography>
                   ) : null}
                 </Box>

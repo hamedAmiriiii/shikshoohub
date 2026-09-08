@@ -9,19 +9,16 @@ import AddIcon from '@mui/icons-material/Add';
 import PrintIcon from '@mui/icons-material/Print';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
-import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
 import FlashlightOnIcon from '@mui/icons-material/FlashlightOn';
 import FlashlightOffIcon from '@mui/icons-material/FlashlightOff';
 import SafeBarcodeScanner from "@/app/coponent/SafeBarcodeScanner";
 import { useRouter } from "next/navigation";
 import CardUser from "./cardUser";
+import ProductEditSheet from "./ProductEditSheet";
 import { ToastContainer, toast } from "react-toastify";
-import 'react-toastify/dist/ReactToastify.css';
-import BottomSheet from "@/app/coponent/BottomSheet";
-import TextInput from "@/app/coponent/TextInput/TextInput";
+import "react-toastify/dist/ReactToastify.css";
 import tokenCode from "@/app/coponent/tokenCode";
 import { apiRequestError } from "@/app/lib/apiRequestError/client";
 import { useQueryClient } from '@tanstack/react-query';
@@ -306,7 +303,7 @@ export default function ListData() {
     };
 
     // کامپوننت درختی برای نمایش دسته‌بندی‌ها
-    const CategoryTreeItem = ({ category, level = 0 }: { category: any; level?: number }) => {
+    const CategoryTreeItem = ({ category, level = 0, compact = false }: { category: any; level?: number; compact?: boolean }) => {
         const [expanded, setExpanded] = useState(false);
         const hasChildren = category.children && category.children.length > 0;
         const isSelected = categoryIds.includes(category.id);
@@ -332,8 +329,8 @@ export default function ListData() {
                     sx={{
                         display: 'flex',
                         alignItems: 'center',
-                        padding: '8px 12px',
-                        paddingRight: `${12 + level * 24}px`,
+                        padding: compact ? "2px 8px" : "8px 12px",
+                        paddingRight: `${(compact ? 8 : 12) + level * (compact ? 16 : 24)}px`,
                         cursor: hasChildren ? 'pointer' : 'default',
                         '&:hover': {
                             backgroundColor: 'var(--admin-menu-hover)',
@@ -343,12 +340,12 @@ export default function ListData() {
                 >
                     {hasChildren ? (
                         expanded ? (
-                            <ExpandMoreIcon sx={{ color: 'var(--admin-accent)', fontSize: '20px', marginLeft: '8px' }} />
+                            <ExpandMoreIcon sx={{ color: 'var(--admin-accent)', fontSize: compact ? '16px' : '20px', marginLeft: compact ? '4px' : '8px' }} />
                         ) : (
-                            <ChevronRightIcon sx={{ color: 'var(--admin-accent)', fontSize: '20px', marginLeft: '8px' }} />
+                            <ChevronRightIcon sx={{ color: 'var(--admin-accent)', fontSize: compact ? '16px' : '20px', marginLeft: compact ? '4px' : '8px' }} />
                         )
                     ) : (
-                        <Box sx={{ width: '20px', marginLeft: '8px' }} />
+                        <Box sx={{ width: compact ? '16px' : '20px', marginLeft: compact ? '4px' : '8px' }} />
                     )}
                     <Checkbox
                         checked={isSelected}
@@ -356,12 +353,13 @@ export default function ListData() {
                         onClick={(e) => e.stopPropagation()}
                         sx={{
                             color: 'var(--admin-accent)',
+                            p: compact ? 0.25 : 1,
                             '&.Mui-checked': {
                                 color: 'var(--admin-accent)',
                             },
                         }}
                     />
-                    <Typography sx={{ color: 'var(--admin-text)', fontSize: '14px', flex: 1 }}>
+                    <Typography sx={{ color: 'var(--admin-text)', fontSize: compact ? '12px' : '14px', flex: 1 }}>
                         {category.name}
                     </Typography>
                 </Box>
@@ -369,7 +367,7 @@ export default function ListData() {
                     <Collapse in={expanded} timeout="auto" unmountOnExit>
                         <Box sx={{ paddingRight: '24px' }}>
                             {category.children.map((child: any) => (
-                                <CategoryTreeItem key={child.id} category={child} level={level + 1} />
+                                <CategoryTreeItem key={child.id} category={child} level={level + 1} compact={compact} />
                             ))}
                         </Box>
                     </Collapse>
@@ -396,7 +394,7 @@ export default function ListData() {
           <Box sx={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
             <span>{item?.name || "—"}</span>
             {isProducedGoodItem(item) ? (
-              <Chip label="تولیدی" size="small" sx={{ height: 20, fontSize: "11px", backgroundColor: "rgba(120, 181, 104, 0.18)", color: "var(--admin-accent)" }} />
+              <Chip label="تولیدی" size="small" sx={{ height: 16, fontSize: "9px", backgroundColor: "rgba(120, 181, 104, 0.18)", color: "var(--admin-accent)" }} />
             ) : null}
           </Box>
         ),
@@ -409,20 +407,20 @@ export default function ListData() {
           if (!item?.sale_price) return '-';
           if (item?.has_discount) {
             return (
-              <Box sx={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "12px", textDecoration: "line-through" }}>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "10px", textDecoration: "line-through" }}>
                   {formatNumber(item.original_sale_price)} تومان
                 </Typography>
-                <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <Typography sx={{ color: "var(--admin-accent)", fontSize: "14px", fontWeight: "600" }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                  <Typography sx={{ color: "var(--admin-accent)", fontSize: "11px", fontWeight: "600" }}>
                     {formatNumber(item.sale_price)} تومان
                   </Typography>
                   <Typography sx={{ 
                     color: "#ff9100", 
-                    fontSize: "11px", 
+                    fontSize: "9px", 
                     fontWeight: "600",
                     backgroundColor: "rgba(255, 145, 0, 0.1)",
-                    padding: "2px 6px",
+                    padding: "1px 4px",
                     borderRadius: "4px"
                   }}>
                     {formatNumber(item.discount_percent)}%
@@ -446,10 +444,10 @@ export default function ListData() {
           return (
             <Typography sx={{ 
               color: color, 
-              fontSize: "13px", 
+              fontSize: "11px", 
               fontWeight: "600",
               backgroundColor: bgColor,
-              padding: "4px 8px",
+              padding: "2px 6px",
               borderRadius: "4px",
               display: "inline-block"
             }}>
@@ -866,7 +864,7 @@ export default function ListData() {
   
     return (
       <Suspense fallback={<div>در حال بارگذاری...</div>}>
-        <Box sx={{ minHeight: "100vh", width: "100%", maxWidth: "100%", boxSizing: "border-box", overflowX: "hidden", padding: { xs: "16px", md: "24px" }, paddingBottom: "100px", direction: "rtl", background: "var(--admin-bg-gradient)" }}>
+        <Box sx={{ minHeight: "100vh", width: "100%", maxWidth: "100%", boxSizing: "border-box", overflowX: "hidden", padding: { xs: "8px", md: "12px" }, paddingBottom: "100px", direction: "rtl", background: "var(--admin-bg-gradient)" }}>
           {/* Header with Back Button and Action Buttons */}
           <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "-30px", padding: "4px" }}>
          
@@ -943,30 +941,31 @@ export default function ListData() {
             filterComponent={<></>}
             showTotal={false}
             desktopColumns={desktopColumns}
+            compactDesktop
             onEditItem={handleEditProduct}
             onSizeColorItem={handleSizeColorProduct}
             onManufacturerItem={handleManufacturerProduct}
             onDeleteItem={handleDeleteProduct}
             customActions={
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
                 <Button
                   size="small"
-                  startIcon={<FileUploadIcon />}
+                  startIcon={<FileUploadIcon sx={{ fontSize: 16 }} />}
                   onClick={() => router.push("/admin/product/import")}
                   sx={{
-                    height: "40px",
-                    borderRadius: "12px",
+                    height: "32px",
+                    borderRadius: "8px",
                     color: "var(--admin-text)",
                     border: "1px solid var(--admin-border)",
                     backgroundColor: "var(--admin-surface)",
-                    fontSize: "12px",
+                    fontSize: "11px",
                     whiteSpace: "nowrap",
                     "&:hover": { backgroundColor: "var(--admin-menu-hover)" },
                   }}
                 >
                   ایمپورت اکسل
                 </Button>
-              <FormControl size="small" sx={{ minWidth: { xs: 140, sm: 180 } }}>
+              <FormControl size="small" sx={{ minWidth: { xs: 120, sm: 160 } }}>
                 <Select
                   value={productSort}
                   displayEmpty
@@ -974,9 +973,9 @@ export default function ListData() {
                   sx={{
                     backgroundColor: "var(--admin-surface)",
                     color: "var(--admin-text)",
-                    borderRadius: "12px",
-                    fontSize: "13px",
-                    height: "40px",
+                    borderRadius: "8px",
+                    fontSize: "11px",
+                    height: "32px",
                     "& .MuiOutlinedInput-notchedOutline": { borderColor: "#505669" },
                     "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "var(--admin-accent)" },
                     "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "var(--admin-accent)" },
@@ -1000,311 +999,46 @@ export default function ListData() {
           />
         </div>
 
-        {/* BottomSheet for editing product */}
-        <BottomSheet
+        <ProductEditSheet
           open={editBottomSheet}
           onClose={handleCloseEditBottomSheet}
-          title="ویرایش کالا"
-        >
-          <Box sx={{ display: "flex", flexDirection: "column", gap: "20px", padding: "16px", direction: "rtl" }}>
-            {/* ID - Read Only */}
-            {/* <Box>
-              <Typography sx={{ color: "var(--admin-text)", marginBottom: "8px", fontSize: "14px" }}>
-                شناسه کالا:
-              </Typography>
-              <TextField
-                value={editingProduct?.id || ""}
-                disabled
-                fullWidth
-                sx={{
-                  direction: "rtl",
-                  "& .MuiOutlinedInput-root": {
-                    backgroundColor: "var(--admin-surface-alt)",
-                    color: "var(--admin-text-secondary)",
-                    direction: "rtl",
-                    "& fieldset": {
-                      borderColor: "#505669",
-                    },
-                  },
-                  "& .MuiInputBase-input": {
-                    textAlign: "right",
-                    direction: "rtl",
-                  },
-                }}
-              />
-            </Box> */}
-
-            <Box>
-              <Typography sx={{ color: "var(--admin-text)", marginBottom: "8px", fontSize: "14px", fontWeight: 600 }}>
-                بارکد *
-              </Typography>
-              <Box
-                sx={{
-                  display: "flex",
-                  gap: 1,
-                  alignItems: "stretch",
-                  p: 1,
-                  borderRadius: "12px",
-                  border: "1px solid rgba(120, 181, 104, 0.25)",
-                  backgroundColor: "var(--admin-surface-alt)",
-                }}
-              >
-                <TextField
-                  value={barcode}
-                  onChange={(e) => setBarcode(e.target.value.slice(0, 255))}
-                  placeholder="بارکد کالا"
-                  size="small"
-                  fullWidth
-                  inputProps={{ maxLength: 255 }}
-                  sx={{
-                    "& .MuiOutlinedInput-root": {
-                      backgroundColor: "var(--admin-surface-alt)",
-                      color: "var(--admin-text)",
-                      borderRadius: "10px",
-                      "& fieldset": { borderColor: "#505669" },
-                      "&:hover fieldset": { borderColor: "var(--admin-accent)" },
-                      "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
-                    },
-                    "& .MuiInputBase-input": {
-                      direction: "ltr",
-                      textAlign: "left",
-                      color: "var(--admin-text)",
-                    },
-                  }}
-                />
-                <IconButton
-                  type="button"
-                  onClick={() => {
-                    setEditScanManualCode(barcode);
-                    setEditBarcodeScannerOpen(true);
-                    setTimeout(() => editBarcodeScanInputRef.current?.focus(), 150);
-                  }}
-                  title="اسکن بارکد"
-                  sx={{
-                    flexShrink: 0,
-                    alignSelf: "center",
-                    borderRadius: "10px",
-                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                    color: "var(--admin-text)",
-                    "&:hover": {
-                      background: "linear-gradient(135deg, #764ba2 0%, #667eea 100%)",
-                    },
-                  }}
-                >
-                  <QrCodeScannerIcon />
-                </IconButton>
-              </Box>
-            </Box>
-
-            {/* Name */}
-            <TextInput
-              value={name}
-              label="نام کالا"
-              onChange={(e) => setName(e)}
-              name="name"
-              type="text"
-            />
-
-            {/* Profit Percentage */}
-            <TextInput
-              value={profitPercentage.toString()}
-              label="درصد سود"
-              onChange={(e) => handleProfitPercentageChange(e)}
-              name="profitPercentage"
-              type="number"
-            />
-
-            {/* Purchase Price */}
-            <TextInput
-              value={purchase_price}
-              label="قیمت خرید"
-              onChange={(e) => handlePurchasePriceChange(e)}
-              name="purchase_price"
-              type="number"
-            />
-
-            {/* Sale Price */}
-            <TextInput
-              value={sale_price}
-              label="قیمت فروش"
-              onChange={(e) => {
-                setSale_price(e);
-                const pct = profitPercentFromPrices(purchase_price, e);
-                if (pct != null) setProfitPercentage(pct);
-              }}
-              name="sale_price"
-              type="number"
-            />
-
-            {/* Quantity */}
-            <TextInput
-              value={quantity}
-              label="موجودی"
-              onChange={(e) => setQuantity(e)}
-              name="quantity"
-              type="number"
-            />
-
-            {/* Discount Percent */}
-            <TextInput
-              value={discountPercent}
-              label="درصد تخفیف (اختیاری)"
-              onChange={(e) => setDiscountPercent(e)}
-              name="discountPercent"
-              type="number"
-            />
-
-            {/* Image Upload Section */}
-            <Box sx={{ marginTop: "20px", marginBottom: "20px" }}>
-              <Typography sx={{ color: "var(--admin-text)", fontSize: "16px", fontWeight: "600", marginBottom: "12px" }}>
-                تصاویر محصول (اختیاری)
-              </Typography>
-              
-              {/* Upload Button */}
-              <input
-                accept="image/*"
-                style={{ display: 'none' }}
-                id="image-upload-edit"
-                multiple
-                type="file"
-                onChange={handleImageUpload}
-              />
-              <label htmlFor="image-upload-edit">
-                <Button
-                  component="span"
-                  variant="outlined"
-                  startIcon={<AddPhotoAlternateIcon />}
-                  sx={{
-                    borderColor: "var(--admin-accent)",
-                    color: "var(--admin-accent)",
-                    "&:hover": {
-                      borderColor: "var(--admin-accent-hover)",
-                      backgroundColor: "var(--admin-menu-hover)",
-                    },
-                    width: "100%",
-                    marginBottom: "16px",
-                  }}
-                >
-                  افزودن تصویر
-                </Button>
-              </label>
-
-              {/* Image Preview Grid */}
-              {images.length > 0 && (
-                <Grid container spacing={2}>
-                  {images.map((image, index) => (
-                    <Grid item xs={6} sm={4} md={3} key={index}>
-                      <Card
-                        sx={{
-                          position: 'relative',
-                          borderRadius: '12px',
-                          overflow: 'hidden',
-                        }}
-                      >
-                        <CardMedia
-                          component="img"
-                          image={image}
-                          alt={`تصویر ${index + 1}`}
-                          sx={{
-                            height: '150px',
-                            objectFit: 'cover',
-                          }}
-                        />
-                        <IconButton
-                          onClick={() => handleRemoveImage(index)}
-                          sx={{
-                            position: 'absolute',
-                            top: 8,
-                            right: 8,
-                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                            color: 'var(--admin-text)',
-                            '&:hover': {
-                              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                            },
-                          }}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </Card>
-                    </Grid>
-                  ))}
-                </Grid>
-              )}
-            </Box>
-
-            {/* Category Selection */}
-            <Box>
-              <Typography sx={{ color: "var(--admin-text)", fontSize: "16px", fontWeight: "600", marginBottom: "12px" }}>
-                دسته‌بندی‌ها (اختیاری)
-              </Typography>
-              
-              {/* Selected Categories Chips */}
-              {categoryIds.length > 0 && (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, marginBottom: '12px' }}>
-                  {categoryIds.map((value) => {
-                    const flatCats = flattenCategories(categories);
-                    const category = flatCats.find(cat => cat.id === value);
-                    return (
-                      <Chip
-                        key={value}
-                        label={category?.name || value}
-                        onDelete={() => setCategoryIds(categoryIds.filter(id => id !== value))}
-                        sx={{
-                          backgroundColor: 'var(--admin-accent)',
-                          color: 'var(--admin-text)',
-                          fontSize: '12px',
-                          '& .MuiChip-deleteIcon': {
-                            color: 'var(--admin-text)',
-                            '&:hover': {
-                              color: '#ff4444',
-                            },
-                          },
-                        }}
-                      />
-                    );
-                  })}
-                </Box>
-              )}
-
-              {/* Category Tree */}
-              <Paper
-                sx={{
-                  backgroundColor: 'var(--admin-surface-alt)',
-                  border: '1px solid var(--admin-divider)',
-                  borderRadius: '8px',
-                  maxHeight: '300px',
-                  overflow: 'auto',
-                  padding: '8px 0',
-                }}
-              >
-                {categories.map((category) => (
-                  <CategoryTreeItem key={category.id} category={category} />
-                ))}
-              </Paper>
-            </Box>
-
-            {/* Submit Button */}
-            <Button
-              variant="contained"
-              onClick={handleUpdateProduct}
-              fullWidth
-              sx={{
-                backgroundColor: "var(--admin-accent)",
-                color: "var(--admin-text)",
-                padding: "12px",
-                fontSize: "16px",
-                fontWeight: "600",
-                direction: "rtl",
-                "&:hover": {
-                  backgroundColor: "var(--admin-accent-hover)"
-                },
-                marginTop: "8px"
-              }}
-            >
-              ثبت تغییرات
-            </Button>
-          </Box>
-        </BottomSheet>
+          name={name}
+          onNameChange={setName}
+          barcode={barcode}
+          onBarcodeChange={setBarcode}
+          onOpenBarcodeScanner={() => {
+            setEditScanManualCode(barcode);
+            setEditBarcodeScannerOpen(true);
+            setTimeout(() => editBarcodeScanInputRef.current?.focus(), 150);
+          }}
+          profitPercentage={profitPercentage.toString()}
+          onProfitPercentageChange={handleProfitPercentageChange}
+          purchasePrice={purchase_price}
+          onPurchasePriceChange={handlePurchasePriceChange}
+          salePrice={sale_price}
+          onSalePriceChange={(e) => {
+            setSale_price(e);
+            const pct = profitPercentFromPrices(purchase_price, e);
+            if (pct != null) setProfitPercentage(pct);
+          }}
+          quantity={quantity}
+          onQuantityChange={setQuantity}
+          discountPercent={discountPercent}
+          onDiscountPercentChange={setDiscountPercent}
+          images={images}
+          onImageUpload={handleImageUpload}
+          onRemoveImage={handleRemoveImage}
+          categoryIds={categoryIds}
+          onRemoveCategory={(id) => setCategoryIds(categoryIds.filter((cid) => cid !== id))}
+          flattenCategoryName={(id) => {
+            const category = flattenCategories(categories).find((cat) => cat.id === id);
+            return category?.name || String(id);
+          }}
+          categoryTree={categories.map((category) => (
+            <CategoryTreeItem key={category.id} category={category} compact />
+          ))}
+          onSubmit={handleUpdateProduct}
+        />
 
         <Modal
           open={editBarcodeScannerOpen}

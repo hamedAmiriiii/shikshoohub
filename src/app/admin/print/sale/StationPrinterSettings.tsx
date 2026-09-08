@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Box, Button, MenuItem, Select, Typography } from "@mui/material";
+import { Box, Button, MenuItem, Select, Switch, TextField, Typography } from "@mui/material";
 import {
   type ReceiptPrintStation,
   type SaleReceiptPrintSettings,
@@ -23,14 +23,66 @@ const STATION_LABEL: Record<ReceiptPrintStation, string> = {
   extra: "پرینتر سوم (بار)",
 };
 
+const switchSx = {
+  transform: "scale(0.85)",
+  "& .MuiSwitch-switchBase.Mui-checked": { color: "var(--admin-accent)" },
+  "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+    backgroundColor: "var(--admin-accent)",
+  },
+};
+
+function ToggleRow({
+  title,
+  hint,
+  checked,
+  onChange,
+  last = false,
+}: {
+  title: string;
+  hint: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  last?: boolean;
+}) {
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 0.75,
+        py: 0.55,
+        borderBottom: last ? "none" : "1px solid var(--admin-divider)",
+      }}
+    >
+      <Box sx={{ minWidth: 0, flex: 1 }}>
+        <Typography sx={{ color: "var(--admin-text)", fontSize: "13px", fontWeight: 600, lineHeight: 1.25 }}>
+          {title}
+        </Typography>
+        <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "11px", lineHeight: 1.25, mt: 0.1 }}>
+          {hint}
+        </Typography>
+      </Box>
+      <Switch
+        size="small"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        sx={switchSx}
+      />
+    </Box>
+  );
+}
+
 export function StationPrinterSettings({
   settings,
   onChange,
   compact = false,
+  showReceiptToggles = false,
 }: {
   settings: SaleReceiptPrintSettings;
   onChange: (partial: Partial<SaleReceiptPrintSettings>) => void;
   compact?: boolean;
+  showReceiptToggles?: boolean;
 }) {
   const [printers, setPrinters] = useState<string[]>(() => {
     const current = [
@@ -42,6 +94,9 @@ export function StationPrinterSettings({
   });
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
+  const [revealQz, setRevealQz] = useState(
+    Boolean(settings.qzCertificate?.trim() && settings.qzPrivateKey?.trim()),
+  );
 
   const refresh = useCallback(async () => {
     setBusy(true);
@@ -61,7 +116,11 @@ export function StationPrinterSettings({
       setPrinters(merged);
       setStatus(found.length ? `${found.length} پرینتر پیدا شد` : "پرینتری در ویندوز پیدا نشد");
     } catch (error) {
-      setStatus(qzErrorMessage(error));
+      const message = qzErrorMessage(error);
+      if (message.includes("گواهی") || String(error).toLowerCase().includes("qz_credentials_missing")) {
+        setRevealQz(true);
+      }
+      setStatus(message);
     } finally {
       setBusy(false);
     }
@@ -88,28 +147,49 @@ export function StationPrinterSettings({
     [settings],
   );
 
-  const stations: ReceiptPrintStation[] = ["hall", "kitchen", "extra"];
   const enabled = getEnabledReceiptPrintStations(settings);
+  const stations = (["hall", "kitchen", "extra"] as ReceiptPrintStation[]).filter((station) =>
+    enabled.includes(station),
+  );
+  const uniqueSelectedPrinters = Array.from(
+    new Set(stations.map((station) => getStationPrinterName(settings, station)).filter(Boolean)),
+  );
+  const showQzSettings =
+    revealQz || uniqueSelectedPrinters.length >= 2;
+
+  const pemFieldSx = {
+    "& .MuiInputBase-input": {
+      fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+      fontSize: 11,
+      direction: "ltr",
+      textAlign: "left",
+    },
+  };
 
   return (
     <Box sx={{ gridColumn: "1 / -1", display: "grid", gap: 1.5 }}>
-      {!compact && (
-        <Typography sx={{ fontSize: 13, color: "#555" }}>
-          برای چاپ بدون پنجره تأیید، QZ Tray را روی همین کامپیوتر نصب و باز نگه دارید، پرینتر هر بخش را انتخاب کنید، و یک‌بار اجازه اتصال را بدهید.
-        </Typography>
-      )}
-      <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", alignItems: "center" }}>
-        <Button size="small" variant="contained" disabled={busy} onClick={() => void refresh()}>
-          {busy ? "صبر کنید..." : "خواندن پرینترهای سیستم"}
-        </Button>
-        <Button size="small" variant="outlined" href={QZ_TRAY_DOWNLOAD_URL} target="_blank" rel="noreferrer">
-          دانلود QZ Tray
-        </Button>
-      </Box>
-      {status ? (
-        <Typography sx={{ fontSize: 12, color: status.includes("ناموفق") || status.includes("نیست") ? "#b45309" : "#166534" }}>
-          {status}
-        </Typography>
+      {showReceiptToggles ? (
+        <Box sx={{ display: "flex", flexDirection: "column" }}>
+          <ToggleRow
+            title="چاپ مستقیم فاکتور"
+            hint="بدون پیش‌نمایش چاپ"
+            checked={Boolean(settings.autoPrint)}
+            onChange={(checked) => onChange({ autoPrint: checked })}
+          />
+          <ToggleRow
+            title="فیش آشپزخانه"
+            hint="با چاپ سالن، یک فیش بدون قیمت هم چاپ می‌شود"
+            checked={Boolean(settings.printKitchen)}
+            onChange={(checked) => onChange({ printKitchen: checked })}
+          />
+          <ToggleRow
+            title="فیش سوم (بار)"
+            hint="ایستگاه جدا با پرینتر مستقل"
+            checked={Boolean(settings.printExtra)}
+            onChange={(checked) => onChange({ printExtra: checked })}
+            last
+          />
+        </Box>
       ) : null}
 
       {stations.map((station) => {
@@ -118,9 +198,8 @@ export function StationPrinterSettings({
         const options = value && !printers.includes(value) ? [value, ...printers] : printers;
         return (
           <Box key={station} sx={{ display: "grid", gap: 0.5 }}>
-            <Typography sx={{ fontSize: 13 }}>
+            <Typography sx={{ fontSize: 13, color: "var(--admin-text)" }}>
               {STATION_LABEL[station]}
-              {!enabled.includes(station) ? " (این فیش خاموش است)" : ""}
             </Typography>
             <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
               <Select
@@ -144,6 +223,61 @@ export function StationPrinterSettings({
           </Box>
         );
       })}
+
+      <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", alignItems: "center" }}>
+        <Button size="small" variant="contained" disabled={busy} onClick={() => void refresh()}>
+          {busy ? "صبر کنید..." : "خواندن پرینترهای سیستم"}
+        </Button>
+        <Button size="small" variant="outlined" href={QZ_TRAY_DOWNLOAD_URL} target="_blank" rel="noreferrer">
+          دانلود QZ Tray
+        </Button>
+      </Box>
+      {status ? (
+        <Typography sx={{ fontSize: 12, color: status.includes("ناموفق") || status.includes("نیست") ? "#b45309" : "#166534" }}>
+          {status}
+        </Typography>
+      ) : null}
+
+      {showQzSettings ? (
+        <Box sx={{ display: "grid", gap: 1.25 }}>
+          {!compact && (
+            <Typography sx={{ fontSize: 13, color: "#555" }}>
+              برای چاپ بدون پنجره تأیید روی چند پرینتر، گواهی و کلید خصوصی QZ را وارد کنید، QZ Tray را باز نگه دارید، و یک‌بار اجازه اتصال را بدهید.
+            </Typography>
+          )}
+          {compact && (
+            <Typography sx={{ fontSize: 12, color: "var(--admin-text-secondary)" }}>
+              چند پرینتر انتخاب شده؛ گواهی و کلید خصوصی QZ را وارد کنید تا چاپ مستقیم به همه ارسال شود.
+            </Typography>
+          )}
+          <TextField
+            size="small"
+            fullWidth
+            multiline
+            minRows={compact ? 3 : 4}
+            label="گواهی QZ (Certificate)"
+            placeholder="-----BEGIN CERTIFICATE-----"
+            value={settings.qzCertificate || ""}
+            onChange={(e) => onChange({ qzCertificate: e.target.value })}
+            sx={pemFieldSx}
+          />
+          <TextField
+            size="small"
+            fullWidth
+            multiline
+            minRows={compact ? 3 : 4}
+            label="کلید خصوصی QZ (Private Key)"
+            placeholder="-----BEGIN PRIVATE KEY-----"
+            value={settings.qzPrivateKey || ""}
+            onChange={(e) => onChange({ qzPrivateKey: e.target.value })}
+            sx={pemFieldSx}
+          />
+        </Box>
+      ) : (
+        <Typography sx={{ fontSize: 12, color: "var(--admin-text-secondary)" }}>
+          اگر برای چند فیش پرینتر جدا انتخاب کنید، تنظیمات اتصال QZ اینجا می‌آید.
+        </Typography>
+      )}
     </Box>
   );
 }
