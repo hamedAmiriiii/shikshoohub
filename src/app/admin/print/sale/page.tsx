@@ -37,12 +37,18 @@ import { canSilentPrint, qzErrorMessage, silentPrintReceiptStations } from "@/ap
 function SettingsSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <Box sx={{ gridColumn: "1 / -1" }}>
-      <Typography sx={{ fontWeight: 700, fontSize: 14, mb: 1, color: "#333" }}>{title}</Typography>
+      <Typography sx={{ fontWeight: 700, fontSize: 14, mb: 1, color: "var(--admin-text)" }}>{title}</Typography>
       <Box
         sx={{
           display: "grid",
           gap: 1.5,
           gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+          color: "var(--admin-text)",
+          "& .MuiFormControlLabel-label": { color: "var(--admin-text)", fontSize: 13 },
+          "& .MuiInputBase-input, & .MuiSelect-select, & .MuiInputLabel-root": {
+            color: "var(--admin-text)",
+          },
+          "& .MuiTypography-root": { color: "var(--admin-text)" },
         }}
       >
         {children}
@@ -102,9 +108,6 @@ function SaleReceiptPrintContent() {
         } catch {
           await printReceiptStationsSequentially(getEnabledReceiptPrintStations(settings));
         }
-        if (!cancelled && directPrintMode) {
-          window.setTimeout(() => window.close(), 400);
-        }
       })();
     }, 400);
     return () => {
@@ -135,12 +138,16 @@ function SaleReceiptPrintContent() {
           margin: 0 !important;
           padding: 0 !important;
           background: #fff !important;
+          color: #111 !important;
         }
         .no-print {
           display: none !important;
         }
-        .print-only {
-          display: block !important;
+        .print-preview {
+          background: #fff !important;
+          border: none !important;
+          padding: 0 !important;
+          color: #111 !important;
         }
         .print-ticket {
           width: ${paperWidthMm}mm !important;
@@ -176,10 +183,9 @@ function SaleReceiptPrintContent() {
     <>
       <style>{printStyles}</style>
 
-      {!directPrintMode && (
-        <Box className="no-print" sx={{ direction: "rtl", bgcolor: "#f3f4f6", minHeight: "100vh", p: 2 }}>
+      <Box sx={{ direction: "rtl", bgcolor: "var(--admin-bg-gradient)", minHeight: "100vh", p: 2, color: "var(--admin-text)" }}>
           <Box sx={{ maxWidth: 820, mx: "auto" }}>
-            <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 2 }}>
+            <Box className="no-print" sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 2 }}>
               <Button
                 variant="contained"
                 startIcon={<PrintIcon />}
@@ -198,29 +204,31 @@ function SaleReceiptPrintContent() {
             </Box>
 
             {canSilentPrint(settings) ? (
-              <Typography sx={{ fontSize: 13, color: "#166534", mb: 2 }}>
+              <Typography className="no-print" sx={{ fontSize: 13, color: "var(--admin-accent)", mb: 2 }}>
                 چاپ بی‌صدا فعال است؛ فیش هر بخش مستقیم به پرینتر انتخاب‌شده ارسال می‌شود.
               </Typography>
             ) : stations.length > 1 ? (
-              <Typography sx={{ fontSize: 13, color: "#555", mb: 2 }}>
+              <Typography className="no-print" sx={{ fontSize: 13, color: "var(--admin-text-secondary)", mb: 2 }}>
                 پرینتر هر بخش را در تنظیمات انتخاب کنید تا بدون پنجره چاپ ارسال شود. تا آن زمان برای هر فیش پنجره چاپ باز می‌شود.
               </Typography>
             ) : null}
 
             {showSettings && (
               <Box
+                className="no-print"
                 sx={{
-                  bgcolor: "#fff",
+                  bgcolor: "var(--admin-surface)",
                   borderRadius: 2,
                   p: 2,
                   mb: 2,
-                  border: "1px solid #e0e0e0",
+                  border: "1px solid var(--admin-border)",
+                  color: "var(--admin-text)",
                   display: "grid",
                   gap: 2,
                   gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
                 }}
               >
-                <Typography sx={{ gridColumn: "1 / -1", fontWeight: 700, fontSize: 16 }}>تنظیمات چاپ فاکتور</Typography>
+                <Typography sx={{ gridColumn: "1 / -1", fontWeight: 700, fontSize: 16, color: "var(--admin-text)" }}>تنظیمات چاپ فاکتور</Typography>
 
                 <SettingsSection title="ایستگاه‌های چاپ">
                   <FormControlLabel
@@ -331,9 +339,7 @@ function SaleReceiptPrintContent() {
                   </Box>
 
                   <Box sx={{ display: "flex", alignItems: "center" }}>
-                    <Typography sx={{ fontSize: 13, color: "#666" }}>
-                      عرض مؤثر چاپ: <strong>{paperWidthMm}mm</strong>
-                    </Typography>
+                    <Typography sx={{ fontSize: 13, mb: 0.5, color: "var(--admin-text)" }}>عرض مؤثر چاپ: <strong>{paperWidthMm}mm</strong></Typography>
                   </Box>
                 </SettingsSection>
 
@@ -487,8 +493,10 @@ function SaleReceiptPrintContent() {
             )}
 
             <Box
+              className="print-preview"
               sx={{
                 bgcolor: "#fff",
+                color: "#111",
                 borderRadius: 2,
                 p: 2,
                 border: "1px dashed #ccc",
@@ -498,7 +506,7 @@ function SaleReceiptPrintContent() {
                 gap: 3,
               }}
             >
-              <Typography sx={{ fontSize: 12, color: "#888", textAlign: "center" }}>
+              <Typography className="no-print" sx={{ fontSize: 12, color: "#888", textAlign: "center" }}>
                 پیش‌نمایش — عرض {paperWidthMm}mm
                 {stations.length > 1 ? ` — ${stations.length} فیش` : ""}
               </Typography>
@@ -506,11 +514,6 @@ function SaleReceiptPrintContent() {
             </Box>
           </Box>
         </Box>
-      )}
-
-      <Box sx={{ display: directPrintMode ? "block" : "none" }} className="print-only">
-        <ReceiptTicketsBlock receipt={receipt} settings={settings} paperWidthMm={paperWidthMm} />
-      </Box>
     </>
   );
 }

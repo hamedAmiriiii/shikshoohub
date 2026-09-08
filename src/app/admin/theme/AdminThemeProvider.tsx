@@ -83,10 +83,10 @@ function buildMuiTheme(mode: AdminThemeMode) {
       MuiOutlinedInput: {
         styleOverrides: {
           root: {
-            backgroundColor: isLight ? "#f1f5f9" : c.surface,
+            backgroundColor: isLight ? "#ffffff" : c.surface,
             color: c.text,
             "& fieldset": {
-              borderColor: c.border,
+              borderColor: isLight ? "#94a3b8" : c.border,
             },
             "&:hover fieldset": {
               borderColor: c.accent,
@@ -94,6 +94,37 @@ function buildMuiTheme(mode: AdminThemeMode) {
             "&.Mui-focused fieldset": {
               borderColor: c.accent,
             },
+          },
+          input: {
+            color: c.text,
+          },
+        },
+      },
+      MuiSelect: {
+        styleOverrides: {
+          select: {
+            color: c.text,
+          },
+          icon: {
+            color: c.textMuted,
+          },
+        },
+      },
+      MuiFormControlLabel: {
+        styleOverrides: {
+          label: {
+            color: c.text,
+          },
+        },
+      },
+      MuiButton: {
+        styleOverrides: {
+          outlined: {
+            color: c.text,
+            borderColor: isLight ? "#94a3b8" : c.border,
+          },
+          text: {
+            color: c.text,
           },
         },
       },

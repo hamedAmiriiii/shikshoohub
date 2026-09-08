@@ -17,12 +17,16 @@ function ticketSx(paperWidthMm: number, settings: SaleReceiptPrintSettings) {
     maxWidth: "100%",
     mx: "auto",
     bgcolor: "#fff",
-    color: "#000",
+    color: "#111",
     fontFamily: "Tahoma, Arial, sans-serif",
     fontSize: `${settings.fontSize}px`,
     lineHeight: settings.lineHeight,
     p: `${settings.paddingMm}mm`,
     boxSizing: "border-box",
+    "& .MuiTypography-root": {
+      color: "#111",
+      fontFamily: "Tahoma, Arial, sans-serif",
+    },
   } as const;
 }
 

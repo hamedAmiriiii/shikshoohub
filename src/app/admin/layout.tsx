@@ -147,7 +147,7 @@ export default function ShikshooLayout({
 
   const pageTitle = getPageTitle(pathname);
   const showBack = shouldShowBack(pathname);
-  const showShell = !isChecking || isPublicAdminPage;
+  const showShell = !isChecking || isPublicAdminPage || Boolean(isPrintPage);
 
   return (
     <AdminThemeProvider>

@@ -1245,10 +1245,10 @@ export default function ShoppingPage() {
       return;
     }
     openSaleReceiptPrintPage(
-      skipPrintPreview ? "/admin/print/sale?direct=1" : "/admin/print/sale",
+      readSaleReceiptPrintSettings().autoPrint ? "/admin/print/sale?direct=1" : "/admin/print/sale",
       lastSaleReceipt,
     );
-  }, [lastSaleReceipt, skipPrintPreview]);
+  }, [lastSaleReceipt]);
 
   const resetCartAfterQueuedSale = useCallback(() => {
     clearOrRemoveActiveCart({ clearScanned: true });

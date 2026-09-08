@@ -31,6 +31,42 @@ const switchSx = {
   },
 };
 
+const fieldSx = {
+  minWidth: 220,
+  flex: 1,
+  color: "var(--admin-text)",
+  "& .MuiOutlinedInput-root": {
+    backgroundColor: "#fff",
+    color: "var(--admin-text)",
+    "& fieldset": { borderColor: "var(--admin-input-border, var(--admin-border))" },
+    "&:hover fieldset": { borderColor: "var(--admin-accent)" },
+    "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
+  },
+  "& .MuiSelect-select": { color: "var(--admin-text)" },
+  "& .MuiSelect-icon": { color: "var(--admin-text-muted)" },
+  "& .MuiInputLabel-root": { color: "var(--admin-text-muted)" },
+  "& .MuiInputBase-input": { color: "var(--admin-text)" },
+};
+
+const outlinedBtnSx = {
+  color: "var(--admin-text)",
+  borderColor: "var(--admin-input-border, var(--admin-border))",
+  "&:hover": {
+    borderColor: "var(--admin-accent)",
+    bgcolor: "var(--admin-menu-hover)",
+  },
+};
+
+const containedBtnSx = {
+  bgcolor: "var(--admin-accent)",
+  color: "#fff",
+  "&:hover": { bgcolor: "var(--admin-accent-hover)", color: "#fff" },
+  "&.Mui-disabled": {
+    bgcolor: "var(--admin-border)",
+    color: "var(--admin-text-muted)",
+  },
+};
+
 function ToggleRow({
   title,
   hint,
@@ -158,7 +194,9 @@ export function StationPrinterSettings({
     revealQz || uniqueSelectedPrinters.length >= 2;
 
   const pemFieldSx = {
+    ...fieldSx,
     "& .MuiInputBase-input": {
+      ...fieldSx["& .MuiInputBase-input"],
       fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
       fontSize: 11,
       direction: "ltr",
@@ -171,8 +209,8 @@ export function StationPrinterSettings({
       {showReceiptToggles ? (
         <Box sx={{ display: "flex", flexDirection: "column" }}>
           <ToggleRow
-            title="چاپ مستقیم فاکتور"
-            hint="بدون پیش‌نمایش چاپ"
+            title="چاپ خودکار فاکتور"
+            hint="بعد از فروش، چاپ شروع می‌شود؛ پیش‌نمایش و تنظیمات همچنان دیده می‌شوند"
             checked={Boolean(settings.autoPrint)}
             onChange={(checked) => onChange({ autoPrint: checked })}
           />
@@ -207,7 +245,7 @@ export function StationPrinterSettings({
                 displayEmpty
                 value={value}
                 onChange={(e) => onChange({ [key]: String(e.target.value) })}
-                sx={{ minWidth: 220, flex: 1 }}
+                sx={fieldSx}
               >
                 <MenuItem value="">انتخاب نشده</MenuItem>
                 {options.map((name) => (
@@ -216,7 +254,13 @@ export function StationPrinterSettings({
                   </MenuItem>
                 ))}
               </Select>
-              <Button size="small" variant="outlined" disabled={busy || !value} onClick={() => void testStation(station)}>
+              <Button
+                size="small"
+                variant="outlined"
+                disabled={busy || !value}
+                onClick={() => void testStation(station)}
+                sx={outlinedBtnSx}
+              >
                 تست
               </Button>
             </Box>
@@ -225,10 +269,17 @@ export function StationPrinterSettings({
       })}
 
       <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", alignItems: "center" }}>
-        <Button size="small" variant="contained" disabled={busy} onClick={() => void refresh()}>
+        <Button size="small" variant="contained" disabled={busy} onClick={() => void refresh()} sx={containedBtnSx}>
           {busy ? "صبر کنید..." : "خواندن پرینترهای سیستم"}
         </Button>
-        <Button size="small" variant="outlined" href={QZ_TRAY_DOWNLOAD_URL} target="_blank" rel="noreferrer">
+        <Button
+          size="small"
+          variant="outlined"
+          href={QZ_TRAY_DOWNLOAD_URL}
+          target="_blank"
+          rel="noreferrer"
+          sx={outlinedBtnSx}
+        >
           دانلود QZ Tray
         </Button>
       </Box>
@@ -241,7 +292,7 @@ export function StationPrinterSettings({
       {showQzSettings ? (
         <Box sx={{ display: "grid", gap: 1.25 }}>
           {!compact && (
-            <Typography sx={{ fontSize: 13, color: "#555" }}>
+            <Typography sx={{ fontSize: 13, color: "var(--admin-text-secondary)" }}>
               برای چاپ بدون پنجره تأیید روی چند پرینتر، گواهی و کلید خصوصی QZ را وارد کنید، QZ Tray را باز نگه دارید، و یک‌بار اجازه اتصال را بدهید.
             </Typography>
           )}

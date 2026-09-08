@@ -88,6 +88,7 @@ html[data-admin-theme="light"] {
   --admin-info-bg: rgba(5, 150, 105, 0.08);
   --admin-info-border: rgba(5, 150, 105, 0.22);
   --admin-info-icon: #059669;
+  --admin-input-border: #94a3b8;
 }
 
 html[data-admin-theme="light"] body {
@@ -145,8 +146,27 @@ html[data-admin-theme="light"] .MuiTableCell-root .MuiTypography-root {
 }
 
 html[data-admin-theme="light"] .MuiInputBase-input,
-html[data-admin-theme="light"] .MuiInputLabel-root {
+html[data-admin-theme="light"] .MuiInputLabel-root,
+html[data-admin-theme="light"] .MuiFormLabel-root,
+html[data-admin-theme="light"] .MuiSelect-select,
+html[data-admin-theme="light"] .MuiSelect-icon,
+html[data-admin-theme="light"] .MuiFormControlLabel-label,
+html[data-admin-theme="light"] .MuiMenuItem-root,
+html[data-admin-theme="light"] .MuiSlider-markLabel {
+  color: var(--admin-text) !important;
+}
+
+html[data-admin-theme="light"] .MuiOutlinedInput-root {
+  background-color: #fff;
   color: var(--admin-text);
+}
+
+html[data-admin-theme="light"] .MuiOutlinedInput-notchedOutline {
+  border-color: var(--admin-input-border, #94a3b8) !important;
+}
+
+html[data-admin-theme="light"] .MuiButton-contained {
+  color: #fff !important;
 }
 
 html[data-admin-theme="light"] .MuiBottomNavigationAction-label {
