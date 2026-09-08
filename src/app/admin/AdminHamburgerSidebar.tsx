@@ -37,6 +37,8 @@ import StorefrontIcon from "@mui/icons-material/Storefront";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import ShoppingCartCheckoutIcon from "@mui/icons-material/ShoppingCartCheckout";
 import CardMembershipIcon from "@mui/icons-material/CardMembership";
+import VpnKeyIcon from "@mui/icons-material/VpnKey";
+import WifiIcon from "@mui/icons-material/Wifi";
 import BadgeIcon from "@mui/icons-material/Badge";
 import PaymentsIcon from "@mui/icons-material/Payments";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
@@ -407,6 +409,18 @@ export default function AdminHamburgerSidebar({
         label: "نمایندگی‌ها",
         href: "/admin/agency-requests",
         icon: <HandshakeIcon />,
+      },
+      {
+        id: "desktop-licenses",
+        label: "لایسنس دسکتاپ",
+        href: "/admin/desktop-licenses",
+        icon: <VpnKeyIcon />,
+      },
+      {
+        id: "desktop-license-logs",
+        label: "لاگ اتصال دسکتاپ",
+        href: "/admin/desktop-licenses/logs",
+        icon: <WifiIcon />,
       },
     ],
     [],
