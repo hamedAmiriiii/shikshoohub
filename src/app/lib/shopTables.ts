@@ -215,12 +215,18 @@ export function tableOrderToSaleReceipt(order: TableOrder, shopName?: string): S
     const quantity = Number(product.quantity) || 1;
     const unitPrice = Number(product.sale_price) || Number(product.unit_price) || 0;
     const lineTotal = Number(product.line_total) || unitPrice * quantity;
+    const itemNote = String(
+      (product as { note?: string | null }).note ||
+        (product as { notes?: string | null }).notes ||
+        "",
+    ).trim();
     return {
       id: product.id ?? product.product_id,
       name: product.product_name || product.name || "محصول",
       quantity,
       unitPrice,
       lineTotal,
+      note: itemNote || undefined,
     };
   });
   const subtotal = items.reduce((sum, item) => sum + item.lineTotal, 0) || getTableOrderAmount(order);

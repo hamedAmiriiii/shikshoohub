@@ -20,7 +20,10 @@ export type SaleReceiptItem = {
   quantity: number;
   unitPrice: number;
   lineTotal: number;
+  note?: string;
 };
+
+export type ReceiptPrintStation = "hall" | "kitchen" | "extra";
 
 export type SaleReceiptData = {
   purchaseId?: number | string;
@@ -63,6 +66,15 @@ export type SaleReceiptPrintSettings = {
   showItemUnitPrice: boolean;
   compactItems: boolean;
   autoPrint: boolean;
+  printHall: boolean;
+  printKitchen: boolean;
+  printExtra: boolean;
+  kitchenTitle: string;
+  extraTitle: string;
+  silentPrint: boolean;
+  hallPrinter: string;
+  kitchenPrinter: string;
+  extraPrinter: string;
 };
 
 export const DEFAULT_SALE_RECEIPT_PRINT_SETTINGS: SaleReceiptPrintSettings = {
@@ -81,6 +93,15 @@ export const DEFAULT_SALE_RECEIPT_PRINT_SETTINGS: SaleReceiptPrintSettings = {
   showItemUnitPrice: true,
   compactItems: false,
   autoPrint: false,
+  printHall: true,
+  printKitchen: true,
+  printExtra: false,
+  kitchenTitle: "آشپزخانه",
+  extraTitle: "بار",
+  silentPrint: true,
+  hallPrinter: "",
+  kitchenPrinter: "",
+  extraPrinter: "",
 };
 
 function normalizeSaleReceiptPrintSettings(
@@ -103,8 +124,76 @@ function normalizeSaleReceiptPrintSettings(
   merged.titleFontSize = Math.min(22, Math.max(10, merged.titleFontSize || 14));
   merged.paddingMm = Math.min(12, Math.max(0, merged.paddingMm ?? 4));
   merged.lineHeight = Math.min(2.2, Math.max(1.1, merged.lineHeight ?? 1.5));
+  merged.printHall = merged.printHall !== false;
+  merged.printKitchen = Boolean(merged.printKitchen);
+  merged.printExtra = Boolean(merged.printExtra);
+  merged.kitchenTitle = String(merged.kitchenTitle || "آشپزخانه").slice(0, 40);
+  merged.extraTitle = String(merged.extraTitle || "بار").slice(0, 40);
+  merged.silentPrint = merged.silentPrint !== false;
+  merged.hallPrinter = String(merged.hallPrinter || "").slice(0, 120);
+  merged.kitchenPrinter = String(merged.kitchenPrinter || "").slice(0, 120);
+  merged.extraPrinter = String(merged.extraPrinter || "").slice(0, 120);
 
   return merged;
+}
+
+export function getStationPrinterName(
+  settings: SaleReceiptPrintSettings,
+  station: ReceiptPrintStation,
+): string {
+  if (station === "hall") return settings.hallPrinter?.trim() || "";
+  if (station === "kitchen") return settings.kitchenPrinter?.trim() || "";
+  return settings.extraPrinter?.trim() || "";
+}
+
+export function stationPrinterSettingKey(
+  station: ReceiptPrintStation,
+): "hallPrinter" | "kitchenPrinter" | "extraPrinter" {
+  if (station === "hall") return "hallPrinter";
+  if (station === "kitchen") return "kitchenPrinter";
+  return "extraPrinter";
+}
+
+export function getEnabledReceiptPrintStations(
+  settings: SaleReceiptPrintSettings,
+): ReceiptPrintStation[] {
+  const stations: ReceiptPrintStation[] = [];
+  if (settings.printHall !== false) stations.push("hall");
+  if (settings.printKitchen) stations.push("kitchen");
+  if (settings.printExtra) stations.push("extra");
+  return stations.length ? stations : ["hall"];
+}
+
+export function printReceiptStationsSequentially(
+  stations: ReceiptPrintStation[],
+): Promise<void> {
+  if (typeof window === "undefined") return Promise.resolve();
+  const list = stations.length ? stations : (["hall"] as ReceiptPrintStation[]);
+
+  const printOne = (station: ReceiptPrintStation) =>
+    new Promise<void>((resolve) => {
+      document.body.dataset.printStation = station;
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        window.removeEventListener("afterprint", finish);
+        resolve();
+      };
+      window.addEventListener("afterprint", finish);
+      window.setTimeout(() => {
+        window.print();
+      }, 80);
+      window.setTimeout(finish, 120000);
+    });
+
+  return (async () => {
+    for (const station of list) {
+      await printOne(station);
+      await new Promise((r) => setTimeout(r, 350));
+    }
+    delete document.body.dataset.printStation;
+  })();
 }
 
 export function resolvePaperWidthMm(settings: SaleReceiptPrintSettings): number {
@@ -189,11 +278,32 @@ export function openSaleReceiptPrintPage(
   basePath = "/admin/print/sale",
   data?: SaleReceiptData | null,
 ): void {
-  if (typeof window === "undefined") return;
+  void dispatchSaleReceiptPrint(basePath, data);
+}
+
+export async function dispatchSaleReceiptPrint(
+  basePath = "/admin/print/sale",
+  data?: SaleReceiptData | null,
+): Promise<"silent" | "dialog"> {
+  if (typeof window === "undefined") return "dialog";
   if (data) {
     saveSaleReceiptPrintData(data);
   }
+  const settings = readSaleReceiptPrintSettings();
+  const receipt = data ?? readSaleReceiptPrintData();
+  if (receipt && settings.silentPrint !== false) {
+    try {
+      const { canSilentPrint, silentPrintReceiptStations } = await import("@/app/lib/qzSilentPrint");
+      if (canSilentPrint(settings)) {
+        await silentPrintReceiptStations(receipt, settings);
+        return "silent";
+      }
+    } catch {
+      // Fall back to the browser print dialog.
+    }
+  }
   window.open(basePath, "_blank", "noopener,noreferrer");
+  return "dialog";
 }
 
 export function getPaymentTypeLabel(receipt: SaleReceiptData): string {

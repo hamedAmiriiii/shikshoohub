@@ -44,9 +44,12 @@ import {
 import LoyaltyCreditTiersSettings from "@/app/admin/settings/LoyaltyCreditTiersSettings";
 import ShopBackupSettings from "@/app/admin/settings/ShopBackupSettings";
 import {
+  DEFAULT_SALE_RECEIPT_PRINT_SETTINGS,
   readSaleReceiptPrintSettings,
   writeSaleReceiptPrintSettings,
+  type SaleReceiptPrintSettings,
 } from "@/app/lib/saleReceiptPrint";
+import { StationPrinterSettings } from "@/app/admin/print/sale/StationPrinterSettings";
 import { useShopPermissionGate } from "@/app/lib/shopPermissions";
 
 const settingsCardSx = {
@@ -265,6 +268,11 @@ export default function SettingsPage() {
   const [restaurantCafeEnabled, setRestaurantCafeEnabled] = useState(false);
   const [menuTableOrdersPopupEnabled, setMenuTableOrdersPopupEnabled] = useState(false);
   const [directPrintEnabled, setDirectPrintEnabled] = useState(false);
+  const [printKitchenEnabled, setPrintKitchenEnabled] = useState(true);
+  const [printExtraEnabled, setPrintExtraEnabled] = useState(false);
+  const [receiptPrintSettings, setReceiptPrintSettings] = useState<SaleReceiptPrintSettings>(
+    DEFAULT_SALE_RECEIPT_PRINT_SETTINGS,
+  );
   const [shopCardNumber, setShopCardNumber] = useState("");
   const [shopCardHolder, setShopCardHolder] = useState("");
   const [shopBankName, setShopBankName] = useState("");
@@ -285,7 +293,11 @@ export default function SettingsPage() {
     setAskCustomerName(settings.askCustomerName);
     setRestaurantCafeEnabled(settings.restaurantCafeEnabled);
     setMenuTableOrdersPopupEnabled(settings.menuTableOrdersPopupEnabled);
-    setDirectPrintEnabled(readSaleReceiptPrintSettings().autoPrint);
+    const printSettings = readSaleReceiptPrintSettings();
+    setDirectPrintEnabled(printSettings.autoPrint);
+    setPrintKitchenEnabled(Boolean(printSettings.printKitchen));
+    setPrintExtraEnabled(Boolean(printSettings.printExtra));
+    setReceiptPrintSettings(printSettings);
   }, []);
 
   const handleToggleProductListOnMainPage = (
@@ -444,6 +456,20 @@ export default function SettingsPage() {
         ? "حالت چاپ مستقیم فعال شد؛ پیش‌نمایش چاپ نمایش داده نمی‌شود"
         : "حالت پیش‌نمایش چاپ فعال شد",
     );
+  };
+
+  const handleToggleKitchenPrint = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setPrintKitchenEnabled(enabled);
+    setReceiptPrintSettings(writeSaleReceiptPrintSettings({ printKitchen: enabled }));
+    toast.success(enabled ? "فیش آشپزخانه همراه چاپ فعال شد" : "فیش آشپزخانه خاموش شد");
+  };
+
+  const handleToggleExtraPrint = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setPrintExtraEnabled(enabled);
+    setReceiptPrintSettings(writeSaleReceiptPrintSettings({ printExtra: enabled }));
+    toast.success(enabled ? "فیش سوم (بار) همراه چاپ فعال شد" : "فیش سوم خاموش شد");
   };
 
   const applyLoyaltyResponse = (loyaltyRes: Record<string, unknown> | boolean) => {
@@ -815,10 +841,41 @@ export default function SettingsPage() {
             hint="بدون پیش‌نمایش چاپ"
             checked={directPrintEnabled}
             onChange={handleToggleDirectPrint}
+          />
+          <SettingsToggleRow
+            icon={<KitchenIcon sx={{ fontSize: 18 }} />}
+            title="فیش آشپزخانه"
+            hint="با چاپ سالن، یک فیش بدون قیمت هم چاپ می‌شود"
+            checked={printKitchenEnabled}
+            onChange={handleToggleKitchenPrint}
+          />
+          <SettingsToggleRow
+            icon={<RestaurantMenuIcon sx={{ fontSize: 18 }} />}
+            title="فیش سوم (بار)"
+            hint="ایستگاه جدا با پرینتر مستقل"
+            checked={printExtraEnabled}
+            onChange={handleToggleExtraPrint}
             last
           />
         </CardContent>
       </Card>
+
+      <SettingsSectionCard
+        icon={<PrintIcon sx={{ fontSize: 18 }} />}
+        title="پرینتر سالن و آشپزخانه"
+        hint="انتخاب پرینتر هر فیش و ارسال بدون پنجره تأیید"
+      >
+        <Box sx={{ mt: 1 }}>
+          <StationPrinterSettings
+            compact
+            settings={receiptPrintSettings}
+            onChange={(partial) => {
+              const next = writeSaleReceiptPrintSettings(partial);
+              setReceiptPrintSettings(next);
+            }}
+          />
+        </Box>
+      </SettingsSectionCard>
 
       <SettingsSectionCard
         icon={<CreditCardIcon sx={{ fontSize: 18 }} />}
