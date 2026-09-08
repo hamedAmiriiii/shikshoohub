@@ -16,6 +16,10 @@ import {
   ADMIN_POS_SETTINGS_CHANGED_EVENT,
   readAdminPosSettings,
 } from "@/app/lib/adminPosSettings";
+import {
+  speakPersianAnnouncement,
+  tableLabelToAnnouncement,
+} from "@/app/lib/speakPersianAnnouncement";
 
 export const SERVICE_REQUESTS_NEW_EVENT = "table-service-requests-new";
 
@@ -45,14 +49,19 @@ export default function ServiceRequestsPendingProvider({ children }: { children:
   const seenInitialized = useRef(false);
   const soundRef = useRef<HTMLAudioElement | null>(null);
 
-  const playSound = useCallback(() => {
-    try {
-      if (!soundRef.current) soundRef.current = new Audio("/reserv/1.mp3");
-      soundRef.current.currentTime = 0;
-      void soundRef.current.play().catch(() => {});
-    } catch {
-      /* ignore */
-    }
+  const playSound = useCallback((label?: string | null) => {
+    const spoken = tableLabelToAnnouncement(String(label || "").trim() || "اتاق", "service");
+    void (async () => {
+      const ok = await speakPersianAnnouncement(spoken);
+      if (ok) return;
+      try {
+        if (!soundRef.current) soundRef.current = new Audio("/reserv/1.mp3");
+        soundRef.current.currentTime = 0;
+        void soundRef.current.play().catch(() => {});
+      } catch {
+        /* ignore */
+      }
+    })();
   }, []);
 
   const refresh = useCallback(async () => {
@@ -68,11 +77,12 @@ export default function ServiceRequestsPendingProvider({ children }: { children:
       const prevCount = seenCount.current;
       setCount(nextCount);
       setLatestId(Number.isFinite(nextLatest as number) ? nextLatest : null);
+      const nextLabel = typeof res?.latest_label === "string" ? res.latest_label : "";
       if (seenInitialized.current && nextCount > prevCount) {
-        playSound();
+        playSound(nextLabel);
         window.dispatchEvent(
           new CustomEvent(SERVICE_REQUESTS_NEW_EVENT, {
-            detail: { count: nextCount, latestId: nextLatest, prevCount },
+            detail: { count: nextCount, latestId: nextLatest, prevCount, label: nextLabel },
           }),
         );
       }

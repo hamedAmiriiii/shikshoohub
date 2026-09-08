@@ -16,6 +16,10 @@ import {
   ADMIN_POS_SETTINGS_CHANGED_EVENT,
   readAdminPosSettings,
 } from "@/app/lib/adminPosSettings";
+import {
+  speakPersianAnnouncement,
+  tableLabelToAnnouncement,
+} from "@/app/lib/speakPersianAnnouncement";
 
 export const TABLE_ORDERS_NEW_EVENT = "table-orders-new";
 
@@ -53,18 +57,21 @@ export default function TableOrdersPendingProvider({ children }: { children: Rea
   const seenInitialized = useRef(false);
   const soundRef = useRef<HTMLAudioElement | null>(null);
 
-  const playNewOrderSound = useCallback(() => {
-    try {
-      if (!soundRef.current) {
-        soundRef.current = new Audio("/reserv/1.mp3");
+  const playNewOrderSound = useCallback((label?: string | null) => {
+    const spoken = tableLabelToAnnouncement(String(label || "").trim() || "میز");
+    void (async () => {
+      const ok = await speakPersianAnnouncement(spoken);
+      if (ok) return;
+      try {
+        if (!soundRef.current) {
+          soundRef.current = new Audio("/reserv/1.mp3");
+        }
+        soundRef.current.currentTime = 0;
+        void soundRef.current.play().catch(() => {});
+      } catch {
+        /* ignore */
       }
-      soundRef.current.currentTime = 0;
-      void soundRef.current.play().catch(() => {
-        /* مرورگر ممکن است پخش خودکار را تا تعامل کاربر مسدود کند */
-      });
-    } catch {
-      /* ignore */
-    }
+    })();
   }, []);
 
   const refresh = useCallback(async () => {
@@ -82,11 +89,12 @@ export default function TableOrdersPendingProvider({ children }: { children: Rea
       setCount(nextCount);
       setWithReceipt(nextReceipt);
       setLatestId(Number.isFinite(nextLatest as number) ? nextLatest : null);
+      const nextLabel = typeof res?.latest_label === "string" ? res.latest_label : "";
       if (seenInitialized.current && nextCount > prevCount) {
-        playNewOrderSound();
+        playNewOrderSound(nextLabel);
         window.dispatchEvent(
           new CustomEvent(TABLE_ORDERS_NEW_EVENT, {
-            detail: { count: nextCount, latestId: nextLatest, prevCount },
+            detail: { count: nextCount, latestId: nextLatest, prevCount, label: nextLabel },
           }),
         );
       }
