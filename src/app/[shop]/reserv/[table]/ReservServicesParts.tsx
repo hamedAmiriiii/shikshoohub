@@ -7,6 +7,18 @@ import RoomServiceIcon from "@mui/icons-material/RoomService";
 import { Box, Button, CircularProgress, Typography } from "@mui/material";
 import { ACCENT, ACCENT_DARK, ACCENT_SOFT, formatNumber, type ReservTheme } from "./ReservOrderingParts";
 
+function formatSchedule(value?: string | null) {
+  if (!value) return "";
+  const date = new Date(String(value).replace(" ", "T"));
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("fa-IR", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
 type SwitchProps = {
   mode: "menu" | "services";
   onChange: (mode: "menu" | "services") => void;
@@ -201,7 +213,9 @@ export function ReservServiceRequestList({ requests, theme, cancellingId, onCanc
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography sx={{ fontWeight: 800, fontSize: 13, color: theme.TEXT }}>{row.name}</Typography>
             <Typography sx={{ color: theme.MUTED, fontSize: 11 }}>
-              {row.status_label || "در انتظار"} {row.note ? `· ${row.note}` : ""}
+              {row.status_label || "در انتظار"}
+              {row.scheduled_at ? ` · ${formatSchedule(row.scheduled_at)}` : ""}
+              {row.note ? ` · ${row.note}` : ""}
             </Typography>
           </Box>
           {row.status === "pending" ? (

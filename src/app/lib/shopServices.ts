@@ -33,6 +33,7 @@ export type TableServiceRequest = {
   table_label?: string | null;
   table_number?: number | null;
   created_at?: string;
+  scheduled_at?: string | null;
   done_at?: string | null;
 };
 

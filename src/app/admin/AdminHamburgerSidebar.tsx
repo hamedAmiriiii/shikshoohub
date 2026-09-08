@@ -58,8 +58,12 @@ import GroupsIcon from "@mui/icons-material/Groups";
 import {
   ADMIN_POS_SETTINGS_CHANGED_EVENT,
   readAdminPosSettings,
+  writeAdminPosSettings,
 } from "@/app/lib/adminPosSettings";
 import { useShopPermissionGate, type ShopPermissionKey } from "@/app/lib/shopPermissions";
+import { extractRoomServicesEnabled } from "@/app/lib/shopServices";
+import tokenCode from "@/app/coponent/tokenCode";
+import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
 
 export const ADMIN_SIDEBAR_WIDTH = 200;
 
@@ -136,6 +140,15 @@ export default function AdminHamburgerSidebar({
     };
     sync();
     window.addEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, sync);
+    const token = tokenCode();
+    if (token) {
+      void FetchWithJwtClient("GET", "/api/shop-services", token).then((res) => {
+        if (res?.hasError) return;
+        const enabled = extractRoomServicesEnabled(res);
+        writeAdminPosSettings({ roomServicesEnabled: enabled });
+        setRoomServicesEnabled(enabled);
+      });
+    }
     return () => window.removeEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, sync);
   }, []);
   const financialChildren: NavLeaf[] = useMemo(
@@ -386,6 +399,12 @@ export default function AdminHamburgerSidebar({
         icon: <StorefrontIcon />,
       },
       {
+        id: "shop-service-access",
+        label: "دسترسی خدمات",
+        href: "/admin/shop-service-access",
+        icon: <RoomServiceIcon />,
+      },
+      {
         id: "sms-orders",
         label: "درخواست‌های بسته پیامک",
         href: "/admin/sms-package-orders",
@@ -482,7 +501,7 @@ export default function AdminHamburgerSidebar({
         label: "خدمات اتاق",
         href: "/admin/shop-services",
         icon: <RoomServiceIcon />,
-        permission: "shop_tables",
+        permission: "shop_services",
       },
     ],
     [],

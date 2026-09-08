@@ -21,6 +21,7 @@ import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
+import EventIcon from "@mui/icons-material/Event";
 import RoomServiceIcon from "@mui/icons-material/RoomService";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -56,15 +57,30 @@ const formatDate = (value?: string) => {
 };
 
 type TabKey = "requests" | "catalog";
-type RequestFilter = "pending" | "done" | "cancelled";
+type RequestFilter = "open" | "done" | "cancelled";
+
+function toDatetimeLocal(value?: string | null) {
+  if (!value) return "";
+  const date = new Date(String(value).replace(" ", "T"));
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function fromDatetimeLocal(value: string) {
+  if (!value) return "";
+  return value.replace("T", " ") + ":00";
+}
 
 export default function ShopServicesPage() {
   const [tab, setTab] = useState<TabKey>("requests");
   const [services, setServices] = useState<ShopService[]>([]);
   const [requests, setRequests] = useState<TableServiceRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [requestFilter, setRequestFilter] = useState<RequestFilter>("pending");
+  const [requestFilter, setRequestFilter] = useState<RequestFilter>("open");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [scheduleRow, setScheduleRow] = useState<TableServiceRequest | null>(null);
+  const [scheduleAt, setScheduleAt] = useState("");
   const [editing, setEditing] = useState<ShopService | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -182,7 +198,42 @@ export default function ShopServicesPage() {
     await loadCatalog();
   };
 
+  const saveSchedule = async () => {
+    if (!scheduleRow || !scheduleAt) {
+      toast.error("تاریخ و ساعت را وارد کنید");
+      return;
+    }
+    const token = tokenCode();
+    if (!token) return;
+    setActingId(scheduleRow.id);
+    try {
+      const res = await FetchWithJwtClient(
+        "POST",
+        `/api/table-service-requests/${scheduleRow.id}/schedule`,
+        token,
+        {},
+        { body: JSON.stringify({ scheduled_at: fromDatetimeLocal(scheduleAt) }) },
+      );
+      if (res?.hasError) {
+        toast.error(getApiErrorMessage(res, "ثبت زمان ناموفق بود"));
+        return;
+      }
+      toast.success("زمان انجام ثبت شد");
+      setScheduleRow(null);
+      await loadRequests({ silent: true });
+      await refreshPending();
+    } finally {
+      setActingId(null);
+    }
+  };
+
   const actOnRequest = async (row: TableServiceRequest, action: "done" | "cancel") => {
+    if (action === "done" && !row.scheduled_at) {
+      setScheduleRow(row);
+      setScheduleAt(toDatetimeLocal(row.scheduled_at));
+      toast.info("اول تاریخ و ساعت انجام را ثبت کنید");
+      return;
+    }
     const token = tokenCode();
     if (!token) return;
     setActingId(row.id);
@@ -229,11 +280,11 @@ export default function ShopServicesPage() {
       {tab === "requests" ? (
         <>
           <Box sx={{ display: "flex", gap: 0.7, mb: 1.5 }}>
-            {(["pending", "done", "cancelled"] as const).map((key) => (
+            {(["open", "done", "cancelled"] as const).map((key) => (
               <Chip
                 key={key}
                 size="small"
-                label={key === "pending" ? "در انتظار" : key === "done" ? "انجام‌شده" : "لغو شده"}
+                label={key === "open" ? "باز" : key === "done" ? "انجام‌شده" : "لغو شده"}
                 onClick={() => setRequestFilter(key)}
                 variant={requestFilter === key ? "filled" : "outlined"}
                 color={requestFilter === key ? "success" : "default"}
@@ -267,19 +318,41 @@ export default function ShopServicesPage() {
                       <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: 12 }}>
                         {row.table_label || (row.table_number ? `اتاق ${row.table_number}` : "اتاق")} · {formatDate(row.created_at)}
                       </Typography>
+                      {row.scheduled_at ? (
+                        <Typography sx={{ color: "var(--admin-accent)", fontSize: 12, mt: 0.2, fontWeight: 700 }}>
+                          زمان انجام: {formatDate(row.scheduled_at)}
+                        </Typography>
+                      ) : (
+                        <Typography sx={{ color: "#e6a23c", fontSize: 12, mt: 0.2 }}>
+                          هنوز زمان انجام ثبت نشده
+                        </Typography>
+                      )}
                       {row.note ? (
                         <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, mt: 0.3 }}>
                           {row.note}
                         </Typography>
                       ) : null}
                     </Box>
-                    {row.status === "pending" ? (
+                    {row.status === "pending" || row.status === "scheduled" ? (
                       <Box sx={{ display: "flex", gap: 0.4 }}>
                         <IconButton
                           size="small"
-                          onClick={() => actOnRequest(row, "done")}
+                          onClick={() => {
+                            setScheduleRow(row);
+                            setScheduleAt(toDatetimeLocal(row.scheduled_at));
+                          }}
                           disabled={actingId === row.id}
                           sx={{ color: "var(--admin-accent)" }}
+                          aria-label="ثبت زمان"
+                        >
+                          <EventIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => actOnRequest(row, "done")}
+                          disabled={actingId === row.id || !row.scheduled_at}
+                          sx={{ color: "var(--admin-accent)" }}
+                          aria-label="انجام شد"
                         >
                           <CheckRoundedIcon fontSize="small" />
                         </IconButton>
@@ -398,6 +471,28 @@ export default function ShopServicesPage() {
           </Button>
           <Button onClick={saveService} disabled={saving} startIcon={<RoomServiceIcon />}>
             {saving ? "..." : "ذخیره"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog open={Boolean(scheduleRow)} onClose={() => setScheduleRow(null)} fullWidth maxWidth="xs">
+        <DialogTitle sx={{ fontWeight: 800 }}>زمان انجام خدمت</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ fontSize: 13, color: "var(--admin-text-secondary)", mb: 1.5 }}>
+            {scheduleRow?.name} — {scheduleRow?.table_label || "اتاق"}
+          </Typography>
+          <TextField
+            fullWidth
+            type="datetime-local"
+            label="تاریخ و ساعت"
+            value={scheduleAt}
+            onChange={(e) => setScheduleAt(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setScheduleRow(null)}>انصراف</Button>
+          <Button onClick={saveSchedule} disabled={actingId === scheduleRow?.id} startIcon={<EventIcon />}>
+            ثبت زمان
           </Button>
         </DialogActions>
       </Dialog>

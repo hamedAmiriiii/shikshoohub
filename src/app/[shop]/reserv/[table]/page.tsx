@@ -450,6 +450,7 @@ export default function TableReservPage() {
   const [cancellingOrder, setCancellingOrder] = useState(false);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [currentOpen, setCurrentOpen] = useState(false);
+  const [servicesOpen, setServicesOpen] = useState(false);
   const [currentLoading, setCurrentLoading] = useState(false);
   const [currentOrders, setCurrentOrders] = useState<TableOrder[]>([]);
   const [currentDetail, setCurrentDetail] = useState<TableOrder | null>(null);
@@ -867,7 +868,11 @@ export default function TableReservPage() {
         setServiceRequests([]);
         return;
       }
-      setServiceRequests(extractTableServiceRequests(res).filter((row) => row.status === "pending"));
+      setServiceRequests(
+        extractTableServiceRequests(res).filter(
+          (row) => row.status === "pending" || row.status === "scheduled" || !row.status,
+        ),
+      );
     } catch {
       setServiceRequests([]);
     }
@@ -1247,8 +1252,8 @@ export default function TableReservPage() {
     creditToApply > 0
       ? `${formatNumber(payableAmount)} تومان`
       : `${formatNumber(cartTotal)} تومان`;
-  const activeCurrentCount =
-    currentOrders.filter((order) => order.status !== "cancelled").length + serviceRequests.length;
+  const activeCurrentCount = currentOrders.filter((order) => order.status !== "cancelled").length;
+  const activeServiceCount = serviceRequests.length;
 
   return (
     <Box
@@ -1267,9 +1272,15 @@ export default function TableReservPage() {
         themeMode={themeMode}
         theme={theme}
         currentOrderCount={activeCurrentCount}
+        currentServiceCount={activeServiceCount}
+        showServiceShortcut={servicesEnabled}
         onLogin={() => setLoginOpen(true)}
         onToggleTheme={toggleTheme}
         onCurrentOrders={openCurrentOrders}
+        onCurrentServices={() => {
+          setServicesOpen(true);
+          void loadServiceRequests();
+        }}
         onHistory={openOrders}
       />
 
@@ -1956,20 +1967,12 @@ export default function TableReservPage() {
               </Button>
             ) : null}
           </Box>
-        ) : currentOrders.length === 0 && serviceRequests.length === 0 ? (
+        ) : currentOrders.length === 0 ? (
           <Typography sx={{ textAlign: "center", color: MUTED, py: 4 }}>
-            سفارش یا خدمت بازی برای این میز نیست.
+            سفارش بازی برای این میز نیست. بعد از تأیید صندوق از اینجا برداشته می‌شود.
           </Typography>
         ) : (
           <Box sx={{ overflowY: "auto" }}>
-            {serviceRequests.length > 0 ? (
-              <ReservServiceRequestList
-                requests={serviceRequests}
-                theme={theme}
-                cancellingId={cancellingServiceId}
-                onCancel={cancelServiceRequest}
-              />
-            ) : null}
             {currentOrders.map((order) => (
               <Box
                 key={order.id}
@@ -2001,6 +2004,40 @@ export default function TableReservPage() {
               </Box>
             ))}
           </Box>
+        )}
+      </Drawer>
+      <Drawer
+        anchor="bottom"
+        open={servicesOpen}
+        onClose={() => setServicesOpen(false)}
+        PaperProps={{
+          sx: {
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            p: 2,
+            pb: "max(16px, env(safe-area-inset-bottom))",
+            direction: "rtl",
+            maxWidth: 520,
+            mx: "auto",
+            bgcolor: SURFACE,
+            color: TEXT,
+            maxHeight: "80vh",
+          },
+        }}
+      >
+        <Box sx={{ width: 42, height: 5, borderRadius: 99, bgcolor: "#3a3a3a", mx: "auto", mb: 1.5 }} />
+        <Typography sx={{ fontWeight: 800, fontSize: 18, color: TEXT, mb: 1 }}>خدمات اتاق</Typography>
+        {serviceRequests.length === 0 ? (
+          <Typography sx={{ textAlign: "center", color: MUTED, py: 4 }}>
+            درخواست بازی برای این اتاق نیست.
+          </Typography>
+        ) : (
+          <ReservServiceRequestList
+            requests={serviceRequests}
+            theme={theme}
+            cancellingId={cancellingServiceId}
+            onCancel={cancelServiceRequest}
+          />
         )}
       </Drawer>
       <Dialog

@@ -7,6 +7,7 @@ import HistoryIcon from "@mui/icons-material/History";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import RemoveIcon from "@mui/icons-material/Remove";
+import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import RoomServiceIcon from "@mui/icons-material/RoomService";
 import SearchIcon from "@mui/icons-material/Search";
 import ShoppingBagOutlinedIcon from "@mui/icons-material/ShoppingBagOutlined";
@@ -74,9 +75,12 @@ type HeaderProps = {
   themeMode: ReservThemeMode;
   theme: ReservTheme;
   currentOrderCount: number;
+  currentServiceCount?: number;
+  showServiceShortcut?: boolean;
   onLogin: () => void;
   onToggleTheme: () => void;
   onCurrentOrders: () => void;
+  onCurrentServices?: () => void;
   onHistory: () => void;
 };
 
@@ -87,9 +91,12 @@ export function ReservHeader({
   themeMode,
   theme,
   currentOrderCount,
+  currentServiceCount = 0,
+  showServiceShortcut = false,
   onLogin,
   onToggleTheme,
   onCurrentOrders,
+  onCurrentServices,
   onHistory,
 }: HeaderProps) {
   const iconBtn = {
@@ -199,16 +206,28 @@ export function ReservHeader({
           <IconButton onClick={onToggleTheme} aria-label={themeMode === "dark" ? "حالت روشن" : "حالت تیره"} sx={{ ...iconBtn, width: 40, height: 40 }}>
             {themeMode === "dark" ? <LightModeIcon sx={{ fontSize: 18 }} /> : <DarkModeIcon sx={{ fontSize: 18 }} />}
           </IconButton>
-          <IconButton onClick={onCurrentOrders} aria-label="سفارش جاری" sx={{ ...iconBtn, width: 40, height: 40 }}>
+          <IconButton onClick={onCurrentOrders} aria-label="سفارش غذا" sx={{ ...iconBtn, width: 40, height: 40 }}>
             <Badge
               badgeContent={currentOrderCount}
               color="error"
               max={9}
               sx={{ "& .MuiBadge-badge": { fontSize: "0.55rem", minWidth: 14, height: 14 } }}
             >
-              <RoomServiceIcon sx={{ fontSize: 18 }} />
+              <RestaurantMenuIcon sx={{ fontSize: 18 }} />
             </Badge>
           </IconButton>
+          {showServiceShortcut ? (
+            <IconButton onClick={onCurrentServices} aria-label="خدمات اتاق" sx={{ ...iconBtn, width: 40, height: 40 }}>
+              <Badge
+                badgeContent={currentServiceCount}
+                color="error"
+                max={9}
+                sx={{ "& .MuiBadge-badge": { fontSize: "0.55rem", minWidth: 14, height: 14 } }}
+              >
+                <RoomServiceIcon sx={{ fontSize: 18 }} />
+              </Badge>
+            </IconButton>
+          ) : null}
           <IconButton onClick={onHistory} aria-label="سفارش‌های قبلی" sx={{ ...iconBtn, width: 40, height: 40 }}>
             <HistoryIcon sx={{ fontSize: 18 }} />
           </IconButton>
