@@ -17,8 +17,8 @@ import {
   readAdminPosSettings,
 } from "@/app/lib/adminPosSettings";
 import {
-  speakPersianAnnouncement,
-  tableLabelToAnnouncement,
+  announceTableEvent,
+  bindAnnouncementAudioUnlock,
 } from "@/app/lib/speakPersianAnnouncement";
 
 export const SERVICE_REQUESTS_NEW_EVENT = "table-service-requests-new";
@@ -47,21 +47,10 @@ export default function ServiceRequestsPendingProvider({ children }: { children:
   const [latestId, setLatestId] = useState<number | null>(null);
   const seenCount = useRef(0);
   const seenInitialized = useRef(false);
-  const soundRef = useRef<HTMLAudioElement | null>(null);
+  const seenLatest = useRef<number | null>(null);
 
   const playSound = useCallback((label?: string | null) => {
-    const spoken = tableLabelToAnnouncement(String(label || "").trim() || "اتاق", "service");
-    void (async () => {
-      const ok = await speakPersianAnnouncement(spoken);
-      if (ok) return;
-      try {
-        if (!soundRef.current) soundRef.current = new Audio("/reserv/1.mp3");
-        soundRef.current.currentTime = 0;
-        void soundRef.current.play().catch(() => {});
-      } catch {
-        /* ignore */
-      }
-    })();
+    void announceTableEvent(label || "", "service");
   }, []);
 
   const refresh = useCallback(async () => {
@@ -78,7 +67,11 @@ export default function ServiceRequestsPendingProvider({ children }: { children:
       setCount(nextCount);
       setLatestId(Number.isFinite(nextLatest as number) ? nextLatest : null);
       const nextLabel = typeof res?.latest_label === "string" ? res.latest_label : "";
-      if (seenInitialized.current && nextCount > prevCount) {
+      const latestGrew =
+        nextLatest != null &&
+        Number.isFinite(nextLatest) &&
+        (seenLatest.current == null || nextLatest > seenLatest.current);
+      if (seenInitialized.current && nextCount > 0 && (nextCount > prevCount || latestGrew)) {
         playSound(nextLabel);
         window.dispatchEvent(
           new CustomEvent(SERVICE_REQUESTS_NEW_EVENT, {
@@ -88,6 +81,11 @@ export default function ServiceRequestsPendingProvider({ children }: { children:
       }
       seenInitialized.current = true;
       seenCount.current = nextCount;
+      if (nextLatest != null && Number.isFinite(nextLatest)) {
+        seenLatest.current = nextLatest;
+      } else if (nextCount === 0) {
+        seenLatest.current = null;
+      }
     } catch {
       /* ignore */
     }
@@ -100,12 +98,15 @@ export default function ServiceRequestsPendingProvider({ children }: { children:
     return () => window.removeEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, sync);
   }, []);
 
+  useEffect(() => bindAnnouncementAudioUnlock(), []);
+
   useEffect(() => {
     if (!enabled) {
       setCount(0);
       setLatestId(null);
       seenInitialized.current = false;
       seenCount.current = 0;
+      seenLatest.current = null;
       return;
     }
     void refresh();

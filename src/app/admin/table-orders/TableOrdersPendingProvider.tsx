@@ -17,8 +17,8 @@ import {
   readAdminPosSettings,
 } from "@/app/lib/adminPosSettings";
 import {
-  speakPersianAnnouncement,
-  tableLabelToAnnouncement,
+  announceTableEvent,
+  bindAnnouncementAudioUnlock,
 } from "@/app/lib/speakPersianAnnouncement";
 
 export const TABLE_ORDERS_NEW_EVENT = "table-orders-new";
@@ -55,23 +55,9 @@ export default function TableOrdersPendingProvider({ children }: { children: Rea
   const seenLatest = useRef<number | null>(null);
   const seenCount = useRef(0);
   const seenInitialized = useRef(false);
-  const soundRef = useRef<HTMLAudioElement | null>(null);
 
   const playNewOrderSound = useCallback((label?: string | null) => {
-    const spoken = tableLabelToAnnouncement(String(label || "").trim() || "میز");
-    void (async () => {
-      const ok = await speakPersianAnnouncement(spoken);
-      if (ok) return;
-      try {
-        if (!soundRef.current) {
-          soundRef.current = new Audio("/reserv/1.mp3");
-        }
-        soundRef.current.currentTime = 0;
-        void soundRef.current.play().catch(() => {});
-      } catch {
-        /* ignore */
-      }
-    })();
+    void announceTableEvent(label || "", "order");
   }, []);
 
   const refresh = useCallback(async () => {
@@ -90,7 +76,11 @@ export default function TableOrdersPendingProvider({ children }: { children: Rea
       setWithReceipt(nextReceipt);
       setLatestId(Number.isFinite(nextLatest as number) ? nextLatest : null);
       const nextLabel = typeof res?.latest_label === "string" ? res.latest_label : "";
-      if (seenInitialized.current && nextCount > prevCount) {
+      const latestGrew =
+        nextLatest != null &&
+        Number.isFinite(nextLatest) &&
+        (seenLatest.current == null || nextLatest > seenLatest.current);
+      if (seenInitialized.current && nextCount > 0 && (nextCount > prevCount || latestGrew)) {
         playNewOrderSound(nextLabel);
         window.dispatchEvent(
           new CustomEvent(TABLE_ORDERS_NEW_EVENT, {
@@ -116,6 +106,8 @@ export default function TableOrdersPendingProvider({ children }: { children: Rea
     window.addEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, sync);
     return () => window.removeEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, sync);
   }, []);
+
+  useEffect(() => bindAnnouncementAudioUnlock(), []);
 
   useEffect(() => {
     if (!enabled) {

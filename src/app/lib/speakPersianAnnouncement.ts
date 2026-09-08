@@ -1,3 +1,5 @@
+const FALLBACK_SRC = "/reserv/1.mp3";
+
 const FA_ONES = [
   "صفر",
   "یک",
@@ -54,12 +56,15 @@ function toSpokenPersian(text: string): string {
   return text.replace(/\d+/g, (digits) => numberToPersianWords(Number(digits)));
 }
 
+function isPersianVoice(voice: SpeechSynthesisVoice): boolean {
+  const name = `${voice.name} ${voice.lang}`.toLowerCase();
+  return /^fa/i.test(voice.lang) || name.includes("persian") || name.includes("farsi") || name.includes("فارسی");
+}
+
 function voiceScore(voice: SpeechSynthesisVoice): number {
   const name = `${voice.name} ${voice.lang}`.toLowerCase();
   let score = 0;
-  if (/^fa/i.test(voice.lang) || name.includes("persian") || name.includes("farsi") || name.includes("فارسی")) {
-    score += 50;
-  }
+  if (isPersianVoice(voice)) score += 50;
   if (/dilara|fariba|nazanin|minu|arezoo|elham|laleh/.test(name)) score += 30;
   if (/female|woman|zira|hazel|aria|jenny|samantha|susan/.test(name)) score += 12;
   if (/male|david|mark|george|guy/.test(name)) score -= 20;
@@ -70,9 +75,9 @@ function voiceScore(voice: SpeechSynthesisVoice): number {
 function pickFemaleFaVoice(): SpeechSynthesisVoice | null {
   if (typeof window === "undefined" || !window.speechSynthesis) return null;
   const voices = window.speechSynthesis.getVoices();
-  if (!voices.length) return null;
-  const ranked = [...voices].sort((a, b) => voiceScore(b) - voiceScore(a));
-  return ranked[0] ?? null;
+  const persian = voices.filter(isPersianVoice);
+  if (!persian.length) return null;
+  return [...persian].sort((a, b) => voiceScore(b) - voiceScore(a))[0] ?? null;
 }
 
 function waitForVoices(): Promise<void> {
@@ -94,37 +99,141 @@ export function tableLabelToAnnouncement(label: string, kind: "order" | "service
   return kind === "service" ? `درخواست خدمت، ${spoken}` : `سفارش جدید، ${spoken}`;
 }
 
+let audioPrimed = false;
+let fallbackAudio: HTMLAudioElement | null = null;
+
+function ensureFallbackAudio(src = FALLBACK_SRC): HTMLAudioElement | null {
+  if (typeof window === "undefined") return null;
+  if (!fallbackAudio) fallbackAudio = new Audio(src);
+  return fallbackAudio;
+}
+
+/** مرورگر بدون یک کلیک صدا را مسدود می‌کند؛ بعد از اولین لمس صفحه صدا آزاد می‌شود. */
+export function bindAnnouncementAudioUnlock(src = FALLBACK_SRC): () => void {
+  if (typeof window === "undefined") return () => {};
+  const prime = () => {
+    if (audioPrimed) return;
+    audioPrimed = true;
+    try {
+      window.speechSynthesis?.resume();
+      const warm = new SpeechSynthesisUtterance("\u200c");
+      warm.volume = 0;
+      warm.rate = 2;
+      warm.lang = "fa-IR";
+      window.speechSynthesis?.speak(warm);
+    } catch {
+      /* ignore */
+    }
+    try {
+      const audio = ensureFallbackAudio(src);
+      if (!audio) return;
+      audio.muted = true;
+      void audio
+        .play()
+        .then(() => {
+          audio.pause();
+          audio.currentTime = 0;
+          audio.muted = false;
+        })
+        .catch(() => {
+          audio.muted = false;
+        });
+    } catch {
+      /* ignore */
+    }
+  };
+  window.addEventListener("pointerdown", prime);
+  window.addEventListener("keydown", prime);
+  return () => {
+    window.removeEventListener("pointerdown", prime);
+    window.removeEventListener("keydown", prime);
+  };
+}
+
+export function playAnnouncementFallback(src = FALLBACK_SRC): Promise<boolean> {
+  try {
+    const audio = ensureFallbackAudio(src);
+    if (!audio) return Promise.resolve(false);
+    audio.muted = false;
+    audio.currentTime = 0;
+    return audio
+      .play()
+      .then(() => true)
+      .catch(() => false);
+  } catch {
+    return Promise.resolve(false);
+  }
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
 /**
  * تبدیل متن فارسی به صدا با موتور خود مرورگر (بدون پکیج و بدون مدل سنگین).
- * اگر صدا مسدود شود یا صدا موجود نباشد، false برمی‌گرداند تا صدای قبلی پخش شود.
+ * موفقیت فقط وقتی است که پخش واقعاً شروع شود.
  */
 export async function speakPersianAnnouncement(text: string): Promise<boolean> {
   if (typeof window === "undefined" || !window.speechSynthesis || !text.trim()) return false;
   await waitForVoices();
+  const synth = window.speechSynthesis;
   const voice = pickFemaleFaVoice();
   const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "fa-IR";
+  utterance.lang = voice?.lang || "fa-IR";
   utterance.rate = 0.92;
   utterance.pitch = 1.08;
   utterance.volume = 1;
   if (voice) utterance.voice = voice;
-  window.speechSynthesis.cancel();
+
+  try {
+    synth.resume();
+    synth.cancel();
+  } catch {
+    /* ignore */
+  }
+  // کروم اگر بلافاصله بعد از cancel صدا بدهد، اغلب ساکت می‌ماند.
+  await wait(80);
+  synth.resume();
+
   return new Promise((resolve) => {
     let settled = false;
+    let started = false;
     const done = (ok: boolean) => {
       if (settled) return;
       settled = true;
+      window.clearInterval(keepAlive);
+      window.clearTimeout(startWatch);
       resolve(ok);
     };
-    utterance.onend = () => done(true);
+    utterance.onstart = () => {
+      started = true;
+    };
+    utterance.onend = () => done(started);
     utterance.onerror = () => done(false);
+    const keepAlive = window.setInterval(() => {
+      if (settled) return;
+      try {
+        if (synth.paused) synth.resume();
+      } catch {
+        /* ignore */
+      }
+    }, 250);
+    const startWatch = window.setTimeout(() => {
+      if (!started) done(false);
+    }, 1800);
     try {
-      window.speechSynthesis.speak(utterance);
-      window.setTimeout(() => {
-        if (!settled && window.speechSynthesis.speaking) done(true);
-      }, 250);
+      synth.speak(utterance);
     } catch {
       done(false);
     }
   });
+}
+
+export async function announceTableEvent(
+  label: string,
+  kind: "order" | "service" = "order",
+): Promise<void> {
+  const spoken = tableLabelToAnnouncement(String(label || "").trim() || (kind === "service" ? "اتاق" : "میز"), kind);
+  const ok = await speakPersianAnnouncement(spoken);
+  if (!ok) await playAnnouncementFallback();
 }
