@@ -35,6 +35,10 @@ const nextConfig = {
         source: "/api/oil/public/history/:phone",
         destination: `${api}/api/oil/public/history/:phone`,
       },
+      {
+        source: "/api/payments/zarinpal/callback",
+        destination: `${api}/api/payments/zarinpal/callback`,
+      },
     ];
   },
   async headers() {
