@@ -39,7 +39,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/broadcast-sms': 'ارسال پیامک',
     '/admin/orders': 'سفارشات اینترنتی',
     '/admin/table-orders': 'سفارش حضوری',
-    '/admin/shop-tables': 'میزهای فروشگاه',
+    '/admin/shop-tables': 'میز و اتاق',
     '/admin/shop-services': 'خدمات اتاق',
     '/admin/best-selling': 'محصولات پرفروش',
     '/admin/invoices': 'فاکتورها',

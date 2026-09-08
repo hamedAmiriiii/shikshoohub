@@ -7,10 +7,13 @@ import {
 import type { SaleReceiptData } from "@/app/lib/saleReceiptPrint";
 import { dailyTicketFromRecord } from "@/app/lib/dailyTicketNumber";
 
+export type ShopPlaceKind = "table" | "room";
+
 export type ShopTable = {
   id: number;
   shop_id?: number;
   number: number;
+  kind?: ShopPlaceKind;
   name?: string | null;
   label?: string | null;
   is_active?: boolean;
@@ -35,6 +38,9 @@ export type ShopTableInfo = {
   shopName?: string;
   shopCode?: string;
   label: string;
+  kind?: ShopPlaceKind;
+  allowMenu?: boolean;
+  allowServices?: boolean;
   paymentMethods?: TablePaymentMethod[];
 };
 
@@ -114,16 +120,28 @@ export function normalizeShopTable(raw: unknown): ShopTable | null {
     id,
     shop_id: toNumber(nested.shop_id) ?? undefined,
     number,
+    kind: normalizePlaceKind(nested.kind),
     name,
     label: typeof nested.label === "string" ? nested.label : name,
     is_active: nested.is_active === false ? false : true,
   };
 }
 
-export function shopTableDisplayName(table: Pick<ShopTable, "number" | "name" | "label">): string {
+export function normalizePlaceKind(value: unknown): ShopPlaceKind {
+  const raw = String(value || "").trim().toLowerCase();
+  return raw === "room" || raw === "اتاق" ? "room" : "table";
+}
+
+export function shopPlaceNoun(kind?: ShopPlaceKind | null): string {
+  return kind === "room" ? "اتاق" : "میز";
+}
+
+export function shopTableDisplayName(
+  table: Pick<ShopTable, "number" | "name" | "label" | "kind">,
+): string {
   const named = (table.name || table.label || "").trim();
   if (named) return named;
-  return `میز ${table.number}`;
+  return `${shopPlaceNoun(table.kind)} ${table.number}`;
 }
 
 export function extractShopTables(res: unknown): ShopTable[] {
@@ -169,11 +187,17 @@ export function extractShopTableInfo(res: unknown, fallbackNumber: number): Shop
     (typeof shop?.code === "string" && shop.code) ||
     (typeof obj?.shop_code === "string" && obj.shop_code) ||
     undefined;
+  const objKind = normalizePlaceKind(obj?.kind ?? table?.kind);
+  const allowMenu = obj?.allow_menu;
+  const allowServices = obj?.allow_services;
   return {
     table,
     shopName,
     shopCode,
-    label: table ? shopTableDisplayName(table) : `میز ${fallbackNumber}`,
+    kind: objKind,
+    allowMenu: allowMenu === false ? false : allowMenu === true ? true : undefined,
+    allowServices: allowServices === false ? false : allowServices === true ? true : undefined,
+    label: table ? shopTableDisplayName(table) : `${shopPlaceNoun(objKind)} ${fallbackNumber}`,
     paymentMethods: extractPaymentMethods(res),
   };
 }
@@ -298,12 +322,20 @@ export function getAdminShopCode(): string | null {
   return getLastShopCode();
 }
 
-export function tableReservPath(shopCode: string, tableNumber: number): string {
-  return shopPath(shopCode, `/reserv/${tableNumber}`);
+export function tableReservPath(
+  shopCode: string,
+  tableNumber: number,
+  kind: ShopPlaceKind = "table",
+): string {
+  return shopPath(shopCode, kind === "room" ? `/room/${tableNumber}` : `/reserv/${tableNumber}`);
 }
 
-export function tableReservAbsoluteUrl(shopCode: string, tableNumber: number): string {
-  const path = tableReservPath(shopCode, tableNumber);
+export function tableReservAbsoluteUrl(
+  shopCode: string,
+  tableNumber: number,
+  kind: ShopPlaceKind = "table",
+): string {
+  const path = tableReservPath(shopCode, tableNumber, kind);
   if (typeof window === "undefined") return path;
   return `${window.location.origin}${path}`;
 }

@@ -24,6 +24,7 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DownloadIcon from "@mui/icons-material/Download";
 import QrCode2Icon from "@mui/icons-material/QrCode2";
 import TableRestaurantIcon from "@mui/icons-material/TableRestaurant";
+import MeetingRoomIcon from "@mui/icons-material/MeetingRoom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import tokenCode from "@/app/coponent/tokenCode";
@@ -34,9 +35,11 @@ import {
   extractShopTables,
   getAdminShopCode,
   getAdminRestaurantName,
+  shopPlaceNoun,
   shopTableDisplayName,
   tableQrImageUrl,
   tableReservAbsoluteUrl,
+  type ShopPlaceKind,
   composeTableQrPoster,
   downloadDataUrl,
   readTableQrPosterTheme,
@@ -46,6 +49,7 @@ import {
 } from "@/app/lib/shopTables";
 
 export default function ShopTablesPage() {
+  const [placeKind, setPlaceKind] = useState<ShopPlaceKind>("table");
   const [tables, setTables] = useState<ShopTable[]>([]);
   const [loading, setLoading] = useState(true);
   const [shopCode, setShopCode] = useState("");
@@ -87,7 +91,8 @@ export default function ShopTablesPage() {
 
   const openCreate = () => {
     setEditing(null);
-    const next = tables.length ? Math.max(...tables.map((t) => t.number)) + 1 : 1;
+    const ofKind = tables.filter((t) => (t.kind || "table") === placeKind);
+    const next = ofKind.length ? Math.max(...ofKind.map((t) => t.number)) + 1 : 1;
     setTableNumber(String(next));
     setTableName("");
     setDialogOpen(true);
@@ -103,7 +108,7 @@ export default function ShopTablesPage() {
   const saveTable = async () => {
     const number = Number(tableNumber);
     if (!Number.isInteger(number) || number < 1) {
-      toast.error("شماره میز باید عدد مثبت باشد");
+      toast.error(`شماره ${shopPlaceNoun(placeKind)} باید عدد مثبت باشد`);
       return;
     }
     const token = tokenCode();
@@ -111,8 +116,9 @@ export default function ShopTablesPage() {
     const body = {
       number,
       table_number: number,
-      name: tableName.trim() || `میز ${number}`,
-      label: tableName.trim() || `میز ${number}`,
+      kind: editing?.kind || placeKind,
+      name: tableName.trim() || `${shopPlaceNoun(editing?.kind || placeKind)} ${number}`,
+      label: tableName.trim() || `${shopPlaceNoun(editing?.kind || placeKind)} ${number}`,
     };
     setSaving(true);
     try {
@@ -120,10 +126,10 @@ export default function ShopTablesPage() {
         ? await FetchWithJwtClient("PUT", `/api/shop-tables/${editing.id}`, token, {}, { body: JSON.stringify(body) })
         : await FetchWithJwtClient("POST", "/api/shop-tables", token, {}, { body: JSON.stringify(body) });
       if (res?.hasError) {
-        toast.error(getApiErrorMessage(res, "ذخیره میز ناموفق بود"));
+        toast.error(getApiErrorMessage(res, `ذخیره ${shopPlaceNoun(placeKind)} ناموفق بود`));
         return;
       }
-      toast.success(editing ? "میز ویرایش شد" : "میز ساخته شد");
+      toast.success(editing ? `${shopPlaceNoun(editing.kind || placeKind)} ویرایش شد` : `${shopPlaceNoun(placeKind)} ساخته شد`);
       setDialogOpen(false);
       await loadTables();
     } finally {
@@ -134,7 +140,7 @@ export default function ShopTablesPage() {
   const createDefaults = async () => {
     const count = Number(defaultsCount);
     if (!Number.isInteger(count) || count < 1 || count > 50) {
-      toast.error("تعداد میز باید بین ۱ تا ۵۰ باشد");
+      toast.error(`تعداد ${shopPlaceNoun(placeKind)} باید بین ۱ تا ۵۰ باشد`);
       return;
     }
     const token = tokenCode();
@@ -146,13 +152,13 @@ export default function ShopTablesPage() {
         "/api/shop-tables/create-defaults",
         token,
         {},
-        { body: JSON.stringify({ count }) },
+        { body: JSON.stringify({ count, kind: placeKind }) },
       );
       if (res?.hasError) {
-        toast.error(getApiErrorMessage(res, "ساخت میزهای پیش‌فرض ناموفق بود"));
+        toast.error(getApiErrorMessage(res, "ساخت پیش‌فرض ناموفق بود"));
         return;
       }
-      toast.success(`${count} میز ساخته شد`);
+      toast.success(`${count} ${shopPlaceNoun(placeKind)} ساخته شد`);
       await loadTables();
     } finally {
       setCreatingDefaults(false);
@@ -160,15 +166,15 @@ export default function ShopTablesPage() {
   };
 
   const deleteTable = async (table: ShopTable) => {
-    if (!window.confirm(`میز «${shopTableDisplayName(table)}» حذف شود؟`)) return;
+    if (!window.confirm(`${shopPlaceNoun(table.kind)} «${shopTableDisplayName(table)}» حذف شود؟`)) return;
     const token = tokenCode();
     if (!token) return;
     const res = await FetchWithJwtClient("DELETE", `/api/shop-tables/${table.id}`, token);
     if (res?.hasError) {
-      toast.error(getApiErrorMessage(res, "حذف میز ناموفق بود"));
+        toast.error(getApiErrorMessage(res, "حذف ناموفق بود"));
       return;
     }
-    toast.success("میز حذف شد");
+    toast.success("حذف شد");
     await loadTables();
   };
 
@@ -182,7 +188,7 @@ export default function ShopTablesPage() {
     setQrPoster("");
     setQrPosterLoading(true);
     const title = shopTableDisplayName(qrTable);
-    const url = tableReservAbsoluteUrl(shopCode.trim(), qrTable.number);
+    const url = tableReservAbsoluteUrl(shopCode.trim(), qrTable.number, qrTable.kind || "table");
     void composeTableQrPoster(url, title, getAdminRestaurantName(), 240, qrTheme)
       .then((dataUrl) => {
         if (!cancelled) setQrPoster(dataUrl);
@@ -212,7 +218,7 @@ export default function ShopTablesPage() {
       toast.error("کد فروشگاه را وارد کنید تا لینک ساخته شود");
       return;
     }
-    const url = tableReservAbsoluteUrl(shopCode.trim(), table.number);
+    const url = tableReservAbsoluteUrl(shopCode.trim(), table.number, table.kind || "table");
     try {
       await navigator.clipboard.writeText(url);
       toast.success("لینک کپی شد");
@@ -223,10 +229,34 @@ export default function ShopTablesPage() {
 
   return (
     <Box sx={{ ...adminPageSx, p: 2, pb: 12 }}>
-      <Typography sx={{ fontWeight: 800, mb: 1, fontSize: 18 }}>میزهای فروشگاه</Typography>
+      <Typography sx={{ fontWeight: 800, mb: 1, fontSize: 18 }}>میز و اتاق</Typography>
       <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: 13, mb: 2 }}>
-        برای هر میز یا اتاق یک لینک QR بسازید تا مهمان سفارش یا خدمت ثبت کند.
+        میز و اتاق جدا تعریف می‌شوند. اتاق منو و خدمات را می‌بیند؛ میز فقط خدمات را (اگر خدمات روشن باشد).
       </Typography>
+      <ToggleButtonGroup
+        exclusive
+        fullWidth
+        size="small"
+        value={placeKind}
+        onChange={(_, value: ShopPlaceKind | null) => {
+          if (value) setPlaceKind(value);
+        }}
+        sx={{
+          mb: 2,
+          "& .MuiToggleButton-root": {
+            color: "var(--admin-text)",
+            borderColor: "var(--admin-border)",
+            "&.Mui-selected": {
+              bgcolor: "var(--admin-accent)",
+              color: "#fff",
+              "&:hover": { bgcolor: "var(--admin-accent-hover)" },
+            },
+          },
+        }}
+      >
+        <ToggleButton value="table">میزها</ToggleButton>
+        <ToggleButton value="room">اتاق‌ها</ToggleButton>
+      </ToggleButtonGroup>
 
       <TextField
         size="small"
@@ -252,7 +282,7 @@ export default function ShopTablesPage() {
           onClick={openCreate}
           sx={{ ...adminButtonStartIconSx, bgcolor: "var(--admin-accent)", "&:hover": { bgcolor: "var(--admin-accent-hover)" } }}
         >
-          میز جدید
+          {placeKind === "room" ? "اتاق جدید" : "میز جدید"}
         </Button>
         <TextField
           size="small"
@@ -282,17 +312,17 @@ export default function ShopTablesPage() {
         <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
           <CircularProgress sx={{ color: "var(--admin-accent)" }} />
         </Box>
-      ) : tables.length === 0 ? (
+      ) : tables.filter((t) => (t.kind || "table") === placeKind).length === 0 ? (
         <Card sx={{ backgroundColor: "var(--admin-surface)", border: "1px solid var(--admin-border)" }}>
           <CardContent>
             <Typography sx={{ color: "var(--admin-text-secondary)" }}>
-              هنوز میزی تعریف نشده. با «ساخت پیش‌فرض» میز ۱ و ۲ ساخته می‌شود.
+              هنوز {shopPlaceNoun(placeKind)}ی تعریف نشده. با «ساخت پیش‌فرض» شماره ۱ و ۲ ساخته می‌شود.
             </Typography>
           </CardContent>
         </Card>
       ) : (
-        tables.map((table) => {
-          const url = shopCode.trim() ? tableReservAbsoluteUrl(shopCode.trim(), table.number) : "";
+        tables.filter((t) => (t.kind || "table") === placeKind).map((table) => {
+          const url = shopCode.trim() ? tableReservAbsoluteUrl(shopCode.trim(), table.number, table.kind || "table") : "";
           return (
             <Card
               key={table.id}
@@ -300,7 +330,11 @@ export default function ShopTablesPage() {
             >
               <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <TableRestaurantIcon sx={{ color: "var(--admin-accent)" }} />
+                  {table.kind === "room" ? (
+                    <MeetingRoomIcon sx={{ color: "var(--admin-accent)" }} />
+                  ) : (
+                    <TableRestaurantIcon sx={{ color: "var(--admin-accent)" }} />
+                  )}
                   <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography sx={{ fontWeight: 800 }}>{shopTableDisplayName(table)}</Typography>
                     <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: 12 }}>
@@ -328,10 +362,14 @@ export default function ShopTablesPage() {
       )}
 
       <Dialog open={dialogOpen} onClose={() => !saving && setDialogOpen(false)} fullWidth maxWidth="xs">
-        <DialogTitle>{editing ? "ویرایش میز" : "میز جدید"}</DialogTitle>
+        <DialogTitle>
+          {editing
+            ? `ویرایش ${shopPlaceNoun(editing.kind || placeKind)}`
+            : `${shopPlaceNoun(placeKind)} جدید`}
+        </DialogTitle>
         <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 1.5, pt: 1 }}>
           <TextField
-            label="شماره میز"
+            label={`شماره ${shopPlaceNoun(editing?.kind || placeKind)}`}
             type="number"
             value={tableNumber}
             onChange={(e) => setTableNumber(e.target.value)}
@@ -368,7 +406,7 @@ export default function ShopTablesPage() {
                   alt={qrTable ? shopTableDisplayName(qrTable) : "QR"}
                   src={
                     qrPoster ||
-                    tableQrImageUrl(tableReservAbsoluteUrl(shopCode.trim(), qrTable.number), 240)
+                    tableQrImageUrl(tableReservAbsoluteUrl(shopCode.trim(), qrTable.number, qrTable.kind || "table"), 240)
                   }
                   sx={{
                     width: qrPoster ? 280 : 240,
@@ -381,7 +419,7 @@ export default function ShopTablesPage() {
                 />
               )}
               <Typography sx={{ mt: 1.5, fontSize: 13, direction: "ltr" }}>
-                {tableReservAbsoluteUrl(shopCode.trim(), qrTable.number)}
+                {tableReservAbsoluteUrl(shopCode.trim(), qrTable.number, qrTable.kind || "table")}
               </Typography>
               <Typography sx={{ mt: 2, mb: 1, fontSize: 12, color: "var(--admin-text-secondary)" }}>
                 تم

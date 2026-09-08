@@ -167,11 +167,21 @@ export function isCustomerAuthPath(pathname: string | null | undefined): boolean
   return false;
 }
 
-/** صفحه سفارش پای میز از QR: /{shop}/reserv/{n} */
+/** صفحه سفارش پای میز/اتاق از QR: /{shop}/reserv/{n} یا /{shop}/room/{n} */
 export function isTableReservPath(pathname: string | null | undefined): boolean {
   if (!pathname) return false;
   const parts = pathname.split("/").filter(Boolean);
-  return parts.length >= 3 && parts[1] === "reserv" && !SHOP_RESERVED_SEGMENTS.has(parts[0]);
+  return (
+    parts.length >= 3 &&
+    (parts[1] === "reserv" || parts[1] === "room") &&
+    !SHOP_RESERVED_SEGMENTS.has(parts[0])
+  );
+}
+
+export function placeKindFromPathname(pathname: string | null | undefined): "table" | "room" {
+  if (!pathname) return "table";
+  const parts = pathname.split("/").filter(Boolean);
+  return parts[1] === "room" ? "room" : "table";
 }
 
 export function customerLoginPath(shopCode: string): string {

@@ -25,11 +25,12 @@ import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import PhoneIphoneIcon from "@mui/icons-material/PhoneIphone";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
-import { useParams } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import { apiRequestError } from "@/app/lib/apiRequestError";
 import { APP_FONT_FAMILY } from "@/app/lib/appFont";
 import { useShopStorefront } from "@/app/context/ShopContext";
-import { extractShopTableInfo, extractPaymentMethods, DEFAULT_TABLE_PAYMENT_METHODS, extractTableOrders, getTableOrderAmount, getTableOrderProducts, tablePaymentMethodLabel, type ShopTableInfo, type TablePaymentMethod, type TableOrder } from "@/app/lib/shopTables";
+import { extractShopTableInfo, extractPaymentMethods, DEFAULT_TABLE_PAYMENT_METHODS, extractTableOrders, getTableOrderAmount, getTableOrderProducts, tablePaymentMethodLabel, shopPlaceNoun, type ShopTableInfo, type TablePaymentMethod, type TableOrder } from "@/app/lib/shopTables";
+import { placeKindFromPathname } from "@/app/lib/shopStorefront";
 import {
   getActiveRootCategories,
   parseCategoriesFromApi,
@@ -278,14 +279,14 @@ function productImage(product: Product, categoryImageById?: Map<string, string>)
   return "/pic/noImageShop.jpg";
 }
 
-function cartStorageKey(shopCode: string, tableNumber: number) {
-  return `table_order_cart_${shopCode}_${tableNumber}`;
+function cartStorageKey(shopCode: string, tableNumber: number, kind: string) {
+  return `table_order_cart_${shopCode}_${kind}_${tableNumber}`;
 }
 
-function readCart(shopCode: string, tableNumber: number): CartLine[] {
+function readCart(shopCode: string, tableNumber: number, kind: string): CartLine[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = sessionStorage.getItem(cartStorageKey(shopCode, tableNumber));
+    const raw = sessionStorage.getItem(cartStorageKey(shopCode, tableNumber, kind));
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed : [];
   } catch {
@@ -293,8 +294,8 @@ function readCart(shopCode: string, tableNumber: number): CartLine[] {
   }
 }
 
-function writeCart(shopCode: string, tableNumber: number, cart: CartLine[]) {
-  sessionStorage.setItem(cartStorageKey(shopCode, tableNumber), JSON.stringify(cart));
+function writeCart(shopCode: string, tableNumber: number, cart: CartLine[], kind: string) {
+  sessionStorage.setItem(cartStorageKey(shopCode, tableNumber, kind), JSON.stringify(cart));
 }
 
 const RECEIPT_MAX_BYTES = 5 * 1024 * 1024;
@@ -403,6 +404,8 @@ function collectCategoryImages(categories: ShopCategory[], map: Map<string, stri
 
 export default function TableReservPage() {
   const params = useParams();
+  const pathname = usePathname();
+  const placeKind = placeKindFromPathname(pathname);
   const { shopCode, shopApi, shop } = useShopStorefront();
   const tableNumber = Number(params?.table);
   const [tableInfo, setTableInfo] = useState<ShopTableInfo | null>(null);
@@ -486,14 +489,14 @@ export default function TableReservPage() {
 
   useEffect(() => {
     if (!shopCode || !validTable) return;
-    setCart(readCart(shopCode, tableNumber));
+    setCart(readCart(shopCode, tableNumber, placeKind));
     const saved = readSavedGuestPhone(shopCode);
     if (saved) setPhone(saved);
-  }, [shopCode, tableNumber, validTable]);
+  }, [placeKind, shopCode, tableNumber, validTable]);
 
   const persistCart = (next: CartLine[]) => {
     setCart(next);
-    if (shopCode && validTable) writeCart(shopCode, tableNumber, next);
+    if (shopCode && validTable) writeCart(shopCode, tableNumber, next, placeKind);
   };
 
   const lookupGuest = useCallback(
@@ -552,7 +555,7 @@ export default function TableReservPage() {
 
   const loadTable = useCallback(async () => {
     if (!shopCode || !validTable) {
-      if (!validTable) setTableError("شماره میز نامعتبر است");
+      if (!validTable) setTableError(`شماره ${shopPlaceNoun(placeKind)} نامعتبر است`);
       return;
     }
     setTableError("");
@@ -561,7 +564,7 @@ export default function TableReservPage() {
         "Get",
         {},
         {},
-        shopApi(`/api/tables/${tableNumber}`),
+        shopApi(`/api/tables/${tableNumber}?kind=${placeKind}`),
         false,
         true,
         "",
@@ -571,7 +574,7 @@ export default function TableReservPage() {
           table: null,
           shopName: undefined,
           shopCode,
-          label: `میز ${tableNumber}`,
+          label: `${shopPlaceNoun(placeKind)} ${tableNumber}`,
         });
         const fromShop = extractPaymentMethods(shop);
         if (fromShop.length) setPaymentMethods(fromShop);
@@ -579,7 +582,8 @@ export default function TableReservPage() {
       }
       const info = extractShopTableInfo(res, tableNumber);
       setTableInfo(info);
-      if (extractRoomServicesEnabled(res)) setServicesEnabled(true);
+      if (info.allowServices === true || extractRoomServicesEnabled(res)) setServicesEnabled(true);
+      if (info.allowServices === false) setServicesEnabled(false);
       const methods = info.paymentMethods?.length
         ? info.paymentMethods
         : extractPaymentMethods(shop);
@@ -589,10 +593,10 @@ export default function TableReservPage() {
         table: null,
         shopName: undefined,
         shopCode,
-        label: `میز ${tableNumber}`,
+        label: `${shopPlaceNoun(placeKind)} ${tableNumber}`,
       });
     }
-  }, [shop, shopApi, shopCode, tableNumber, validTable]);
+  }, [placeKind, shop, shopApi, shopCode, tableNumber, validTable]);
 
   const loadProducts = useCallback(
     async (pageNum: number, isInitial: boolean) => {
@@ -655,8 +659,14 @@ export default function TableReservPage() {
   }, [loadTable]);
 
   useEffect(() => {
+    if (tableInfo?.allowMenu === false) {
+      setProducts([]);
+      setProductsLoading(false);
+      setCatalogMode("services");
+      return;
+    }
     loadProducts(1, true);
-  }, [loadProducts]);
+  }, [loadProducts, tableInfo?.allowMenu]);
 
   useEffect(() => {
     loadServices();
@@ -751,8 +761,10 @@ export default function TableReservPage() {
     });
   }, [products, search, selectedCategory]);
 
-  const hasMenu = products.length > 0 || !servicesEnabled;
-  const showBothCatalogs = servicesEnabled && products.length > 0;
+  const allowMenu = tableInfo?.allowMenu !== false;
+  const allowServices = servicesEnabled && tableInfo?.allowServices !== false;
+  const hasMenu = allowMenu && (products.length > 0 || !allowServices);
+  const showBothCatalogs = allowMenu && allowServices && products.length > 0;
   const visibleServices = useMemo(() => {
     const term = search.trim().toLowerCase();
     if (!term) return services;
@@ -763,10 +775,10 @@ export default function TableReservPage() {
   }, [search, services]);
 
   useEffect(() => {
-    if (servicesEnabled && products.length === 0 && services.length > 0) {
+    if (!allowMenu || (allowServices && products.length === 0 && services.length > 0)) {
       setCatalogMode("services");
     }
-  }, [products.length, services.length, servicesEnabled]);
+  }, [allowMenu, allowServices, products.length, services.length]);
 
   const qtyOf = (product: Product | string) => {
     const key = typeof product === "string" ? product : catalogItemKey(product);
@@ -811,7 +823,7 @@ export default function TableReservPage() {
 
   const cartCount = cart.reduce((sum, line) => sum + line.quantity, 0);
   const cartTotal = cart.reduce((sum, line) => sum + line.sale_price * line.quantity, 0);
-  const tableLabel = tableInfo?.label || `میز ${tableNumber}`;
+  const tableLabel = tableInfo?.label || `${shopPlaceNoun(placeKind)} ${tableNumber}`;
   const shopTitle = tableInfo?.shopName || shop?.name || shopCode || "فروشگاه";
   const normalizedPhone = normalizeGuestPhone(phone);
   const phoneReady = isValidGuestPhone(normalizedPhone);
@@ -826,7 +838,7 @@ export default function TableReservPage() {
     if (!shopCode || !validTable) return;
     if (!silent) setCurrentLoading(true);
     try {
-      const query = new URLSearchParams({ table_number: String(tableNumber) });
+      const query = new URLSearchParams({ table_number: String(tableNumber), kind: placeKind });
       if (phoneReady) query.set("phone", normalizedPhone);
       const res = await apiRequestError(
         "Get",
@@ -848,12 +860,12 @@ export default function TableReservPage() {
     } finally {
       if (!silent) setCurrentLoading(false);
     }
-  }, [normalizedPhone, phoneReady, shopApi, shopCode, tableNumber, validTable]);
+  }, [normalizedPhone, phoneReady, placeKind, shopApi, shopCode, tableNumber, validTable]);
 
   const loadServiceRequests = useCallback(async () => {
     if (!shopCode || !validTable || !servicesEnabled) return;
     try {
-      const query = new URLSearchParams({ table_number: String(tableNumber) });
+      const query = new URLSearchParams({ table_number: String(tableNumber), kind: placeKind });
       if (phoneReady) query.set("phone", normalizedPhone);
       const res = await apiRequestError(
         "Get",
@@ -876,7 +888,7 @@ export default function TableReservPage() {
     } catch {
       setServiceRequests([]);
     }
-  }, [normalizedPhone, phoneReady, servicesEnabled, shopApi, shopCode, tableNumber, validTable]);
+  }, [normalizedPhone, phoneReady, placeKind, servicesEnabled, shopApi, shopCode, tableNumber, validTable]);
 
   useEffect(() => {
     void loadServiceRequests();
@@ -891,6 +903,7 @@ export default function TableReservPage() {
         {},
         {
           table_number: tableNumber,
+          kind: placeKind,
           shop_service_id: service.id,
           ...(phoneReady ? { phone: normalizedPhone } : {}),
         },
@@ -1067,6 +1080,7 @@ export default function TableReservPage() {
         {},
         {
           table_number: tableNumber,
+          kind: placeKind,
           payment_method: paymentMethod,
           products: cart.map((line) => catalogCartApiLine(line)),
           ...(note.trim() ? { note: note.trim() } : {}),
@@ -1135,7 +1149,7 @@ export default function TableReservPage() {
   if (!validTable) {
     return (
       <Box sx={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", p: 3, direction: "rtl", bgcolor: BG }}>
-        <Typography sx={{ color: "#e57373" }}>{tableError || "میز نامعتبر است"}</Typography>
+        <Typography sx={{ color: "#e57373" }}>{tableError || `${shopPlaceNoun(placeKind)} نامعتبر است`}</Typography>
       </Box>
     );
   }
@@ -1273,7 +1287,7 @@ export default function TableReservPage() {
         theme={theme}
         currentOrderCount={activeCurrentCount}
         currentServiceCount={activeServiceCount}
-        showServiceShortcut={servicesEnabled}
+        showServiceShortcut={allowServices}
         onLogin={() => setLoginOpen(true)}
         onToggleTheme={toggleTheme}
         onCurrentOrders={openCurrentOrders}
@@ -1317,13 +1331,13 @@ export default function TableReservPage() {
               onChange={setSearch}
               theme={theme}
               placeholder={
-                catalogMode === "services" && (showBothCatalogs || (servicesEnabled && !hasMenu))
+                catalogMode === "services" && (showBothCatalogs || (allowServices && !hasMenu))
                   ? "جستجوی خدمات اتاق…"
                   : "جستجوی غذا، نوشیدنی و …"
               }
             />
           </Box>
-          {catalogMode === "services" && servicesEnabled ? (
+          {catalogMode === "services" && allowServices ? (
             <>
               <ReservServiceRequestList
                 requests={serviceRequests}

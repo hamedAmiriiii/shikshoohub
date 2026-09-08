@@ -491,7 +491,7 @@ export default function AdminHamburgerSidebar({
       },
       {
         id: "shop-tables",
-        label: "میزهای فروشگاه",
+        label: "میز و اتاق",
         href: "/admin/shop-tables",
         icon: <TableRestaurantIcon />,
         permission: "shop_tables",
