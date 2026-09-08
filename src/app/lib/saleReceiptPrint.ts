@@ -50,6 +50,15 @@ export type SaleReceiptData = {
   customerNote?: string;
 };
 
+export type StationTicketLayout = {
+  paperPreset: ReceiptPaperPresetId;
+  customPaperWidthMm: number;
+  fontSize: number;
+  titleFontSize: number;
+  paddingMm: number;
+  lineHeight: number;
+};
+
 export type SaleReceiptPrintSettings = {
   paperPreset: ReceiptPaperPresetId;
   customPaperWidthMm: number;
@@ -75,6 +84,9 @@ export type SaleReceiptPrintSettings = {
   hallPrinter: string;
   kitchenPrinter: string;
   extraPrinter: string;
+  hallLayout?: StationTicketLayout;
+  kitchenLayout?: StationTicketLayout;
+  extraLayout?: StationTicketLayout;
   qzCertificate: string;
   qzPrivateKey: string;
 };
@@ -137,10 +149,82 @@ function normalizeSaleReceiptPrintSettings(
   merged.hallPrinter = String(merged.hallPrinter || "").slice(0, 120);
   merged.kitchenPrinter = String(merged.kitchenPrinter || "").slice(0, 120);
   merged.extraPrinter = String(merged.extraPrinter || "").slice(0, 120);
+  merged.hallLayout = raw.hallLayout ? normalizeStationLayout(raw.hallLayout) : undefined;
+  merged.kitchenLayout = raw.kitchenLayout ? normalizeStationLayout(raw.kitchenLayout) : undefined;
+  merged.extraLayout = raw.extraLayout ? normalizeStationLayout(raw.extraLayout) : undefined;
   merged.qzCertificate = String(merged.qzCertificate || "").slice(0, 32000);
   merged.qzPrivateKey = String(merged.qzPrivateKey || "").slice(0, 32000);
 
   return merged;
+}
+
+function defaultStationLayout(): StationTicketLayout {
+  return {
+    paperPreset: DEFAULT_SALE_RECEIPT_PRINT_SETTINGS.paperPreset,
+    customPaperWidthMm: DEFAULT_SALE_RECEIPT_PRINT_SETTINGS.customPaperWidthMm,
+    fontSize: DEFAULT_SALE_RECEIPT_PRINT_SETTINGS.fontSize,
+    titleFontSize: DEFAULT_SALE_RECEIPT_PRINT_SETTINGS.titleFontSize,
+    paddingMm: DEFAULT_SALE_RECEIPT_PRINT_SETTINGS.paddingMm,
+    lineHeight: DEFAULT_SALE_RECEIPT_PRINT_SETTINGS.lineHeight,
+  };
+}
+
+function normalizeStationLayout(raw: Partial<StationTicketLayout> | undefined): StationTicketLayout {
+  const merged = { ...defaultStationLayout(), ...raw };
+  if (!RECEIPT_PAPER_PRESETS.some((p) => p.id === merged.paperPreset)) {
+    merged.paperPreset = "80";
+  }
+  merged.customPaperWidthMm = Math.min(220, Math.max(40, merged.customPaperWidthMm || 80));
+  merged.fontSize = Math.min(18, Math.max(8, merged.fontSize || 12));
+  merged.titleFontSize = Math.min(22, Math.max(10, merged.titleFontSize || 14));
+  merged.paddingMm = Math.min(12, Math.max(0, merged.paddingMm ?? 4));
+  merged.lineHeight = Math.min(2.2, Math.max(1.1, merged.lineHeight ?? 1.5));
+  return merged;
+}
+
+function globalLayoutFromSettings(settings: Pick<
+  SaleReceiptPrintSettings,
+  "paperPreset" | "customPaperWidthMm" | "fontSize" | "titleFontSize" | "paddingMm" | "lineHeight"
+>): StationTicketLayout {
+  return normalizeStationLayout({
+    paperPreset: settings.paperPreset,
+    customPaperWidthMm: settings.customPaperWidthMm,
+    fontSize: settings.fontSize,
+    titleFontSize: settings.titleFontSize,
+    paddingMm: settings.paddingMm,
+    lineHeight: settings.lineHeight,
+  });
+}
+
+export function stationLayoutSettingKey(
+  station: ReceiptPrintStation,
+): "hallLayout" | "kitchenLayout" | "extraLayout" {
+  if (station === "hall") return "hallLayout";
+  if (station === "kitchen") return "kitchenLayout";
+  return "extraLayout";
+}
+
+export function getStationLayout(
+  settings: SaleReceiptPrintSettings,
+  station: ReceiptPrintStation,
+): StationTicketLayout {
+  const stored = settings[stationLayoutSettingKey(station)];
+  if (stored) return normalizeStationLayout(stored);
+  return globalLayoutFromSettings(settings);
+}
+
+export function applyStationLayout(
+  settings: SaleReceiptPrintSettings,
+  station: ReceiptPrintStation,
+): SaleReceiptPrintSettings {
+  return { ...settings, ...getStationLayout(settings, station) };
+}
+
+export function resolveStationPaperWidthMm(
+  settings: SaleReceiptPrintSettings,
+  station: ReceiptPrintStation,
+): number {
+  return resolvePaperWidthMm(applyStationLayout(settings, station));
 }
 
 export function getStationPrinterName(

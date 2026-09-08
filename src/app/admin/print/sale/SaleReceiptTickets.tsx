@@ -2,10 +2,12 @@
 
 import { Box, Divider, Typography } from "@mui/material";
 import {
+  applyStationLayout,
   formatReceiptDate,
   formatReceiptNumber,
   getEnabledReceiptPrintStations,
   getPaymentTypeLabel,
+  resolveStationPaperWidthMm,
   type ReceiptPrintStation,
   type SaleReceiptData,
   type SaleReceiptPrintSettings,
@@ -262,20 +264,24 @@ export function ReceiptTicketsBlock({
 }: {
   receipt: SaleReceiptData;
   settings: SaleReceiptPrintSettings;
-  paperWidthMm: number;
+  paperWidthMm?: number;
 }) {
   const stations = getEnabledReceiptPrintStations(settings);
 
   return (
     <>
       {stations.includes("hall") && (
-        <HallReceiptTicket receipt={receipt} settings={settings} paperWidthMm={paperWidthMm} />
+        <HallReceiptTicket
+          receipt={receipt}
+          settings={applyStationLayout(settings, "hall")}
+          paperWidthMm={paperWidthMm ?? resolveStationPaperWidthMm(settings, "hall")}
+        />
       )}
       {stations.includes("kitchen") && (
         <PrepStationTicket
           receipt={receipt}
-          settings={settings}
-          paperWidthMm={paperWidthMm}
+          settings={applyStationLayout(settings, "kitchen")}
+          paperWidthMm={resolveStationPaperWidthMm(settings, "kitchen")}
           station="kitchen"
           title={settings.kitchenTitle || "آشپزخانه"}
         />
@@ -283,8 +289,8 @@ export function ReceiptTicketsBlock({
       {stations.includes("extra") && (
         <PrepStationTicket
           receipt={receipt}
-          settings={settings}
-          paperWidthMm={paperWidthMm}
+          settings={applyStationLayout(settings, "extra")}
+          paperWidthMm={resolveStationPaperWidthMm(settings, "extra")}
           station="extra"
           title={settings.extraTitle || "بار"}
         />

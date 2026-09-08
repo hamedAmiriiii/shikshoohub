@@ -18,6 +18,8 @@
   --admin-divider: rgba(255, 255, 255, 0.1);
   --admin-header-bar-border: rgba(55, 84, 165, 0.3);
   --admin-accent-border: rgba(120, 181, 104, 0.2);
+  --admin-input-bg: #1a1d2e;
+  --admin-input-border: #505669;
   --admin-bottom-nav-bg: #2b3143;
   --admin-surface-nested: #353b4f;
   --admin-surface-deep: #3f4559;
@@ -49,6 +51,8 @@ html:not([data-admin-theme]) {
   --admin-divider: rgba(255, 255, 255, 0.1);
   --admin-header-bar-border: rgba(55, 84, 165, 0.3);
   --admin-accent-border: rgba(120, 181, 104, 0.2);
+  --admin-input-bg: #1a1d2e;
+  --admin-input-border: #505669;
   --admin-bottom-nav-bg: #2b3143;
   --admin-surface-nested: #353b4f;
   --admin-surface-deep: #3f4559;
@@ -88,6 +92,7 @@ html[data-admin-theme="light"] {
   --admin-info-bg: rgba(5, 150, 105, 0.08);
   --admin-info-border: rgba(5, 150, 105, 0.22);
   --admin-info-icon: #059669;
+  --admin-input-bg: #ffffff;
   --admin-input-border: #94a3b8;
 }
 
@@ -157,12 +162,63 @@ html[data-admin-theme="light"] .MuiSlider-markLabel {
 }
 
 html[data-admin-theme="light"] .MuiOutlinedInput-root {
-  background-color: #fff;
+  background-color: var(--admin-input-bg, #fff);
   color: var(--admin-text);
 }
 
-html[data-admin-theme="light"] .MuiOutlinedInput-notchedOutline {
-  border-color: var(--admin-input-border, #94a3b8) !important;
+html[data-admin-theme="dark"] .MuiOutlinedInput-root,
+html:not([data-admin-theme]) .MuiOutlinedInput-root {
+  background-color: var(--admin-input-bg, var(--admin-surface-alt));
+  color: var(--admin-text);
+}
+
+html[data-admin-theme="dark"] .MuiInputBase-input,
+html[data-admin-theme="dark"] .MuiInputLabel-root,
+html[data-admin-theme="dark"] .MuiFormLabel-root,
+html[data-admin-theme="dark"] .MuiSelect-select,
+html[data-admin-theme="dark"] .MuiSelect-icon,
+html[data-admin-theme="dark"] .MuiFormControlLabel-label,
+html:not([data-admin-theme]) .MuiInputBase-input,
+html:not([data-admin-theme]) .MuiInputLabel-root,
+html:not([data-admin-theme]) .MuiSelect-select,
+html:not([data-admin-theme]) .MuiSelect-icon {
+  color: var(--admin-text) !important;
+}
+
+html[data-admin-theme] .MuiDialog-paper,
+html[data-admin-theme] .MuiMenu-paper,
+html[data-admin-theme] .MuiPopover-paper {
+  background-color: var(--admin-surface) !important;
+  background-image: none !important;
+  color: var(--admin-text) !important;
+}
+
+html[data-admin-theme] .MuiDialog-paper .MuiTypography-root,
+html[data-admin-theme] .MuiDialogTitle-root,
+html[data-admin-theme] .MuiDialogContent-root,
+html[data-admin-theme] .MuiMenuItem-root {
+  color: var(--admin-text);
+}
+
+html[data-admin-theme] .MuiSlider-rail {
+  opacity: 0.45;
+  background-color: var(--admin-text-muted);
+}
+
+html[data-admin-theme] .MuiSlider-track,
+html[data-admin-theme] .MuiSlider-thumb {
+  background-color: var(--admin-accent);
+  border-color: var(--admin-accent);
+}
+
+html[data-admin-theme="dark"] .MuiOutlinedInput-notchedOutline,
+html:not([data-admin-theme]) .MuiOutlinedInput-notchedOutline {
+  border-color: var(--admin-input-border, var(--admin-border)) !important;
+}
+
+html[data-admin-theme="dark"] .MuiButton-contained,
+html:not([data-admin-theme]) .MuiButton-contained {
+  color: #fff !important;
 }
 
 html[data-admin-theme="light"] .MuiButton-contained {

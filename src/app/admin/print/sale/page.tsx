@@ -1,30 +1,16 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  Box,
-  Button,
-  Typography,
-  TextField,
-  FormControlLabel,
-  Switch,
-  Select,
-  MenuItem,
-  Divider,
-  Slider,
-} from "@mui/material";
+import { Box, Button, Typography } from "@mui/material";
 import PrintIcon from "@mui/icons-material/Print";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import {
   type SaleReceiptData,
   type SaleReceiptPrintSettings,
-  RECEIPT_PAPER_PRESETS,
   readSaleReceiptPrintData,
   readSaleReceiptPrintSettings,
   writeSaleReceiptPrintSettings,
-  resetSaleReceiptPrintSettings,
   resolvePaperWidthMm,
   DEFAULT_SALE_RECEIPT_PRINT_SETTINGS,
   getEnabledReceiptPrintStations,
@@ -34,36 +20,13 @@ import { ReceiptTicketsBlock } from "@/app/admin/print/sale/SaleReceiptTickets";
 import { StationPrinterSettings } from "@/app/admin/print/sale/StationPrinterSettings";
 import { canSilentPrint, qzErrorMessage, silentPrintReceiptStations } from "@/app/lib/qzSilentPrint";
 
-function SettingsSection({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <Box sx={{ gridColumn: "1 / -1" }}>
-      <Typography sx={{ fontWeight: 700, fontSize: 14, mb: 1, color: "var(--admin-text)" }}>{title}</Typography>
-      <Box
-        sx={{
-          display: "grid",
-          gap: 1.5,
-          gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
-          color: "var(--admin-text)",
-          "& .MuiFormControlLabel-label": { color: "var(--admin-text)", fontSize: 13 },
-          "& .MuiInputBase-input, & .MuiSelect-select, & .MuiInputLabel-root": {
-            color: "var(--admin-text)",
-          },
-          "& .MuiTypography-root": { color: "var(--admin-text)" },
-        }}
-      >
-        {children}
-      </Box>
-    </Box>
-  );
-}
-
 function SaleReceiptPrintContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const [receipt, setReceipt] = useState<SaleReceiptData | null>(null);
   const [settings, setSettings] = useState<SaleReceiptPrintSettings>(DEFAULT_SALE_RECEIPT_PRINT_SETTINGS);
-  const [showSettings, setShowSettings] = useState(false);
+  const [showSettings, setShowSettings] = useState(true);
   const [printing, setPrinting] = useState(false);
   const autoPrintedRef = useRef(false);
   const directPrintMode = searchParams.get("direct") === "1";
@@ -122,10 +85,6 @@ function SaleReceiptPrintContent() {
     setSettings((prev) => writeSaleReceiptPrintSettings({ ...prev, ...partial }));
   }, []);
 
-  const handleResetSettings = useCallback(() => {
-    setSettings(resetSaleReceiptPrintSettings());
-  }, []);
-
   const printStyles = useMemo(
     () => `
       @page {
@@ -150,8 +109,6 @@ function SaleReceiptPrintContent() {
           color: #111 !important;
         }
         .print-ticket {
-          width: ${paperWidthMm}mm !important;
-          max-width: ${paperWidthMm}mm !important;
           box-shadow: none !important;
         }
         body[data-print-station="hall"] .print-ticket:not(.print-ticket-hall) {
@@ -195,10 +152,10 @@ function SaleReceiptPrintContent() {
               >
                 {printing ? "در حال چاپ..." : stations.length > 1 ? `چاپ ${stations.length} فیش` : "چاپ فاکتور"}
               </Button>
-              <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => window.close()}>
+              <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => window.close()} sx={{ color: "var(--admin-text)", borderColor: "var(--admin-input-border, var(--admin-border))" }}>
                 بستن
               </Button>
-              <Button variant="text" onClick={() => setShowSettings((v) => !v)}>
+              <Button variant="text" onClick={() => setShowSettings((v) => !v)} sx={{ color: "var(--admin-text)" }}>
                 {showSettings ? "پنهان کردن تنظیمات" : "تنظیمات چاپ"}
               </Button>
             </Box>
@@ -209,7 +166,7 @@ function SaleReceiptPrintContent() {
               </Typography>
             ) : stations.length > 1 ? (
               <Typography className="no-print" sx={{ fontSize: 13, color: "var(--admin-text-secondary)", mb: 2 }}>
-                پرینتر هر بخش را در تنظیمات انتخاب کنید تا بدون پنجره چاپ ارسال شود. تا آن زمان برای هر فیش پنجره چاپ باز می‌شود.
+                پرینتر و کاغذ هر فیش را جدا تنظیم کنید.
               </Typography>
             ) : null}
 
@@ -223,272 +180,10 @@ function SaleReceiptPrintContent() {
                   mb: 2,
                   border: "1px solid var(--admin-border)",
                   color: "var(--admin-text)",
-                  display: "grid",
-                  gap: 2,
-                  gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+                  maxWidth: 480,
                 }}
               >
-                <Typography sx={{ gridColumn: "1 / -1", fontWeight: 700, fontSize: 16, color: "var(--admin-text)" }}>تنظیمات چاپ فاکتور</Typography>
-
-                <SettingsSection title="ایستگاه‌های چاپ">
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={settings.printHall !== false}
-                        onChange={(e) => saveSettings({ printHall: e.target.checked })}
-                      />
-                    }
-                    label="فیش سالن (با قیمت)"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={Boolean(settings.printKitchen)}
-                        onChange={(e) => saveSettings({ printKitchen: e.target.checked })}
-                      />
-                    }
-                    label="فیش آشپزخانه (بدون قیمت)"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={Boolean(settings.printExtra)}
-                        onChange={(e) => saveSettings({ printExtra: e.target.checked })}
-                      />
-                    }
-                    label="فیش سوم (بار / سردخانه)"
-                  />
-                  <TextField
-                    size="small"
-                    fullWidth
-                    label="عنوان فیش آشپزخانه"
-                    value={settings.kitchenTitle}
-                    onChange={(e) => saveSettings({ kitchenTitle: e.target.value })}
-                  />
-                  <TextField
-                    size="small"
-                    fullWidth
-                    label="عنوان فیش سوم"
-                    value={settings.extraTitle}
-                    onChange={(e) => saveSettings({ extraTitle: e.target.value })}
-                  />
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={settings.silentPrint !== false}
-                        onChange={(e) => saveSettings({ silentPrint: e.target.checked })}
-                      />
-                    }
-                    label="ارسال مستقیم به پرینتر انتخاب‌شده (بدون سؤال)"
-                  />
-                  <StationPrinterSettings settings={settings} onChange={saveSettings} />
-                </SettingsSection>
-
-                <Divider sx={{ gridColumn: "1 / -1" }} />
-
-                <SettingsSection title="عرض و اندازه کاغذ">
-                  <Box sx={{ gridColumn: { xs: "1", sm: "1 / -1" } }}>
-                    <Typography sx={{ fontSize: 13, mb: 0.5 }}>نوع / عرض کاغذ</Typography>
-                    <Select
-                      size="small"
-                      fullWidth
-                      value={settings.paperPreset}
-                      onChange={(e) =>
-                        saveSettings({
-                          paperPreset: e.target.value as SaleReceiptPrintSettings["paperPreset"],
-                        })
-                      }
-                    >
-                      {RECEIPT_PAPER_PRESETS.map((preset) => (
-                        <MenuItem key={preset.id} value={preset.id}>
-                          {preset.label}
-                          {preset.hint ? ` — ${preset.hint}` : ""}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </Box>
-
-                  {settings.paperPreset === "custom" && (
-                    <Box>
-                      <Typography sx={{ fontSize: 13, mb: 0.5 }}>عرض سفارشی (40 تا 220 میلی‌متر)</Typography>
-                      <TextField
-                        size="small"
-                        fullWidth
-                        type="number"
-                        value={settings.customPaperWidthMm}
-                        inputProps={{ min: 40, max: 220 }}
-                        onChange={(e) => {
-                          const value = parseInt(e.target.value, 10);
-                          if (!Number.isNaN(value)) saveSettings({ customPaperWidthMm: value });
-                        }}
-                      />
-                    </Box>
-                  )}
-
-                  <Box>
-                    <Typography sx={{ fontSize: 13, mb: 0.5 }}>حاشیه داخلی (mm)</Typography>
-                    <Slider
-                      size="small"
-                      value={settings.paddingMm}
-                      min={0}
-                      max={12}
-                      step={1}
-                      valueLabelDisplay="auto"
-                      onChange={(_, value) => saveSettings({ paddingMm: value as number })}
-                    />
-                  </Box>
-
-                  <Box sx={{ display: "flex", alignItems: "center" }}>
-                    <Typography sx={{ fontSize: 13, mb: 0.5, color: "var(--admin-text)" }}>عرض مؤثر چاپ: <strong>{paperWidthMm}mm</strong></Typography>
-                  </Box>
-                </SettingsSection>
-
-                <Divider sx={{ gridColumn: "1 / -1" }} />
-
-                <SettingsSection title="ظاهر متن">
-                  <Box>
-                    <Typography sx={{ fontSize: 13, mb: 0.5 }}>اندازه فونت متن ({settings.fontSize}px)</Typography>
-                    <Slider
-                      size="small"
-                      value={settings.fontSize}
-                      min={8}
-                      max={18}
-                      step={1}
-                      valueLabelDisplay="auto"
-                      onChange={(_, value) => saveSettings({ fontSize: value as number })}
-                    />
-                  </Box>
-
-                  <Box>
-                    <Typography sx={{ fontSize: 13, mb: 0.5 }}>اندازه عنوان ({settings.titleFontSize}px)</Typography>
-                    <Slider
-                      size="small"
-                      value={settings.titleFontSize}
-                      min={10}
-                      max={22}
-                      step={1}
-                      valueLabelDisplay="auto"
-                      onChange={(_, value) => saveSettings({ titleFontSize: value as number })}
-                    />
-                  </Box>
-
-                  <Box sx={{ gridColumn: { xs: "1", sm: "1 / -1" } }}>
-                    <Typography sx={{ fontSize: 13, mb: 0.5 }}>فاصله خطوط ({settings.lineHeight.toFixed(1)})</Typography>
-                    <Slider
-                      size="small"
-                      value={settings.lineHeight}
-                      min={1.1}
-                      max={2.2}
-                      step={0.1}
-                      valueLabelDisplay="auto"
-                      onChange={(_, value) => saveSettings({ lineHeight: value as number })}
-                    />
-                  </Box>
-                </SettingsSection>
-
-                <Divider sx={{ gridColumn: "1 / -1" }} />
-
-                <SettingsSection title="محتوای فاکتور">
-                  <Box sx={{ gridColumn: { xs: "1", sm: "1 / -1" } }}>
-                    <Typography sx={{ fontSize: 13, mb: 0.5 }}>عنوان فروشگاه روی فاکتور</Typography>
-                    <TextField
-                      size="small"
-                      fullWidth
-                      value={settings.shopTitle}
-                      placeholder="نام فروشگاه"
-                      onChange={(e) => saveSettings({ shopTitle: e.target.value })}
-                    />
-                  </Box>
-
-                  <Box sx={{ gridColumn: { xs: "1", sm: "1 / -1" } }}>
-                    <Typography sx={{ fontSize: 13, mb: 0.5 }}>متن پایین فاکتور</Typography>
-                    <TextField
-                      size="small"
-                      fullWidth
-                      value={settings.footerText}
-                      onChange={(e) => saveSettings({ footerText: e.target.value })}
-                    />
-                  </Box>
-
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={settings.showDate}
-                        onChange={(e) => saveSettings({ showDate: e.target.checked })}
-                      />
-                    }
-                    label="نمایش تاریخ و ساعت"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={settings.showPurchaseId}
-                        onChange={(e) => saveSettings({ showPurchaseId: e.target.checked })}
-                      />
-                    }
-                    label="نمایش شماره فاکتور"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={settings.showCustomerPhone}
-                        onChange={(e) => saveSettings({ showCustomerPhone: e.target.checked })}
-                      />
-                    }
-                    label="نمایش شماره مشتری"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={settings.showPaymentMethod}
-                        onChange={(e) => saveSettings({ showPaymentMethod: e.target.checked })}
-                      />
-                    }
-                    label="نمایش روش پرداخت"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={settings.showItemUnitPrice}
-                        onChange={(e) => saveSettings({ showItemUnitPrice: e.target.checked })}
-                      />
-                    }
-                    label="نمایش قیمت واحد کالا"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={settings.compactItems}
-                        onChange={(e) => saveSettings({ compactItems: e.target.checked })}
-                      />
-                    }
-                    label="چیدمان فشرده اقلام"
-                  />
-                </SettingsSection>
-
-                <Divider sx={{ gridColumn: "1 / -1" }} />
-
-                <SettingsSection title="رفتار چاپ">
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={settings.autoPrint}
-                        onChange={(e) => saveSettings({ autoPrint: e.target.checked })}
-                      />
-                    }
-                    label="چاپ خودکار هنگام باز شدن"
-                  />
-                  <Box sx={{ display: "flex", alignItems: "center" }}>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      startIcon={<RestartAltIcon />}
-                      onClick={handleResetSettings}
-                    >
-                      بازنشانی به پیش‌فرض
-                    </Button>
-                  </Box>
-                </SettingsSection>
+                <StationPrinterSettings compact showReceiptToggles settings={settings} onChange={saveSettings} />
               </Box>
             )}
 

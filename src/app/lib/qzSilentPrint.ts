@@ -1,4 +1,5 @@
 import {
+  applyStationLayout,
   getEnabledReceiptPrintStations,
   getStationPrinterName,
   resolvePaperWidthMm,
@@ -258,7 +259,6 @@ export async function silentPrintReceiptStations(
   const enabled = getEnabledReceiptPrintStations(settings);
   const printed: ReceiptPrintStation[] = [];
   const skipped: ReceiptPrintStation[] = [];
-  const widthMm = resolvePaperWidthMm(settings);
 
   await connectQzTray();
 
@@ -270,8 +270,9 @@ export async function silentPrintReceiptStations(
       continue;
     }
     try {
-      const html = buildStationTicketHtml(receipt, settings, station);
-      await printHtmlToNamedPrinter(printer, html, widthMm);
+      const ticketSettings = applyStationLayout(settings, station);
+      const html = buildStationTicketHtml(receipt, ticketSettings, station);
+      await printHtmlToNamedPrinter(printer, html, resolvePaperWidthMm(ticketSettings));
       printed.push(station);
     } catch (error) {
       skipped.push(station);
