@@ -1,6 +1,8 @@
 "use client";
 
 import { Box, Divider, Typography } from "@mui/material";
+import { formatDailyTicketNumber } from "@/app/lib/dailyTicketNumber";
+import { readAdminPosSettings } from "@/app/lib/adminPosSettings";
 import {
   applyStationLayout,
   formatReceiptDate,
@@ -12,6 +14,11 @@ import {
   type SaleReceiptData,
   type SaleReceiptPrintSettings,
 } from "@/app/lib/saleReceiptPrint";
+
+function dailyTicketLabel(receipt: SaleReceiptData): string | null {
+  if (!readAdminPosSettings().showDailyTicketNumber || receipt.dailyTicketNumber == null) return null;
+  return `فیش ${formatDailyTicketNumber(receipt.dailyTicketNumber)}`;
+}
 
 function ticketSx(paperWidthMm: number, settings: SaleReceiptPrintSettings) {
   return {
@@ -64,6 +71,11 @@ export function HallReceiptTicket({
       <Typography align="center" sx={{ fontWeight: 700, fontSize: `${settings.fontSize - 1}px`, mb: 0.5 }}>
         فیش سالن
       </Typography>
+      {dailyTicketLabel(receipt) ? (
+        <Typography align="center" sx={{ fontWeight: 800, fontSize: `${settings.titleFontSize}px`, mb: 0.5 }}>
+          {dailyTicketLabel(receipt)}
+        </Typography>
+      ) : null}
 
       {settings.showDate && (
         <Typography align="center" sx={{ fontSize: `${settings.fontSize - 1}px`, mb: 1 }}>
@@ -209,6 +221,11 @@ function PrepStationTicket({
       {shopTitle ? (
         <Typography align="center" sx={{ fontSize: `${settings.fontSize - 1}px`, mb: 0.5 }}>
           {shopTitle}
+        </Typography>
+      ) : null}
+      {dailyTicketLabel(receipt) ? (
+        <Typography align="center" sx={{ fontWeight: 800, fontSize: `${settings.titleFontSize}px`, mb: 0.5 }}>
+          {dailyTicketLabel(receipt)}
         </Typography>
       ) : null}
       {settings.showDate && (

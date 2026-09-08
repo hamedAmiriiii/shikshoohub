@@ -1,6 +1,6 @@
 "use client";
 import List from "@/app/coponent/grid/Grid";
-import React, { useMemo, useState, Suspense } from "react";
+import React, { useEffect, useMemo, useState, Suspense } from "react";
 
 import {
   Box,
@@ -28,6 +28,11 @@ import persian_fa from "react-date-object/locales/persian_fa";
 import "react-multi-date-picker/styles/layouts/mobile.css";
 import { paymentTypeLabel } from "@/app/lib/paymentTypes";
 import { canReplacePurchase, purchaseEditHref } from "@/app/lib/purchaseEdit";
+import {
+  ADMIN_POS_SETTINGS_CHANGED_EVENT,
+  readAdminPosSettings,
+} from "@/app/lib/adminPosSettings";
+import { dailyTicketFromRecord, formatDailyTicketNumber } from "@/app/lib/dailyTicketNumber";
 
 const formatNumber = (num: number | string) => {
     const numValue = typeof num === "string" ? parseFloat(num.replace(/,/g, "")) : num;
@@ -59,7 +64,15 @@ export default function ListPurches() {
     const [filterMode, setFilterMode] = useState<'today' | 'week' | 'month' | 'range' | null>(null);
     const [filterSheetOpen, setFilterSheetOpen] = useState(false);
     const [detailsItem, setDetailsItem] = useState<any>(null);
+    const [showDailyTicket, setShowDailyTicket] = useState(false);
     const [refreshGrid, setRefreshGrid] = useState(false);
+
+    useEffect(() => {
+      const sync = () => setShowDailyTicket(Boolean(readAdminPosSettings().showDailyTicketNumber));
+      sync();
+      window.addEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, sync);
+      return () => window.removeEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, sync);
+    }, []);
 
     const openDetails = (item: any) => setDetailsItem(item);
     const closeDetails = () => setDetailsItem(null);
@@ -67,6 +80,18 @@ export default function ListPurches() {
 
     const desktopColumns = useMemo(
         () => [
+            ...(showDailyTicket
+              ? [
+                  {
+                    label: "فیش",
+                    field: (item: any) => {
+                      const ticket = dailyTicketFromRecord(item);
+                      return ticket != null ? formatDailyTicketNumber(ticket) : "—";
+                    },
+                    width: "64px",
+                  },
+                ]
+              : []),
             {
                 label: "شماره",
                 field: (item: any) => (item?.id != null ? `#${item.id}` : "—"),
@@ -100,7 +125,7 @@ export default function ListPurches() {
                 width: "64px",
             },
         ],
-        [],
+        [showDailyTicket],
     );
     
     let searchBoxList: any = [
@@ -396,6 +421,9 @@ export default function ListPurches() {
               }}
             >
               جزئیات فروش {detailsItem?.id != null ? `#${detailsItem.id}` : ""}
+              {showDailyTicket && dailyTicketFromRecord(detailsItem) != null
+                ? ` · فیش ${formatDailyTicketNumber(dailyTicketFromRecord(detailsItem) as number)}`
+                : ""}
               <IconButton
                 onClick={closeDetails}
                 size="small"

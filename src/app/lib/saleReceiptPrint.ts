@@ -1,3 +1,5 @@
+import { dailyTicketFromRecord } from "@/app/lib/dailyTicketNumber";
+
 export const SALE_RECEIPT_PRINT_DATA_KEY = "sale_receipt_print_data";
 export const SALE_RECEIPT_PRINT_SETTINGS_KEY = "sale_receipt_print_settings";
 
@@ -48,6 +50,7 @@ export type SaleReceiptData = {
   chequeNumber?: string;
   footerNote?: string;
   customerNote?: string;
+  dailyTicketNumber?: number;
 };
 
 export type StationTicketLayout = {
@@ -376,11 +379,15 @@ export async function dispatchSaleReceiptPrint(
   data?: SaleReceiptData | null,
 ): Promise<"silent" | "dialog"> {
   if (typeof window === "undefined") return "dialog";
-  if (data) {
-    saveSaleReceiptPrintData(data);
-  }
   const settings = readSaleReceiptPrintSettings();
-  const receipt = data ?? readSaleReceiptPrintData();
+  let receipt = data ?? readSaleReceiptPrintData();
+  if (receipt && receipt.dailyTicketNumber == null) {
+    const stored = dailyTicketFromRecord(receipt);
+    if (stored != null) receipt = { ...receipt, dailyTicketNumber: stored };
+  }
+  if (receipt) {
+    saveSaleReceiptPrintData(receipt);
+  }
   if (receipt && settings.silentPrint !== false) {
     try {
       const { canSilentPrint, silentPrintReceiptStations } = await import("@/app/lib/qzSilentPrint");

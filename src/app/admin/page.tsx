@@ -89,6 +89,7 @@ import {
   openSaleReceiptPrintPage,
   readSaleReceiptPrintSettings,
 } from '@/app/lib/saleReceiptPrint';
+import { dailyTicketFromRecord, formatDailyTicketNumber } from '@/app/lib/dailyTicketNumber';
 import {
   buildAvailableChequesForSaleUrl,
   extractChequeList,
@@ -1218,7 +1219,10 @@ export default function ShoppingPage() {
   const finalizeSuccessfulSale = useCallback(
     (res: any, successMessage: string) => {
       const purchaseId = res?.id ?? res?.purchase_id ?? res?.data?.id;
-      const receipt = buildSaleReceiptFromCurrentSale(purchaseId);
+      const receipt = {
+        ...buildSaleReceiptFromCurrentSale(purchaseId),
+        dailyTicketNumber: dailyTicketFromRecord(res) ?? dailyTicketFromRecord(res?.data) ?? undefined,
+      };
       const directPrint = Boolean(readSaleReceiptPrintSettings().autoPrint);
       saveSaleReceiptPrintData(receipt);
       setLastSaleReceipt(receipt);
@@ -4239,6 +4243,11 @@ export default function ShoppingPage() {
           <Typography id="sale-success-modal" sx={{ fontWeight: 700, fontSize: "18px", color: "var(--admin-text)", mb: 1 }}>
             {lastSaleReceipt?.purchaseId != null ? "خرید با موفقیت ثبت شد" : "خرید در صف آفلاین ثبت شد"}
           </Typography>
+          {lastSaleReceipt?.dailyTicketNumber != null && readAdminPosSettings().showDailyTicketNumber ? (
+            <Typography sx={{ color: "var(--admin-text)", fontSize: "22px", fontWeight: 800, mb: 1 }}>
+              فیش {formatDailyTicketNumber(lastSaleReceipt.dailyTicketNumber)}
+            </Typography>
+          ) : null}
           {lastSaleReceipt?.purchaseId != null && (
             <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "14px", mb: 2 }}>
               شماره فاکتور: {lastSaleReceipt.purchaseId}

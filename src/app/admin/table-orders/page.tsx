@@ -155,9 +155,13 @@ export default function TableOrdersPage() {
       toast.success(res?.message || "فاکتور ساخته شد");
       const paidId = payOrder.id;
       const purchaseId = Number(res?.purchase?.id ?? res?.table_order?.purchase_id);
+      const ticket =
+        Number(res?.purchase?.daily_ticket_number ?? res?.purchase?.dailyTicketNumber) || undefined;
       setPayOrder({
         ...payOrder,
         purchase_id: Number.isFinite(purchaseId) && purchaseId > 0 ? purchaseId : payOrder.purchase_id,
+        purchase: res?.purchase,
+        daily_ticket_number: ticket,
       });
       setInvoiceReady(true);
       setOrders((prev) => prev.filter((order) => order.id !== paidId));

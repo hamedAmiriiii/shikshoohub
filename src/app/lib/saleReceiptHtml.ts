@@ -1,3 +1,5 @@
+import { formatDailyTicketNumber } from "@/app/lib/dailyTicketNumber";
+import { readAdminPosSettings } from "@/app/lib/adminPosSettings";
 import {
   formatReceiptDate,
   formatReceiptNumber,
@@ -14,6 +16,11 @@ function escapeHtml(value: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function dailyTicketHtml(receipt: SaleReceiptData): string {
+  if (!readAdminPosSettings().showDailyTicketNumber || receipt.dailyTicketNumber == null) return "";
+  return `<div class="sub">فیش ${escapeHtml(formatDailyTicketNumber(receipt.dailyTicketNumber))}</div>`;
 }
 
 function wrapTicketHtml(inner: string, settings: SaleReceiptPrintSettings): string {
@@ -101,6 +108,7 @@ function hallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSettings)
   return `
     <h1>${shopTitle}</h1>
     <div class="sub">فیش سالن</div>
+    ${dailyTicketHtml(receipt)}
     ${settings.showDate ? `<div class="muted">${escapeHtml(formatReceiptDate(receipt.createdAt))}</div>` : ""}
     <table class="row">
       <tr>
@@ -135,6 +143,7 @@ function prepInner(
 
   return `
     <h1>${escapeHtml(title)}</h1>
+    ${dailyTicketHtml(receipt)}
     ${shopTitle ? `<div class="muted">${escapeHtml(shopTitle)}</div>` : ""}
     ${settings.showDate ? `<div class="muted">${escapeHtml(formatReceiptDate(receipt.createdAt))}</div>` : ""}
     ${receipt.tableLabel ? `<div class="sub">${escapeHtml(receipt.tableLabel)}</div>` : ""}

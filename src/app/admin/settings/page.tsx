@@ -26,6 +26,7 @@ import CreditCardIcon from "@mui/icons-material/CreditCard";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import KitchenIcon from "@mui/icons-material/Kitchen";
 import PersonIcon from "@mui/icons-material/Person";
+import ConfirmationNumberOutlinedIcon from "@mui/icons-material/ConfirmationNumberOutlined";
 import PriceChangeIcon from "@mui/icons-material/PriceChange";
 import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
 import ImageOutlinedIcon from "@mui/icons-material/ImageOutlined";
@@ -265,6 +266,7 @@ export default function SettingsPage() {
   const [salePriceEditEnabled, setSalePriceEditEnabled] = useState(false);
   const [classicPosMode, setClassicPosMode] = useState(false);
   const [askCustomerName, setAskCustomerName] = useState(false);
+  const [showDailyTicketNumber, setShowDailyTicketNumber] = useState(false);
   const [restaurantCafeEnabled, setRestaurantCafeEnabled] = useState(false);
   const [menuTableOrdersPopupEnabled, setMenuTableOrdersPopupEnabled] = useState(false);
   const [receiptPrintSettings, setReceiptPrintSettings] = useState<SaleReceiptPrintSettings>(
@@ -289,6 +291,7 @@ export default function SettingsPage() {
     setSalePriceEditEnabled(settings.salePriceEditEnabled);
     setClassicPosMode(settings.classicPosMode);
     setAskCustomerName(settings.askCustomerName);
+    setShowDailyTicketNumber(Boolean(settings.showDailyTicketNumber));
     setRestaurantCafeEnabled(settings.restaurantCafeEnabled);
     setMenuTableOrdersPopupEnabled(settings.menuTableOrdersPopupEnabled);
     const printSettings = readSaleReceiptPrintSettings();
@@ -439,6 +442,17 @@ export default function SettingsPage() {
       enabled
         ? "در ثبت مشتری، فیلد نام هم نمایش داده می‌شود"
         : "ثبت مشتری فقط با شماره تلفن انجام می‌شود",
+    );
+  };
+
+  const handleToggleShowDailyTicketNumber = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setShowDailyTicketNumber(enabled);
+    writeAdminPosSettings({ showDailyTicketNumber: enabled });
+    toast.success(
+      enabled
+        ? "شماره فیش روزانه نمایش داده می‌شود"
+        : "شماره فیش روزانه پنهان شد",
     );
   };
 
@@ -804,6 +818,13 @@ export default function SettingsPage() {
             hint="علاوه بر تلفن، نام هم گرفته شود"
             checked={askCustomerName}
             onChange={handleToggleAskCustomerName}
+          />
+          <SettingsToggleRow
+            icon={<ConfirmationNumberOutlinedIcon sx={{ fontSize: 18 }} />}
+            title="نمایش شماره فیش روزانه"
+            hint="هر فروش از ۱؛ هر روز از نو — در لیست فروش هم دیده می‌شود"
+            checked={showDailyTicketNumber}
+            onChange={handleToggleShowDailyTicketNumber}
             last
           />
         </CardContent>

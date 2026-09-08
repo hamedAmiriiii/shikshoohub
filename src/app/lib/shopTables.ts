@@ -5,6 +5,7 @@ import {
   type PurchaseDebtProduct,
 } from "@/app/lib/purchaseDebts";
 import type { SaleReceiptData } from "@/app/lib/saleReceiptPrint";
+import { dailyTicketFromRecord } from "@/app/lib/dailyTicketNumber";
 
 export type ShopTable = {
   id: number;
@@ -65,6 +66,9 @@ export type TableOrder = {
   products?: TableOrderProduct[];
   items?: TableOrderProduct[];
   shop_table?: ShopTable;
+  purchase?: { daily_ticket_number?: number; dailyTicketNumber?: number };
+  daily_ticket_number?: number;
+  dailyTicketNumber?: number;
 };
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -253,6 +257,7 @@ export function tableOrderToSaleReceipt(order: TableOrder, shopName?: string): S
     cardAmount: method === "card_to_card" || method === "pos" ? subtotal : undefined,
     footerNote: payLabel || undefined,
     customerNote: order.note?.trim() || undefined,
+    dailyTicketNumber: dailyTicketFromRecord(order) ?? undefined,
   };
 }
 

@@ -6,6 +6,8 @@ import EditIcon from "@mui/icons-material/Edit";
 import { useRouter } from "next/navigation";
 import { paymentTypeLabel } from "@/app/lib/paymentTypes";
 import { canReplacePurchase, purchaseEditHref, purchaseHasReturns } from "@/app/lib/purchaseEdit";
+import { readAdminPosSettings } from "@/app/lib/adminPosSettings";
+import { dailyTicketFromRecord, formatDailyTicketNumber } from "@/app/lib/dailyTicketNumber";
 
 const formatNumber = (num: number | string) => {
   const numValue = typeof num === "string" ? parseFloat(num.replace(/,/g, "")) : num;
@@ -46,6 +48,8 @@ export default function PurchaseSummaryCard({
   const router = useRouter();
   const editGate = canReplacePurchase(data);
   const hasReturns = purchaseHasReturns(data);
+  const showDailyTicket = Boolean(readAdminPosSettings().showDailyTicketNumber);
+  const dailyTicket = showDailyTicket ? dailyTicketFromRecord(data) : null;
 
   return (
     <Box
@@ -68,8 +72,11 @@ export default function PurchaseSummaryCard({
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 0.25 }}>
           <Typography sx={{ fontSize: 13, fontWeight: 700, color: "var(--admin-text)" }}>
-            #{data?.id ?? "—"}
+            {dailyTicket != null ? `فیش ${formatDailyTicketNumber(dailyTicket)}` : `#${data?.id ?? "—"}`}
           </Typography>
+          {dailyTicket != null ? (
+            <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)" }}>#{data?.id ?? "—"}</Typography>
+          ) : null}
           {isInstallment ? (
             <Chip label="اقساطی" size="small" sx={{ height: 18, fontSize: 10, backgroundColor: "#ff9800", color: "#fff" }} />
           ) : null}
