@@ -23,34 +23,43 @@ function wrapTicketHtml(inner: string, settings: SaleReceiptPrintSettings): stri
   const pad = settings.paddingMm;
   const lh = settings.lineHeight;
   return `<!DOCTYPE html>
-<html dir="rtl" lang="fa">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="rtl" lang="fa">
 <head>
 <meta charset="utf-8"/>
 <style>
   * { box-sizing: border-box; }
-  body {
+  html, body {
     margin: 0;
     width: ${width}mm;
+    color: #000000;
+    background: #ffffff;
+  }
+  body {
     padding: ${pad}mm;
-    color: #000;
-    background: #fff;
-    font-family: Tahoma, Arial, sans-serif;
+    font-family: Tahoma, "Segoe UI", Arial, sans-serif;
     font-size: ${font}px;
     line-height: ${lh};
   }
-  h1 { font-size: ${title}px; font-weight: 800; text-align: center; margin: 0 0 4px; }
-  .sub { text-align: center; font-weight: 700; margin: 0 0 6px; }
-  .muted { text-align: center; font-size: ${font - 1}px; margin: 0 0 8px; }
-  .row { display: flex; justify-content: space-between; gap: 8px; }
-  .item { margin-bottom: ${settings.compactItems ? 4 : 8}px; }
-  .name { font-weight: 700; }
-  hr { border: none; border-top: 1px solid #000; margin: 8px 0; }
+  h1 { font-size: ${title}px; font-weight: 800; text-align: center; margin: 0 0 4px; color: #000000; }
+  .sub { text-align: center; font-weight: 700; margin: 0 0 6px; color: #000000; }
+  .muted { text-align: center; font-size: ${font - 1}px; margin: 0 0 8px; color: #000000; }
+  table.row { width: 100%; border-collapse: collapse; }
+  table.row td { vertical-align: top; color: #000000; }
+  table.row td.end { text-align: left; white-space: nowrap; }
+  .item { margin-bottom: ${settings.compactItems ? 4 : 8}px; color: #000000; }
+  .name { font-weight: 700; color: #000000; }
+  hr { border: none; border-top: 1px solid #000000; margin: 8px 0; }
   .bold { font-weight: 800; }
-  .note { white-space: pre-wrap; }
+  .note { white-space: pre-wrap; color: #000000; }
 </style>
 </head>
 <body>${inner}</body>
 </html>`;
+}
+
+function rowHtml(label: string, value: string, bold = false): string {
+  const cls = bold ? "bold" : "";
+  return `<table class="row ${cls}"><tr><td>${label}</td><td class="end">${value}</td></tr></table>`;
 }
 
 function hallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSettings): string {
@@ -61,18 +70,18 @@ function hallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSettings)
         ? `${formatReceiptNumber(item.quantity)} × ${formatReceiptNumber(item.unitPrice)}`
         : `تعداد: ${formatReceiptNumber(item.quantity)}`;
       const note = item.note ? `<div>یادداشت: ${escapeHtml(item.note)}</div>` : "";
-      return `<div class="item"><div class="name">${escapeHtml(item.name)}</div>${note}<div class="row"><span>${qtyPrice}</span><span class="bold">${formatReceiptNumber(item.lineTotal)}</span></div></div>`;
+      return `<div class="item"><div class="name">${escapeHtml(item.name)}</div>${note}<table class="row"><tr><td>${qtyPrice}</td><td class="end bold">${formatReceiptNumber(item.lineTotal)}</td></tr></table></div>`;
     })
     .join("");
 
   const extras: string[] = [];
-  extras.push(`<div class="row"><span>جمع</span><span>${formatReceiptNumber(receipt.subtotal)}</span></div>`);
-  if (receipt.discount > 0) extras.push(`<div class="row"><span>تخفیف</span><span>${formatReceiptNumber(receipt.discount)}</span></div>`);
-  if (receipt.creditUsed > 0) extras.push(`<div class="row"><span>اعتبار</span><span>${formatReceiptNumber(receipt.creditUsed)}</span></div>`);
-  if (receipt.backPrice > 0) extras.push(`<div class="row"><span>برگشتی</span><span>${formatReceiptNumber(receipt.backPrice)}</span></div>`);
-  extras.push(`<div class="row bold"><span>مبلغ نهایی</span><span>${formatReceiptNumber(receipt.finalTotal)} تومان</span></div>`);
+  extras.push(rowHtml("جمع", formatReceiptNumber(receipt.subtotal)));
+  if (receipt.discount > 0) extras.push(rowHtml("تخفیف", formatReceiptNumber(receipt.discount)));
+  if (receipt.creditUsed > 0) extras.push(rowHtml("اعتبار", formatReceiptNumber(receipt.creditUsed)));
+  if (receipt.backPrice > 0) extras.push(rowHtml("برگشتی", formatReceiptNumber(receipt.backPrice)));
+  extras.push(rowHtml("مبلغ نهایی", `${formatReceiptNumber(receipt.finalTotal)} تومان`, true));
   if (receipt.payableNow > 0 && receipt.payableNow !== receipt.finalTotal) {
-    extras.push(`<div class="row"><span>قابل پرداخت</span><span>${formatReceiptNumber(receipt.payableNow)} تومان</span></div>`);
+    extras.push(rowHtml("قابل پرداخت", `${formatReceiptNumber(receipt.payableNow)} تومان`));
   }
 
   const pay: string[] = [];
@@ -93,13 +102,15 @@ function hallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSettings)
     <h1>${shopTitle}</h1>
     <div class="sub">فیش سالن</div>
     ${settings.showDate ? `<div class="muted">${escapeHtml(formatReceiptDate(receipt.createdAt))}</div>` : ""}
-    <div class="row">
-      <div>
-        ${settings.showPurchaseId && receipt.purchaseId != null ? `<div>شماره فاکتور: ${escapeHtml(String(receipt.purchaseId))}</div>` : ""}
-        ${settings.showCustomerPhone && receipt.phone ? `<div>مشتری: ${escapeHtml(receipt.phone)}</div>` : ""}
-      </div>
-      ${receipt.tableLabel ? `<div class="bold">${escapeHtml(receipt.tableLabel)}</div>` : ""}
-    </div>
+    <table class="row">
+      <tr>
+        <td>
+          ${settings.showPurchaseId && receipt.purchaseId != null ? `<div>شماره فاکتور: ${escapeHtml(String(receipt.purchaseId))}</div>` : ""}
+          ${settings.showCustomerPhone && receipt.phone ? `<div>مشتری: ${escapeHtml(receipt.phone)}</div>` : ""}
+        </td>
+        ${receipt.tableLabel ? `<td class="end bold">${escapeHtml(receipt.tableLabel)}</td>` : ""}
+      </tr>
+    </table>
     <hr/>
     ${items}
     <hr/>
@@ -118,7 +129,7 @@ function prepInner(
   const items = receipt.items
     .map((item) => {
       const note = item.note ? `<div class="bold">یادداشت: ${escapeHtml(item.note)}</div>` : "";
-      return `<div class="item"><div class="row"><span class="name">${escapeHtml(item.name)}</span><span class="bold">× ${formatReceiptNumber(item.quantity)}</span></div>${note}</div>`;
+      return `<div class="item"><table class="row"><tr><td class="name">${escapeHtml(item.name)}</td><td class="end bold">× ${formatReceiptNumber(item.quantity)}</td></tr></table>${note}</div>`;
     })
     .join("");
 
