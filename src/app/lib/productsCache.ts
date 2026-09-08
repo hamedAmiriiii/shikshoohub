@@ -35,6 +35,11 @@ function parseProductsCache(raw: string | null): CachedProduct[] {
   }
 }
 
+export function isCatalogItemOutOfStock(product: Pick<CachedProduct, "quantity">): boolean {
+  const qty = Number(product.quantity);
+  return !Number.isFinite(qty) || qty <= 0;
+}
+
 export function getCachedProductDiscount(product: CachedProduct): {
   salePrice: number;
   originalPrice: number;

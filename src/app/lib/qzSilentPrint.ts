@@ -8,6 +8,8 @@ import {
 } from "@/app/lib/saleReceiptPrint";
 import { buildStationTicketHtml } from "@/app/lib/saleReceiptHtml";
 
+import { applyQzDemoSigning } from "@/app/lib/qzDemoSigning";
+
 export const QZ_TRAY_DOWNLOAD_URL =
   "https://api.webinoplus.ir/storage/appwebino/webino-try.exe";
 const QZ_SCRIPT_SRC = "/vendor/qz-tray.js";
@@ -24,6 +26,17 @@ type QzApi = {
     create: (printer: string, opts?: Record<string, unknown>) => unknown;
   };
   print: (config: unknown, data: unknown[]) => Promise<void>;
+  security: {
+    setCertificatePromise: (
+      handler: (resolve: (cert: string) => void, reject: (err?: unknown) => void) => void,
+    ) => void;
+    setSignaturePromise: (
+      factory: (
+        toSign: string,
+      ) => (resolve: (signature: string) => void, reject: (err?: unknown) => void) => void,
+    ) => void;
+    setSignatureAlgorithm: (algorithm: string) => void;
+  };
 };
 
 declare global {
@@ -76,6 +89,7 @@ export function qzErrorMessage(error: unknown): string {
 
 export async function connectQzTray(): Promise<QzApi> {
   const qz = await loadQzScript();
+  applyQzDemoSigning(qz);
   if (!qz.websocket.isActive()) {
     await qz.websocket.connect({ retries: 3, delay: 1 });
   }
