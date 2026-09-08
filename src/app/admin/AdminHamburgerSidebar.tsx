@@ -397,6 +397,12 @@ export default function AdminHamburgerSidebar({
         icon: <GroupsIcon />,
       },
       {
+        id: "product-plan-orders",
+        label: "خریداران یادینو",
+        href: "/admin/product-plans/orders",
+        icon: <ReceiptLongIcon />,
+      },
+      {
         id: "agency-requests",
         label: "نمایندگی‌ها",
         href: "/admin/agency-requests",

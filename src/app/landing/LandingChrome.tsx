@@ -24,6 +24,8 @@ type Props = {
   loginLabel?: string;
   onStartFree?: () => void;
   stickyCta?: boolean;
+  ctaLabel?: string;
+  hideRegister?: boolean;
 };
 
 export default function LandingChrome({
@@ -33,6 +35,8 @@ export default function LandingChrome({
   loginLabel = "ورود",
   onStartFree,
   stickyCta = true,
+  ctaLabel = TRIAL_CTA,
+  hideRegister = false,
 }: Props) {
   const [navOpen, setNavOpen] = useState(false);
 
@@ -72,15 +76,27 @@ export default function LandingChrome({
             >
               نمایندگی
             </Link>
-            <Link href={loginUrl} className="hover:text-cyan-400 transition">
-              {loginLabel}
-            </Link>
-            <Link
-              href={registerUrl}
-              className="bg-gradient-to-l from-violet-600 to-fuchsia-600 text-white px-5 py-2 rounded-xl hover:opacity-90 transition font-medium shadow-lg shadow-fuchsia-900/30"
-            >
-              شروع رایگان
-            </Link>
+            {hideRegister ? null : (
+              <Link href={loginUrl} className="hover:text-cyan-400 transition">
+                {loginLabel}
+              </Link>
+            )}
+            {hideRegister ? (
+              <button
+                type="button"
+                onClick={goRegister}
+                className="bg-gradient-to-l from-violet-600 to-fuchsia-600 text-white px-5 py-2 rounded-xl hover:opacity-90 transition font-medium shadow-lg shadow-fuchsia-900/30"
+              >
+                {ctaLabel}
+              </button>
+            ) : (
+              <Link
+                href={registerUrl}
+                className="bg-gradient-to-l from-violet-600 to-fuchsia-600 text-white px-5 py-2 rounded-xl hover:opacity-90 transition font-medium shadow-lg shadow-fuchsia-900/30"
+              >
+                شروع رایگان
+              </Link>
+            )}
           </nav>
           <button
             type="button"
@@ -105,12 +121,20 @@ export default function LandingChrome({
             <Link href="/#faq" onClick={() => setNavOpen(false)}>
               سوالات
             </Link>
-            <Link href={loginUrl} onClick={() => setNavOpen(false)}>
-              {loginLabel}
-            </Link>
-            <Link href={registerUrl} className="text-fuchsia-400 font-semibold" onClick={() => setNavOpen(false)}>
-              شروع رایگان
-            </Link>
+            {!hideRegister ? (
+              <Link href={loginUrl} onClick={() => setNavOpen(false)}>
+                {loginLabel}
+              </Link>
+            ) : null}
+            {hideRegister ? (
+              <button type="button" className="text-fuchsia-400 font-semibold text-right" onClick={() => { setNavOpen(false); goRegister(); }}>
+                {ctaLabel}
+              </button>
+            ) : (
+              <Link href={registerUrl} className="text-fuchsia-400 font-semibold" onClick={() => setNavOpen(false)}>
+                شروع رایگان
+              </Link>
+            )}
           </div>
         )}
       </header>
@@ -172,15 +196,23 @@ export default function LandingChrome({
             <div className="text-white font-medium mb-3">دسترسی سریع</div>
             <ul className="space-y-2">
               <li>
-                <Link href={registerUrl} className="hover:text-cyan-400">
-                  ثبت‌نام رایگان
-                </Link>
+                {hideRegister ? (
+                  <button type="button" onClick={goRegister} className="hover:text-cyan-400">
+                    {ctaLabel}
+                  </button>
+                ) : (
+                  <Link href={registerUrl} className="hover:text-cyan-400">
+                    ثبت‌نام رایگان
+                  </Link>
+                )}
               </li>
+              {hideRegister ? null : (
               <li>
                 <Link href={loginUrl} className="hover:text-cyan-400">
                   ورود
                 </Link>
               </li>
+              )}
               <li>
                 <Link
                   href={AGENCY_REQUEST_URL}
@@ -217,7 +249,7 @@ export default function LandingChrome({
               onClick={goRegister}
               className="w-full py-3.5 rounded-xl bg-gradient-to-l from-violet-600 to-fuchsia-600 text-white font-semibold shadow-lg"
             >
-              {TRIAL_CTA}
+              {ctaLabel}
             </button>
           </div>
           <div className="h-20 md:hidden" aria-hidden />

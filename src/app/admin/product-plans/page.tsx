@@ -53,8 +53,8 @@ const emptyForm: PlanForm = {
   name: "",
   max_users: "5",
   max_videos: "4",
-  duration_days: "30",
-  duration_label: "یک‌ماهه",
+  duration_days: "180",
+  duration_label: "شش‌ماهه",
   price_toman: "",
   features: [
     "تا ۵ کاربر همزمان",
@@ -252,6 +252,13 @@ export default function AdminProductPlansPage() {
         <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "13px" }}>
           پلن‌های یادینو را اینجا ببینید و قیمت یا امکانات را ویرایش کنید.
         </Typography>
+        <Box sx={{ display: "flex", gap: 1, flexShrink: 0 }}>
+          <Button
+            onClick={() => router.push("/admin/product-plans/orders")}
+            sx={{ color: "var(--admin-accent)" }}
+          >
+            خریداران
+          </Button>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
@@ -265,6 +272,7 @@ export default function AdminProductPlansPage() {
         >
           پلن جدید
         </Button>
+        </Box>
       </Box>
 
       {loading ? (

@@ -39,6 +39,7 @@ export type LandingProduct = {
   registerUrl: string;
   loginLabel: string;
   screenshots: LandingScreenshot[];
+  hasTrial?: boolean;
 };
 
 export const LANDING_PRODUCTS: LandingProduct[] = [
@@ -148,6 +149,7 @@ export const LANDING_PRODUCTS: LandingProduct[] = [
     registerUrl: REGISTER_URL,
     loginLabel: "ورود به یادینو",
     screenshots: [],
+    hasTrial: false,
   },
   {
     slug: "social",

@@ -20,7 +20,7 @@ export type YadinoTier = {
   plans: YadinoPlan[];
 };
 
-const DURATION_ORDER = [30, 90, 180, 365] as const;
+const DURATION_ORDER = [180, 365] as const;
 
 const FA_USERS: Record<number, string> = {
   5: "۵",
@@ -79,7 +79,7 @@ export function fallbackYadinoPlans(): YadinoPlan[] {
   let sort = 1;
   for (const tier of TIERS) {
     const features = yadinoFeatures(tier.users);
-    const prices = [tier.monthly, tier.quarterly, tier.semiannual, tier.yearly];
+    const prices = [tier.semiannual, tier.yearly];
     DURATION_ORDER.forEach((days, i) => {
       rows.push({
         name: `سرویس آموزشی ${FA_USERS[tier.users]} کاربره`,

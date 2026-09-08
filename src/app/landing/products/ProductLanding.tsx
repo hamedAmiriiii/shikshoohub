@@ -56,9 +56,14 @@ export default function ProductLanding({ product }: { product: LandingProduct })
   const [slide, setSlide] = useState(0);
   const shots = product.screenshots;
   const hasShots = shots.length > 0;
+  const hasTrial = product.hasTrial !== false;
 
   const startFree = () => {
     window.location.href = product.registerUrl;
+  };
+
+  const goPricing = () => {
+    document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" });
   };
 
   return (
@@ -66,7 +71,9 @@ export default function ProductLanding({ product }: { product: LandingProduct })
       registerUrl={product.registerUrl}
       loginUrl={product.loginUrl}
       loginLabel={product.loginLabel}
-      onStartFree={startFree}
+      onStartFree={hasTrial ? startFree : goPricing}
+      ctaLabel={hasTrial ? undefined : "خرید پلن"}
+      hideRegister={!hasTrial}
     >
       <section className="relative overflow-hidden pt-12 pb-16 md:pt-16 md:pb-20">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(139,92,246,0.22),_transparent_50%)]" />
@@ -75,9 +82,15 @@ export default function ProductLanding({ product }: { product: LandingProduct })
             <Link href="/#products" className="text-sm text-cyan-400 hover:text-cyan-300">
               ← همه محصولات
             </Link>
-            <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-cyan-300 text-xs">
-              <Sparkles size={14} /> {TRIAL_SHORT} تست رایگان
-            </div>
+            {hasTrial ? (
+              <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-cyan-300 text-xs">
+                <Sparkles size={14} /> {TRIAL_SHORT} تست رایگان
+              </div>
+            ) : (
+              <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-fuchsia-300 text-xs">
+                <Sparkles size={14} /> خرید آنلاین پلن شش‌ماهه و یک‌ساله
+              </div>
+            )}
             <div className="mt-5 flex items-center gap-3 justify-center lg:justify-start">
               <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${product.color} text-white flex items-center justify-center`}>
                 <Icon size={24} />
@@ -90,11 +103,12 @@ export default function ProductLanding({ product }: { product: LandingProduct })
             <div className="flex flex-col sm:flex-row gap-3 mt-8 justify-center lg:justify-start">
               <button
                 type="button"
-                onClick={startFree}
+                onClick={hasTrial ? startFree : goPricing}
                 className="px-8 py-3.5 rounded-xl bg-gradient-to-l from-violet-600 to-fuchsia-600 text-white font-semibold"
               >
-                {TRIAL_CTA}
+                {hasTrial ? TRIAL_CTA : "خرید پلن"}
               </button>
+              {hasTrial ? (
               <Link
                 href={product.loginUrl}
                 className="px-8 py-3.5 rounded-xl border border-white/15 bg-white/5 text-slate-200 font-medium hover:bg-white/10 transition text-center inline-flex items-center justify-center gap-2"
@@ -102,6 +116,7 @@ export default function ProductLanding({ product }: { product: LandingProduct })
                 <LogIn size={16} />
                 {product.loginLabel}
               </Link>
+              ) : null}
             </div>
           </motion.div>
 
