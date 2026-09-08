@@ -25,6 +25,15 @@ const nextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: "/landing/products/class",
+        destination: "/landing/products/yadino",
+        permanent: true,
+      },
+    ];
+  },
   // PWA configuration
   async rewrites() {
     const api = (

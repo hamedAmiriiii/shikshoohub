@@ -5,6 +5,7 @@ import ShopAccessWatcher from '../componentsShop/ShopAccessWatcher';
 import AdminThemeProvider from './theme/AdminThemeProvider';
 import AdminOnboardingProvider from './onboarding/AdminOnboardingProvider';
 import TableOrdersPendingProvider from './table-orders/TableOrdersPendingProvider';
+import ServiceRequestsPendingProvider from './shop-services/ServiceRequestsPendingProvider';
 import './theme/admin-theme.css';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -39,6 +40,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/orders': 'سفارشات اینترنتی',
     '/admin/table-orders': 'سفارش حضوری',
     '/admin/shop-tables': 'میزهای فروشگاه',
+    '/admin/shop-services': 'خدمات اتاق',
     '/admin/best-selling': 'محصولات پرفروش',
     '/admin/invoices': 'فاکتورها',
     '/admin/manufacturers': 'تولیدکنندگان',
@@ -148,6 +150,7 @@ export default function ShikshooLayout({
     <AdminThemeProvider>
       <AdminOnboardingProvider>
         <TableOrdersPendingProvider>
+        <ServiceRequestsPendingProvider>
         <Box
           className="admin-app"
           sx={{
@@ -182,6 +185,7 @@ export default function ShikshooLayout({
           </>
         )}
         </Box>
+        </ServiceRequestsPendingProvider>
         </TableOrdersPendingProvider>
       </AdminOnboardingProvider>
     </AdminThemeProvider>

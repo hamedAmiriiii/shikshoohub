@@ -46,8 +46,8 @@
       features: ["تقویم نوبت", "پیامک یادآوری", "خدمات و پرسنل", "نوبت مشتری"],
     },
     {
-      id: "class",
-      href: "/landing/products/class",
+      id: "yadino",
+      href: "/landing/products/yadino",
       loginUrl: "/admin/login",
       icon: "🎓",
       title: "کلاس آنلاین و اتاق جلسه",

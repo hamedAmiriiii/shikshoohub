@@ -16,6 +16,8 @@ export type AdminPosSettings = {
   kgSalesEnabled: boolean;
   /** میز، سفارش حضوری و پولینگ رسیدگی‌نشده */
   restaurantCafeEnabled: boolean;
+  /** خدمات اتاق/میز جدا از کالا (هتل و مشابه) */
+  roomServicesEnabled: boolean;
   /** پاپ‌آپ سفارش حضوری وقتی در حالت منو سفارش جدید می‌رسد */
   menuTableOrdersPopupEnabled: boolean;
   /** امکان تغییر قیمت فروش هنگام ثبت خرید */
@@ -36,6 +38,7 @@ const DEFAULT_SETTINGS: AdminPosSettings = {
   producedGoodsMenuEnabled: false,
   kgSalesEnabled: false,
   restaurantCafeEnabled: false,
+  roomServicesEnabled: false,
   menuTableOrdersPopupEnabled: false,
   salePriceEditEnabled: false,
   classicPosMode: false,

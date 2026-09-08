@@ -268,7 +268,7 @@ export default function YadinoPricing() {
               onClick={() => void submitBuy()}
               className="w-full py-3 rounded-xl bg-gradient-to-l from-violet-600 to-fuchsia-600 text-white font-semibold disabled:opacity-60"
             >
-              {submitting ? "در حال اتصال…" : "پرداخت با زرین‌پال"}
+              {submitting ? "در حال اتصال به درگاه" : "پرداخت آنلاین"}
             </button>
           </div>
         </div>

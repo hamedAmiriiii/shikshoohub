@@ -15,7 +15,6 @@ import {
   Puzzle,
   Share2,
   Smartphone,
-  Sparkles,
   Store,
   Video,
   Zap,
@@ -24,7 +23,6 @@ import LandingChrome from "./LandingChrome";
 import {
   LANDING_PRODUCTS,
   REGISTER_URL,
-  TRIAL_BADGE,
   TRIAL_CTA,
   TRIAL_SHORT,
   type ProductIconName,
@@ -102,9 +100,6 @@ export default function LandingHubClient() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(6,182,212,0.15),_transparent_45%)]" />
         <div className="max-w-6xl mx-auto px-4 grid lg:grid-cols-2 gap-12 items-center relative">
           <motion.div {...fadeUp(0)} className="text-center lg:text-right">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-cyan-300 text-xs font-medium mb-4">
-              <Sparkles size={14} /> {TRIAL_BADGE}
-            </span>
             <h1 className="text-3xl sm:text-4xl lg:text-[1.8rem] font-bold leading-tight">
               <span className="bg-gradient-to-l from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">
                 مجموعه نرم‌افزارهای وبینو

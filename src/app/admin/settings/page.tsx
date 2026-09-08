@@ -14,6 +14,7 @@ import {
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 import TableRestaurantIcon from "@mui/icons-material/TableRestaurant";
+import RoomServiceIcon from "@mui/icons-material/RoomService";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import LoyaltyIcon from "@mui/icons-material/Loyalty";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
@@ -263,6 +264,7 @@ export default function SettingsPage() {
   const [classicPosMode, setClassicPosMode] = useState(false);
   const [askCustomerName, setAskCustomerName] = useState(false);
   const [restaurantCafeEnabled, setRestaurantCafeEnabled] = useState(false);
+  const [roomServicesEnabled, setRoomServicesEnabled] = useState(false);
   const [menuTableOrdersPopupEnabled, setMenuTableOrdersPopupEnabled] = useState(false);
   const [directPrintEnabled, setDirectPrintEnabled] = useState(false);
   const [shopCardNumber, setShopCardNumber] = useState("");
@@ -284,8 +286,20 @@ export default function SettingsPage() {
     setClassicPosMode(settings.classicPosMode);
     setAskCustomerName(settings.askCustomerName);
     setRestaurantCafeEnabled(settings.restaurantCafeEnabled);
+    setRoomServicesEnabled(settings.roomServicesEnabled);
     setMenuTableOrdersPopupEnabled(settings.menuTableOrdersPopupEnabled);
     setDirectPrintEnabled(readSaleReceiptPrintSettings().autoPrint);
+    const token = tokenCode();
+    if (!token) return;
+    void apiRequestError("Get", {}, {}, "/api/settings", true, true, token).then((allSettings) => {
+      if (allSettings?.hasError) return;
+      const raw = allSettings as Record<string, unknown>;
+      const value = raw.room_services_enabled;
+      if (value == null || value === "") return;
+      const enabled = value === true || value === 1 || value === "1" || value === "true";
+      setRoomServicesEnabled(enabled);
+      writeAdminPosSettings({ roomServicesEnabled: enabled });
+    });
   }, []);
 
   const handleToggleProductListOnMainPage = (
@@ -355,6 +369,35 @@ export default function SettingsPage() {
       enabled
         ? "حالت رستوران و کافه فعال شد — میز و سفارش حضوری در منو دیده می‌شود"
         : "حالت رستوران و کافه غیرفعال شد",
+    );
+  };
+
+  const handleToggleRoomServices = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setRoomServicesEnabled(enabled);
+    writeAdminPosSettings({ roomServicesEnabled: enabled });
+    const token = tokenCode();
+    if (token) {
+      const res = await apiRequestError(
+        "Put",
+        {},
+        { value: enabled ? "1" : "0" },
+        "/api/settings/room_services_enabled",
+        true,
+        true,
+        token,
+      );
+      if (res?.hasError) {
+        toast.error(typeof res.message === "string" ? res.message : "ذخیره خدمات اتاق ناموفق بود");
+        setRoomServicesEnabled(!enabled);
+        writeAdminPosSettings({ roomServicesEnabled: !enabled });
+        return;
+      }
+    }
+    toast.success(
+      enabled
+        ? "خدمات اتاق فعال شد — مهمان در صفحه میز هم منو و هم خدمات را می‌بیند"
+        : "خدمات اتاق غیرفعال شد",
     );
   };
 
@@ -713,7 +756,7 @@ export default function SettingsPage() {
             hint="میز و سفارش حضوری در منو"
             checked={restaurantCafeEnabled}
             onChange={handleToggleRestaurantCafe}
-            last={!restaurantCafeEnabled}
+            last={!restaurantCafeEnabled && !roomServicesEnabled}
           />
           {restaurantCafeEnabled ? (
             <SettingsToggleRow
@@ -722,8 +765,16 @@ export default function SettingsPage() {
               hint="در حالت منو وقتی سفارش جدید رسید"
               checked={menuTableOrdersPopupEnabled}
               onChange={handleToggleMenuTableOrdersPopup}
+              last={!roomServicesEnabled}
             />
           ) : null}
+          <SettingsToggleRow
+            icon={<RoomServiceIcon sx={{ fontSize: 18 }} />}
+            title="خدمات اتاق"
+            hint="تمیزکردن، پتو و خدمات رایگان جدا از کالا"
+            checked={roomServicesEnabled}
+            onChange={handleToggleRoomServices}
+          />
           
         </CardContent>
       </Card>

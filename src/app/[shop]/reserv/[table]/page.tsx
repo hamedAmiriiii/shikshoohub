@@ -40,6 +40,13 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { catalogCartApiLine, catalogItemKey, isProducedGoodItem } from "@/app/lib/catalogItems";
 import {
+  extractRoomServicesEnabled,
+  extractShopServices,
+  extractTableServiceRequests,
+  type ShopService,
+  type TableServiceRequest,
+} from "@/app/lib/shopServices";
+import {
   ACCENT,
   ACCENT_DARK,
   ReservCartBar,
@@ -54,6 +61,11 @@ import {
   formatNumber,
   type ReservThemeMode,
 } from "./ReservOrderingParts";
+import {
+  ReservMenuServiceSwitch,
+  ReservServiceGrid,
+  ReservServiceRequestList,
+} from "./ReservServicesParts";
 
 type ProductImage = { image_url?: string; image_path?: string };
 
@@ -395,6 +407,13 @@ export default function TableReservPage() {
   const tableNumber = Number(params?.table);
   const [tableInfo, setTableInfo] = useState<ShopTableInfo | null>(null);
   const [tableError, setTableError] = useState("");
+  const [catalogMode, setCatalogMode] = useState<"menu" | "services">("menu");
+  const [servicesEnabled, setServicesEnabled] = useState(false);
+  const [services, setServices] = useState<ShopService[]>([]);
+  const [servicesLoading, setServicesLoading] = useState(false);
+  const [serviceRequests, setServiceRequests] = useState<TableServiceRequest[]>([]);
+  const [requestingServiceId, setRequestingServiceId] = useState<number | null>(null);
+  const [cancellingServiceId, setCancellingServiceId] = useState<number | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState(false);
@@ -559,6 +578,7 @@ export default function TableReservPage() {
       }
       const info = extractShopTableInfo(res, tableNumber);
       setTableInfo(info);
+      if (extractRoomServicesEnabled(res)) setServicesEnabled(true);
       const methods = info.paymentMethods?.length
         ? info.paymentMethods
         : extractPaymentMethods(shop);
@@ -609,6 +629,26 @@ export default function TableReservPage() {
     [shopApi, shopCode],
   );
 
+  const loadServices = useCallback(async () => {
+    if (!shopCode) return;
+    setServicesLoading(true);
+    try {
+      const res = await apiRequestError("Get", {}, {}, shopApi("/api/shop-services"), false, true, "");
+      if (res?.hasError) {
+        setServices([]);
+        setServicesEnabled(false);
+        return;
+      }
+      const enabled = extractRoomServicesEnabled(res);
+      setServicesEnabled(enabled);
+      setServices(enabled ? extractShopServices(res) : []);
+    } catch {
+      setServices([]);
+    } finally {
+      setServicesLoading(false);
+    }
+  }, [shopApi, shopCode]);
+
   useEffect(() => {
     loadTable();
   }, [loadTable]);
@@ -616,6 +656,10 @@ export default function TableReservPage() {
   useEffect(() => {
     loadProducts(1, true);
   }, [loadProducts]);
+
+  useEffect(() => {
+    loadServices();
+  }, [loadServices]);
 
   useEffect(() => {
     if (!shopCode) return;
@@ -706,6 +750,23 @@ export default function TableReservPage() {
     });
   }, [products, search, selectedCategory]);
 
+  const hasMenu = products.length > 0 || !servicesEnabled;
+  const showBothCatalogs = servicesEnabled && products.length > 0;
+  const visibleServices = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return services;
+    return services.filter((service) => {
+      const hay = `${service.name || ""} ${service.description || ""}`.toLowerCase();
+      return hay.includes(term);
+    });
+  }, [search, services]);
+
+  useEffect(() => {
+    if (servicesEnabled && products.length === 0 && services.length > 0) {
+      setCatalogMode("services");
+    }
+  }, [products.length, services.length, servicesEnabled]);
+
   const qtyOf = (product: Product | string) => {
     const key = typeof product === "string" ? product : catalogItemKey(product);
     return cart.find((line) => catalogItemKey(line) === key)?.quantity || 0;
@@ -788,10 +849,95 @@ export default function TableReservPage() {
     }
   }, [normalizedPhone, phoneReady, shopApi, shopCode, tableNumber, validTable]);
 
+  const loadServiceRequests = useCallback(async () => {
+    if (!shopCode || !validTable || !servicesEnabled) return;
+    try {
+      const query = new URLSearchParams({ table_number: String(tableNumber) });
+      if (phoneReady) query.set("phone", normalizedPhone);
+      const res = await apiRequestError(
+        "Get",
+        {},
+        {},
+        shopApi(`/api/table-service-requests?${query.toString()}`),
+        false,
+        true,
+        "",
+      );
+      if (res?.hasError) {
+        setServiceRequests([]);
+        return;
+      }
+      setServiceRequests(extractTableServiceRequests(res).filter((row) => row.status === "pending"));
+    } catch {
+      setServiceRequests([]);
+    }
+  }, [normalizedPhone, phoneReady, servicesEnabled, shopApi, shopCode, tableNumber, validTable]);
+
+  useEffect(() => {
+    void loadServiceRequests();
+  }, [loadServiceRequests]);
+
+  const requestService = async (service: ShopService) => {
+    if (!shopCode || !validTable) return;
+    setRequestingServiceId(service.id);
+    try {
+      const res = await apiRequestError(
+        "Post",
+        {},
+        {
+          table_number: tableNumber,
+          shop_service_id: service.id,
+          ...(phoneReady ? { phone: normalizedPhone } : {}),
+        },
+        shopApi("/api/table-service-request"),
+        false,
+        true,
+        "",
+      );
+      if (res?.hasError) {
+        toast.error(typeof res.message === "string" ? res.message : "ثبت درخواست ناموفق بود");
+        return;
+      }
+      toast.success(typeof res.message === "string" ? res.message : "درخواست ثبت شد");
+      void loadServiceRequests();
+    } catch {
+      toast.error("خطا در ارتباط با سرور");
+    } finally {
+      setRequestingServiceId(null);
+    }
+  };
+
+  const cancelServiceRequest = async (row: TableServiceRequest) => {
+    if (!shopCode) return;
+    setCancellingServiceId(row.id);
+    try {
+      const res = await apiRequestError(
+        "Post",
+        {},
+        phoneReady ? { phone: normalizedPhone } : {},
+        shopApi(`/api/table-service-request/${row.id}/cancel`),
+        false,
+        true,
+        "",
+      );
+      if (res?.hasError) {
+        toast.error(typeof res.message === "string" ? res.message : "لغو درخواست ناموفق بود");
+        return;
+      }
+      toast.success(typeof res.message === "string" ? res.message : "درخواست لغو شد");
+      void loadServiceRequests();
+    } catch {
+      toast.error("خطا در ارتباط با سرور");
+    } finally {
+      setCancellingServiceId(null);
+    }
+  };
+
   const openCurrentOrders = () => {
     setCurrentOpen(true);
     setCurrentDetail(null);
     void loadCurrentOrders();
+    void loadServiceRequests();
   };
 
   const openCurrentDetail = async (order: TableOrder) => {
@@ -1101,7 +1247,8 @@ export default function TableReservPage() {
     creditToApply > 0
       ? `${formatNumber(payableAmount)} تومان`
       : `${formatNumber(cartTotal)} تومان`;
-  const activeCurrentCount = currentOrders.filter((order) => order.status !== "cancelled").length;
+  const activeCurrentCount =
+    currentOrders.filter((order) => order.status !== "cancelled").length + serviceRequests.length;
 
   return (
     <Box
@@ -1134,15 +1281,70 @@ export default function TableReservPage() {
           pt: 1.5,
           pb: cartCount > 0 ? { xs: "112px", md: 3 } : 3,
           display: { xs: "block", md: "grid" },
-          gridTemplateColumns: { md: "minmax(0,1fr) 340px" },
+          gridTemplateColumns: {
+            md: catalogMode === "services" && cartCount === 0 ? "minmax(0,1fr)" : "minmax(0,1fr) 340px",
+          },
           gap: { md: 2.5 },
           alignItems: "start",
         }}
       >
         <Box component="main">
+          {showBothCatalogs ? (
+            <ReservMenuServiceSwitch
+              mode={catalogMode}
+              onChange={(next) => {
+                setCatalogMode(next);
+                setSearch("");
+              }}
+              theme={theme}
+              pendingServiceCount={serviceRequests.length}
+            />
+          ) : null}
           <Box sx={{ mb: 1.25 }}>
-            <ReservSearchBar value={search} onChange={setSearch} theme={theme} />
+            <ReservSearchBar
+              value={search}
+              onChange={setSearch}
+              theme={theme}
+              placeholder={
+                catalogMode === "services" && (showBothCatalogs || (servicesEnabled && !hasMenu))
+                  ? "جستجوی خدمات اتاق…"
+                  : "جستجوی غذا، نوشیدنی و …"
+              }
+            />
           </Box>
+          {catalogMode === "services" && servicesEnabled ? (
+            <>
+              <ReservServiceRequestList
+                requests={serviceRequests}
+                theme={theme}
+                cancellingId={cancellingServiceId}
+                onCancel={cancelServiceRequest}
+              />
+              {servicesLoading ? (
+                <ReservProductSkeletonList theme={theme} />
+              ) : visibleServices.length === 0 ? (
+                <ReservEmptyState
+                  theme={theme}
+                  title={
+                    searchActive
+                      ? `خدمتی برای «${search.trim()}» پیدا نشد.`
+                      : "هنوز خدمتی تعریف نشده است."
+                  }
+                />
+              ) : (
+                <ReservServiceGrid
+                  services={visibleServices}
+                  theme={theme}
+                  requestingId={requestingServiceId}
+                  pendingServiceIds={serviceRequests
+                    .map((row) => Number(row.service_id))
+                    .filter((id) => Number.isFinite(id) && id > 0)}
+                  onRequest={requestService}
+                />
+              )}
+            </>
+          ) : (
+            <>
           <Box sx={{ mb: 1.5 }}>
             <ReservCategoryTabs
               categories={categories}
@@ -1226,8 +1428,11 @@ export default function TableReservPage() {
               {loadingMore ? "..." : "موارد بیشتر"}
             </Button>
           ) : null}
+            </>
+          )}
         </Box>
 
+        {catalogMode !== "services" || cartCount > 0 ? (
         <ReservDesktopCartPanel
           theme={theme}
           lines={cart.map((line) => ({ ...line, key: catalogItemKey(line) }))}
@@ -1237,14 +1442,17 @@ export default function TableReservPage() {
           onRemove={(key) => adjustCartLine(key, 0)}
           onCheckout={() => setCartOpen(true)}
         />
+        ) : null}
       </Box>
 
+      {catalogMode !== "services" || cartCount > 0 ? (
       <ReservCartBar
         count={cartCount}
         totalLabel={cartTotalLabel}
         theme={theme}
         onOpen={() => setCartOpen(true)}
       />
+      ) : null}
 
       <Drawer
         anchor="bottom"
@@ -1748,12 +1956,20 @@ export default function TableReservPage() {
               </Button>
             ) : null}
           </Box>
-        ) : currentOrders.length === 0 ? (
+        ) : currentOrders.length === 0 && serviceRequests.length === 0 ? (
           <Typography sx={{ textAlign: "center", color: MUTED, py: 4 }}>
-            سفارش بازی برای این میز نیست. بعد از تأیید صندوق از اینجا برداشته می‌شود.
+            سفارش یا خدمت بازی برای این میز نیست.
           </Typography>
         ) : (
           <Box sx={{ overflowY: "auto" }}>
+            {serviceRequests.length > 0 ? (
+              <ReservServiceRequestList
+                requests={serviceRequests}
+                theme={theme}
+                cancellingId={cancellingServiceId}
+                onCancel={cancelServiceRequest}
+              />
+            ) : null}
             {currentOrders.map((order) => (
               <Box
                 key={order.id}

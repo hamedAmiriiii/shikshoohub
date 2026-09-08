@@ -79,19 +79,20 @@ export default function ProductLanding({ product }: { product: LandingProduct })
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(139,92,246,0.22),_transparent_50%)]" />
         <div className="max-w-6xl mx-auto px-4 grid lg:grid-cols-2 gap-10 items-center relative">
           <motion.div {...fadeUp()} className="text-center lg:text-right">
-            <Link href="/#products" className="text-sm text-cyan-400 hover:text-cyan-300">
-              ← همه محصولات
-            </Link>
             {hasTrial ? (
-              <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-cyan-300 text-xs">
-                <Sparkles size={14} /> {TRIAL_SHORT} تست رایگان
-              </div>
-            ) : (
-              <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-fuchsia-300 text-xs">
-                <Sparkles size={14} /> خرید آنلاین پلن شش‌ماهه و یک‌ساله
-              </div>
-            )}
-            <div className="mt-5 flex items-center gap-3 justify-center lg:justify-start">
+              <>
+                <Link
+                  href="/#products"
+                  className="block text-sm text-cyan-400 hover:text-cyan-300"
+                >
+                  ← همه محصولات
+                </Link>
+                <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-cyan-300 text-xs">
+                  <Sparkles size={14} /> {TRIAL_SHORT} تست رایگان
+                </div>
+              </>
+            ) : null}
+            <div className={`${hasTrial ? "mt-5" : ""} flex items-center gap-3 justify-center lg:justify-start`}>
               <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${product.color} text-white flex items-center justify-center`}>
                 <Icon size={24} />
               </div>
@@ -196,7 +197,7 @@ export default function ProductLanding({ product }: { product: LandingProduct })
         </div>
       </section>
 
-      {product.slug === "class" ? <YadinoPricing /> : null}
+      {product.slug === "yadino" ? <YadinoPricing /> : null}
 
       {hasShots && shots.length > 1 && (
         <section className="py-12 md:py-16">

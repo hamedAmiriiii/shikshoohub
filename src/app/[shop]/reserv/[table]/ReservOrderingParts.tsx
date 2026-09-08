@@ -222,16 +222,17 @@ type SearchProps = {
   value: string;
   onChange: (value: string) => void;
   theme: ReservTheme;
+  placeholder?: string;
 };
 
-export function ReservSearchBar({ value, onChange, theme }: SearchProps) {
+export function ReservSearchBar({ value, onChange, theme, placeholder = "جستجوی غذا، نوشیدنی و …" }: SearchProps) {
   return (
     <TextField
       size="small"
       fullWidth
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      placeholder="جستجوی غذا، نوشیدنی و …"
+      placeholder={placeholder}
       inputProps={{ "aria-label": "جستجوی منو" }}
       InputProps={{
         startAdornment: (

@@ -225,7 +225,7 @@ export default function ShopTablesPage() {
     <Box sx={{ ...adminPageSx, p: 2, pb: 12 }}>
       <Typography sx={{ fontWeight: 800, mb: 1, fontSize: 18 }}>میزهای فروشگاه</Typography>
       <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: 13, mb: 2 }}>
-        برای هر میز یک لینک QR بسازید تا مشتری از روی میز سفارش حضوری ثبت کند.
+        برای هر میز یا اتاق یک لینک QR بسازید تا مهمان سفارش یا خدمت ثبت کند.
       </Typography>
 
       <TextField

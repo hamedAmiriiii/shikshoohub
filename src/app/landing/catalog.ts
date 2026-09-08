@@ -11,7 +11,6 @@ export const ENAMAD_HTML =
 
 export const TRIAL_SHORT = "یک هفته";
 export const TRIAL_CTA = "شروع رایگان یک هفته‌ای";
-export const TRIAL_BADGE = "۸ محصول — یک هفته تست رایگان";
 
 export type ProductIconName =
   | "calculator"
@@ -127,8 +126,8 @@ export const LANDING_PRODUCTS: LandingProduct[] = [
     screenshots: [],
   },
   {
-    slug: "class",
-    href: "/landing/products/class",
+    slug: "yadino",
+    href: "/landing/products/yadino",
     title: "یادینو",
     tag: "آموزشی",
     icon: "video",
@@ -185,5 +184,6 @@ export const LANDING_PRODUCTS: LandingProduct[] = [
 ];
 
 export function getLandingProduct(slug: string) {
-  return LANDING_PRODUCTS.find((p) => p.slug === slug);
+  const key = slug === "class" ? "yadino" : slug;
+  return LANDING_PRODUCTS.find((p) => p.slug === key);
 }
