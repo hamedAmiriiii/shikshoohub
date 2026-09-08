@@ -21,6 +21,7 @@ import {
   Video,
 } from "lucide-react";
 import LandingChrome from "../LandingChrome";
+import YadinoPricing from "./YadinoPricing";
 import {
   LANDING_PRODUCTS,
   TRIAL_CTA,
@@ -179,6 +180,8 @@ export default function ProductLanding({ product }: { product: LandingProduct })
           </ul>
         </div>
       </section>
+
+      {product.slug === "class" ? <YadinoPricing /> : null}
 
       {hasShots && shots.length > 1 && (
         <section className="py-12 md:py-16">

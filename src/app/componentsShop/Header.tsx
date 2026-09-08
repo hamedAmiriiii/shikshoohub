@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Badge, Box, Typography, IconButton, Container, Button, Drawer } from "@mui/material";
+import { Badge, Box, Typography, IconButton, Container, Button, Drawer, useMediaQuery } from "@mui/material";
 import { useTableOrdersPending } from "@/app/admin/table-orders/TableOrdersPendingProvider";
 import MenuIcon from "@mui/icons-material/Menu";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -30,6 +30,19 @@ import AdminHamburgerSidebar, {
 import { ADMIN_MENU_CART_WIDTH_VAR } from "@/app/admin/adminMenuCartLayout";
 import { useAdminTheme } from "@/app/admin/theme/useAdminTheme";
 
+function lastPhoneDigits(phone: string, count = 4): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length <= count) return phone;
+  return digits.slice(-count);
+}
+
+function compactPersonName(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) return "کاربر";
+  const parts = trimmed.split(/\s+/);
+  return parts[0] || trimmed;
+}
+
 interface HeaderProps {
   title?: string;
   rightAction?: React.ReactNode;
@@ -53,6 +66,7 @@ export default function Header({
   const [shopAccessExpired, setShopAccessExpired] = useState(false);
   const [expiredAccessInfo, setExpiredAccessInfo] =
     useState<ReturnType<typeof getShopAccessFromUser>>(null);
+  const compactIdentity = useMediaQuery("(max-width:600px)");
 
   const syncAccessState = () => {
     const userData = localStorage.getItem("user");
@@ -103,6 +117,11 @@ export default function Header({
   const displayPhone = user
     ? getUserPhoneFromRecord(user as Record<string, unknown>)
     : "";
+  const fullPersonName = String(user?.name || user?.fullName || "کاربر");
+  const headerPersonName = compactIdentity
+    ? compactPersonName(fullPersonName)
+    : fullPersonName;
+  const headerPhone = compactIdentity ? lastPhoneDigits(displayPhone) : displayPhone;
   const shopDisplayName =
     user?.atelier?.name ||
     user?.atelier_name ||
@@ -237,13 +256,14 @@ export default function Header({
       sx={{
         position: "sticky",
         top: 0,
-        zIndex: 1000,
+        zIndex: (theme) => theme.zIndex.drawer + 2,
         backgroundColor: "var(--admin-header-bg)",
-        paddingTop: { xs: "12px", md: "16px" },
-        paddingBottom: { xs: "12px", md: "16px" },
-        marginBottom: { xs: "12px", md: "16px" },
-        // وقتی سبد حالت منو باز است، هدر کنار سبد می‌ماند (مثل فاصله با منوی راست)
-        pl: `var(${ADMIN_MENU_CART_WIDTH_VAR}, 0px)`,
+        paddingTop: { xs: "8px", md: "16px" },
+        paddingBottom: { xs: "8px", md: "16px" },
+        marginBottom: { xs: "8px", md: "16px" },
+        minWidth: 0,
+        // روی موبایل هدر تمام‌عرض روی سبد می‌ماند؛ فاصله سبد فقط از md
+        pl: { xs: 0, md: `var(${ADMIN_MENU_CART_WIDTH_VAR}, 0px)` },
         pr: { md: `${ADMIN_SIDEBAR_WIDTH}px` },
       }}
     >
@@ -285,7 +305,7 @@ export default function Header({
         {sidebarContent}
       </Drawer>
 
-      <Container maxWidth="xl">
+      <Container maxWidth="xl" disableGutters sx={{ px: { xs: 1, md: 3 }, minWidth: 0, overflow: "hidden" }}>
         {shopAccessExpired && !isSuperAdmin && (
           <Box
             sx={{
@@ -366,16 +386,18 @@ export default function Header({
           sx={{
             backgroundColor: "var(--admin-surface)",
             color: "var(--admin-text)",
-            padding: { xs: "12px 16px", md: "16px 24px" },
+            padding: { xs: "8px 10px", md: "16px 24px" },
             borderRadius: { xs: "12px", md: "16px" },
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             border: "1px solid var(--admin-header-bar-border)",
-            gap: { xs: "12px", md: "16px" },
+            gap: { xs: "6px", md: "16px" },
+            minWidth: 0,
+            overflow: "hidden",
           }}
         >
-          <Box sx={{ display: "flex", alignItems: "center", gap: { xs: "8px", md: "12px" } }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: { xs: "4px", md: "12px" }, flexShrink: 0 }}>
             <IconButton
               data-admin-tour="menu"
               onClick={handleMenuOpen}
@@ -386,8 +408,8 @@ export default function Header({
                 "&:hover": {
                   backgroundColor: "var(--admin-icon-bg-hover)",
                 },
-                width: { xs: "40px", md: "48px" },
-                height: { xs: "40px", md: "48px" },
+                width: { xs: "36px", md: "48px" },
+                height: { xs: "36px", md: "48px" },
                 flexShrink: 0,
               }}
             >
@@ -411,8 +433,8 @@ export default function Header({
                   "&:hover": {
                     backgroundColor: "rgba(255,255,255,0.2)",
                   },
-                  width: { xs: "40px", md: "48px" },
-                  height: { xs: "40px", md: "48px" },
+                  width: { xs: "36px", md: "48px" },
+                  height: { xs: "36px", md: "48px" },
                   flexShrink: 0,
                 }}
               >
@@ -424,17 +446,23 @@ export default function Header({
           {title ? (
             <Box
               sx={{
-                padding: { xs: "6px 12px", md: "8px 20px" },
+                padding: { xs: "4px 4px", md: "8px 20px" },
                 borderRadius: { xs: "10px", md: "14px" },
-                flexShrink: 0,
+                minWidth: 0,
+                flex: "1 1 0",
+                overflow: "hidden",
               }}
             >
               <Typography
                 sx={{
                   fontWeight: "700",
-                  fontSize: { xs: "14px", md: "18px" },
+                  fontSize: { xs: "13px", md: "18px" },
                   color: "var(--admin-text)",
                   textShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  textAlign: "center",
                 }}
               >
                 {title}
@@ -444,17 +472,23 @@ export default function Header({
             <Box
               sx={{
                 background: "var(--admin-title-gradient)",
-                padding: { xs: "8px 16px", md: "12px 24px" },
+                padding: { xs: "6px 8px", md: "12px 24px" },
                 borderRadius: { xs: "12px", md: "16px" },
-                flexShrink: 0,
+                minWidth: 0,
+                flex: "1 1 0",
+                overflow: "hidden",
               }}
             >
               <Typography
                 sx={{
                   fontWeight: "700",
-                  fontSize: { xs: "16px", md: "20px" },
+                  fontSize: { xs: "14px", md: "20px" },
                   color: "var(--admin-text)",
                   textShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  textAlign: "center",
                 }}
               >
                 {user?.atelier?.name || "فروشگاه"}
@@ -466,13 +500,15 @@ export default function Header({
             sx={{
               display: "flex",
               alignItems: "center",
-              gap: { xs: "8px", md: "12px" },
-              flex: 1,
+              gap: { xs: "4px", md: "12px" },
+              minWidth: 0,
+              flex: "0 1 auto",
               justifyContent: "flex-end",
+              overflow: "hidden",
             }}
           >
             {rightAction && (
-              <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Box sx={{ display: { xs: "none", sm: "flex" }, alignItems: "center", gap: "8px", flexShrink: 0 }}>
                 {rightAction}
               </Box>
             )}
@@ -482,8 +518,11 @@ export default function Header({
                   sx={{
                     display: "flex",
                     alignItems: "center",
-                    gap: { xs: "6px", md: "12px" },
+                    gap: { xs: "4px", md: "12px" },
                     minWidth: 0,
+                    flex: "1 1 auto",
+                    justifyContent: "flex-end",
+                    overflow: "hidden",
                   }}
                 >
                   <PersonIcon
@@ -494,8 +533,9 @@ export default function Header({
                       display: { xs: "none", sm: "block" },
                     }}
                   />
-                  <Box sx={{ minWidth: 0, textAlign: "right" }}>
+                  <Box sx={{ minWidth: 0, maxWidth: { xs: 72, sm: 140, md: 220 }, textAlign: "right" }}>
                     <Typography
+                      title={fullPersonName}
                       sx={{
                         fontSize: { xs: "12px", md: "18px" },
                         fontWeight: "700",
@@ -503,15 +543,15 @@ export default function Header({
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
-                        maxWidth: { xs: "100px", sm: "180px", md: "none" },
                       }}
                     >
-                      {user.name || user.fullName || "کاربر"}
+                      {headerPersonName}
                     </Typography>
                     {displayPhone && (
                       <Typography
                         component="span"
                         dir="ltr"
+                        title={displayPhone}
                         sx={{
                           display: "block",
                           fontSize: { xs: "11px", md: "13px" },
@@ -519,9 +559,12 @@ export default function Header({
                           marginTop: "2px",
                           letterSpacing: "0.02em",
                           unicodeBidi: "plaintext",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
                         }}
                       >
-                        {displayPhone}
+                        {headerPhone}
                       </Typography>
                     )}
                   </Box>
@@ -532,7 +575,7 @@ export default function Header({
                   sx={{
                     color: "var(--admin-accent)",
                     backgroundColor: "var(--admin-icon-bg)",
-                    padding: { xs: "6px", md: "8px" },
+                    padding: { xs: "5px", md: "8px" },
                     flexShrink: 0,
                     "&:hover": {
                       backgroundColor: "var(--admin-icon-bg-hover)",
@@ -547,7 +590,7 @@ export default function Header({
                   sx={{
                     color: "var(--admin-accent)",
                     backgroundColor: "var(--admin-icon-bg)",
-                    padding: { xs: "6px", md: "8px" },
+                    padding: { xs: "5px", md: "8px" },
                     flexShrink: 0,
                     "&:hover": {
                       backgroundColor: "var(--admin-icon-bg-hover)",
@@ -565,7 +608,7 @@ export default function Header({
                   sx={{
                     color: "#ff4444",
                     backgroundColor: "rgba(255, 68, 68, 0.1)",
-                    padding: { xs: "6px", md: "8px" },
+                    padding: { xs: "5px", md: "8px" },
                     flexShrink: 0,
                     "&:hover": {
                       backgroundColor: "rgba(255, 68, 68, 0.2)",
