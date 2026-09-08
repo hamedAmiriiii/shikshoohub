@@ -35,6 +35,7 @@ import {
   saveOilReportsCache,
   type OilVisitQueueBody,
 } from "./offline";
+import { isAppOnline } from "@/app/lib/desktopMode";
 
 const BASE_URL = (
   process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoplus.ir"
@@ -383,8 +384,7 @@ export async function oilSubmitVisit(
   },
 ): Promise<OilSubmitVisitResult> {
   const payload = freezeOilVisitBody(body);
-  const offline = typeof navigator !== "undefined" && navigator.onLine === false;
-  if (offline) {
+  if (!isAppOnline()) {
     enqueueOilVisit(payload);
     return { queued: true, client_id: payload.client_id };
   }
@@ -419,7 +419,7 @@ export async function oilGetReports() {
     await saveOilReportsCache(res);
     return res;
   }
-  if (isOilNetworkError(res) || (typeof navigator !== "undefined" && navigator.onLine === false)) {
+  if (isOilNetworkError(res) || !isAppOnline()) {
     const cached = await readOilReportsCache();
     if (cached) return cached;
   }

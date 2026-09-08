@@ -17,6 +17,7 @@ import {
   saveOilSession,
 } from "@/app/lib/oil/auth";
 import type { OilSession, OilSmsQuota } from "@/app/lib/oil/types";
+import { isAppOnline } from "@/app/lib/desktopMode";
 
 type OilAuthValue = {
   ready: boolean;
@@ -91,7 +92,7 @@ export function OilAuthProvider({ children }: { children: React.ReactNode }) {
       setReady(true);
       return;
     }
-    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    if (!isAppOnline()) {
       setReady(true);
       return;
     }

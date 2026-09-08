@@ -28,6 +28,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { mainColors, searchColors } from "../../liberari/colors";
 import { PRODUCTS_CACHE_KEY } from "@/app/lib/productsCache";
 import { catalogItemKey, isProducedGoodItem } from "@/app/lib/catalogItems";
+import { apiAssetUrl } from "@/app/lib/apiBase";
 
 const PRODUCT_SORT_OPTIONS = [
     { value: "", label: "پیش‌فرض" },
@@ -658,13 +659,13 @@ export default function ListData() {
             }
             // اگر URL نسبی است
             if (img.startsWith('/storage/')) {
-              return `https://api.webinoplus.ir${img}`;
+              return apiAssetUrl(img);
             }
             return img;
           } else if (img.image_url) {
             // اگر object است و image_url دارد
             if (img.image_url.startsWith('/storage/')) {
-              return `https://api.webinoplus.ir${img.image_url}`;
+              return apiAssetUrl(img.image_url);
             }
             if (img.image_url.startsWith('http')) {
               return img.image_url;
@@ -673,7 +674,7 @@ export default function ListData() {
           } else if (img.url) {
             // اگر url property دارد
             if (img.url.startsWith('/storage/')) {
-              return `https://api.webinoplus.ir${img.url}`;
+              return apiAssetUrl(img.url);
             }
             if (img.url.startsWith('http')) {
               return img.url;

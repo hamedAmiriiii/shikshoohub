@@ -25,6 +25,7 @@ import {
   freezeOilVisitBody,
 } from "@/app/lib/oil/offline";
 import { getOilToken } from "@/app/lib/oil/auth";
+import { isAppOnline, isDesktopLocalMode } from "@/app/lib/desktopMode";
 
 type OilOfflineValue = {
   online: boolean;
@@ -47,7 +48,7 @@ export function OilOfflineProvider({ children }: { children: React.ReactNode }) 
 
   const flush = useCallback(async () => {
     if (flushing.current) return;
-    if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+    if (!isAppOnline()) return;
     if (!getOilToken()) return;
     const items = listOilOutbox();
     if (items.length === 0) return;
@@ -118,23 +119,40 @@ export function OilOfflineProvider({ children }: { children: React.ReactNode }) 
   }, [refresh]);
 
   useEffect(() => {
-    setOnline(typeof navigator === "undefined" ? true : navigator.onLine);
+    if (isDesktopLocalMode()) {
+      setOnline(true);
+      refresh();
+      const onChanged = () => refresh();
+      const onVisible = () => {
+        if (document.visibilityState === "visible") void flush();
+      };
+      window.addEventListener("focus", onVisible);
+      document.addEventListener("visibilitychange", onVisible);
+      window.addEventListener(OIL_OUTBOX_CHANGED, onChanged);
+      void flush();
+      return () => {
+        window.removeEventListener("focus", onVisible);
+        document.removeEventListener("visibilitychange", onVisible);
+        window.removeEventListener(OIL_OUTBOX_CHANGED, onChanged);
+      };
+    }
+    setOnline(isAppOnline());
     refresh();
     const onStatus = () => {
-      const next = navigator.onLine;
+      const next = isAppOnline();
       setOnline(next);
       if (next) void flush();
     };
     const onChanged = () => refresh();
     const onVisible = () => {
-      if (document.visibilityState === "visible" && navigator.onLine) void flush();
+      if (document.visibilityState === "visible" && isAppOnline()) void flush();
     };
     window.addEventListener("online", onStatus);
     window.addEventListener("offline", onStatus);
     window.addEventListener("focus", onVisible);
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener(OIL_OUTBOX_CHANGED, onChanged);
-    if (typeof navigator === "undefined" || navigator.onLine) void flush();
+    if (isAppOnline()) void flush();
     return () => {
       window.removeEventListener("online", onStatus);
       window.removeEventListener("offline", onStatus);
@@ -159,6 +177,7 @@ export function useOilOffline() {
 export function OilOfflineIcon() {
   const ctx = useOilOffline();
   if (!ctx) return null;
+  if (isDesktopLocalMode()) return null;
   const { online, pending, syncing, flush } = ctx;
   if (online && pending === 0 && !syncing) return null;
 

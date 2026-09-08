@@ -38,6 +38,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import 'react-toastify/dist/ReactToastify.css';
 import PhoneNumberInput from '@/app/coponent/PhoneNumberInput/PhoneNumberInput';
 import tokenCode from '@/app/coponent/tokenCode';
+import { isDesktopLocalMode, isAppOnline } from '@/app/lib/desktopMode';
 import { FetchWithJwtClient } from '@/app/coponent/fetchWithJwtClient';
 import {
   readTodayDashboardCache,
@@ -169,13 +170,12 @@ export default function ShoppingPage() {
   const [backPrice, setBackPrice] = useState(0);
   const [checkingCredit, setCheckingCredit] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isOnline, setIsOnline] = useState(
-    () => typeof navigator === "undefined" || navigator.onLine,
-  );
+  const [isOnline, setIsOnline] = useState(() => isAppOnline());
   const [forcedOffline, setForcedOffline] = useState(false);
   const [isCheckingNetworkSpeed, setIsCheckingNetworkSpeed] = useState(false);
   const [networkWarningOpen, setNetworkWarningOpen] = useState(false);
   const [networkWarningMessage, setNetworkWarningMessage] = useState("");
+  const desktopLocal = isDesktopLocalMode();
   const [pendingPurchases, setPendingPurchases] = useState<any[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [paymentType, setPaymentType] = useState<PaymentType>('cash');
@@ -218,7 +218,7 @@ export default function ShoppingPage() {
   const [cardAmountInput, setCardAmountInput] = useState("");
   const [cashAmountInput, setCashAmountInput] = useState("");
   const [paymentSplitError, setPaymentSplitError] = useState("");
-  const effectiveOnline = isOnline && !forcedOffline;
+  const effectiveOnline = desktopLocal ? true : isOnline && !forcedOffline;
 
   const withTimeout = useCallback(
     async <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
@@ -517,8 +517,13 @@ export default function ShoppingPage() {
     "& .MuiFormHelperText-root": { color: "#ff4444", fontSize: { xs: "11px", md: "12px" } },
   } as const;
   
-  // Online/Offline detection
+  // Online/Offline detection (cloud PWA only — desktop uses local API)
   useEffect(() => {
+    if (isDesktopLocalMode()) {
+      setIsOnline(true);
+      setForcedOffline(false);
+      return;
+    }
     const updateOnlineStatus = () => {
       const online = navigator.onLine;
       setIsOnline(online);
@@ -526,10 +531,6 @@ export default function ShoppingPage() {
         setForcedOffline(false);
       }
     };
-
-
-
-    
 
     updateOnlineStatus();
     window.addEventListener('online', updateOnlineStatus);
@@ -649,6 +650,11 @@ export default function ShoppingPage() {
   }, [effectiveOnline, isSyncing, syncPendingPurchases]);
 
   const checkNetworkSpeed = useCallback(async () => {
+    if (isDesktopLocalMode()) {
+      setForcedOffline(false);
+      toast.success("اتصال به سرور محلی برقرار است.");
+      return;
+    }
     if (!navigator.onLine) {
       setNetworkWarningMessage("اتصال اینترنت در دسترس نیست. بهتر است در حالت آفلاین بمانید.");
       setNetworkWarningOpen(true);
@@ -713,7 +719,7 @@ export default function ShoppingPage() {
         if (!isActive) return;
         console.log('res : ',res);
         if (res.hasError) {
-          if (!navigator.onLine) return;
+          if (!isAppOnline()) return;
           if (!hasCachedData) {
             toast.error("خطا در دریافت محصولات", { toastId: "products-fetch-error" });
           } else {
@@ -743,17 +749,17 @@ export default function ShoppingPage() {
         if (!isActive) return;
         console.error('خطا در دریافت محصولات:', error);
         const isTimeout =
-          error instanceof Error && error.message === NETWORK_TIMEOUT_ERROR && navigator.onLine;
-        if (isTimeout) {
+          error instanceof Error && error.message === NETWORK_TIMEOUT_ERROR && isAppOnline();
+        if (isTimeout && !isDesktopLocalMode()) {
           setForcedOffline(true);
           toast.warn("اینترنت کند است؛ سیستم موقتاً روی حالت آفلاین رفت.", {
             toastId: SLOW_NETWORK_TOAST_ID,
           });
           return;
         }
-        if (!hasCachedData && navigator.onLine) {
+        if (!hasCachedData && isAppOnline()) {
           toast.error("خطا در دریافت محصولات", { toastId: "products-fetch-error" });
-        } else if (hasCachedData && navigator.onLine) {
+        } else if (hasCachedData && isAppOnline()) {
           toast.warn("خطا در بروزرسانی محصولات - از cache استفاده می‌شود", {
             toastId: "products-cache-fallback",
           });
@@ -770,7 +776,7 @@ export default function ShoppingPage() {
       }
 
       const apiPromise =
-        navigator.onLine && isActive ? fetchProducts() : Promise.resolve();
+        isAppOnline() && isActive ? fetchProducts() : Promise.resolve();
 
       if (!hasCachedData) {
         try {
@@ -1498,7 +1504,12 @@ export default function ShoppingPage() {
       finalizeSuccessfulSale(res, successMessage);
     }).catch((error) => {
       console.error("Error submitting purchase:", error);
-      if (error instanceof Error && error.message === NETWORK_TIMEOUT_ERROR && navigator.onLine) {
+      if (isDesktopLocalMode()) {
+        toast.error("خطا در ثبت خرید روی سرور محلی. دوباره تلاش کنید.");
+        setIsSubmitting(false);
+        return;
+      }
+      if (error instanceof Error && error.message === NETWORK_TIMEOUT_ERROR && isAppOnline()) {
         setForcedOffline(true);
       }
       void queueCurrentPurchase(
@@ -1665,7 +1676,7 @@ export default function ShoppingPage() {
   const checkCredit = async (phoneNumber: string) => {
     setCheckingCredit(true);
 
-    if (!navigator.onLine) {
+    if (!isAppOnline()) {
       try {
         const cached = await findCustomerCreditInCache(phoneNumber);
         if (cached) {
@@ -2041,8 +2052,8 @@ export default function ShoppingPage() {
     <Box sx={{ position: 'relative', minHeight: '100vh', direction: "rtl", background: "var(--admin-bg-gradient)" }}>
       <Container maxWidth="xl" sx={{ padding: { xs: '12px', md: '24px' }, paddingBottom: { xs: '140px', md: '56px' } }}>
 
-        {/* Offline / Pending — یک خط فشرده */}
-        {(!effectiveOnline || pendingPurchases.length > 0) && (
+        {/* Offline / Pending — cloud PWA only (desktop is always local-online) */}
+        {!desktopLocal && (!effectiveOnline || pendingPurchases.length > 0) && (
           <Box
             sx={{
               backgroundColor: !effectiveOnline ? "#ff9800" : "#2196f3",

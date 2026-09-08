@@ -41,6 +41,7 @@ import {
   syncOutboxItem,
   type OutboxItem,
 } from "@/app/lib/offline";
+import { isAppOnline, isDesktopLocalMode } from "@/app/lib/desktopMode";
 
 const formatNumber = (num: number) => new Intl.NumberFormat("fa-IR").format(num);
 
@@ -63,7 +64,7 @@ export default function PendingPurchasesPage() {
   const router = useRouter();
   const [items, setItems] = useState<OutboxItem[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [isOnline, setIsOnline] = useState(true);
+  const [isOnline, setIsOnline] = useState(() => isAppOnline());
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
 
   const reload = useCallback(async () => {
@@ -76,7 +77,11 @@ export default function PendingPurchasesPage() {
   }, []);
 
   useEffect(() => {
-    const updateOnlineStatus = () => setIsOnline(navigator.onLine);
+    if (isDesktopLocalMode()) {
+      setIsOnline(true);
+      return;
+    }
+    const updateOnlineStatus = () => setIsOnline(isAppOnline());
     updateOnlineStatus();
     window.addEventListener("online", updateOnlineStatus);
     window.addEventListener("offline", updateOnlineStatus);
@@ -168,7 +173,7 @@ export default function PendingPurchasesPage() {
           <Box sx={{ width: 40 }} />
         </Box>
 
-        {!isOnline && (
+        {!isOnline && !isDesktopLocalMode() && (
           <Box sx={{ backgroundColor: "#ff9800", color: "var(--admin-text)", p: 1.5, borderRadius: 2, mb: 2, display: "flex", alignItems: "center", gap: 1 }}>
             <CloudQueueIcon />
             <Typography sx={{ fontSize: 14, fontWeight: 600 }}>

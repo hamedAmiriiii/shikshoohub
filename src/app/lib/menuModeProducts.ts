@@ -112,7 +112,10 @@ export function getProductImageUrl(product: CachedProduct): string | null {
   const first = images[0];
   if (typeof first === "string") {
     if (first.startsWith("http") || first.startsWith("data:")) return first;
-    if (first.startsWith("/storage/")) return `https://api.webinoplus.ir${first}`;
+    if (first.startsWith("/storage/")) {
+      const base = (process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoplus.ir").replace(/\/$/, "");
+      return `${base}${first}`;
+    }
     return first;
   }
 
@@ -120,7 +123,10 @@ export function getProductImageUrl(product: CachedProduct): string | null {
     const url = String((first as { image_url: string }).image_url || "");
     if (!url) return null;
     if (url.startsWith("http") || url.startsWith("data:")) return url;
-    if (url.startsWith("/storage/")) return `https://api.webinoplus.ir${url}`;
+    if (url.startsWith("/storage/")) {
+      const base = (process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoplus.ir").replace(/\/$/, "");
+      return `${base}${url}`;
+    }
     return url;
   }
 

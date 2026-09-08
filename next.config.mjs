@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: "standalone",
+  productionBrowserSourceMaps: false,
   experimental: {
     serverActions: {
       bodySizeLimit: '10mb', // 👈 افزایش حجم مجاز تا 10 مگابایت
@@ -16,11 +18,23 @@ const nextConfig = {
         ignoreBuildErrors: true,
   },
   images: {
-    domains: ['https://api.webinoplus.ir' , 'webinoplus.ir', 'api.webinoplus.ir'], // اضافه کردن هاست به لیست مجاز
+    domains: ['https://api.webinoplus.ir' , 'webinoplus.ir', 'api.webinoplus.ir', '127.0.0.1', 'localhost'], // اضافه کردن هاست به لیست مجاز
     remotePatterns: [
       {
         protocol: 'https',
         hostname: 'api.webinoplus.ir',
+        pathname: '/storage/**',
+      },
+      {
+        protocol: 'http',
+        hostname: '127.0.0.1',
+        port: '18080',
+        pathname: '/storage/**',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '18080',
         pathname: '/storage/**',
       },
     ],

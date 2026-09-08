@@ -18,6 +18,7 @@ import { mainColors, searchColors } from "../../liberari/colors";
 import { appendProductLabelPrintParams } from "@/app/lib/productLabelPrint";
 import { formatAmountInput, parseAmountInput } from "@/app/lib/amountInput";
 import { isProducedGoodItem } from "@/app/lib/catalogItems";
+import { apiAssetUrl } from "@/app/lib/apiBase";
 
 const formatNumber = (num: number | string) => {
   const numValue = typeof num === 'string' ? parseFloat(num.replace(/,/g, '')) : num;
@@ -102,14 +103,14 @@ export default function CardUser(props: any) {
           if (img.startsWith('data:image/')) {
             imageUrl = img;
           } else if (img.startsWith('/storage/')) {
-            imageUrl = `https://api.webinoplus.ir${img}`;
+            imageUrl = apiAssetUrl(img);
           } else {
             imageUrl = img;
           }
         } else if (img.image_url) {
           imageId = img.id;
           if (img.image_url.startsWith('/storage/')) {
-            imageUrl = `https://api.webinoplus.ir${img.image_url}`;
+            imageUrl = apiAssetUrl(img.image_url);
           } else if (img.image_url.startsWith('http')) {
             imageUrl = img.image_url;
           } else {
@@ -118,7 +119,7 @@ export default function CardUser(props: any) {
         } else if (img.url) {
           imageId = img.id;
           if (img.url.startsWith('/storage/')) {
-            imageUrl = `https://api.webinoplus.ir${img.url}`;
+            imageUrl = apiAssetUrl(img.url);
           } else if (img.url.startsWith('http')) {
             imageUrl = img.url;
           } else {

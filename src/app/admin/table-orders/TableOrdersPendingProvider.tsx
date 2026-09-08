@@ -16,6 +16,7 @@ import {
   ADMIN_POS_SETTINGS_CHANGED_EVENT,
   readAdminPosSettings,
 } from "@/app/lib/adminPosSettings";
+import { isAppOnline } from "@/app/lib/desktopMode";
 
 export const TABLE_ORDERS_NEW_EVENT = "table-orders-new";
 
@@ -68,7 +69,7 @@ export default function TableOrdersPendingProvider({ children }: { children: Rea
   }, []);
 
   const refresh = useCallback(async () => {
-    if (!navigator.onLine) return;
+    if (!isAppOnline()) return;
     if (!readAdminPosSettings().restaurantCafeEnabled) return;
     const token = tokenCode();
     if (!token) return;

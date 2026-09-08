@@ -1,4 +1,7 @@
-const API_BASE = "https://api.webinoplus.ir";
+const API_BASE = (process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoplus.ir").replace(
+  /\/$/,
+  ""
+);
 
 export const CATEGORY_DISPLAY_COLORS = [
   "#87CEEB",
