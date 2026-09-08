@@ -29,6 +29,13 @@ import tokenCode from "@/app/coponent/tokenCode";
 import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
 import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
 import { adminButtonStartIconSx, adminPageSx } from "@/app/admin/theme/adminTheme";
+import DatePicker from "react-multi-date-picker";
+import DateObject from "react-date-object";
+import gregorian from "react-date-object/calendars/gregorian";
+import persian from "react-date-object/calendars/persian";
+import persian_fa from "react-date-object/locales/persian_fa";
+import TimePicker from "react-multi-date-picker/plugins/time_picker";
+import "react-multi-date-picker/styles/layouts/mobile.css";
 import {
   extractShopServices,
   extractTableServiceRequests,
@@ -59,17 +66,28 @@ const formatDate = (value?: string) => {
 type TabKey = "requests" | "catalog";
 type RequestFilter = "open" | "done" | "cancelled";
 
-function toDatetimeLocal(value?: string | null) {
-  if (!value) return "";
-  const date = new Date(String(value).replace(" ", "T"));
-  if (Number.isNaN(date.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+function toEnglishDigits(value: string): string {
+  const persianDigits = "۰۱۲۳۴۵۶۷۸۹";
+  const arabicDigits = "٠١٢٣٤٥٦٧٨٩";
+  return value
+    .replace(/[۰-۹]/g, (ch) => String(persianDigits.indexOf(ch)))
+    .replace(/[٠-٩]/g, (ch) => String(arabicDigits.indexOf(ch)));
 }
 
-function fromDatetimeLocal(value: string) {
+function parseApiDateTimeToPersian(value?: string | null): DateObject {
+  if (value) {
+    const date = new Date(String(value).replace(" ", "T"));
+    if (!Number.isNaN(date.getTime())) {
+      return new DateObject({ date, calendar: gregorian }).convert(persian);
+    }
+  }
+  return new DateObject({ calendar: persian, locale: persian_fa });
+}
+
+function gregorianDateTimeFromPersian(value: DateObject | null): string {
   if (!value) return "";
-  return value.replace("T", " ") + ":00";
+  const g = new DateObject(value).convert(gregorian);
+  return toEnglishDigits(g.format("YYYY-MM-DD HH:mm:00"));
 }
 
 export default function ShopServicesPage() {
@@ -80,7 +98,7 @@ export default function ShopServicesPage() {
   const [requestFilter, setRequestFilter] = useState<RequestFilter>("open");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [scheduleRow, setScheduleRow] = useState<TableServiceRequest | null>(null);
-  const [scheduleAt, setScheduleAt] = useState("");
+  const [scheduleAt, setScheduleAt] = useState<DateObject | null>(null);
   const [editing, setEditing] = useState<ShopService | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -212,7 +230,7 @@ export default function ShopServicesPage() {
         `/api/table-service-requests/${scheduleRow.id}/schedule`,
         token,
         {},
-        { body: JSON.stringify({ scheduled_at: fromDatetimeLocal(scheduleAt) }) },
+        { body: JSON.stringify({ scheduled_at: gregorianDateTimeFromPersian(scheduleAt) }) },
       );
       if (res?.hasError) {
         toast.error(getApiErrorMessage(res, "ثبت زمان ناموفق بود"));
@@ -230,7 +248,7 @@ export default function ShopServicesPage() {
   const actOnRequest = async (row: TableServiceRequest, action: "done" | "cancel") => {
     if (action === "done" && !row.scheduled_at) {
       setScheduleRow(row);
-      setScheduleAt(toDatetimeLocal(row.scheduled_at));
+      setScheduleAt(parseApiDateTimeToPersian(row.scheduled_at));
       toast.info("اول تاریخ و ساعت انجام را ثبت کنید");
       return;
     }
@@ -339,7 +357,7 @@ export default function ShopServicesPage() {
                           size="small"
                           onClick={() => {
                             setScheduleRow(row);
-                            setScheduleAt(toDatetimeLocal(row.scheduled_at));
+                            setScheduleAt(parseApiDateTimeToPersian(row.scheduled_at));
                           }}
                           disabled={actingId === row.id}
                           sx={{ color: "var(--admin-accent)" }}
@@ -480,14 +498,41 @@ export default function ShopServicesPage() {
           <Typography sx={{ fontSize: 13, color: "var(--admin-text-secondary)", mb: 1.5 }}>
             {scheduleRow?.name} — {scheduleRow?.table_label || "اتاق"}
           </Typography>
-          <TextField
-            fullWidth
-            type="datetime-local"
-            label="تاریخ و ساعت"
-            value={scheduleAt}
-            onChange={(e) => setScheduleAt(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-          />
+          <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)", mb: 0.8 }}>
+            تاریخ و ساعت شمسی
+          </Typography>
+          <Box
+            sx={{
+              "& .rmdp-input": {
+                width: "100%",
+                height: 48,
+                borderRadius: "12px",
+                textAlign: "right",
+                direction: "rtl",
+                backgroundColor: "var(--admin-surface-alt)",
+                color: "var(--admin-text)",
+                border: "1px solid var(--admin-border)",
+              },
+            }}
+          >
+            <DatePicker
+              value={scheduleAt}
+              onChange={(value) =>
+                setScheduleAt(value && !Array.isArray(value) ? (value as DateObject) : null)
+              }
+              calendar={persian}
+              locale={persian_fa}
+              format="YYYY/MM/DD HH:mm"
+              calendarPosition="bottom-right"
+              zIndex={2000}
+              containerStyle={{ width: "100%", zIndex: 2000 }}
+              portal
+              plugins={[<TimePicker key="time" hideSeconds />]}
+              placeholder="انتخاب تاریخ و ساعت"
+              className="rmdp-mobile"
+              style={{ width: "100%", height: 48, borderRadius: 12 }}
+            />
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setScheduleRow(null)}>انصراف</Button>
