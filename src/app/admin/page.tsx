@@ -52,7 +52,7 @@ import {
 } from '@/app/lib/shopSalesByDay';
 import SalesByDayChart from '@/app/coponent/SalesByDayChart';
 import { readProductsCountFromCache, readProductsFromCache, isCatalogItemOutOfStock } from '@/app/lib/productsCache';
-import { catalogItemKey, isProducedGoodItem } from '@/app/lib/catalogItems';
+import { catalogItemKey, isProducedGoodItem, isRawMaterialItem } from '@/app/lib/catalogItems';
 import {
   OUTBOX_CHANGED_EVENT,
   attachClientIdToPayload,
@@ -98,6 +98,12 @@ import {
   type Cheque,
 } from '@/app/lib/cheques';
 import ChequeFormSheet from '@/app/admin/cheques/ChequeFormSheet';
+import {
+  canReplacePurchase,
+  purchasedLineToCartItem,
+  purchaseEditStockBonus,
+  purchaseHasReturns,
+} from '@/app/lib/purchaseEdit';
 
 
 
@@ -212,6 +218,11 @@ export default function ShoppingPage() {
   const manualCodeInputRef = useRef<HTMLInputElement>(null);
   const phoneInputRef = useRef<HTMLInputElement>(null);
   const searchParams = useSearchParams();
+  const [editingPurchaseId, setEditingPurchaseId] = useState<number | null>(null);
+  const [editStockBonus, setEditStockBonus] = useState<Record<string, number>>({});
+  const [editHasReturns, setEditHasReturns] = useState(false);
+  const [editReuseCredit, setEditReuseCredit] = useState(false);
+  const editLoadedRef = useRef<string | null>(null);
 
   type SettlementMode = "split" | "card_all" | "cash_all";
   const [settlementMode, setSettlementMode] = useState<SettlementMode>("card_all");
@@ -401,6 +412,10 @@ export default function ShoppingPage() {
   );
 
   const addCartSlot = useCallback(() => {
+    if (editingPurchaseId) {
+      toast.info("در حال ویرایش فاکتور هستید؛ سبد جدید نسازید");
+      return;
+    }
     if (cartSlotsRef.current.length >= MAX_MULTI_CARTS) {
       toast.info("حداکثر ۴ سبد می‌توانید داشته باشید");
       return;
@@ -412,7 +427,7 @@ export default function ShoppingPage() {
     setCartCount(slots.length);
     setActiveCartIndex(slots.length - 1);
     applyCartSlot(createEmptyCartSlot());
-  }, [activeCartIndex, captureCurrentSlot, applyCartSlot]);
+  }, [activeCartIndex, captureCurrentSlot, applyCartSlot, editingPurchaseId]);
 
   const clearOrRemoveActiveCart = useCallback(
     (options?: { clearScanned?: boolean }) => {
@@ -1004,9 +1019,23 @@ export default function ShoppingPage() {
     };
   }, [paymentType, chequePaymentEnabled]);
 
+  const cancelPurchaseEdit = useCallback(() => {
+    editLoadedRef.current = null;
+    setEditingPurchaseId(null);
+    setEditStockBonus({});
+    setEditHasReturns(false);
+    setEditReuseCredit(false);
+    clearOrRemoveActiveCart({ clearScanned: true });
+    router.replace("/admin/purchas");
+  }, [clearOrRemoveActiveCart, router]);
+
   const clearMenuCart = useCallback(() => {
+    if (editingPurchaseId) {
+      cancelPurchaseEdit();
+      return;
+    }
     clearOrRemoveActiveCart();
-  }, [clearOrRemoveActiveCart]);
+  }, [clearOrRemoveActiveCart, editingPurchaseId, cancelPurchaseEdit]);
 
   const handleMenuProductUpdated = useCallback((updated: any) => {
     const key = catalogItemKey(updated);
@@ -1039,7 +1068,9 @@ export default function ShoppingPage() {
   }, [salePriceEditEnabled]);
 
   const addProductToCart = useCallback((item: any) => {
-    if (isCatalogItemOutOfStock(item)) {
+    const bonus = editStockBonus[catalogItemKey(item)] || 0;
+    const available = Number(item.quantity) + bonus;
+    if (!Number.isFinite(available) || available <= 0) {
       toast.warning("این کالا ناموجود است و به سبد اضافه نمی‌شود");
       return;
     }
@@ -1088,7 +1119,7 @@ export default function ShoppingPage() {
     if (navigator.vibrate) {
       navigator.vibrate(70);
     }
-  }, [kgSalesEnabled, salePriceEditEnabled]);
+  }, [kgSalesEnabled, salePriceEditEnabled, editStockBonus]);
 
   const addProductByBarcode = useCallback((barcode: string) => {
     if (!barcode || barcode.length < 3) return;
@@ -1195,9 +1226,17 @@ export default function ShoppingPage() {
       setSaleSuccessOpen(true);
       toast.success(successMessage);
       resetCartAfterSale();
+      if (editingPurchaseId) {
+        editLoadedRef.current = null;
+        setEditingPurchaseId(null);
+        setEditStockBonus({});
+        setEditHasReturns(false);
+        setEditReuseCredit(false);
+        router.replace("/admin");
+      }
       setIsSubmitting(false);
     },
-    [buildSaleReceiptFromCurrentSale, resetCartAfterSale],
+    [buildSaleReceiptFromCurrentSale, resetCartAfterSale, editingPurchaseId, router],
   );
 
   const handlePrintLastSaleReceipt = useCallback(() => {
@@ -1262,6 +1301,22 @@ export default function ShoppingPage() {
         return payload;
       }
 
+      if (isRawMaterialItem(item)) {
+        const payload: Record<string, unknown> = {
+          raw_material_id: Number(item.raw_material_id ?? item.id),
+          quantity: item.quantity,
+          purchase_price: Number(item.purchase_price),
+        };
+        if (salePriceEditEnabled) {
+          const defaultPrice = Number(item.default_sale_price ?? item.sale_price);
+          const currentPrice = Number(item.sale_price);
+          if (currentPrice !== defaultPrice) {
+            payload.sale_price = currentPrice;
+          }
+        }
+        return payload;
+      }
+
       const payload: Record<string, unknown> = {
         product_id: Number(item.id),
         quantity: item.quantity,
@@ -1288,6 +1343,12 @@ export default function ShoppingPage() {
         setIsSubmitting(false);
         return;
       }
+    }
+
+    if (editingPurchaseId && !effectiveOnline) {
+      toast.error("ویرایش فاکتور فقط در حالت آنلاین ممکن است");
+      setIsSubmitting(false);
+      return;
     }
 
     // اعتبارسنجی: برای خرید نسیه باید شماره تلفن وارد شود
@@ -1339,6 +1400,9 @@ export default function ShoppingPage() {
     const loadData: any = {
       products: cart.map((item) => buildPurchaseProductLine(item)),
     };
+    if (editingPurchaseId) {
+      loadData.replace_purchase_id = editingPurchaseId;
+    }
     if (discounttype> 0) {
       loadData.discount_amount = discounttype;
     }
@@ -1347,7 +1411,7 @@ export default function ShoppingPage() {
       loadData.phone = phone;
     }
 
-    if (useCreditAmount > 0) {
+    if (useCreditAmount > 0 || editReuseCredit) {
       loadData.use_credit = true;
     }
 
@@ -1478,6 +1542,17 @@ export default function ShoppingPage() {
           return;
         }
 
+        if (editingPurchaseId) {
+          try {
+            const errorData = JSON.parse(res.errorText);
+            toast.error(errorData.error || errorData.message || "ویرایش فاکتور انجام نشد");
+          } catch {
+            toast.error("ویرایش فاکتور انجام نشد");
+          }
+          setIsSubmitting(false);
+          return;
+        }
+
         void queueCurrentPurchase(
           purchasePayload,
           clientId,
@@ -1486,7 +1561,7 @@ export default function ShoppingPage() {
         );
         return;
       }
-      let successMessage = "خرید ثبت شد";
+      let successMessage = editingPurchaseId ? "فاکتور با سبد جدید جایگزین شد" : "خرید ثبت شد";
       if (paymentType === "installment" && res.installments && res.installments.length > 0) {
         const paidCount = res.installments.filter((inst: any) => inst.is_paid).length;
         const totalCount = res.installments.length;
@@ -1502,6 +1577,11 @@ export default function ShoppingPage() {
       finalizeSuccessfulSale(res, successMessage);
     }).catch((error) => {
       console.error("Error submitting purchase:", error);
+      if (editingPurchaseId) {
+        toast.error("ویرایش فاکتور انجام نشد. اتصال را بررسی کنید.");
+        setIsSubmitting(false);
+        return;
+      }
       if (error instanceof Error && error.message === NETWORK_TIMEOUT_ERROR && navigator.onLine) {
         setForcedOffline(true);
       }
@@ -1512,7 +1592,7 @@ export default function ShoppingPage() {
         "warn",
       );
     });
-  }, [cart, phone, useCreditAmount, effectiveOnline, discounttype, total, formatNumber, paymentType, installmentCount, payableNow, paymentFieldsValid, settlementMode, appendPaymentSettlement, resetPaymentSettlement, installmentCalculation, calculatingInstallments, installmentCreditError, finalizeSuccessfulSale, queueCurrentPurchase, withTimeout, selectedChequeId, selectedCheque, selectedChequeAmount, chequeRemainder, salePayableAmount, loadingAvailableCheques, buildPurchaseProductLine, parseAmountInput, cardAmountInput, cashAmountInput]);
+  }, [cart, phone, useCreditAmount, effectiveOnline, discounttype, total, formatNumber, paymentType, installmentCount, payableNow, paymentFieldsValid, settlementMode, appendPaymentSettlement, resetPaymentSettlement, installmentCalculation, calculatingInstallments, installmentCreditError, finalizeSuccessfulSale, queueCurrentPurchase, withTimeout, selectedChequeId, selectedCheque, selectedChequeAmount, chequeRemainder, salePayableAmount, loadingAvailableCheques, buildPurchaseProductLine, parseAmountInput, cardAmountInput, cashAmountInput, editingPurchaseId, editReuseCredit]);
 
   // بررسی اعتبارسنجی تخفیف هنگام تغییر total
   useEffect(() => {
@@ -1659,12 +1739,77 @@ export default function ShoppingPage() {
 
   // پر کردن شماره از URL برگشت کالا (?phone=...)
   useEffect(() => {
+    if (searchParams.get("editPurchase")) return;
     const rawPhone = searchParams.get("phone")?.trim();
     if (!rawPhone) return;
     onChangePhone(rawPhone);
     // فقط با تغییر URL؛ نه با هر تغییر onChangePhone
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
+
+  useEffect(() => {
+    const raw = searchParams.get("editPurchase")?.trim();
+    if (!raw) {
+      if (editLoadedRef.current) {
+        editLoadedRef.current = null;
+        setEditingPurchaseId(null);
+        setEditStockBonus({});
+        setEditHasReturns(false);
+        setEditReuseCredit(false);
+      }
+      return;
+    }
+    if (editLoadedRef.current === raw) return;
+    let cancelled = false;
+    const load = async () => {
+      const token = tokenCode();
+      const res = await FetchWithJwtClient("GET", `/api/purchased-products/${raw}`, token, {});
+      if (cancelled) return;
+      if (!res || res.hasError) {
+        toast.error("فاکتور برای ویرایش بارگذاری نشد");
+        return;
+      }
+      const gate = canReplacePurchase(res);
+      if (!gate.ok) {
+        toast.error(gate.reason);
+        return;
+      }
+      const lines = Array.isArray(res.purchased_products) ? res.purchased_products : [];
+      const cartItems = lines.map((line: any) => purchasedLineToCartItem(line, items));
+      const totalAmt = cartItems.reduce(
+        (sum: number, item: any) => sum + Number(item.sale_price) * Number(item.quantity),
+        0,
+      );
+      const discount = Number(res.discount_amount) || 0;
+      const card = Number(res.card_amount) || 0;
+      const cash = Number(res.cash_amount) || 0;
+      applyCartSlot({
+        ...createEmptyCartSlot(),
+        cart: cartItems,
+        total: totalAmt,
+        phone: typeof res.phone === "string" ? res.phone : "",
+        discounttype: discount,
+        discountDisplay: discount > 0 ? formatAmountInput(String(Math.floor(discount))) : "",
+        paymentType: (res.payment_type || "cash") as PaymentType,
+        installmentCount: Number(res.installment_count) || 2,
+        useCreditAmount: Number(res.credit_used) > 0 ? Number(res.credit_used) : 0,
+        selectedChequeId: res.cheque_id || res.cheque?.id || null,
+        settlementMode: card > 0 && cash > 0 ? "split" : cash > 0 ? "cash_all" : "card_all",
+        cardAmountInput: moneyField(card),
+        cashAmountInput: moneyField(cash),
+      });
+      setEditingPurchaseId(Number(res.id));
+      setEditStockBonus(purchaseEditStockBonus(lines));
+      setEditHasReturns(purchaseHasReturns(res));
+      setEditReuseCredit(Number(res.credit_used) > 0);
+      editLoadedRef.current = raw;
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, items]);
 
   const checkCredit = async (phoneNumber: string) => {
     setCheckingCredit(true);
@@ -1988,6 +2133,9 @@ export default function ShoppingPage() {
     onOpenCreateCheque: () => setChequeCreateOpen(true),
     salePriceEditEnabled,
     onSalePriceChange: setCartItemSalePrice,
+    submitLabel: editingPurchaseId ? "جایگزینی فاکتور" : undefined,
+    cartTitle: editingPurchaseId ? `ویرایش #${editingPurchaseId}` : undefined,
+    clearLabel: editingPurchaseId ? "لغو ویرایش" : undefined,
   }), [
     cart,
     total,
@@ -2037,6 +2185,7 @@ export default function ShoppingPage() {
     salePriceEditEnabled,
     setCartItemSalePrice,
     formatNumber,
+    editingPurchaseId,
   ]);
 
 
@@ -2044,6 +2193,24 @@ export default function ShoppingPage() {
   return (
     <Box sx={{ position: 'relative', minHeight: '100vh', direction: "rtl", background: "var(--admin-bg-gradient)" }}>
       <Container maxWidth="xl" sx={{ padding: { xs: '12px', md: '24px' }, paddingBottom: { xs: '140px', md: '56px' } }}>
+
+        {editingPurchaseId ? (
+          <Box
+            sx={{
+              backgroundColor: "#fff8e1",
+              border: "1px solid #ffcc80",
+              color: "#5d4037",
+              padding: { xs: "8px 12px", md: "10px 16px" },
+              borderRadius: "12px",
+              marginBottom: { xs: "12px", md: "16px" },
+              fontSize: { xs: "12px", md: "14px" },
+              fontWeight: 600,
+            }}
+          >
+            ویرایش فاکتور #{editingPurchaseId} — کالا را کم یا زیاد کنید. ثبت، کل این خرید را جایگزین می‌کند
+            {editHasReturns ? " و برگشت‌های قبلی این فاکتور هم برگردانده می‌شود." : "."}
+          </Box>
+        ) : null}
 
         {/* Offline / Pending — یک خط فشرده */}
         {(!effectiveOnline || pendingPurchases.length > 0) && (
@@ -3848,7 +4015,7 @@ export default function ShoppingPage() {
                     }
                   }}
                 >
-                  {isSubmitting ? "در حال ثبت..." : "ثبت خرید"}
+                  {isSubmitting ? "در حال ثبت..." : editingPurchaseId ? "جایگزینی فاکتور" : "ثبت خرید"}
                 </Button>
               </Box>
             </Grid>

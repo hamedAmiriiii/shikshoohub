@@ -18,6 +18,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import CloseIcon from '@mui/icons-material/Close';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import EditIcon from '@mui/icons-material/Edit';
+import { useRouter } from "next/navigation";
 import Purchas from "./purchas";
 import PurchaseSummaryCard from "./PurchaseSummaryCard";
 import DatePicker from "react-multi-date-picker";
@@ -25,6 +27,7 @@ import persian from "react-date-object/calendars/persian";
 import persian_fa from "react-date-object/locales/persian_fa";
 import "react-multi-date-picker/styles/layouts/mobile.css";
 import { paymentTypeLabel } from "@/app/lib/paymentTypes";
+import { canReplacePurchase, purchaseEditHref } from "@/app/lib/purchaseEdit";
 
 const formatNumber = (num: number | string) => {
     const numValue = typeof num === "string" ? parseFloat(num.replace(/,/g, "")) : num;
@@ -50,6 +53,7 @@ const formatDate = (dateString: string | null | undefined) => {
 };
 
 export default function ListPurches() {
+    const router = useRouter();
     const [dataFilter, setDataFilter] = useState([]);
     const [dateRange, setDateRange] = useState<any>([]);
     const [filterMode, setFilterMode] = useState<'today' | 'week' | 'month' | 'range' | null>(null);
@@ -280,7 +284,32 @@ export default function ListPurches() {
               refreshGrid={refreshGrid}
               hidePrintAction
               onRowClick={openDetails}
-              renderRowActions={(item: any) => (
+              renderRowActions={(item: any) => {
+                const editGate = canReplacePurchase(item);
+                return (
+                <Box sx={{ display: "flex", gap: 0.5, justifyContent: "center" }}>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<EditIcon sx={{ fontSize: 16 }} />}
+                  disabled={!editGate.ok}
+                  title={editGate.ok ? "ویرایش سفارش در سبد" : editGate.reason}
+                  onClick={() => {
+                    if (!editGate.ok) return;
+                    router.push(purchaseEditHref(item.id));
+                  }}
+                  sx={{
+                    fontSize: 11,
+                    minWidth: 0,
+                    px: 1,
+                    py: 0.25,
+                    color: editGate.ok ? "#ef6c00" : "var(--admin-text-muted)",
+                    borderColor: "var(--admin-border)",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  ویرایش
+                </Button>
                 <Button
                   size="small"
                   variant="outlined"
@@ -298,7 +327,9 @@ export default function ListPurches() {
                 >
                   جزئیات
                 </Button>
-              )}
+                </Box>
+                );
+              }}
               customActions={
                 <Box sx={{ display: "flex", gap: "8px", alignItems: "center" }}>
                   {hasActiveFilters() && (

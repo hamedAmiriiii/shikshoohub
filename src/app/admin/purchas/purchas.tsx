@@ -23,6 +23,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import PaymentIcon from '@mui/icons-material/Payment';
+import EditIcon from '@mui/icons-material/Edit';
 import React, { useEffect, useState } from "react";
 import LabelCustom from "@/app/coponent/labelCustom";
 import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
@@ -45,6 +46,7 @@ import {
   returnFullPurchase,
   returnPurchaseItem,
 } from "@/app/lib/purchaseReturns";
+import { canReplacePurchase, purchaseEditHref } from "@/app/lib/purchaseEdit";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -537,8 +539,35 @@ export default function purchas(props: any) {
           {/* نمایش لیست محصولات */}
           {data?.purchased_products && Array.isArray(data.purchased_products) && data.purchased_products.length > 0 && (
             <Box className="mt-2">
-              {!isInstallment && data.purchased_products.some((item: any) => !deletedItems.includes(item.id)) ? (
+              {canReplacePurchase(data).ok && (isInstallment || !data.purchased_products.some((item: any) => !deletedItems.includes(item.id))) ? (
                 <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<EditIcon />}
+                    onClick={() => router.push(purchaseEditHref(data.id))}
+                    sx={{ color: "#ef6c00", borderColor: "#ffcc80" }}
+                  >
+                    ویرایش سفارش
+                  </Button>
+                </Box>
+              ) : null}
+              {!isInstallment && data.purchased_products.some((item: any) => !deletedItems.includes(item.id)) ? (
+                <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1, gap: 1 }}>
+                  {canReplacePurchase(data).ok ? (
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={<EditIcon />}
+                      onClick={() => router.push(purchaseEditHref(data.id))}
+                      sx={{
+                        color: "#ef6c00",
+                        borderColor: "#ffcc80",
+                      }}
+                    >
+                      ویرایش سفارش
+                    </Button>
+                  ) : null}
                   <Button
                     size="small"
                     variant="outlined"

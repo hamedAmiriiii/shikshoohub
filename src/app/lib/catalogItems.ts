@@ -3,6 +3,7 @@ export type CatalogIdentity = {
   item_type?: string | null;
   produced_good_id?: number | string | null;
   product_id?: number | string | null;
+  raw_material_id?: number | string | null;
 };
 
 export function isProducedGoodItem(item: CatalogIdentity | null | undefined): boolean {
@@ -11,11 +12,21 @@ export function isProducedGoodItem(item: CatalogIdentity | null | undefined): bo
   return item.produced_good_id != null && item.produced_good_id !== "";
 }
 
+export function isRawMaterialItem(item: CatalogIdentity | null | undefined): boolean {
+  if (!item) return false;
+  if (String(item.item_type || "").toLowerCase() === "raw_material") return true;
+  return item.raw_material_id != null && item.raw_material_id !== "";
+}
+
 export function catalogItemKey(item: CatalogIdentity | null | undefined): string {
   if (!item) return "";
   if (isProducedGoodItem(item)) {
     const id = item.produced_good_id ?? item.id;
     return `produced_good:${id}`;
+  }
+  if (isRawMaterialItem(item)) {
+    const id = item.raw_material_id ?? item.id;
+    return `raw_material:${id}`;
   }
   const id = item.product_id ?? item.id;
   return `product:${id}`;
@@ -48,6 +59,14 @@ export function catalogCartApiLine(item: CatalogIdentity & {
     return {
       produced_good_id: Number(item.produced_good_id ?? item.id),
       item_type: "produced_good",
+      quantity: item.quantity,
+      ...extra,
+    };
+  }
+  if (isRawMaterialItem(item)) {
+    return {
+      raw_material_id: Number(item.raw_material_id ?? item.id),
+      item_type: "raw_material",
       quantity: item.quantity,
       ...extra,
     };

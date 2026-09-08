@@ -2,7 +2,10 @@
 
 import { Box, Button, Chip, Typography } from "@mui/material";
 import VisibilityIcon from "@mui/icons-material/Visibility";
+import EditIcon from "@mui/icons-material/Edit";
+import { useRouter } from "next/navigation";
 import { paymentTypeLabel } from "@/app/lib/paymentTypes";
+import { canReplacePurchase, purchaseEditHref, purchaseHasReturns } from "@/app/lib/purchaseEdit";
 
 const formatNumber = (num: number | string) => {
   const numValue = typeof num === "string" ? parseFloat(num.replace(/,/g, "")) : num;
@@ -40,6 +43,9 @@ export default function PurchaseSummaryCard({
   const paymentLabel = data?.payment_type_label || paymentTypeLabel(data?.payment_type || "");
   const isInstallment = data?.payment_type === "installment";
   const isCheque = data?.payment_type === "cheque";
+  const router = useRouter();
+  const editGate = canReplacePurchase(data);
+  const hasReturns = purchaseHasReturns(data);
 
   return (
     <Box
@@ -83,9 +89,33 @@ export default function PurchaseSummaryCard({
           </Typography>
           <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)" }}>
             {itemCount} کالا · {paymentLabel || "—"}
+            {hasReturns ? " · برگشتی دارد" : ""}
           </Typography>
         </Box>
       </Box>
+      <Button
+        size="small"
+        variant="outlined"
+        startIcon={<EditIcon sx={{ fontSize: 16 }} />}
+        disabled={!editGate.ok}
+        title={editGate.ok ? "ویرایش سفارش در سبد" : editGate.reason}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!editGate.ok) return;
+          router.push(purchaseEditHref(data.id));
+        }}
+        sx={{
+          flexShrink: 0,
+          fontSize: 11,
+          minWidth: 0,
+          px: 1,
+          py: 0.25,
+          color: editGate.ok ? "#ef6c00" : "var(--admin-text-muted)",
+          borderColor: "var(--admin-border)",
+        }}
+      >
+        ویرایش
+      </Button>
       <Button
         size="small"
         variant="outlined"

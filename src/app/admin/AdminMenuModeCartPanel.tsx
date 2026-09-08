@@ -129,6 +129,9 @@ export type AdminMenuModeCartPanelProps = {
   onOpenCreateCheque?: () => void;
   salePriceEditEnabled?: boolean;
   onSalePriceChange?: (itemId: number | string, value: string) => void;
+  submitLabel?: string;
+  cartTitle?: string;
+  clearLabel?: string;
 };
 
 export default function AdminMenuModeCartPanel({
@@ -189,6 +192,9 @@ export default function AdminMenuModeCartPanel({
   onOpenCreateCheque,
   salePriceEditEnabled = false,
   onSalePriceChange,
+  submitLabel,
+  cartTitle,
+  clearLabel,
 }: AdminMenuModeCartPanelProps) {
   const finalTotal = Math.max(0, total - useCreditAmount - discounttype - backPrice);
   const showPaymentTypeSelector =
@@ -252,7 +258,7 @@ export default function AdminMenuModeCartPanel({
         }}
       >
         <Typography sx={{ fontSize: "10px", fontWeight: 600, color: "var(--admin-text-muted)" }}>
-          سبد {activeCartIndex + 1} · {cart.length} کالا
+          سبد {activeCartIndex + 1} · {cart.length} کالا{cartTitle ? ` · ${cartTitle}` : ""}
         </Typography>
       </Box>
 
@@ -655,7 +661,7 @@ export default function AdminMenuModeCartPanel({
               color: "var(--admin-text-secondary)",
             }}
           >
-            انصراف
+            {clearLabel || "انصراف"}
           </Button>
           <Button
             size="small"
@@ -671,7 +677,7 @@ export default function AdminMenuModeCartPanel({
               "&:hover": { bgcolor: "var(--admin-accent-hover)" },
             }}
           >
-            {isSubmitting ? "..." : "ثبت"}
+            {isSubmitting ? "..." : submitLabel || "ثبت"}
           </Button>
         </Box>
       </Box>
