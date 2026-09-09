@@ -8,11 +8,14 @@ import TableOrdersPendingProvider from './table-orders/TableOrdersPendingProvide
 import ServiceRequestsPendingProvider from './shop-services/ServiceRequestsPendingProvider';
 import './theme/admin-theme.css';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import { ADMIN_SIDEBAR_WIDTH } from './AdminHamburgerSidebar';
 import { ADMIN_MENU_CART_WIDTH_VAR } from './adminMenuCartLayout';
 import { canAccessAdminPath, getFirstAllowedAdminPath, isPublicAdminPath } from '@/app/lib/shopPermissions';
+import { persistShopFeaturesFromPayload } from '@/app/lib/shopFeatures';
+import tokenCode from '@/app/coponent/tokenCode';
+import { FetchWithJwtClient } from '@/app/coponent/fetchWithJwtClient';
 import WebinoChatbot from '@/app/coponent/WebinoChatbot';
 
 // Map pathname to page title
@@ -110,6 +113,7 @@ export default function ShikshooLayout({
     pathname?.includes('/admin/login') ||
     pathname?.includes('/admin/register-shop');
   const [isChecking, setIsChecking] = useState(true);
+  const shopFeaturesSyncedRef = useRef(false);
 
   useEffect(() => {
     const stored = localStorage.getItem("admin_theme_mode");
@@ -132,6 +136,22 @@ export default function ShikshooLayout({
       return;
     }
     setIsChecking(false);
+
+    if (token && !isPublicAdminPage && !shopFeaturesSyncedRef.current) {
+      shopFeaturesSyncedRef.current = true;
+      const auth = tokenCode() || token;
+      void Promise.all([
+        FetchWithJwtClient("GET", "/api/user", auth),
+        FetchWithJwtClient("GET", "/api/settings", auth),
+      ]).then(([userRes, settingsRes]) => {
+        if (userRes && !userRes.hasError) {
+          persistShopFeaturesFromPayload(userRes as Record<string, unknown>);
+        }
+        if (settingsRes && !settingsRes.hasError) {
+          persistShopFeaturesFromPayload(settingsRes as Record<string, unknown>);
+        }
+      });
+    }
 
     // مانیفست PWA: ورود و scope فقط /admin
     if (typeof window !== 'undefined') {

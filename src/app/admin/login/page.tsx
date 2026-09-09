@@ -18,7 +18,7 @@ import {
   getFirstAllowedAdminPath,
   mergeUserWithShopPermissions,
 } from "@/app/lib/shopPermissions";
-import { mergeUserWithShopFeatures } from "@/app/lib/shopFeatures";
+import { mergeUserWithShopFeatures, SHOP_FEATURES_CHANGED_EVENT } from "@/app/lib/shopFeatures";
 import { isOilProjectLoginMessage } from "@/app/lib/oilProjectLogin";
 
 type View = "login" | "forgot-phone" | "forgot-reset";
@@ -322,6 +322,7 @@ export default function ShikshooLoginPage() {
               payload,
             );
             localStorage.setItem("user", JSON.stringify(user));
+            window.dispatchEvent(new CustomEvent(SHOP_FEATURES_CHANGED_EVENT));
             syncShopAccessFromLogin(payload);
             toast.success("برای تمدید اعتبار وارد شدید");
             router.push("/admin/shop-plans");
@@ -353,6 +354,7 @@ export default function ShikshooLoginPage() {
           payload,
         );
         localStorage.setItem("user", JSON.stringify(user));
+        window.dispatchEvent(new CustomEvent(SHOP_FEATURES_CHANGED_EVENT));
         syncShopAccessFromLogin(payload);
         toast.success("ورود با موفقیت انجام شد");
         router.push(getFirstAllowedAdminPath(user));

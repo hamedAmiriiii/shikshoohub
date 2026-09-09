@@ -104,15 +104,31 @@ export default function ShopServiceAccessPage() {
         `/api/admin/shop-service-access/${row.atelier_id}`,
         token,
         {},
-        { body: JSON.stringify({ feature, enabled }) },
+        { body: JSON.stringify({ feature, enabled: enabled ? 1 : 0 }) },
       );
       if (res?.hasError) {
         toast.error(getApiErrorMessage(res, "ذخیره دسترسی ناموفق بود"));
         return;
       }
+      const saved = Boolean(res?.[feature]);
       setRows((prev) =>
-        prev.map((item) => (item.atelier_id === row.atelier_id ? { ...item, [feature]: enabled } : item)),
+        prev.map((item) =>
+          item.atelier_id === row.atelier_id
+            ? {
+                ...item,
+                restaurant_cafe_enabled: Boolean(res.restaurant_cafe_enabled),
+                room_services_enabled: Boolean(res.room_services_enabled),
+                produced_goods_enabled: Boolean(res.produced_goods_enabled),
+                accounting_enabled: Boolean(res.accounting_enabled),
+                [feature]: saved,
+              }
+            : item,
+        ),
       );
+      if (saved !== enabled) {
+        toast.error("روی این فروشگاه ذخیره نشد. ایندکس settings را در دیتابیس اصلاح کنید.");
+        return;
+      }
       toast.success(typeof res.message === "string" ? res.message : "ذخیره شد");
     } finally {
       setSaving(null);
