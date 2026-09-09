@@ -12,7 +12,7 @@ import { buildStationTicketHtml } from "@/app/lib/saleReceiptHtml";
 import { applyQzDemoSigning } from "@/app/lib/qzDemoSigning";
 
 export const QZ_TRAY_DOWNLOAD_URL =
-  "https://api.webinoplus.ir/storage/appwebino/webino-try.exe";
+  "https://api.webinoo-plus.ir/storage/appwebino/webino-try.exe";
 const QZ_SCRIPT_SRC = "/vendor/qz-tray.js";
 
 type QzApi = {

@@ -23,7 +23,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     (window as Window & { WEBINO_API_ORIGIN?: string }).WEBINO_API_ORIGIN = (
-      process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoplus.ir"
+      process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoo-plus.ir"
     ).replace(/\/$/, "");
   }, []);
 

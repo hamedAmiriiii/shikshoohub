@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { notifyShopAccessIfExpired } from "@/app/lib/shopAccess";
 
-const API_HOST = (process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoplus.ir").replace(
+const API_HOST = (process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoo-plus.ir").replace(
   /\/$/,
   "",
 );

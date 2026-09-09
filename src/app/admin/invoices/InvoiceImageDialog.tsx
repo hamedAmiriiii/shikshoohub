@@ -23,7 +23,7 @@ import type { InvoiceRecord } from "@/app/admin/invoices/InvoiceDetailsDialog";
 function resolveImageUrl(url?: string | null): string | null {
   if (!url) return null;
   if (url.startsWith("http") || url.startsWith("data:")) return url;
-  const base = (process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoplus.ir").replace(
+  const base = (process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoo-plus.ir").replace(
     /\/$/,
     "",
   );

@@ -11,7 +11,7 @@ import {
   type YadinoTier,
 } from "../yadinoPlans";
 
-const API_ORIGIN = (process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoplus.ir").replace(/\/$/, "");
+const API_ORIGIN = (process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoo-plus.ir").replace(/\/$/, "");
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value)

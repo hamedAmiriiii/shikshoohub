@@ -1,4 +1,4 @@
-const API_BASE = "https://api.webinoplus.ir";
+const API_BASE = "https://api.webinoo-plus.ir";
 
 export const CATEGORY_DISPLAY_COLORS = [
   "#87CEEB",

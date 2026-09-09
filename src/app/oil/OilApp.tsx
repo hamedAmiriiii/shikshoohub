@@ -25,7 +25,7 @@ const oilMuiTheme = createTheme({
 function OilProviders({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const origin = (
-      process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoplus.ir"
+      process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoo-plus.ir"
     ).replace(/\/$/, "");
     const w = window as Window & {
       WEBINO_API_ORIGIN?: string;

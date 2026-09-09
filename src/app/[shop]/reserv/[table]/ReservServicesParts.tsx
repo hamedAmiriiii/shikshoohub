@@ -5,19 +5,8 @@ import { shopServiceEmoji, type ShopService, type TableServiceRequest } from "@/
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import RoomServiceIcon from "@mui/icons-material/RoomService";
 import { Box, Button, CircularProgress, Typography } from "@mui/material";
-import { ACCENT, ACCENT_DARK, ACCENT_SOFT, formatNumber, type ReservTheme } from "./ReservOrderingParts";
-
-function formatSchedule(value?: string | null) {
-  if (!value) return "";
-  const date = new Date(String(value).replace(" ", "T"));
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("fa-IR", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}
+import { ACCENT, ACCENT_DARK, ACCENT_SOFT, type ReservTheme } from "./ReservOrderingParts";
+import { useReservI18n } from "./reservI18n";
 
 type SwitchProps = {
   mode: "menu" | "services";
@@ -27,6 +16,7 @@ type SwitchProps = {
 };
 
 export function ReservMenuServiceSwitch({ mode, onChange, theme, pendingServiceCount = 0 }: SwitchProps) {
+  const { t, formatNumber } = useReservI18n();
   return (
     <Box
       sx={{
@@ -43,8 +33,8 @@ export function ReservMenuServiceSwitch({ mode, onChange, theme, pendingServiceC
     >
       {(
         [
-          { id: "menu" as const, label: "منو", icon: <RestaurantMenuIcon sx={{ fontSize: 18 }} /> },
-          { id: "services" as const, label: "خدمات", icon: <RoomServiceIcon sx={{ fontSize: 18 }} /> },
+          { id: "menu" as const, label: t("menu"), icon: <RestaurantMenuIcon sx={{ fontSize: 18 }} /> },
+          { id: "services" as const, label: t("services"), icon: <RoomServiceIcon sx={{ fontSize: 18 }} /> },
         ] as const
       ).map((item) => {
         const active = mode === item.id;
@@ -108,6 +98,7 @@ type GridProps = {
 };
 
 export function ReservServiceGrid({ services, theme, requestingId, pendingServiceIds, onRequest }: GridProps) {
+  const { t, translateServiceName, translateServiceDesc } = useReservI18n();
   return (
     <Box
       sx={{
@@ -151,13 +142,13 @@ export function ReservServiceGrid({ services, theme, requestingId, pendingServic
               {shopServiceEmoji(service.icon_key)}
             </Typography>
             <Typography sx={{ fontWeight: 800, fontSize: 15, color: theme.TEXT, mb: 0.4, position: "relative" }}>
-              {service.name}
+              {translateServiceName(service.name, service.icon_key)}
             </Typography>
             <Typography sx={{ color: theme.MUTED, fontSize: 12, lineHeight: 1.7, flex: 1, position: "relative" }}>
-              {service.description || "بدون هزینه — بعد از درخواست برای اتاقتان ارسال می‌شود."}
+              {translateServiceDesc(service.description, service.icon_key)}
             </Typography>
             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mt: 1.2, gap: 1 }}>
-              <Typography sx={{ fontSize: 11, fontWeight: 800, color: ACCENT_DARK }}>رایگان</Typography>
+              <Typography sx={{ fontSize: 11, fontWeight: 800, color: ACCENT_DARK }}>{t("free")}</Typography>
               <Button
                 disabled={loading || pending}
                 onClick={() => onRequest(service)}
@@ -173,7 +164,7 @@ export function ReservServiceGrid({ services, theme, requestingId, pendingServic
                   "&:hover": { bgcolor: pending ? ACCENT_SOFT : ACCENT_DARK },
                 }}
               >
-                {loading ? <CircularProgress size={14} sx={{ color: "#1a1712" }} /> : pending ? "ثبت شد" : "درخواست"}
+                {loading ? <CircularProgress size={14} sx={{ color: "#1a1712" }} /> : pending ? t("requested") : t("request")}
               </Button>
             </Box>
           </Box>
@@ -191,10 +182,11 @@ type ListProps = {
 };
 
 export function ReservServiceRequestList({ requests, theme, cancellingId, onCancel }: ListProps) {
+  const { t, formatDateTime, translateServiceName, translateStatus } = useReservI18n();
   if (requests.length === 0) return null;
   return (
     <Box sx={{ mb: 1.6 }}>
-      <Typography sx={{ fontWeight: 800, fontSize: 14, color: theme.TEXT, mb: 0.8 }}>درخواست‌های جاری</Typography>
+      <Typography sx={{ fontWeight: 800, fontSize: 14, color: theme.TEXT, mb: 0.8 }}>{t("currentRequests")}</Typography>
       {requests.map((row) => (
         <Box
           key={row.id}
@@ -211,10 +203,10 @@ export function ReservServiceRequestList({ requests, theme, cancellingId, onCanc
         >
           <Box sx={{ fontSize: 22 }}>{shopServiceEmoji(row.icon_key)}</Box>
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography sx={{ fontWeight: 800, fontSize: 13, color: theme.TEXT }}>{row.name}</Typography>
+            <Typography sx={{ fontWeight: 800, fontSize: 13, color: theme.TEXT }}>{translateServiceName(row.name, row.icon_key)}</Typography>
             <Typography sx={{ color: theme.MUTED, fontSize: 11 }}>
-              {row.status_label || "در انتظار"}
-              {row.scheduled_at ? ` · ${formatSchedule(row.scheduled_at)}` : ""}
+              {translateStatus(row.status, row.status_label)}
+              {row.scheduled_at ? ` · ${formatDateTime(row.scheduled_at)}` : ""}
               {row.note ? ` · ${row.note}` : ""}
             </Typography>
           </Box>
@@ -224,7 +216,7 @@ export function ReservServiceRequestList({ requests, theme, cancellingId, onCanc
               disabled={cancellingId === row.id}
               sx={{ color: "#e57373", fontWeight: 700, fontSize: 12, minWidth: 0 }}
             >
-              {cancellingId === row.id ? "..." : "لغو"}
+              {cancellingId === row.id ? "..." : t("cancel")}
             </Button>
           ) : null}
         </Box>

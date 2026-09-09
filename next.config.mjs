@@ -16,7 +16,7 @@ const nextConfig = {
         ignoreBuildErrors: true,
   },
   images: {
-    domains: ['https://api.webinoplus.ir' , 'webinoplus.ir', 'api.webinoplus.ir'], // اضافه کردن هاست به لیست مجاز
+    domains: ['https://api.webinoo-plus.ir' , 'webinoplus.ir', 'api.webinoplus.ir'], // اضافه کردن هاست به لیست مجاز
     remotePatterns: [
       {
         protocol: 'https',
@@ -37,7 +37,7 @@ const nextConfig = {
   // PWA configuration
   async rewrites() {
     const api = (
-      process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoplus.ir"
+      process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoo-plus.ir"
     ).replace(/\/$/, "");
     return [
       {

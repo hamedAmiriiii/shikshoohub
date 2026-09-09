@@ -1,5 +1,5 @@
 const PUBLIC_API_BASE =
-  process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoplus.ir";
+  process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoo-plus.ir";
 
 export type SelectOption = {
   value: string;

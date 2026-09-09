@@ -59,7 +59,6 @@ import {
   ReservProductSkeletonList,
   ReservSearchBar,
   THEMES,
-  formatNumber,
   type ReservThemeMode,
 } from "./ReservOrderingParts";
 import {
@@ -67,6 +66,7 @@ import {
   ReservServiceGrid,
   ReservServiceRequestList,
 } from "./ReservServicesParts";
+import { ReservI18nProvider, useReservI18n } from "./reservI18n";
 
 type ProductImage = { image_url?: string; image_path?: string };
 
@@ -128,30 +128,6 @@ type GuestOrder = {
 };
 
 const RESERV_THEME_KEY = "reserv_table_theme";
-
-function toFaDigits(value: string) {
-  return value.replace(/\d/g, (digit) => "۰۱۲۳۴۵۶۷۸۹"[Number(digit)] ?? digit);
-}
-
-function formatDateFa(value?: string) {
-  if (!value) return "";
-  const match = value.trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{1,2}))?/);
-  if (match) {
-    const year = Number(match[1]);
-    if (year >= 1200 && year <= 1600) {
-      const datePart = `${match[1]}/${match[2].padStart(2, "0")}/${match[3].padStart(2, "0")}`;
-      const timePart = match[4] ? ` ${match[4].padStart(2, "0")}:${match[5].padStart(2, "0")}` : "";
-      return toFaDigits(datePart + timePart);
-    }
-  }
-  const date = new Date(value.replace(" ", "T"));
-  if (Number.isNaN(date.getTime())) return toFaDigits(value.split(" ")[0] || value);
-  return new Intl.DateTimeFormat("fa-IR", {
-    year: "numeric",
-    month: "numeric",
-    day: "numeric",
-  }).format(date);
-}
 
 function normalizeGuestPhone(value: string): string {
   let digits = value.replace(/\D/g, "");
@@ -254,7 +230,7 @@ function guestOrderTable(order: GuestOrder) {
 
 function resolveMediaUrl(url?: string | null): string | null {
   if (!url) return null;
-  if (url.startsWith("/storage/")) return `https://api.webinoplus.ir${url}`;
+  if (url.startsWith("/storage/")) return `https://api.webinoo-plus.ir${url}`;
   return url;
 }
 
@@ -403,6 +379,15 @@ function collectCategoryImages(categories: ShopCategory[], map: Map<string, stri
 }
 
 export default function TableReservPage() {
+  return (
+    <ReservI18nProvider>
+      <TableReservPageBody />
+    </ReservI18nProvider>
+  );
+}
+
+function TableReservPageBody() {
+  const { t, dir, locale, formatNumber, formatDateTime, translatePlace, translatePayMethod } = useReservI18n();
   const params = useParams();
   const pathname = usePathname();
   const placeKind = placeKindFromPathname(pathname);
@@ -504,7 +489,7 @@ export default function TableReservPage() {
       if (!shopCode) return;
       const normalized = normalizeGuestPhone(rawPhone);
       if (!isValidGuestPhone(normalized)) {
-        if (!silent) toast.error("شماره موبایل را به‌صورت ۱۱ رقمی وارد کنید");
+        if (!silent) toast.error(t("phone11"));
         return;
       }
       setLookupLoading(true);
@@ -519,7 +504,7 @@ export default function TableReservPage() {
           "",
         );
         if (res?.hasError) {
-          if (!silent) toast.error(typeof res.message === "string" ? res.message : "شماره پیدا نشد");
+          if (!silent) toast.error(typeof res.message === "string" ? res.message : t("phoneNotFound"));
           setCredit(0);
           setHasCredit(false);
           setGuestOrders([]);
@@ -539,12 +524,12 @@ export default function TableReservPage() {
         writeSavedGuestPhone(shopCode, normalized);
       } catch {
         setLookupPhone(normalized);
-        if (!silent) toast.error("خطا در دریافت اطلاعات شماره");
+        if (!silent) toast.error(t("phoneLookupError"));
       } finally {
         setLookupLoading(false);
       }
     },
-    [shopApi, shopCode],
+    [shopApi, shopCode, t],
   );
 
   useEffect(() => {
@@ -555,7 +540,7 @@ export default function TableReservPage() {
 
   const loadTable = useCallback(async () => {
     if (!shopCode || !validTable) {
-      if (!validTable) setTableError(`شماره ${shopPlaceNoun(placeKind)} نامعتبر است`);
+      if (!validTable) setTableError(t("invalidPlace", { place: t(placeKind === "room" ? "room" : "table") }));
       return;
     }
     setTableError("");
@@ -596,7 +581,7 @@ export default function TableReservPage() {
         label: `${shopPlaceNoun(placeKind)} ${tableNumber}`,
       });
     }
-  }, [placeKind, shop, shopApi, shopCode, tableNumber, validTable]);
+  }, [placeKind, shop, shopApi, shopCode, tableNumber, t, validTable]);
 
   const loadProducts = useCallback(
     async (pageNum: number, isInitial: boolean) => {
@@ -706,7 +691,7 @@ export default function TableReservPage() {
     const roots = getActiveRootCategories(shopCategories);
     if (roots.length > 0) {
       return [
-        { id: "all", name: "همه", image: null as string | null },
+        { id: "all", name: t("all"), image: null as string | null },
         ...roots.map((cat) => ({
           id: String(cat.id),
           name: cat.name,
@@ -718,7 +703,7 @@ export default function TableReservPage() {
     const upsert = (id: string, name?: string, image?: string | null) => {
       const prev = map.get(id);
       map.set(id, {
-        name: (name && name.trim()) || prev?.name || "دسته",
+        name: (name && name.trim()) || prev?.name || t("category"),
         image: image || prev?.image || null,
       });
     };
@@ -742,10 +727,10 @@ export default function TableReservPage() {
       if (prev && !prev.image) map.set(id, { ...prev, image });
     }
     return [
-      { id: "all", name: "همه", image: null as string | null },
+      { id: "all", name: t("all"), image: null as string | null },
       ...Array.from(map.entries()).map(([id, value]) => ({ id, ...value })),
     ];
-  }, [categoryImageById, products, shopCategories]);
+  }, [categoryImageById, products, shopCategories, t]);
 
   const visibleProducts = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -824,7 +809,8 @@ export default function TableReservPage() {
   const cartCount = cart.reduce((sum, line) => sum + line.quantity, 0);
   const cartTotal = cart.reduce((sum, line) => sum + line.sale_price * line.quantity, 0);
   const tableLabel = tableInfo?.label || `${shopPlaceNoun(placeKind)} ${tableNumber}`;
-  const shopTitle = tableInfo?.shopName || shop?.name || shopCode || "فروشگاه";
+  const displayPlaceLabel = translatePlace(tableLabel, placeKind);
+  const shopTitle = tableInfo?.shopName || shop?.name || shopCode || t("shop");
   const normalizedPhone = normalizeGuestPhone(phone);
   const phoneReady = isValidGuestPhone(normalizedPhone);
   const canUseCredit = phoneReady && hasCredit && credit > 0;
@@ -850,17 +836,17 @@ export default function TableReservPage() {
         "",
       );
       if (res?.hasError) {
-        if (!silent) toast.error(typeof res.message === "string" ? res.message : "دریافت سفارش جاری ناموفق بود");
+        if (!silent) toast.error(typeof res.message === "string" ? res.message : t("currentOrdersFail"));
         setCurrentOrders([]);
         return;
       }
       setCurrentOrders(extractTableOrders(res));
     } catch {
-      if (!silent) toast.error("خطا در ارتباط با سرور");
+      if (!silent) toast.error(t("networkError"));
     } finally {
       if (!silent) setCurrentLoading(false);
     }
-  }, [normalizedPhone, phoneReady, placeKind, shopApi, shopCode, tableNumber, validTable]);
+  }, [normalizedPhone, phoneReady, placeKind, shopApi, shopCode, t, tableNumber, validTable]);
 
   const loadServiceRequests = useCallback(async () => {
     if (!shopCode || !validTable || !servicesEnabled) return;
@@ -913,13 +899,13 @@ export default function TableReservPage() {
         "",
       );
       if (res?.hasError) {
-        toast.error(typeof res.message === "string" ? res.message : "ثبت درخواست ناموفق بود");
+        toast.error(typeof res.message === "string" ? res.message : t("requestFail"));
         return;
       }
-      toast.success(typeof res.message === "string" ? res.message : "درخواست ثبت شد");
+      toast.success(typeof res.message === "string" ? res.message : t("requestOk"));
       void loadServiceRequests();
     } catch {
-      toast.error("خطا در ارتباط با سرور");
+      toast.error(t("networkError"));
     } finally {
       setRequestingServiceId(null);
     }
@@ -939,13 +925,13 @@ export default function TableReservPage() {
         "",
       );
       if (res?.hasError) {
-        toast.error(typeof res.message === "string" ? res.message : "لغو درخواست ناموفق بود");
+        toast.error(typeof res.message === "string" ? res.message : t("cancelRequestFail"));
         return;
       }
-      toast.success(typeof res.message === "string" ? res.message : "درخواست لغو شد");
+      toast.success(typeof res.message === "string" ? res.message : t("requestCancelled"));
       void loadServiceRequests();
     } catch {
-      toast.error("خطا در ارتباط با سرور");
+      toast.error(t("networkError"));
     } finally {
       setCancellingServiceId(null);
     }
@@ -974,20 +960,20 @@ export default function TableReservPage() {
         "",
       );
       if (res?.statusCode === 410 || res?.status === 410) {
-        toast.info(typeof res.message === "string" ? res.message : "این سفارش به فاکتور تبدیل شده");
+        toast.info(typeof res.message === "string" ? res.message : t("invoicedAlready"));
         setCurrentDetail(null);
         void loadCurrentOrders();
         return;
       }
       if (res?.hasError) {
-        toast.error(typeof res.message === "string" ? res.message : "سفارش پیدا نشد");
+        toast.error(typeof res.message === "string" ? res.message : t("orderNotFound"));
         return;
       }
       const raw = (res?.table_order || res?.data || res) as unknown;
       const parsed = extractTableOrders({ table_orders: [raw] })[0];
       if (parsed) setCurrentDetail(parsed);
     } catch {
-      toast.error("خطا در ارتباط با سرور");
+      toast.error(t("networkError"));
     } finally {
       setCurrentDetailLoading(false);
     }
@@ -997,9 +983,9 @@ export default function TableReservPage() {
     if (!value) return;
     try {
       await navigator.clipboard.writeText(value.replace(/\s/g, ""));
-      toast.success("شماره کارت کپی شد");
+      toast.success(t("cardCopied"));
     } catch {
-      toast.error("کپی نشد");
+      toast.error(t("copyFail"));
     }
   };
 
@@ -1014,12 +1000,12 @@ export default function TableReservPage() {
   const pickReceiptFile = async (file: File | null, uploadNow = false) => {
     if (!file) return;
     if (!isAllowedReceiptFile(file)) {
-      setReceiptError("jpg، png، webp یا pdf");
+      setReceiptError(t("receiptTypes"));
       return;
     }
     const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
     if (file.size > RECEIPT_MAX_BYTES) {
-      setReceiptError("حجم فایل اصلی نباید بیشتر از ۵ مگابایت باشد");
+      setReceiptError(t("receiptTooBig"));
       return;
     }
     setReceiptError("");
@@ -1040,14 +1026,14 @@ export default function TableReservPage() {
           "",
         );
         if (res?.hasError) {
-          setReceiptError(typeof res.message === "string" ? res.message : "ارسال رسید ناموفق بود");
+          setReceiptError(typeof res.message === "string" ? res.message : t("receiptFail"));
           return;
         }
         setSubmittedHasReceipt(true);
-        toast.success(typeof res.message === "string" ? res.message : "رسید ثبت شد");
+        toast.success(typeof res.message === "string" ? res.message : t("receiptOk"));
       }
     } catch {
-      setReceiptError("خواندن فایل ناموفق بود");
+      setReceiptError(t("receiptReadFail"));
     } finally {
       setUploadingReceipt(false);
       if (receiptInputRef.current) receiptInputRef.current.value = "";
@@ -1066,11 +1052,11 @@ export default function TableReservPage() {
   const submitOrder = async () => {
     if (!shopCode || cart.length === 0) return;
     if (useCredit && !phoneReady) {
-      toast.error("برای استفاده از اعتبار، شماره موبایل را وارد کنید");
+      toast.error(t("needPhoneForCredit"));
       return;
     }
     if (!paymentMethod) {
-      toast.error("روش پرداخت را انتخاب کنید");
+      toast.error(t("choosePayment"));
       return;
     }
     setSubmitting(true);
@@ -1094,7 +1080,7 @@ export default function TableReservPage() {
         "",
       );
       if (res?.hasError) {
-        toast.error(typeof res.message === "string" ? res.message : "ثبت سفارش ناموفق بود");
+        toast.error(typeof res.message === "string" ? res.message : t("submitFail"));
         return;
       }
       const hadReceipt = paymentMethod === "card_to_card" && Boolean(receiptBase64);
@@ -1111,7 +1097,7 @@ export default function TableReservPage() {
       void loadCurrentOrders(true);
       if (phoneReady) lookupGuest(normalizedPhone, true);
     } catch {
-      toast.error("خطا در ارتباط با سرور");
+      toast.error(t("networkError"));
     } finally {
       setSubmitting(false);
     }
@@ -1131,16 +1117,16 @@ export default function TableReservPage() {
         "",
       );
       if (res?.hasError) {
-        toast.error(typeof res.message === "string" ? res.message : "لغو سفارش ناموفق بود");
+        toast.error(typeof res.message === "string" ? res.message : t("cancelOrderFail"));
         return;
       }
       setSubmittedCancelled(true);
       setCancelConfirmOpen(false);
-      toast.success(typeof res.message === "string" ? res.message : "سفارش لغو شد");
+      toast.success(typeof res.message === "string" ? res.message : t("orderCancelled"));
       void loadCurrentOrders(true);
       if (phoneReady) lookupGuest(normalizedPhone, true);
     } catch {
-      toast.error("خطا در ارتباط با سرور");
+      toast.error(t("networkError"));
     } finally {
       setCancellingOrder(false);
     }
@@ -1148,8 +1134,8 @@ export default function TableReservPage() {
 
   if (!validTable) {
     return (
-      <Box sx={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", p: 3, direction: "rtl", bgcolor: BG }}>
-        <Typography sx={{ color: "#e57373" }}>{tableError || `${shopPlaceNoun(placeKind)} نامعتبر است`}</Typography>
+      <Box sx={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", p: 3, direction: dir, bgcolor: BG }}>
+        <Typography sx={{ color: "#e57373" }}>{tableError || t("invalidPlace", { place: t(placeKind === "room" ? "room" : "table") })}</Typography>
       </Box>
     );
   }
@@ -1165,7 +1151,7 @@ export default function TableReservPage() {
           justifyContent: "center",
           gap: 1.5,
           p: 3,
-          direction: "rtl",
+          direction: dir,
           textAlign: "center",
           bgcolor: BG,
         }}
@@ -1188,21 +1174,21 @@ export default function TableReservPage() {
           )}
         </Box>
         <Typography sx={{ fontWeight: 800, fontSize: 22, color: TEXT }}>
-          {submittedCancelled ? `سفارش ${tableLabel} لغو شد` : `سفارش ${tableLabel} ثبت شد`}
+          {submittedCancelled ? t("orderCancelledTitle", { label: displayPlaceLabel }) : t("orderPlaced", { label: displayPlaceLabel })}
         </Typography>
         {submittedOrderId ? (
           <Typography sx={{ color: ACCENT, fontWeight: 800, fontSize: 15 }}>
-            شماره سفارش: {formatNumber(submittedOrderId)}
+            {t("orderNumber", { n: formatNumber(submittedOrderId) })}
           </Typography>
         ) : null}
         <Typography sx={{ color: MUTED, maxWidth: 320, lineHeight: 1.8, fontSize: 14 }}>
           {submittedCancelled
-            ? "این سفارش دیگر برای صندوق نمایش داده نمی‌شود."
-            : `هنوز فاکتور نشده. روش پرداخت: ${selectedPayMethod?.label || "—"}. بعد از تأیید پرسنل فاکتور ساخته می‌شود.`}
+            ? t("orderHiddenFromPos")
+            : t("orderPendingInvoice", { method: translatePayMethod(selectedPayMethod?.key, selectedPayMethod?.label) || "—" })}
         </Typography>
         {!submittedCancelled && paymentMethod === "card_to_card" && cardToCard?.card_number ? (
           <Box sx={{ mt: 1, p: 1.5, borderRadius: "16px", bgcolor: SURFACE, border: "1px solid rgba(212,175,55,0.2)", maxWidth: 320, width: "100%" }}>
-            <Typography sx={{ fontSize: 12, color: MUTED, mb: 0.4 }}>{cardToCard.bank_name || "کارت به کارت"}</Typography>
+            <Typography sx={{ fontSize: 12, color: MUTED, mb: 0.4 }}>{cardToCard.bank_name || t("cardToCard")}</Typography>
             <Typography sx={{ fontWeight: 800, fontSize: 16, letterSpacing: 1, color: TEXT, direction: "ltr" }}>
               {cardToCard.card_number}
             </Typography>
@@ -1230,33 +1216,33 @@ export default function TableReservPage() {
             "&:hover": { bgcolor: ACCENT_DARK, color: "#1a1408" },
           }}
         >
-          بازگشت
+          {t("back")}
         </Button>
         {submittedOrderId && !submittedCancelled ? (
           <Button
             onClick={() => setCancelConfirmOpen(true)}
             sx={{ color: "#e57373", fontWeight: 700 }}
           >
-            لغو سفارش
+            {t("cancelOrder")}
           </Button>
         ) : null}
         <Dialog open={cancelConfirmOpen} onClose={() => !cancellingOrder && setCancelConfirmOpen(false)}>
           <DialogContent>
-            <Typography sx={{ color: TEXT, fontWeight: 800, mb: 1 }}>لغو سفارش؟</Typography>
+            <Typography sx={{ color: TEXT, fontWeight: 800, mb: 1 }}>{t("cancelOrderConfirm")}</Typography>
             <Typography sx={{ color: MUTED, fontSize: 14, lineHeight: 1.8 }}>
-              فقط تا وقتی پرسنل پرداخت را تأیید نکرده باشد می‌توانید لغو کنید.
+              {t("cancelOrderHint")}
             </Typography>
           </DialogContent>
           <DialogActions sx={{ px: 2, pb: 2 }}>
             <Button onClick={() => setCancelConfirmOpen(false)} disabled={cancellingOrder} sx={{ color: MUTED }}>
-              انصراف
+              {t("dismiss")}
             </Button>
             <Button onClick={cancelSubmittedOrder} disabled={cancellingOrder} sx={{ color: "#e57373", fontWeight: 800 }}>
-              {cancellingOrder ? "..." : "لغو سفارش"}
+              {cancellingOrder ? "..." : t("cancelOrder")}
             </Button>
           </DialogActions>
         </Dialog>
-        <ToastContainer position="bottom-center" autoClose={3000} theme={themeMode} />
+        <ToastContainer position="bottom-center" autoClose={3000} theme={themeMode} rtl={dir === "rtl"} />
       </Box>
     );
   }
@@ -1264,8 +1250,8 @@ export default function TableReservPage() {
   const searchActive = Boolean(search.trim());
   const cartTotalLabel =
     creditToApply > 0
-      ? `${formatNumber(payableAmount)} تومان`
-      : `${formatNumber(cartTotal)} تومان`;
+      ? `${t("amountToman", { amount: formatNumber(payableAmount) })}`
+      : `${t("amountToman", { amount: formatNumber(cartTotal) })}`;
   const activeCurrentCount = currentOrders.filter((order) => order.status !== "cancelled").length;
   const activeServiceCount = serviceRequests.length;
 
@@ -1274,15 +1260,16 @@ export default function TableReservPage() {
       sx={{
         minHeight: "100dvh",
         bgcolor: BG,
-        direction: "rtl",
+        direction: dir,
         color: TEXT,
         fontFamily: APP_FONT_FAMILY,
       }}
+      lang={locale}
     >
       <ReservHeader
         shopTitle={shopTitle}
-        tableLabel={tableLabel}
-        guestLabel={guestIdentified ? normalizedPhone.slice(-4) : "ورود"}
+        tableLabel={displayPlaceLabel}
+        guestLabel={guestIdentified ? normalizedPhone.slice(-4) : t("signIn")}
         themeMode={themeMode}
         theme={theme}
         currentOrderCount={activeCurrentCount}
@@ -1296,6 +1283,7 @@ export default function TableReservPage() {
           void loadServiceRequests();
         }}
         onHistory={openOrders}
+        showLanguageSwitch={allowServices || servicesEnabled}
       />
 
       <Box
@@ -1332,8 +1320,8 @@ export default function TableReservPage() {
               theme={theme}
               placeholder={
                 catalogMode === "services" && (showBothCatalogs || (allowServices && !hasMenu))
-                  ? "جستجوی خدمات اتاق…"
-                  : "جستجوی غذا، نوشیدنی و …"
+                  ? t("searchServices")
+                  : t("searchMenu")
               }
             />
           </Box>
@@ -1352,8 +1340,8 @@ export default function TableReservPage() {
                   theme={theme}
                   title={
                     searchActive
-                      ? `خدمتی برای «${search.trim()}» پیدا نشد.`
-                      : "هنوز خدمتی تعریف نشده است."
+                      ? t("noServiceMatch", { term: search.trim() })
+                      : t("noServicesYet")
                   }
                 />
               ) : (
@@ -1385,7 +1373,7 @@ export default function TableReservPage() {
           ) : productsError ? (
             <ReservEmptyState
               theme={theme}
-              title="اتصال به سرور با مشکل مواجه شد."
+              title={t("serverError")}
               action={
                 <Button
                   onClick={() => loadProducts(1, true)}
@@ -1399,7 +1387,7 @@ export default function TableReservPage() {
                     "&:hover": { bgcolor: ACCENT_DARK, color: "#1a1712" },
                   }}
                 >
-                  تلاش مجدد
+                  {t("retry")}
                 </Button>
               }
             />
@@ -1408,10 +1396,10 @@ export default function TableReservPage() {
               theme={theme}
               title={
                 searchActive
-                  ? `نتیجه‌ای برای «${search.trim()}» پیدا نشد.`
+                  ? t("noSearchResult", { term: search.trim() })
                   : selectedCategory === "all"
-                    ? "غذایی برای نمایش وجود ندارد."
-                    : "غذایی در این دسته پیدا نشد."
+                    ? t("noFood")
+                    : t("noFoodInCategory")
               }
             />
           ) : (
@@ -1450,7 +1438,7 @@ export default function TableReservPage() {
               fullWidth
               sx={{ color: ACCENT, fontWeight: 700, py: 1.4, mt: 1 }}
             >
-              {loadingMore ? "..." : "موارد بیشتر"}
+              {loadingMore ? "..." : t("loadMore")}
             </Button>
           ) : null}
             </>
@@ -1489,7 +1477,7 @@ export default function TableReservPage() {
             borderTopRightRadius: 24,
             p: 2,
             pb: "max(16px, env(safe-area-inset-bottom))",
-            direction: "rtl",
+            direction: dir,
             maxWidth: 520,
             mx: "auto",
             bgcolor: SURFACE,
@@ -1498,7 +1486,7 @@ export default function TableReservPage() {
         }}
       >
         <Box sx={{ width: 42, height: 5, borderRadius: 99, bgcolor: themeMode === "dark" ? "#3a3a3a" : "#d8d2c8", mx: "auto", mb: 1.5 }} />
-        <Typography sx={{ fontWeight: 800, mb: 1.5, fontSize: 18, color: TEXT }}>سفارش {tableLabel}</Typography>
+        <Typography sx={{ fontWeight: 800, mb: 1.5, fontSize: 18, color: TEXT }}>{t("orderFor", { label: displayPlaceLabel })}</Typography>
         <Box sx={{ maxHeight: "46vh", overflowY: "auto" }}>
           {cart.map((line) => (
             <Box
@@ -1527,12 +1515,12 @@ export default function TableReservPage() {
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography sx={{ fontWeight: 800, fontSize: 14, color: TEXT }}>{line.name}</Typography>
                 <Typography sx={{ color: MUTED, fontSize: 12 }}>
-                  {formatNumber(line.sale_price * line.quantity)} تومان
+                  {t("amountToman", { amount: formatNumber(line.sale_price * line.quantity) })}
                 </Typography>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 0.7 }}>
                   <IconButton
                     size="small"
-                    aria-label="کاهش تعداد"
+                    aria-label={t("decreaseQty")}
                     onClick={() => adjustCartLine(catalogItemKey(line), line.quantity - 1)}
                     sx={{ width: 25, height: 25, bgcolor: SURFACE, border: `1px solid ${BORDER}`, color: TEXT }}
                   >
@@ -1543,7 +1531,7 @@ export default function TableReservPage() {
                   </Typography>
                   <IconButton
                     size="small"
-                    aria-label="افزایش تعداد"
+                    aria-label={t("increaseQty")}
                     onClick={() => adjustCartLine(catalogItemKey(line), line.quantity + 1)}
                     sx={{ width: 25, height: 25, bgcolor: ACCENT, color: "#1a1712" }}
                   >
@@ -1553,7 +1541,7 @@ export default function TableReservPage() {
               </Box>
               <IconButton
                 size="small"
-                aria-label="حذف از سبد"
+                aria-label={t("removeFromCart")}
                 onClick={() => adjustCartLine(catalogItemKey(line), 0)}
                 sx={{ color: MUTED }}
               >
@@ -1567,7 +1555,7 @@ export default function TableReservPage() {
           fullWidth
           multiline
           minRows={2}
-          placeholder="یادداشت (اختیاری)"
+          placeholder={t("noteOptional")}
           value={note}
           onChange={(e) => setNote(e.target.value)}
           sx={{
@@ -1591,41 +1579,41 @@ export default function TableReservPage() {
                 sx={{ color: MUTED, "&.Mui-checked": { color: ACCENT } }}
               />
             }
-            label={`استفاده از اعتبار (${formatNumber(credit)} تومان)`}
+            label={t("useCreditLabel", { amount: formatNumber(credit) })}
           />
         ) : (
           <Typography sx={{ mt: 1.1, fontSize: 12, color: MUTED, lineHeight: 1.7 }}>
             {phoneReady
-              ? "با ثبت این سفارش، شماره روی فاکتور می‌ماند و در سفارش‌های بعدی دیده می‌شود."
-              : "از دکمه ورود کنار میز شماره را بدهید تا سفارش در تاریخچه بماند و بتوانید از اعتبار استفاده کنید."}
+              ? t("creditHintLoggedIn")
+              : t("creditHintGuest")}
           </Typography>
         )}
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 1.5 }}>
-          <Typography sx={{ color: MUTED, fontWeight: 700 }}>جمع کل</Typography>
-          <Typography sx={{ fontWeight: 800, fontSize: 16, color: TEXT }}>{formatNumber(cartTotal)} تومان</Typography>
+          <Typography sx={{ color: MUTED, fontWeight: 700 }}>{t("grandTotal")}</Typography>
+          <Typography sx={{ fontWeight: 800, fontSize: 16, color: TEXT }}>{t("amountToman", { amount: formatNumber(cartTotal) })}</Typography>
         </Box>
         {creditToApply > 0 ? (
           <>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 0.7 }}>
-              <Typography sx={{ color: MUTED, fontWeight: 700 }}>کسر از اعتبار</Typography>
+              <Typography sx={{ color: MUTED, fontWeight: 700 }}>{t("creditDeduction")}</Typography>
               <Typography sx={{ fontWeight: 800, fontSize: 14, color: ACCENT }}>
-                − {formatNumber(creditToApply)} تومان
+                − {t("amountToman", { amount: formatNumber(creditToApply) })}
               </Typography>
             </Box>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 0.7, mb: 1.5 }}>
-              <Typography sx={{ color: MUTED, fontWeight: 700 }}>قابل پرداخت</Typography>
+              <Typography sx={{ color: MUTED, fontWeight: 700 }}>{t("payable")}</Typography>
               <Typography sx={{ fontWeight: 800, fontSize: 18, color: ACCENT }}>
-                {formatNumber(payableAmount)} تومان
+                {t("amountToman", { amount: formatNumber(payableAmount) })}
               </Typography>
             </Box>
           </>
         ) : (
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 0.7, mb: 1.5 }}>
-            <Typography sx={{ color: MUTED, fontWeight: 700 }}>قابل پرداخت</Typography>
-            <Typography sx={{ fontWeight: 800, fontSize: 18, color: ACCENT }}>{formatNumber(cartTotal)} تومان</Typography>
+            <Typography sx={{ color: MUTED, fontWeight: 700 }}>{t("payable")}</Typography>
+            <Typography sx={{ fontWeight: 800, fontSize: 18, color: ACCENT }}>{t("amountToman", { amount: formatNumber(cartTotal) })}</Typography>
           </Box>
         )}
-        <Typography sx={{ color: TEXT, fontWeight: 800, fontSize: 14, mt: 0.5, mb: 0.8 }}>روش پرداخت</Typography>
+        <Typography sx={{ color: TEXT, fontWeight: 800, fontSize: 14, mt: 0.5, mb: 0.8 }}>{t("paymentMethodTitle")}</Typography>
         <Box
           sx={{
             display: "flex",
@@ -1658,7 +1646,7 @@ export default function TableReservPage() {
                   border: active ? "none" : "1px solid rgba(212,175,55,0.16)",
                 }}
               >
-                {method.label}
+                {translatePayMethod(method.key, method.label)}
               </Box>
             );
           })}
@@ -1670,12 +1658,12 @@ export default function TableReservPage() {
         ) : null}
         {paymentMethod === "online" ? (
           <Typography sx={{ color: MUTED, fontSize: 12, mb: 1.2, lineHeight: 1.7 }}>
-            درگاه آنلاین فعلاً فعال نیست؛ انتخاب شما ثبت می‌شود و پرسنل بعد از تأیید فاکتور می‌سازند.
+            {t("onlineGatewayHint")}
           </Typography>
         ) : null}
         {paymentMethod === "pos" ? (
           <Typography sx={{ color: MUTED, fontSize: 12, mb: 1.2, lineHeight: 1.7 }}>
-            پرداخت را روی کارتخوان فروشگاه انجام دهید تا پرسنل تأیید کنند.
+            {t("posHint")}
           </Typography>
         ) : null}
         {paymentMethod === "card_to_card" ? (
@@ -1699,7 +1687,7 @@ export default function TableReservPage() {
               </>
             ) : (
               <Typography sx={{ color: MUTED, fontSize: 12, lineHeight: 1.7 }}>
-                شماره کارت فروشگاه هنوز در تنظیمات ثبت نشده است.
+                {t("noCardNumber")}
               </Typography>
             )}
             <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1 }}>
@@ -1715,7 +1703,7 @@ export default function TableReservPage() {
                   fontWeight: 700,
                 }}
               >
-                {receiptName ? "تغییر رسید" : "ارسال رسید کارت‌به‌کارت"}
+                {receiptName ? t("changeReceipt") : t("sendReceipt")}
               </Button>
               {receiptBase64 || (receiptName && receiptIsPdf) ? (
                 <Box sx={{ position: "relative", width: 44, height: 44, flexShrink: 0 }}>
@@ -1723,7 +1711,7 @@ export default function TableReservPage() {
                     <Box
                       component="img"
                       src={receiptBase64}
-                      alt="رسید"
+                      alt={t("receipt")}
                       sx={{
                         width: 44,
                         height: 44,
@@ -1754,7 +1742,7 @@ export default function TableReservPage() {
                   )}
                   <IconButton
                     size="small"
-                    aria-label="حذف رسید"
+                    aria-label={t("removeReceipt")}
                     onClick={(e) => {
                       e.stopPropagation();
                       clearReceipt();
@@ -1792,7 +1780,7 @@ export default function TableReservPage() {
             "&:hover": { bgcolor: ACCENT_DARK, color: "#1a1408" },
           }}
         >
-          {submitting ? "در حال ثبت..." : "ثبت سفارش حضوری"}
+          {submitting ? t("submitting") : t("submitDineIn")}
         </Button>
       </Drawer>
       <Drawer
@@ -1805,7 +1793,7 @@ export default function TableReservPage() {
             borderTopRightRadius: 24,
             p: 2,
             pb: "max(16px, env(safe-area-inset-bottom))",
-            direction: "rtl",
+            direction: dir,
             maxWidth: 520,
             mx: "auto",
             bgcolor: SURFACE,
@@ -1815,14 +1803,14 @@ export default function TableReservPage() {
         }}
       >
         <Box sx={{ width: 42, height: 5, borderRadius: 99, bgcolor: "#3a3a3a", mx: "auto", mb: 1.5 }} />
-        <Typography sx={{ fontWeight: 800, mb: 0.4, fontSize: 18, color: TEXT }}>سفارش‌های قبلی</Typography>
+        <Typography sx={{ fontWeight: 800, mb: 0.4, fontSize: 18, color: TEXT }}>{t("pastOrders")}</Typography>
         <Typography sx={{ color: MUTED, fontSize: 12, mb: 1.5 }}>{normalizedPhone}</Typography>
         {lookupLoading ? (
           <Box sx={{ display: "flex", justifyContent: "center", py: 5 }}>
             <CircularProgress size={28} sx={{ color: ACCENT }} />
           </Box>
         ) : guestOrders.length === 0 ? (
-          <Typography sx={{ textAlign: "center", color: MUTED, py: 4 }}>سفارشی با این شماره در این فروشگاه نیست</Typography>
+          <Typography sx={{ textAlign: "center", color: MUTED, py: 4 }}>{t("noOrdersForPhone")}</Typography>
         ) : (
           <Box sx={{ overflowY: "auto" }}>
             {guestOrders.map((order, index) => {
@@ -1841,28 +1829,28 @@ export default function TableReservPage() {
                 >
                   <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1, mb: 0.6 }}>
                     <Typography sx={{ fontWeight: 800, fontSize: 13, color: TEXT }}>
-                      {guestOrderTable(order) || "سفارش"}
+                      {translatePlace(guestOrderTable(order), placeKind) || t("order")}
                     </Typography>
-                    <Typography sx={{ fontSize: 12, color: MUTED }}>{formatDateFa(order.created_at)}</Typography>
+                    <Typography sx={{ fontSize: 12, color: MUTED }}>{formatDateTime(order.created_at)}</Typography>
                   </Box>
                   <Typography sx={{ fontSize: 13, color: ACCENT, fontWeight: 800 }}>
-                    {formatNumber(guestOrderTotal(order))} تومان
+                    {t("amountToman", { amount: formatNumber(guestOrderTotal(order)) })}
                   </Typography>
                   {used > 0 ? (
                     <Typography sx={{ fontSize: 12, color: MUTED, mt: 0.3 }}>
-                      اعتبار مصرف‌شده: {formatNumber(used)} تومان
+                      {t("creditUsed", { amount: formatNumber(used) })}
                     </Typography>
                   ) : null}
                   {parseMoney(order.payable_amount) > 0 ? (
                     <Typography sx={{ fontSize: 12, color: MUTED }}>
-                      قابل پرداخت: {formatNumber(parseMoney(order.payable_amount))} تومان
+                      {t("payableLine", { amount: formatNumber(parseMoney(order.payable_amount)) })}
                     </Typography>
                   ) : null}
                   {items.length > 0 ? (
                     <Box sx={{ mt: 0.8 }}>
                       {items.map((item, itemIndex) => (
                         <Typography key={`${order.id}-${itemIndex}`} sx={{ fontSize: 12, color: MUTED, lineHeight: 1.7 }}>
-                          {(item.name || item.product_name || "محصول") +
+                          {(item.name || item.product_name || t("product")) +
                             (item.quantity ? ` × ${formatNumber(item.quantity)}` : "")}
                         </Typography>
                       ))}
@@ -1887,7 +1875,7 @@ export default function TableReservPage() {
             borderTopRightRadius: 24,
             p: 2,
             pb: "max(16px, env(safe-area-inset-bottom))",
-            direction: "rtl",
+            direction: dir,
             maxWidth: 520,
             mx: "auto",
             bgcolor: SURFACE,
@@ -1899,11 +1887,11 @@ export default function TableReservPage() {
         <Box sx={{ width: 42, height: 5, borderRadius: 99, bgcolor: "#3a3a3a", mx: "auto", mb: 1.5 }} />
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}>
           <Typography sx={{ fontWeight: 800, fontSize: 18, color: TEXT }}>
-            {currentDetail ? "جزئیات سفارش" : "سفارش جاری"}
+            {currentDetail ? t("orderDetails") : t("currentOrder")}
           </Typography>
           {currentDetail ? (
             <Button onClick={() => setCurrentDetail(null)} sx={{ color: MUTED, minWidth: 0, fontSize: 13 }}>
-              بازگشت
+              {t("back")}
             </Button>
           ) : null}
         </Box>
@@ -1914,14 +1902,14 @@ export default function TableReservPage() {
         ) : currentDetail ? (
           <Box>
             <Typography sx={{ color: ACCENT, fontWeight: 800, fontSize: 16 }}>
-              {formatNumber(getTableOrderAmount(currentDetail))} تومان
+              {t("amountToman", { amount: formatNumber(getTableOrderAmount(currentDetail)) })}
             </Typography>
             <Typography sx={{ color: MUTED, fontSize: 12, mt: 0.4 }}>
-              {tablePaymentMethodLabel(currentDetail) || "—"}
-              {currentDetail.status === "cancelled" ? " · لغو شده" : " · منتظر پرداخت"}
+              {translatePayMethod(currentDetail.payment_method, tablePaymentMethodLabel(currentDetail)) || "—"}
+              {currentDetail.status === "cancelled" ? ` · ${t("cancelled")}` : ` · ${t("awaitingPayment")}`}
             </Typography>
             {getTableOrderProducts(currentDetail).length === 0 ? (
-              <Typography sx={{ color: MUTED, fontSize: 13, mt: 2 }}>اقلامی ثبت نشده</Typography>
+              <Typography sx={{ color: MUTED, fontSize: 13, mt: 2 }}>{t("noItems")}</Typography>
             ) : (
               <Box sx={{ mt: 1.5 }}>
                 {getTableOrderProducts(currentDetail).map((product, index) => (
@@ -1930,7 +1918,7 @@ export default function TableReservPage() {
                     sx={{ display: "flex", justifyContent: "space-between", py: 0.7, borderBottom: "1px solid rgba(255,255,255,0.06)" }}
                   >
                     <Typography sx={{ fontSize: 13, color: TEXT }}>
-                      {product.name || product.product_name || "محصول"} × {formatNumber(Number(product.quantity) || 1)}
+                      {product.name || product.product_name || t("product")} × {formatNumber(Number(product.quantity) || 1)}
                     </Typography>
                     <Typography sx={{ fontSize: 13, color: MUTED }}>
                       {formatNumber(
@@ -1962,14 +1950,14 @@ export default function TableReservPage() {
                       "",
                     );
                     if (res?.hasError) {
-                      toast.error(typeof res.message === "string" ? res.message : "لغو سفارش ناموفق بود");
+                      toast.error(typeof res.message === "string" ? res.message : t("cancelOrderFail"));
                       return;
                     }
-                    toast.success(typeof res.message === "string" ? res.message : "سفارش لغو شد");
+                    toast.success(typeof res.message === "string" ? res.message : t("orderCancelled"));
                     setCurrentDetail(null);
                     void loadCurrentOrders(true);
                   } catch {
-                    toast.error("خطا در ارتباط با سرور");
+                    toast.error(t("networkError"));
                   } finally {
                     setCancellingOrder(false);
                   }
@@ -1977,13 +1965,13 @@ export default function TableReservPage() {
                 disabled={cancellingOrder}
                 sx={{ mt: 2, color: "#e57373", fontWeight: 700 }}
               >
-                {cancellingOrder ? "..." : "لغو این سفارش"}
+                {cancellingOrder ? "..." : t("cancelThisOrder")}
               </Button>
             ) : null}
           </Box>
         ) : currentOrders.length === 0 ? (
           <Typography sx={{ textAlign: "center", color: MUTED, py: 4 }}>
-            سفارش بازی برای این میز نیست. بعد از تأیید صندوق از اینجا برداشته می‌شود.
+            {t("noOpenOrder")}
           </Typography>
         ) : (
           <Box sx={{ overflowY: "auto" }}>
@@ -2003,17 +1991,17 @@ export default function TableReservPage() {
               >
                 <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1 }}>
                   <Typography sx={{ fontWeight: 800, fontSize: 13, color: TEXT }}>
-                    {order.table_label || tableLabel}
+                    {translatePlace(order.table_label || tableLabel, placeKind)}
                   </Typography>
                   <Typography sx={{ fontSize: 12, color: MUTED }}>
-                    {order.status === "cancelled" ? "لغو شده" : "منتظر پرداخت"}
+                    {order.status === "cancelled" ? t("cancelled") : t("awaitingPayment")}
                   </Typography>
                 </Box>
                 <Typography sx={{ fontSize: 14, color: ACCENT, fontWeight: 800, mt: 0.4 }}>
-                  {formatNumber(getTableOrderAmount(order))} تومان
+                  {t("amountToman", { amount: formatNumber(getTableOrderAmount(order)) })}
                 </Typography>
                 <Typography sx={{ fontSize: 12, color: MUTED, mt: 0.25 }}>
-                  {tablePaymentMethodLabel(order) || ""}
+                  {translatePayMethod(order.payment_method, tablePaymentMethodLabel(order))}
                 </Typography>
               </Box>
             ))}
@@ -2030,7 +2018,7 @@ export default function TableReservPage() {
             borderTopRightRadius: 24,
             p: 2,
             pb: "max(16px, env(safe-area-inset-bottom))",
-            direction: "rtl",
+            direction: dir,
             maxWidth: 520,
             mx: "auto",
             bgcolor: SURFACE,
@@ -2040,10 +2028,10 @@ export default function TableReservPage() {
         }}
       >
         <Box sx={{ width: 42, height: 5, borderRadius: 99, bgcolor: "#3a3a3a", mx: "auto", mb: 1.5 }} />
-        <Typography sx={{ fontWeight: 800, fontSize: 18, color: TEXT, mb: 1 }}>خدمات اتاق</Typography>
+        <Typography sx={{ fontWeight: 800, fontSize: 18, color: TEXT, mb: 1 }}>{t("roomServicesTitle")}</Typography>
         {serviceRequests.length === 0 ? (
           <Typography sx={{ textAlign: "center", color: MUTED, py: 4 }}>
-            درخواست بازی برای این اتاق نیست.
+            {t("noOpenService")}
           </Typography>
         ) : (
           <ReservServiceRequestList
@@ -2065,16 +2053,16 @@ export default function TableReservPage() {
             mx: 2,
             width: "100%",
             maxWidth: 400,
-            direction: "rtl",
+            direction: dir,
           },
         }}
       >
         <DialogContent sx={{ p: 2.2 }}>
           <Typography sx={{ fontSize: 15, fontWeight: 800, color: TEXT, mb: 0.5 }}>
-            شماره موبایل (بدون ورود)
+            {t("phoneWithoutLogin")}
           </Typography>
           <Typography sx={{ fontSize: 12, color: MUTED, lineHeight: 1.7, mb: 1.4 }}>
-            با شماره، اعتبار همین فروشگاه و سفارش‌های قبلی را می‌بینید.
+            {t("phoneLoginHint")}
           </Typography>
           <Box sx={{ display: "flex", gap: 0.8, alignItems: "center" }}>
             <TextField
@@ -2111,7 +2099,7 @@ export default function TableReservPage() {
               </Box>
             ) : guestIdentified ? (
               <IconButton
-                aria-label="حذف شماره"
+                aria-label={t("removePhone")}
                 onClick={() => {
                   setPhone("");
                   setLookupPhone("");
@@ -2138,7 +2126,7 @@ export default function TableReservPage() {
           {guestIdentified ? (
             <>
               <Typography sx={{ mt: 1.2, fontSize: 13, color: hasCredit && credit > 0 ? ACCENT : MUTED, fontWeight: 700 }}>
-                {hasCredit && credit > 0 ? `اعتبار شما: ${formatNumber(credit)} تومان` : "اعتباری برای این شماره ثبت نشده"}
+                {hasCredit && credit > 0 ? t("yourCredit", { amount: formatNumber(credit) }) : t("noCredit")}
               </Typography>
               <Button
                 fullWidth
@@ -2153,7 +2141,7 @@ export default function TableReservPage() {
                   "&:hover": { bgcolor: "#2a2a2a" },
                 }}
               >
-                بستن
+                {t("close")}
               </Button>
             </>
           ) : null}
@@ -2176,7 +2164,7 @@ export default function TableReservPage() {
             borderTopRightRadius: 24,
             p: 2,
             pb: "max(16px, env(safe-area-inset-bottom))",
-            direction: "rtl",
+            direction: dir,
             maxWidth: 520,
             mx: "auto",
             bgcolor: SURFACE,
@@ -2211,12 +2199,12 @@ export default function TableReservPage() {
               </Typography>
             ) : null}
             <Typography sx={{ fontWeight: 800, fontSize: 16, color: TEXT, mb: 1.5 }}>
-              {formatNumber(Number(detailProduct.sale_price) || 0)} تومان
+              {t("amountToman", { amount: formatNumber(Number(detailProduct.sale_price) || 0) })}
             </Typography>
             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
               <Box sx={{ display: "flex", alignItems: "center", gap: 0.8 }}>
                 <IconButton
-                  aria-label="کاهش"
+                  aria-label={t("decreaseShort")}
                   onClick={() => setQty(detailProduct, Math.max(0, qtyOf(detailProduct) - 1))}
                   sx={{ width: 31, height: 31, bgcolor: SURFACE_ALT, border: `1px solid ${BORDER}`, color: TEXT }}
                 >
@@ -2226,7 +2214,7 @@ export default function TableReservPage() {
                   {formatNumber(qtyOf(detailProduct))}
                 </Typography>
                 <IconButton
-                  aria-label="افزایش"
+                  aria-label={t("increaseShort")}
                   onClick={() => setQty(detailProduct, qtyOf(detailProduct) + 1)}
                   sx={{ width: 31, height: 31, bgcolor: SURFACE_ALT, border: `1px solid ${BORDER}`, color: TEXT }}
                 >
@@ -2249,13 +2237,13 @@ export default function TableReservPage() {
                   "&:hover": { bgcolor: ACCENT_DARK, color: "#1a1712" },
                 }}
               >
-                {qtyOf(detailProduct.id) > 0 ? "تأیید" : "افزودن به سبد"}
+                {qtyOf(detailProduct.id) > 0 ? t("confirm") : t("addToCart")}
               </Button>
             </Box>
           </Box>
         ) : null}
       </Drawer>
-      <ToastContainer position="bottom-center" autoClose={3000} theme={themeMode} />
+      <ToastContainer position="bottom-center" autoClose={3000} theme={themeMode} rtl={dir === "rtl"} />
     </Box>
   );
 }

@@ -1,4 +1,4 @@
-const API_ORIGIN = (process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoplus.ir").replace(/\/$/, "");
+const API_ORIGIN = (process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoo-plus.ir").replace(/\/$/, "");
 
 function redirectToApi(request: Request) {
   const incoming = new URL(request.url);

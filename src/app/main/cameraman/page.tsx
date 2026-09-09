@@ -24,7 +24,7 @@ export default function Page() {
       label: "تصویر", 
       field: (item: any) => item?.personality_image ? (
         <Image
-          src={`https://api.webinoplus.ir${item.personality_image}`}
+          src={`https://api.webinoo-plus.ir${item.personality_image}`}
           width={50}
           height={50}
           alt="تصویر"

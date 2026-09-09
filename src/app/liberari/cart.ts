@@ -54,7 +54,7 @@ function cartLinesMatch(item: CartItem, ref: CartRef): boolean {
 }
 
 const LEGACY_CART_KEY = "shikshoo_cart";
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoplus.ir";
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoo-plus.ir";
 
 let activeShopCode: string | null = null;
 const syncTimers = new Map<string, ReturnType<typeof setTimeout>>();

@@ -37,7 +37,7 @@ import {
 } from "./offline";
 
 const BASE_URL = (
-  process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoplus.ir"
+  process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoo-plus.ir"
 ).replace(/\/$/, "");
 
 export function isOilApiError(res: unknown): res is OilApiError {

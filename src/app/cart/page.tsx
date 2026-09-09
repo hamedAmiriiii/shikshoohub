@@ -403,7 +403,7 @@ export default function CartPage() {
         if (firstImage.image_url.startsWith('http')) {
           return firstImage.image_url;
         } else if (firstImage.image_url.startsWith('/storage/')) {
-          return `https://api.webinoplus.ir${firstImage.image_url}`;
+          return `https://api.webinoo-plus.ir${firstImage.image_url}`;
         }
         return firstImage.image_url;
       }
@@ -412,7 +412,7 @@ export default function CartPage() {
       if (item.image.startsWith('http')) {
         return item.image;
       } else if (item.image.startsWith('/storage/')) {
-        return `https://api.webinoplus.ir${item.image}`;
+        return `https://api.webinoo-plus.ir${item.image}`;
       }
       return item.image;
     }

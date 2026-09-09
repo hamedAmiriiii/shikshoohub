@@ -2,7 +2,7 @@ import tokenCode from "@/app/coponent/tokenCode";
 import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
 import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
 
-const API_BASE = (process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoplus.ir").replace(/\/$/, "");
+const API_BASE = (process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoo-plus.ir").replace(/\/$/, "");
 export const SHOP_BACKUP_MAX_BYTES = 200 * 1024 * 1024;
 export const SHOP_BACKUP_CONFIRM = "RESTORE";
 

@@ -1,5 +1,5 @@
 (function (root) {
-  var DEFAULT_ORIGIN = "https://api.webinoplus.ir";
+  var DEFAULT_ORIGIN = "https://api.webinoo-plus.ir";
 
   function origin() {
     if (root.WEBINO_API_ORIGIN) return String(root.WEBINO_API_ORIGIN).replace(/\/$/, "");

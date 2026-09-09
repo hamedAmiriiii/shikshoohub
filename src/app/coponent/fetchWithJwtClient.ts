@@ -3,7 +3,7 @@
 import { notifyShopAccessIfExpired } from '@/app/lib/shopAccess';
 import tokenCode from './tokenCode';
 
-const baseURL = process.env.NEXT_PUBLIC_BASE_URL || 'https://api.webinoplus.ir';
+const baseURL = process.env.NEXT_PUBLIC_BASE_URL || 'https://api.webinoo-plus.ir';
 
 function resolveToken(session: unknown): string | null {
   if (typeof session === 'string' && session.trim() !== '') {

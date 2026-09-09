@@ -1,6 +1,7 @@
 "use client";
 
 import { APP_FONT_FAMILY } from "@/app/lib/appFont";
+import { RESERV_LOCALES, useReservI18n } from "./reservI18n";
 import AddIcon from "@mui/icons-material/Add";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import HistoryIcon from "@mui/icons-material/History";
@@ -57,8 +58,8 @@ export const THEMES = {
 
 export type ReservTheme = (typeof THEMES)[ReservThemeMode];
 
-export function formatNumber(num: number) {
-  return new Intl.NumberFormat("fa-IR").format(num);
+export function formatNumber(num: number, locale = "fa-IR") {
+  return new Intl.NumberFormat(locale).format(num);
 }
 
 const motionSafe = {
@@ -82,6 +83,7 @@ type HeaderProps = {
   onCurrentOrders: () => void;
   onCurrentServices?: () => void;
   onHistory: () => void;
+  showLanguageSwitch?: boolean;
 };
 
 export function ReservHeader({
@@ -93,12 +95,14 @@ export function ReservHeader({
   currentOrderCount,
   currentServiceCount = 0,
   showServiceShortcut = false,
+  showLanguageSwitch = false,
   onLogin,
   onToggleTheme,
   onCurrentOrders,
   onCurrentServices,
   onHistory,
 }: HeaderProps) {
+  const { t, locale, setLocale } = useReservI18n();
   const iconBtn = {
     width: 44,
     height: 44,
@@ -185,9 +189,52 @@ export function ReservHeader({
         </Box>
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          {showLanguageSwitch ? (
+            <Box
+              role="group"
+              aria-label="Language"
+              sx={{
+                display: "inline-flex",
+                p: 0.25,
+                borderRadius: "12px",
+                border: `1px solid ${theme.BORDER}`,
+                bgcolor: theme.SURFACE,
+              }}
+            >
+              {RESERV_LOCALES.map((item) => {
+                const active = locale === item.id;
+                return (
+                  <Box
+                    key={item.id}
+                    component="button"
+                    type="button"
+                    onClick={() => setLocale(item.id)}
+                    aria-pressed={active}
+                    aria-label={t(item.id === "fa" ? "langFa" : item.id === "en" ? "langEn" : "langAr")}
+                    sx={{
+                      appearance: "none",
+                      border: 0,
+                      cursor: "pointer",
+                      minWidth: 40,
+                      height: 32,
+                      px: 0.85,
+                      borderRadius: "10px",
+                      fontFamily: APP_FONT_FAMILY,
+                      fontWeight: 800,
+                      fontSize: 10,
+                      bgcolor: active ? ACCENT : "transparent",
+                      color: active ? "#1a1712" : theme.TEXT,
+                    }}
+                  >
+                    {item.short}
+                  </Box>
+                );
+              })}
+            </Box>
+          ) : null}
           <Button
             onClick={onLogin}
-            aria-label="ورود با شماره موبایل"
+            aria-label={t("signInAria")}
             sx={{
               minWidth: 44,
               minHeight: 40,
@@ -203,10 +250,10 @@ export function ReservHeader({
           >
             {guestLabel}
           </Button>
-          <IconButton onClick={onToggleTheme} aria-label={themeMode === "dark" ? "حالت روشن" : "حالت تیره"} sx={{ ...iconBtn, width: 40, height: 40 }}>
+          <IconButton onClick={onToggleTheme} aria-label={themeMode === "dark" ? t("themeLight") : t("themeDark")} sx={{ ...iconBtn, width: 40, height: 40 }}>
             {themeMode === "dark" ? <LightModeIcon sx={{ fontSize: 18 }} /> : <DarkModeIcon sx={{ fontSize: 18 }} />}
           </IconButton>
-          <IconButton onClick={onCurrentOrders} aria-label="سفارش غذا" sx={{ ...iconBtn, width: 40, height: 40 }}>
+          <IconButton onClick={onCurrentOrders} aria-label={t("foodOrdersAria")} sx={{ ...iconBtn, width: 40, height: 40 }}>
             <Badge
               badgeContent={currentOrderCount}
               color="error"
@@ -217,7 +264,7 @@ export function ReservHeader({
             </Badge>
           </IconButton>
           {showServiceShortcut ? (
-            <IconButton onClick={onCurrentServices} aria-label="خدمات اتاق" sx={{ ...iconBtn, width: 40, height: 40 }}>
+            <IconButton onClick={onCurrentServices} aria-label={t("roomServicesAria")} sx={{ ...iconBtn, width: 40, height: 40 }}>
               <Badge
                 badgeContent={currentServiceCount}
                 color="error"
@@ -228,7 +275,7 @@ export function ReservHeader({
               </Badge>
             </IconButton>
           ) : null}
-          <IconButton onClick={onHistory} aria-label="سفارش‌های قبلی" sx={{ ...iconBtn, width: 40, height: 40 }}>
+          <IconButton onClick={onHistory} aria-label={t("pastOrdersAria")} sx={{ ...iconBtn, width: 40, height: 40 }}>
             <HistoryIcon sx={{ fontSize: 18 }} />
           </IconButton>
         </Box>
@@ -244,15 +291,16 @@ type SearchProps = {
   placeholder?: string;
 };
 
-export function ReservSearchBar({ value, onChange, theme, placeholder = "جستجوی غذا، نوشیدنی و …" }: SearchProps) {
+export function ReservSearchBar({ value, onChange, theme, placeholder }: SearchProps) {
+  const { t } = useReservI18n();
   return (
     <TextField
       size="small"
       fullWidth
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      inputProps={{ "aria-label": "جستجوی منو" }}
+      placeholder={placeholder || t("searchMenu")}
+      inputProps={{ "aria-label": t("searchMenuAria") }}
       InputProps={{
         startAdornment: (
           <InputAdornment position="start">
@@ -263,7 +311,7 @@ export function ReservSearchBar({ value, onChange, theme, placeholder = "جست�
           <InputAdornment position="end">
             <IconButton
               size="small"
-              aria-label="پاک کردن جستجو"
+              aria-label={t("clearSearch")}
               onClick={() => onChange("")}
               sx={{ color: theme.MUTED, width: 36, height: 36 }}
             >
@@ -301,10 +349,11 @@ type CategoryProps = {
 };
 
 export function ReservCategoryTabs({ categories, selectedId, onSelect, theme, dimmed }: CategoryProps) {
+  const { t } = useReservI18n();
   return (
     <Box
       role="tablist"
-      aria-label="دسته‌بندی منو"
+      aria-label={t("categoriesAria")}
       sx={{
         display: "flex",
         gap: 0.8,
@@ -383,6 +432,7 @@ export function ReservProductCard({
   onRemove,
   onOpen,
 }: ProductCardProps) {
+  const { t, formatNumber: fmt } = useReservI18n();
   return (
     <Box
       component="article"
@@ -401,7 +451,7 @@ export function ReservProductCard({
         component="button"
         type="button"
         onClick={onOpen}
-        aria-label={`جزئیات ${name}`}
+        aria-label={t("detailsOf", { name })}
         sx={{
           appearance: "none",
           border: 0,
@@ -473,9 +523,9 @@ export function ReservProductCard({
           </Typography>
         ) : null}
         <Typography sx={{ mt: "auto", pt: 0.6, color: theme.TEXT, fontWeight: 800, fontSize: 15 }}>
-          {formatNumber(price)}
-          <Box component="span" sx={{ fontSize: 12, fontWeight: 600, color: theme.MUTED, ms: 0.5 }}>
-            تومان
+          {fmt(price)}
+          <Box component="span" sx={{ fontSize: 12, fontWeight: 600, color: theme.MUTED, ms: 0.5, marginInlineStart: 0.5 }}>
+            {t("toman")}
           </Box>
         </Typography>
       </Box>
@@ -494,7 +544,7 @@ export function ReservProductCard({
         {quantity > 0 ? (
           <>
             <IconButton
-              aria-label={`کاهش ${name}`}
+              aria-label={t("decrease", { name })}
               onClick={onRemove}
               sx={{
                 width: 28,
@@ -508,12 +558,12 @@ export function ReservProductCard({
               <RemoveIcon sx={{ fontSize: 13 }} />
             </IconButton>
             <Typography aria-live="polite" sx={{ fontWeight: 800, fontSize: 12, color: theme.TEXT, lineHeight: 1 }}>
-              {formatNumber(quantity)}
+              {fmt(quantity)}
             </Typography>
           </>
         ) : null}
         <IconButton
-          aria-label={quantity > 0 ? `افزایش ${name}` : `افزودن ${name}`}
+          aria-label={quantity > 0 ? t("increase", { name }) : t("addItem", { name })}
           onClick={onAdd}
           sx={{
             width: 31,
@@ -542,6 +592,7 @@ type CartBarProps = {
 };
 
 export function ReservCartBar({ count, totalLabel, theme, onOpen }: CartBarProps) {
+  const { t, formatNumber: fmt } = useReservI18n();
   if (count <= 0) return null;
   return (
     <Box
@@ -565,7 +616,7 @@ export function ReservCartBar({ count, totalLabel, theme, onOpen }: CartBarProps
         fullWidth
         variant="contained"
         onClick={onOpen}
-        aria-label="مشاهده سبد خرید"
+        aria-label={t("viewCartAria")}
         sx={{
           py: 1.5,
           minHeight: 56,
@@ -603,10 +654,10 @@ export function ReservCartBar({ count, totalLabel, theme, onOpen }: CartBarProps
                 fontWeight: 800,
               }}
             >
-              {formatNumber(count)}
+              {fmt(count)}
             </Box>
           </Box>
-          <Typography sx={{ fontWeight: 800, fontSize: 15 }}>مشاهده سبد</Typography>
+          <Typography sx={{ fontWeight: 800, fontSize: 15 }}>{t("viewCart")}</Typography>
           <Typography sx={{ fontWeight: 800, fontSize: 14 }}>{totalLabel}</Typography>
         </Box>
       </Button>
@@ -698,6 +749,7 @@ export function ReservDesktopCartPanel({
   onRemove,
   onCheckout,
 }: DesktopCartProps) {
+  const { t, formatNumber: fmt } = useReservI18n();
   return (
     <Box
       component="aside"
@@ -715,10 +767,10 @@ export function ReservDesktopCartPanel({
         overflow: "auto",
       }}
     >
-      <Typography sx={{ fontWeight: 800, fontSize: 17, color: theme.TEXT, mb: 1.25 }}>سبد خرید</Typography>
+      <Typography sx={{ fontWeight: 800, fontSize: 17, color: theme.TEXT, mb: 1.25 }}>{t("cart")}</Typography>
       {lines.length === 0 ? (
         <Typography sx={{ color: theme.MUTED, fontSize: 13, lineHeight: 1.8 }}>
-          هنوز چیزی اضافه نکرده‌اید. با دکمه + غذا را انتخاب کنید.
+          {t("cartEmpty")}
         </Typography>
       ) : (
         <>
@@ -748,23 +800,23 @@ export function ReservDesktopCartPanel({
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Typography sx={{ fontWeight: 700, fontSize: 13, color: theme.TEXT }}>{line.name}</Typography>
                   <Typography sx={{ color: theme.MUTED, fontSize: 12, mt: 0.2 }}>
-                    {formatNumber(line.sale_price)} تومان
+                    {fmt(line.sale_price)} {t("toman")}
                   </Typography>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 0.6 }}>
                     <IconButton
                       size="small"
-                      aria-label="کاهش"
+                      aria-label={t("decreaseQty")}
                       onClick={() => onDec(line.key)}
                       sx={{ width: 22, height: 22, bgcolor: theme.SURFACE, border: `1px solid ${theme.BORDER}` }}
                     >
                       <RemoveIcon sx={{ fontSize: 11 }} />
                     </IconButton>
                     <Typography sx={{ minWidth: 16, textAlign: "center", fontWeight: 800, fontSize: 12 }}>
-                      {formatNumber(line.quantity)}
+                      {fmt(line.quantity)}
                     </Typography>
                     <IconButton
                       size="small"
-                      aria-label="افزایش"
+                      aria-label={t("increaseQty")}
                       onClick={() => onInc(line.key)}
                       sx={{ width: 22, height: 22, bgcolor: ACCENT, color: "#1a1712" }}
                     >
@@ -772,7 +824,7 @@ export function ReservDesktopCartPanel({
                     </IconButton>
                     <IconButton
                       size="small"
-                      aria-label="حذف"
+                      aria-label={t("removeFromCart")}
                       onClick={() => onRemove(line.key)}
                       sx={{ width: 32, height: 32, color: theme.MUTED, ms: "auto" }}
                     >
@@ -784,8 +836,8 @@ export function ReservDesktopCartPanel({
             ))}
           </Box>
           <Box sx={{ display: "flex", justifyContent: "space-between", mt: 1.5, mb: 1.25 }}>
-            <Typography sx={{ color: theme.MUTED, fontWeight: 700 }}>جمع</Typography>
-            <Typography sx={{ fontWeight: 800, color: theme.TEXT }}>{formatNumber(total)} تومان</Typography>
+            <Typography sx={{ color: theme.MUTED, fontWeight: 700 }}>{t("total")}</Typography>
+            <Typography sx={{ fontWeight: 800, color: theme.TEXT }}>{fmt(total)} {t("toman")}</Typography>
           </Box>
           <Button
             fullWidth
@@ -800,7 +852,7 @@ export function ReservDesktopCartPanel({
               "&:hover": { bgcolor: ACCENT_DARK, color: "#1a1712" },
             }}
           >
-            ثبت سفارش
+            {t("placeOrder")}
           </Button>
         </>
       )}

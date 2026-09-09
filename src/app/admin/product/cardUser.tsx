@@ -102,14 +102,14 @@ export default function CardUser(props: any) {
           if (img.startsWith('data:image/')) {
             imageUrl = img;
           } else if (img.startsWith('/storage/')) {
-            imageUrl = `https://api.webinoplus.ir${img}`;
+            imageUrl = `https://api.webinoo-plus.ir${img}`;
           } else {
             imageUrl = img;
           }
         } else if (img.image_url) {
           imageId = img.id;
           if (img.image_url.startsWith('/storage/')) {
-            imageUrl = `https://api.webinoplus.ir${img.image_url}`;
+            imageUrl = `https://api.webinoo-plus.ir${img.image_url}`;
           } else if (img.image_url.startsWith('http')) {
             imageUrl = img.image_url;
           } else {
@@ -118,7 +118,7 @@ export default function CardUser(props: any) {
         } else if (img.url) {
           imageId = img.id;
           if (img.url.startsWith('/storage/')) {
-            imageUrl = `https://api.webinoplus.ir${img.url}`;
+            imageUrl = `https://api.webinoo-plus.ir${img.url}`;
           } else if (img.url.startsWith('http')) {
             imageUrl = img.url;
           } else {
