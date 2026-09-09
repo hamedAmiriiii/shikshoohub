@@ -12,10 +12,7 @@ import {
 } from "react";
 import tokenCode from "@/app/coponent/tokenCode";
 import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
-import {
-  ADMIN_POS_SETTINGS_CHANGED_EVENT,
-  readAdminPosSettings,
-} from "@/app/lib/adminPosSettings";
+import { readShopFeatures, SHOP_FEATURES_CHANGED_EVENT } from "@/app/lib/shopFeatures";
 import {
   announceTableEvent,
   bindAnnouncementAudioUnlock,
@@ -62,7 +59,7 @@ export default function TableOrdersPendingProvider({ children }: { children: Rea
 
   const refresh = useCallback(async () => {
     if (!navigator.onLine) return;
-    if (!readAdminPosSettings().restaurantCafeEnabled) return;
+    if (!readShopFeatures().restaurant_cafe_enabled) return;
     const token = tokenCode();
     if (!token) return;
     try {
@@ -101,10 +98,10 @@ export default function TableOrdersPendingProvider({ children }: { children: Rea
   }, [playNewOrderSound]);
 
   useEffect(() => {
-    const sync = () => setEnabled(readAdminPosSettings().restaurantCafeEnabled);
+    const sync = () => setEnabled(readShopFeatures().restaurant_cafe_enabled);
     sync();
-    window.addEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, sync);
-    return () => window.removeEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, sync);
+    window.addEventListener(SHOP_FEATURES_CHANGED_EVENT, sync);
+    return () => window.removeEventListener(SHOP_FEATURES_CHANGED_EVENT, sync);
   }, []);
 
   useEffect(() => bindAnnouncementAudioUnlock(), []);

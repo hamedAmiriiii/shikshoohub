@@ -209,7 +209,7 @@ export default function ShopTablesPage() {
       toast.error("تصویر QR آماده نیست");
       return;
     }
-    downloadDataUrl(qrPoster, `${shopTableDisplayName(qrTable)}.png`);
+    downloadDataUrl(qrPoster, `${shopTableDisplayName(qrTable)}.svg`);
     toast.success("دانلود شد");
   };
 

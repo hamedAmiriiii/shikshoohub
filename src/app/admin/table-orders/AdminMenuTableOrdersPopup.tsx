@@ -47,6 +47,7 @@ import {
   ADMIN_POS_SETTINGS_CHANGED_EVENT,
   readAdminPosSettings,
 } from "@/app/lib/adminPosSettings";
+import { readShopFeatures } from "@/app/lib/shopFeatures";
 
 const formatNumber = (n: number) => new Intl.NumberFormat("fa-IR").format(n);
 
@@ -65,7 +66,7 @@ function formatDate(value?: string): string {
 
 function popupEnabled() {
   const settings = readAdminPosSettings();
-  return settings.restaurantCafeEnabled && settings.menuTableOrdersPopupEnabled;
+  return readShopFeatures().restaurant_cafe_enabled && settings.menuTableOrdersPopupEnabled;
 }
 
 export default function AdminMenuTableOrdersPopup() {

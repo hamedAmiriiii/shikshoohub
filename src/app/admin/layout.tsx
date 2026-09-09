@@ -47,7 +47,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/manufacturers/report': 'گزارش فروش تولیدکنندگان',
     '/admin/shop-sms-logs': 'پیامک‌های فروشگاه',
     '/admin/shop-sms-quota': 'مدیریت فروشگاه‌ها',
-    '/admin/shop-service-access': 'دسترسی خدمات',
+    '/admin/shop-service-access': 'دسترسی فروشگاه',
     '/admin/referral': 'پنل معرفی',
     '/admin/sms-packages': 'خرید بسته پیامک',
     '/admin/shop-plans': 'تمدید اشتراک',

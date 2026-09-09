@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
 import tokenCode from "@/app/coponent/tokenCode";
 import { isSuperAdminUser } from "@/app/lib/superAdmin";
+import { shopFeatureAllowsPath } from "@/app/lib/shopFeatures";
 
 export const SHOP_PERMISSION_CATALOG = [
   { key: "dashboard", title: "داشبورد" },
@@ -308,7 +309,9 @@ export function canAccessAdminPath(
   if (SUPER_ADMIN_PATHS.some((path) => pathMatches(pathname, path))) {
     return isSuperAdminUser();
   }
-  if (isSuperAdminUser() || isShopOwner(user)) return true;
+  if (isSuperAdminUser()) return true;
+  if (!shopFeatureAllowsPath(pathname, user)) return false;
+  if (isShopOwner(user)) return true;
   const keys = getRequiredPermissionKeys(pathname);
   if (keys.length === 0) return true;
   if (hasAnyShopPermission(keys, user)) return true;

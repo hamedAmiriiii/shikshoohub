@@ -55,15 +55,8 @@ import FileUploadIcon from "@mui/icons-material/FileUpload";
 import KitchenIcon from "@mui/icons-material/Kitchen";
 import DescriptionIcon from "@mui/icons-material/Description";
 import GroupsIcon from "@mui/icons-material/Groups";
-import {
-  ADMIN_POS_SETTINGS_CHANGED_EVENT,
-  readAdminPosSettings,
-  writeAdminPosSettings,
-} from "@/app/lib/adminPosSettings";
 import { useShopPermissionGate, type ShopPermissionKey } from "@/app/lib/shopPermissions";
-import { extractRoomServicesEnabled } from "@/app/lib/shopServices";
-import tokenCode from "@/app/coponent/tokenCode";
-import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
+import { readShopFeatures, SHOP_FEATURES_CHANGED_EVENT } from "@/app/lib/shopFeatures";
 
 export const ADMIN_SIDEBAR_WIDTH = 200;
 
@@ -130,26 +123,23 @@ export default function AdminHamburgerSidebar({
   const [restaurantCafeEnabled, setRestaurantCafeEnabled] = useState(false);
   const [roomServicesEnabled, setRoomServicesEnabled] = useState(false);
   const [producedGoodsMenuEnabled, setProducedGoodsMenuEnabled] = useState(false);
+  const [accountingEnabled, setAccountingEnabled] = useState(false);
 
   useEffect(() => {
     const sync = () => {
-      const settings = readAdminPosSettings();
-      setRestaurantCafeEnabled(settings.restaurantCafeEnabled);
-      setRoomServicesEnabled(settings.roomServicesEnabled);
-      setProducedGoodsMenuEnabled(settings.producedGoodsMenuEnabled);
+      const features = readShopFeatures();
+      setRestaurantCafeEnabled(features.restaurant_cafe_enabled);
+      setRoomServicesEnabled(features.room_services_enabled);
+      setProducedGoodsMenuEnabled(features.produced_goods_enabled);
+      setAccountingEnabled(features.accounting_enabled);
     };
     sync();
-    window.addEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, sync);
-    const token = tokenCode();
-    if (token) {
-      void FetchWithJwtClient("GET", "/api/shop-services", token).then((res) => {
-        if (res?.hasError) return;
-        const enabled = extractRoomServicesEnabled(res);
-        writeAdminPosSettings({ roomServicesEnabled: enabled });
-        setRoomServicesEnabled(enabled);
-      });
-    }
-    return () => window.removeEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, sync);
+    window.addEventListener(SHOP_FEATURES_CHANGED_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(SHOP_FEATURES_CHANGED_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
   }, []);
   const financialChildren: NavLeaf[] = useMemo(
     () => [
@@ -400,7 +390,7 @@ export default function AdminHamburgerSidebar({
       },
       {
         id: "shop-service-access",
-        label: "دسترسی خدمات",
+        label: "دسترسی فروشگاه",
         href: "/admin/shop-service-access",
         icon: <RoomServiceIcon />,
       },
@@ -517,12 +507,16 @@ export default function AdminHamburgerSidebar({
         icon: <AccountBalanceIcon />,
         children: filterLeaves(financialChildren),
       },
-      {
-        id: "accounting",
-        label: "حسابداری",
-        icon: <CalculateIcon />,
-        children: filterLeaves(accountingChildren),
-      },
+      ...(accountingEnabled
+        ? [
+            {
+              id: "accounting",
+              label: "حسابداری",
+              icon: <CalculateIcon />,
+              children: filterLeaves(accountingChildren),
+            } as NavGroup,
+          ]
+        : []),
       {
         id: "payroll",
         label: "حقوق دستمزد",
@@ -551,7 +545,7 @@ export default function AdminHamburgerSidebar({
       });
     }
     return base;
-  }, [accountingChildren, adminChildren, can, financialChildren, isSuperAdmin, payrollChildren, productChildren, smsChildren]);
+  }, [accountingChildren, accountingEnabled, adminChildren, can, financialChildren, isSuperAdmin, payrollChildren, productChildren, smsChildren]);
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
 

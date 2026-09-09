@@ -13,7 +13,6 @@ import {
 } from "@mui/material";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
-import TableRestaurantIcon from "@mui/icons-material/TableRestaurant";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import LoyaltyIcon from "@mui/icons-material/Loyalty";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
@@ -24,7 +23,6 @@ import PrintIcon from "@mui/icons-material/Print";
 import ScaleIcon from "@mui/icons-material/Scale";
 import CreditCardIcon from "@mui/icons-material/CreditCard";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
-import KitchenIcon from "@mui/icons-material/Kitchen";
 import PersonIcon from "@mui/icons-material/Person";
 import ConfirmationNumberOutlinedIcon from "@mui/icons-material/ConfirmationNumberOutlined";
 import PriceChangeIcon from "@mui/icons-material/PriceChange";
@@ -42,6 +40,7 @@ import {
   readAdminPosSettings,
   writeAdminPosSettings,
 } from "@/app/lib/adminPosSettings";
+import { readShopFeatures } from "@/app/lib/shopFeatures";
 import LoyaltyCreditTiersSettings from "@/app/admin/settings/LoyaltyCreditTiersSettings";
 import ShopBackupSettings from "@/app/admin/settings/ShopBackupSettings";
 import {
@@ -261,7 +260,6 @@ export default function SettingsPage() {
   const [installmentPaymentEnabled, setInstallmentPaymentEnabled] = useState(true);
   const [debtPaymentEnabled, setDebtPaymentEnabled] = useState(false);
   const [chequePaymentEnabled, setChequePaymentEnabled] = useState(false);
-  const [producedGoodsMenuEnabled, setProducedGoodsMenuEnabled] = useState(false);
   const [kgSalesEnabled, setKgSalesEnabled] = useState(false);
   const [salePriceEditEnabled, setSalePriceEditEnabled] = useState(false);
   const [classicPosMode, setClassicPosMode] = useState(false);
@@ -286,13 +284,12 @@ export default function SettingsPage() {
     setInstallmentPaymentEnabled(settings.installmentPaymentEnabled);
     setDebtPaymentEnabled(settings.debtPaymentEnabled);
     setChequePaymentEnabled(settings.chequePaymentEnabled);
-    setProducedGoodsMenuEnabled(settings.producedGoodsMenuEnabled);
     setKgSalesEnabled(settings.kgSalesEnabled);
     setSalePriceEditEnabled(settings.salePriceEditEnabled);
     setClassicPosMode(settings.classicPosMode);
     setAskCustomerName(settings.askCustomerName);
     setShowDailyTicketNumber(Boolean(settings.showDailyTicketNumber));
-    setRestaurantCafeEnabled(settings.restaurantCafeEnabled);
+    setRestaurantCafeEnabled(readShopFeatures().restaurant_cafe_enabled);
     setMenuTableOrdersPopupEnabled(settings.menuTableOrdersPopupEnabled);
     const printSettings = readSaleReceiptPrintSettings();
     setReceiptPrintSettings(printSettings);
@@ -357,17 +354,6 @@ export default function SettingsPage() {
     );
   };
 
-  const handleToggleRestaurantCafe = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const enabled = event.target.checked;
-    setRestaurantCafeEnabled(enabled);
-    writeAdminPosSettings({ restaurantCafeEnabled: enabled });
-    toast.success(
-      enabled
-        ? "حالت رستوران و کافه فعال شد — میز و سفارش حضوری در منو دیده می‌شود"
-        : "حالت رستوران و کافه غیرفعال شد",
-    );
-  };
-
   const handleToggleMenuTableOrdersPopup = (event: React.ChangeEvent<HTMLInputElement>) => {
     const enabled = event.target.checked;
     setMenuTableOrdersPopupEnabled(enabled);
@@ -420,17 +406,6 @@ export default function SettingsPage() {
       enabled
         ? "گزینه فروش چکی در صفحه فروش فعال شد"
         : "گزینه فروش چکی از صفحه فروش پنهان شد",
-    );
-  };
-
-  const handleToggleProducedGoodsMenu = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const enabled = event.target.checked;
-    setProducedGoodsMenuEnabled(enabled);
-    writeAdminPosSettings({ producedGoodsMenuEnabled: enabled });
-    toast.success(
-      enabled
-        ? "«کالاهای تولیدی» در منوی مدیریت کالا نمایش داده می‌شود"
-        : "«کالاهای تولیدی» از منوی مدیریت کالا پنهان شد",
     );
   };
 
@@ -715,28 +690,20 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      {restaurantCafeEnabled ? (
       <Card sx={settingsCardSx}>
         <CardContent sx={{ py: 0.5, px: 1.25, "&:last-child": { pb: 0.5 } }}>
-          <SettingsToggleRow
-            icon={<TableRestaurantIcon sx={{ fontSize: 18 }} />}
-            title="سفارش حضوری"
-            hint="میز و سفارش حضوری در منو"
-            checked={restaurantCafeEnabled}
-            onChange={handleToggleRestaurantCafe}
-            last={!restaurantCafeEnabled}
-          />
-          {restaurantCafeEnabled ? (
             <SettingsToggleRow
               icon={<NotificationsActiveIcon sx={{ fontSize: 18 }} />}
               title="پاپ‌آپ سفارش حضوری"
               hint="در حالت منو وقتی سفارش جدید رسید"
               checked={menuTableOrdersPopupEnabled}
               onChange={handleToggleMenuTableOrdersPopup}
+              last
             />
-          ) : null}
-          
         </CardContent>
       </Card>
+      ) : null}
 
       <Card sx={settingsCardSx}>
         <CardContent sx={{ py: 0.5, px: 1.25, "&:last-child": { pb: 0.5 } }}>
@@ -790,13 +757,6 @@ export default function SettingsPage() {
             hint="پرداخت با چک دریافتی"
             checked={chequePaymentEnabled}
             onChange={handleToggleChequePayment}
-          />
-          <SettingsToggleRow
-            icon={<KitchenIcon sx={{ fontSize: 18 }} />}
-            title="کالای تولیدی"
-            hint="در منوی مدیریت کالا"
-            checked={producedGoodsMenuEnabled}
-            onChange={handleToggleProducedGoodsMenu}
           />
           <SettingsToggleRow
             icon={<ScaleIcon sx={{ fontSize: 18 }} />}

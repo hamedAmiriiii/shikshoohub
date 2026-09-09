@@ -18,6 +18,7 @@ import {
   getFirstAllowedAdminPath,
   mergeUserWithShopPermissions,
 } from "@/app/lib/shopPermissions";
+import { mergeUserWithShopFeatures } from "@/app/lib/shopFeatures";
 import { isOilProjectLoginMessage } from "@/app/lib/oilProjectLogin";
 
 type View = "login" | "forgot-phone" | "forgot-reset";
@@ -313,8 +314,11 @@ export default function ShikshooLoginPage() {
           if (res.user && res.token) {
             localStorage.setItem("token", res.token);
             const payload = res as Record<string, unknown>;
-            const user = mergeUserWithShopPermissions(
-              mergeUserWithShopAccess(res.user as Record<string, unknown>, payload),
+            const user = mergeUserWithShopFeatures(
+              mergeUserWithShopPermissions(
+                mergeUserWithShopAccess(res.user as Record<string, unknown>, payload),
+                payload,
+              ),
               payload,
             );
             localStorage.setItem("user", JSON.stringify(user));
@@ -341,8 +345,11 @@ export default function ShikshooLoginPage() {
       if (res.user && res.token) {
         localStorage.setItem("token", res.token);
         const payload = res as Record<string, unknown>;
-        const user = mergeUserWithShopPermissions(
-          mergeUserWithShopAccess(res.user as Record<string, unknown>, payload),
+        const user = mergeUserWithShopFeatures(
+          mergeUserWithShopPermissions(
+            mergeUserWithShopAccess(res.user as Record<string, unknown>, payload),
+            payload,
+          ),
           payload,
         );
         localStorage.setItem("user", JSON.stringify(user));
