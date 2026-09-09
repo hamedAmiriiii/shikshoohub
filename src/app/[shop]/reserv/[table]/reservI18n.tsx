@@ -554,11 +554,6 @@ export function ReservI18nProvider({ children }: { children: ReactNode }) {
     setLocaleState(readStoredLocale());
   }, []);
 
-  useEffect(() => {
-    document.documentElement.lang = locale;
-    document.documentElement.dir = locale === "en" ? "ltr" : "rtl";
-  }, [locale]);
-
   const setLocale = useCallback((next: ReservLocale) => {
     setLocaleState(next);
     try {

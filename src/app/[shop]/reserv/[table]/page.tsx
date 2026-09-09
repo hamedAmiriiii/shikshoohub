@@ -581,7 +581,7 @@ function TableReservPageBody() {
         label: `${shopPlaceNoun(placeKind)} ${tableNumber}`,
       });
     }
-  }, [placeKind, shop, shopApi, shopCode, tableNumber, t, validTable]);
+  }, [placeKind, shop, shopApi, shopCode, tableNumber, validTable]);
 
   const loadProducts = useCallback(
     async (pageNum: number, isInitial: boolean) => {
@@ -640,8 +640,8 @@ function TableReservPageBody() {
   }, [shopApi, shopCode]);
 
   useEffect(() => {
-    loadTable();
-  }, [loadTable]);
+    void loadTable();
+  }, [placeKind, shop, shopCode, tableNumber, validTable]);
 
   useEffect(() => {
     if (tableInfo?.allowMenu === false) {
@@ -650,12 +650,12 @@ function TableReservPageBody() {
       setCatalogMode("services");
       return;
     }
-    loadProducts(1, true);
-  }, [loadProducts, tableInfo?.allowMenu]);
+    void loadProducts(1, true);
+  }, [shopCode, tableInfo?.allowMenu]);
 
   useEffect(() => {
-    loadServices();
-  }, [loadServices]);
+    void loadServices();
+  }, [shopCode]);
 
   useEffect(() => {
     if (!shopCode) return;
@@ -679,7 +679,7 @@ function TableReservPageBody() {
     return () => {
       cancelled = true;
     };
-  }, [shopApi, shopCode]);
+  }, [shopCode]);
 
   const categoryImageById = useMemo(() => {
     const map = new Map<string, string>();
@@ -877,8 +877,9 @@ function TableReservPageBody() {
   }, [normalizedPhone, phoneReady, placeKind, servicesEnabled, shopApi, shopCode, tableNumber, validTable]);
 
   useEffect(() => {
+    if (!shopCode || !validTable || !servicesEnabled) return;
     void loadServiceRequests();
-  }, [loadServiceRequests]);
+  }, [normalizedPhone, phoneReady, placeKind, servicesEnabled, shopCode, tableNumber, validTable]);
 
   const requestService = async (service: ShopService) => {
     if (!shopCode || !validTable) return;

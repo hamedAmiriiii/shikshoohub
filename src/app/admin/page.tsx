@@ -90,6 +90,7 @@ import {
   readSaleReceiptPrintSettings,
 } from '@/app/lib/saleReceiptPrint';
 import { dailyTicketFromRecord, formatDailyTicketNumber } from '@/app/lib/dailyTicketNumber';
+import dynamic from "next/dynamic";
 import {
   buildAvailableChequesForSaleUrl,
   extractChequeList,
@@ -98,7 +99,10 @@ import {
   parseAmount,
   type Cheque,
 } from '@/app/lib/cheques';
-import ChequeFormSheet from '@/app/admin/cheques/ChequeFormSheet';
+
+const ChequeFormSheet = dynamic(() => import('@/app/admin/cheques/ChequeFormSheet'), {
+  ssr: false,
+});
 import {
   canReplacePurchase,
   purchasedLineToCartItem,
@@ -4283,6 +4287,7 @@ export default function ShoppingPage() {
         </Box>
       </Modal>
 
+      {chequeCreateOpen ? (
       <ChequeFormSheet
         open={chequeCreateOpen}
         onClose={() => setChequeCreateOpen(false)}
@@ -4305,6 +4310,7 @@ export default function ShoppingPage() {
           void loadAvailableCheques();
         }}
       />
+      ) : null}
 
       <Dialog
         open={networkWarningOpen}
