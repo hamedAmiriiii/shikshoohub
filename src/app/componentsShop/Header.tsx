@@ -1,11 +1,27 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { Badge, Box, Typography, IconButton, Container, Button, Drawer, useMediaQuery } from "@mui/material";
+import {
+  Badge,
+  Box,
+  Typography,
+  IconButton,
+  Container,
+  Button,
+  Drawer,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  useMediaQuery,
+} from "@mui/material";
 import { useTableOrdersPending } from "@/app/admin/table-orders/TableOrdersPendingProvider";
 import MenuIcon from "@mui/icons-material/Menu";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import PersonIcon from "@mui/icons-material/Person";
 import LogoutIcon from "@mui/icons-material/Logout";
+import LockResetIcon from "@mui/icons-material/LockReset";
+import AdminChangePasswordDialog from "@/app/admin/components/AdminChangePasswordDialog";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
@@ -60,6 +76,8 @@ export default function Header({
   const pathname = usePathname();
   const { mode, setMode } = useAdminTheme();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [profileMenuAnchor, setProfileMenuAnchor] = useState<null | HTMLElement>(null);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const { count: pendingTableOrders } = useTableOrdersPending();
   const [user, setUser] = useState<any>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
@@ -136,10 +154,24 @@ export default function Header({
   };
 
   const handleLogout = () => {
+    setProfileMenuAnchor(null);
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     localStorage.removeItem("shop_access_expired");
     router.push("/admin/login");
+  };
+
+  const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setProfileMenuAnchor(event.currentTarget);
+  };
+
+  const handleProfileMenuClose = () => {
+    setProfileMenuAnchor(null);
+  };
+
+  const handleOpenChangePassword = () => {
+    handleProfileMenuClose();
+    setChangePasswordOpen(true);
   };
 
   const handleMenuOpen = () => {
@@ -531,6 +563,17 @@ export default function Header({
             {user && (
               <>
                 <Box
+                  role="button"
+                  tabIndex={0}
+                  aria-haspopup="menu"
+                  aria-expanded={Boolean(profileMenuAnchor)}
+                  onClick={handleProfileMenuOpen}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleProfileMenuOpen(e as unknown as React.MouseEvent<HTMLElement>);
+                    }
+                  }}
                   sx={{
                     display: "flex",
                     alignItems: "center",
@@ -539,6 +582,13 @@ export default function Header({
                     flex: "1 1 auto",
                     justifyContent: "flex-end",
                     overflow: "hidden",
+                    cursor: "pointer",
+                    borderRadius: "10px",
+                    px: { xs: 0.25, md: 0.5 },
+                    py: 0.25,
+                    "&:hover": {
+                      backgroundColor: "var(--admin-menu-hover, rgba(255,255,255,0.06))",
+                    },
                   }}
                 >
                   <PersonIcon
@@ -546,7 +596,6 @@ export default function Header({
                       fontSize: { xs: "20px", md: "28px" },
                       color: "var(--admin-accent)",
                       flexShrink: 0,
-                      display: { xs: "none", sm: "block" },
                     }}
                   />
                   <Box sx={{ minWidth: 0, maxWidth: { xs: 72, sm: 140, md: 220 }, textAlign: "right" }}>
@@ -585,6 +634,50 @@ export default function Header({
                     )}
                   </Box>
                 </Box>
+                <Menu
+                  anchorEl={profileMenuAnchor}
+                  open={Boolean(profileMenuAnchor)}
+                  onClose={handleProfileMenuClose}
+                  anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+                  transformOrigin={{ vertical: "top", horizontal: "left" }}
+                  slotProps={{
+                    paper: {
+                      sx: {
+                        mt: 0.75,
+                        minWidth: 190,
+                        bgcolor: "var(--admin-surface)",
+                        color: "var(--admin-text)",
+                        border: "1px solid var(--admin-border)",
+                        backgroundImage: "none",
+                        boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+                      },
+                    },
+                  }}
+                >
+                  <MenuItem onClick={handleOpenChangePassword} sx={{ fontSize: 13, gap: 0.5 }}>
+                    <ListItemIcon sx={{ minWidth: 32, color: "var(--admin-accent)" }}>
+                      <LockResetIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText primary="تغییر رمز عبور" />
+                  </MenuItem>
+                  <Divider sx={{ borderColor: "var(--admin-border)" }} />
+                  <MenuItem
+                    onClick={() => {
+                      handleProfileMenuClose();
+                      handleLogout();
+                    }}
+                    sx={{ fontSize: 13, color: "var(--admin-error)" }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 32, color: "var(--admin-error)" }}>
+                      <LogoutIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText primary="خروج" />
+                  </MenuItem>
+                </Menu>
+                <AdminChangePasswordDialog
+                  open={changePasswordOpen}
+                  onClose={() => setChangePasswordOpen(false)}
+                />
                 <IconButton
                   onClick={() => window.dispatchEvent(new Event(WEBINO_CHATBOT_TOGGLE_EVENT))}
                   aria-label="دستیار وبینو"
