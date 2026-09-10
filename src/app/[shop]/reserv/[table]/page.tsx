@@ -744,7 +744,8 @@ function TableReservPageBody() {
         if (!inCategory) return false;
       }
       if (!term) return true;
-      return (product.name || "").toLowerCase().includes(term);
+      const hay = `${product.name || ""} ${product.description || ""}`.toLowerCase();
+      return hay.includes(term);
     });
   }, [products, search, selectedCategory]);
 
@@ -2224,7 +2225,7 @@ function TableReservPageBody() {
               ) : null}
             </Typography>
             {detailProduct.description ? (
-              <Typography sx={{ color: MUTED, fontSize: 14, lineHeight: 1.8, mb: 1.2 }}>
+              <Typography sx={{ color: MUTED, fontSize: 12, lineHeight: 1.7, mb: 1.2, fontFamily: APP_FONT_FAMILY }}>
                 {detailProduct.description}
               </Typography>
             ) : null}

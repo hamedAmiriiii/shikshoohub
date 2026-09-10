@@ -553,10 +553,12 @@ export function ReservProductCard({
         {description ? (
           <Typography
             sx={{
-              mt: 0.35,
+              mt: 0.25,
               color: theme.MUTED,
-              fontSize: 13,
-              lineHeight: 1.5,
+              fontSize: 11,
+              fontWeight: 400,
+              lineHeight: 1.45,
+              fontFamily: APP_FONT_FAMILY,
               display: "-webkit-box",
               WebkitLineClamp: 2,
               WebkitBoxOrient: "vertical",

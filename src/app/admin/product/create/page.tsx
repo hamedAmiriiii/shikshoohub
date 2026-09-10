@@ -101,6 +101,7 @@ export default function Page() {
   const router = useRouter();
   const [phon, setPhon] = useState("");
   const [full_name, setfull_name] = useState("");
+  const [description, setDescription] = useState("");
   const [barcode, setBarcode] = useState("");
   const [quantity, setQuantity] = useState("");
   const [purchase_price, setPurchase_price] = useState("");
@@ -458,6 +459,7 @@ export default function Page() {
     setPurchase_price("");
     setQuantity("");
     setfull_name("");
+    setDescription("");
     setProfitPercentage(String(readStoredProfitPercent()));
     setDiscountPercent("");
     setImages([]);
@@ -520,6 +522,7 @@ export default function Page() {
 
       let data: any = {
         "name": full_name,
+        "description": description.trim() || null,
         "purchase_price": purchase_price,
         "sale_price": sale_price,
         "quantity": qtyNum,
@@ -777,6 +780,34 @@ export default function Page() {
                         </IconButton>
                       </InputAdornment>
                     ),
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <Typography sx={colLabelSx}>توضیحات (اختیاری)</Typography>
+                <TextField
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value.slice(0, 500))}
+                  placeholder="مثلاً مواد، حجم یا توضیح کوتاه منو — در منوی میز نمایش داده می‌شود"
+                  fullWidth
+                  size="small"
+                  multiline
+                  minRows={2}
+                  maxRows={4}
+                  inputProps={{ maxLength: 500 }}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      backgroundColor: "rgba(0,0,0,0.28)",
+                      color: "var(--admin-text)",
+                      borderRadius: "10px",
+                      "& fieldset": { borderColor: "rgba(255,255,255,0.12)" },
+                      "&:hover fieldset": { borderColor: "#e67e22" },
+                      "&.Mui-focused fieldset": { borderColor: "#f4d03f" },
+                    },
+                    "& .MuiInputBase-input": {
+                      color: "var(--admin-text)",
+                      fontSize: "13px",
+                    },
                   }}
                 />
               </Grid>

@@ -24,6 +24,8 @@ type ProductEditSheetProps = {
   onClose: () => void;
   name: string;
   onNameChange: (value: string) => void;
+  description: string;
+  onDescriptionChange: (value: string) => void;
   barcode: string;
   onBarcodeChange: (value: string) => void;
   onOpenBarcodeScanner: () => void;
@@ -52,6 +54,8 @@ export default function ProductEditSheet({
   onClose,
   name,
   onNameChange,
+  description,
+  onDescriptionChange,
   barcode,
   onBarcodeChange,
   onOpenBarcodeScanner,
@@ -128,6 +132,39 @@ export default function ProductEditSheet({
                   fontSize: "13px",
                   color: "var(--admin-text)",
                 },
+              }}
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              value={description}
+              onChange={(e) => onDescriptionChange(e.target.value.slice(0, 500))}
+              placeholder="مثلاً مواد، حجم یا توضیح کوتاه منو"
+              size="small"
+              fullWidth
+              multiline
+              minRows={2}
+              maxRows={4}
+              inputProps={{ maxLength: 500 }}
+              label="توضیحات (اختیاری)"
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  backgroundColor: "var(--admin-surface-alt)",
+                  color: "var(--admin-text)",
+                  borderRadius: "10px",
+                  "& fieldset": { borderColor: "var(--admin-border)" },
+                  "&:hover fieldset": { borderColor: "var(--admin-accent)" },
+                  "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
+                },
+                "& .MuiInputBase-input": {
+                  fontSize: "13px",
+                  color: "var(--admin-text)",
+                },
+                "& .MuiInputLabel-root": {
+                  color: "var(--admin-text-muted)",
+                  fontSize: "13px",
+                },
+                "& .MuiInputLabel-root.Mui-focused": { color: "var(--admin-accent)" },
               }}
             />
           </Grid>

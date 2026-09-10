@@ -10,6 +10,16 @@ import ServiceWorkerRegistration from "./components/ServiceWorkerRegistration";
 import PWAHead from "./components/PWAHead";
 import AppShell from "./AppShell";
 import { LEGACY_BROWSER_BOOTSTRAP } from "./legacyBrowserBootstrap";
+import {
+  APP_ICONS,
+  DEFAULT_DESCRIPTION,
+  DEFAULT_TITLE,
+  NOINDEX_ROBOTS,
+  SITE_NAME,
+  SITE_NAME_EN,
+  SITE_URL,
+  isNoIndexPath,
+} from "./lib/seo";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -29,49 +39,57 @@ export function generateMetadata(): Metadata {
   const isOilPublic =
     pathname === "/oilservice" || pathname.startsWith("/oilservice/");
   const oilChrome = isOil || isOilPublic;
+  const hideFromSearch = isNoIndexPath(pathname);
 
   if (isAdmin) {
     return {
-      title: "Webino",
+      metadataBase: new URL(SITE_URL),
+      title: SITE_NAME_EN,
       description: "سیستم مدیریت فروشگاه",
+      robots: NOINDEX_ROBOTS,
       manifest: "/manifest-admin.json",
-      applicationName: "Webino",
+      applicationName: SITE_NAME_EN,
       appleWebApp: {
         capable: true,
         statusBarStyle: "default",
-        title: "Webino",
+        title: SITE_NAME_EN,
       },
-      icons: {
-        icon: [
-          { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-          { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
-        ],
-        apple: [{ url: "/icon-192.png", sizes: "192x192", type: "image/png" }],
+      icons: APP_ICONS,
+    };
+  }
+
+  if (oilChrome) {
+    return {
+      metadataBase: new URL(SITE_URL),
+      title: isOilPublic ? "سوابق تعویض روغن" : "تعویض روغن",
+      description: isOilPublic
+        ? "مشاهده پلاک، کیلومتر و روغن بدون ورود"
+        : "اپ تعویض روغن وبینو",
+      robots: NOINDEX_ROBOTS,
+      manifest: isOil ? "/manifest-oil.json" : "/manifest.json",
+      applicationName: "تعویض روغن",
+      appleWebApp: {
+        capable: true,
+        statusBarStyle: "black-translucent",
+        title: "تعویض روغن",
       },
+      icons: APP_ICONS,
     };
   }
 
   return {
-    title: oilChrome ? (isOilPublic ? "سوابق تعویض روغن" : "تعویض روغن") : "Webino",
-    description: oilChrome
-      ? isOilPublic
-        ? "مشاهده پلاک، کیلومتر و روغن بدون ورود"
-        : "اپ تعویض روغن وبینو"
-      : "سیستم مدیریت فروشگاه",
-    manifest: isOil ? "/manifest-oil.json" : "/manifest.json",
-    applicationName: oilChrome ? "تعویض روغن" : "Webino",
+    metadataBase: new URL(SITE_URL),
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+    applicationName: SITE_NAME,
+    robots: hideFromSearch ? NOINDEX_ROBOTS : undefined,
+    manifest: "/manifest.json",
     appleWebApp: {
       capable: true,
       statusBarStyle: "default",
-      title: oilChrome ? "تعویض روغن" : "وبینو",
+      title: SITE_NAME,
     },
-    icons: {
-      icon: [
-        { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-        { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
-      ],
-      apple: [{ url: "/icon-192.png", sizes: "192x192", type: "image/png" }],
-    },
+    icons: APP_ICONS,
   };
 }
 

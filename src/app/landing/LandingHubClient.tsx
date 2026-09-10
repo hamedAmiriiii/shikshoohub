@@ -21,10 +21,10 @@ import {
 } from "lucide-react";
 import LandingChrome from "./LandingChrome";
 import {
+  LANDING_FAQS,
   LANDING_PRODUCTS,
   REGISTER_URL,
   TRIAL_CTA,
-  TRIAL_SHORT,
   type ProductIconName,
 } from "./catalog";
 
@@ -50,25 +50,6 @@ const STEPS = [
   { n: "۱", title: "ثبت‌نام رایگان", desc: "شماره موبایل و نام کسب‌وکار" },
   { n: "۲", title: "انتخاب محصول", desc: "فروش، تعویض روغن، طلا، نوبت یا فروشگاه" },
   { n: "۳", title: "شروع کار", desc: "پنل آماده است — پشتیبانی همراهتان" },
-];
-
-const FAQS = [
-  {
-    q: "وبینو چند محصول دارد؟",
-    a: "هشت محصول: حسابداری و فروش، تعویض روغن، باشگاه مشتریان، خرید و فروش طلا، نوبت‌دهی، یادینو (کلاس آنلاین)، شبکه اجتماعی و فروشگاه آنلاین.",
-  },
-  {
-    q: "آیا روی موبایل نصب می‌شود؟",
-    a: "بله. نرم‌افزار PWA است و روی اندروید، iOS و ویندوز از مرورگر قابل نصب و اجرا مانند اپلیکیشن است.",
-  },
-  {
-    q: "کدام محصول را انتخاب کنم؟",
-    a: "اگر فروشگاه دارید از حسابداری و فروش شروع کنید. تعویض روغنی، طلافروشی، نوبت‌دهی، آموزش آنلاین و فروش اینترنتی هم صفحه جدا دارند.",
-  },
-  {
-    q: "آیا نسخه آزمایشی رایگان دارد؟",
-    a: `${TRIAL_SHORT} استفاده رایگان به‌همراه ۲۰ پیامک هدیه برای شروع.`,
-  },
 ];
 
 function fadeUp(delay = 0) {
@@ -302,7 +283,7 @@ export default function LandingHubClient() {
         <div className="max-w-2xl mx-auto px-4">
           <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">سوالات متداول</h2>
           <div className="space-y-2">
-            {FAQS.map((item, i) => (
+            {LANDING_FAQS.map((item, i) => (
               <div key={i} className="rounded-xl border border-white/10 bg-white/[0.03] overflow-hidden">
                 <button
                   type="button"

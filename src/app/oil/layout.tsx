@@ -1,11 +1,13 @@
 import { Metadata } from "next";
 import OilApp from "./OilApp";
+import { NOINDEX_ROBOTS } from "../lib/seo";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "تعویض روغن",
   description: "اپ تعویض روغن وبینو",
+  robots: NOINDEX_ROBOTS,
   manifest: "/manifest-oil.json",
   applicationName: "تعویض روغن",
   appleWebApp: {

@@ -53,6 +53,7 @@ export default function ListData() {
     
     // Form states for editing
     const [name, setName] = useState("");
+    const [description, setDescription] = useState("");
     const [barcode, setBarcode] = useState("");
     const [editBarcodeScannerOpen, setEditBarcodeScannerOpen] = useState(false);
     const [editTorchOn, setEditTorchOn] = useState(false);
@@ -685,6 +686,7 @@ export default function ListData() {
         setImages([]);
       }
       setName(product.name || "");
+      setDescription(product.description || "");
       setBarcode(product.barcode || "");
       setPurchase_price(product.purchase_price?.toString() || "");
       setSale_price(product.sale_price?.toString() || "");
@@ -709,6 +711,7 @@ export default function ListData() {
       setEditingProduct(null);
       setImages([]); // پاک کردن عکس‌ها هنگام بستن
       setName("");
+      setDescription("");
       setBarcode("");
       setPurchase_price("");
       setSale_price("");
@@ -765,6 +768,7 @@ export default function ListData() {
 
       const data: any = {
         name: name.trim(),
+        description: description.trim() || null,
         barcode: trimmedBarcode,
         purchase_price: purchasePriceNum.toString(),
         sale_price: salePriceNum.toString(),
@@ -1004,6 +1008,8 @@ export default function ListData() {
           onClose={handleCloseEditBottomSheet}
           name={name}
           onNameChange={setName}
+          description={description}
+          onDescriptionChange={setDescription}
           barcode={barcode}
           onBarcodeChange={setBarcode}
           onOpenBarcodeScanner={() => {

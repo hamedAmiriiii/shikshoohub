@@ -8,6 +8,7 @@ export type CachedProduct = {
   produced_good_id?: number | string | null;
   product_id?: number | string | null;
   name?: string;
+  description?: string | null;
   barcode?: string;
   sale_price?: number | string;
   purchase_price?: number | string;

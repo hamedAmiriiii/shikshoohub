@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import "../oil/oil.css";
+import { NOINDEX_ROBOTS } from "../lib/seo";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "سوابق تعویض روغن",
   description: "مشاهده پلاک، کیلومتر و روغن بدون ورود",
-  robots: { index: false, follow: false },
+  robots: NOINDEX_ROBOTS,
 };
 
 export default function OilServiceLayout({
