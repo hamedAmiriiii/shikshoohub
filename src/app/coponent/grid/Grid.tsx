@@ -171,9 +171,15 @@ interface SearchBoxItem {
   nextConditionOperator: "OR" | "AND";
 }
 
+export type DesktopRowContext = {
+  index: number;
+  page: number;
+  perPage: number;
+};
+
 interface DesktopColumn {
   label: string;
-  field: string | ((item: any) => ReactNode);
+  field: string | ((item: any, row?: DesktopRowContext) => ReactNode);
   width?: string | number;
 }
 
@@ -581,9 +587,13 @@ const List: React.FC<Props> = ({
   };
 
   // Helper function to get field value from nested object path or function
-  const getFieldValue = (item: any, field: string | ((item: any) => ReactNode)): ReactNode => {
+  const getFieldValue = (
+    item: any,
+    field: string | ((item: any, row?: DesktopRowContext) => ReactNode),
+    row?: DesktopRowContext,
+  ): ReactNode => {
     if (typeof field === 'function') {
-      return field(item);
+      return field(item, row);
     }
     
     // Handle nested paths like "user.name" or "atelier.name"
@@ -621,7 +631,13 @@ const List: React.FC<Props> = ({
     ? (desktopData?.total || 0)
     : (totalData || 0);
   
-  const totalPages = usePagination && total > 0 ? Math.ceil(total / rows) : 0;
+  const perPage = usePagination
+    ? (desktopData?.per_page || rows)
+    : (datas?.pages?.[0]?.per_page || rows);
+
+  const totalPages = usePagination && total > 0 ? Math.ceil(total / perPage) : 0;
+
+  const rowNumberFor = (page: number, index: number) => (page - 1) * perPage + index + 1;
 
   return (
     <Grid
@@ -721,11 +737,6 @@ const List: React.FC<Props> = ({
                       <Table sx={{ minWidth: compactDesktop ? "100%" : 650, width: "100%", direction: "rtl" }} aria-label="simple table">
                         <TableHead>
                           <TableRow>
-                            {(CartComponent || renderRowActions) && (
-                              <TableCell align="center" sx={actionsHeaderCellSx}>
-                                عملیات
-                              </TableCell>
-                            )}
                             {desktopColumns?.map((column, idx) => (
                               <TableCell 
                                 key={idx} 
@@ -743,6 +754,11 @@ const List: React.FC<Props> = ({
                                 {column.label}
                               </TableCell>
                             ))}
+                            {(CartComponent || renderRowActions) && (
+                              <TableCell align="center" sx={actionsHeaderCellSx}>
+                                عملیات
+                              </TableCell>
+                            )}
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -762,6 +778,25 @@ const List: React.FC<Props> = ({
                                 '&:last-child td, &:last-child th': { border: 0 } 
                               }}
                             >
+                              {desktopColumns?.map((column, colIdx) => (
+                                <TableCell 
+                                  key={colIdx} 
+                                  align="right"
+                                  sx={{
+                                    color: "var(--admin-text)",
+                                    fontSize: compactDesktop ? 11 : 16,
+                                    padding: compactCellPad,
+                                    whiteSpace: compactDesktop ? "nowrap" : undefined,
+                                    ...columnWidthSx(column, colIdx),
+                                  }}
+                                >
+                                  {getFieldValue(item, column.field, {
+                                    index,
+                                    page: desktopPage,
+                                    perPage,
+                                  })}
+                                </TableCell>
+                              ))}
                               {(CartComponent || renderRowActions) && (
                                 <TableCell
                                   align="center"
@@ -787,21 +822,6 @@ const List: React.FC<Props> = ({
                                   )}
                                 </TableCell>
                               )}
-                              {desktopColumns?.map((column, colIdx) => (
-                                <TableCell 
-                                  key={colIdx} 
-                                  align="right"
-                                  sx={{
-                                    color: "var(--admin-text)",
-                                    fontSize: compactDesktop ? 11 : 16,
-                                    padding: compactCellPad,
-                                    whiteSpace: compactDesktop ? "nowrap" : undefined,
-                                    ...columnWidthSx(column, colIdx),
-                                  }}
-                                >
-                                  {getFieldValue(item, column.field)}
-                                </TableCell>
-                              ))}
                             </TableRow>
                           ))}
                         </TableBody>
@@ -836,6 +856,7 @@ const List: React.FC<Props> = ({
                         <CartComponent
                           onCheck={(id, checked) => onCheck?.(id, checked)}
                           data={data}
+                          rowNumber={rowNumberFor(desktopPage, index)}
                           refreshGrid={() => refetch()}
                           onEdit={onEditItem}
                         />
@@ -874,6 +895,7 @@ const List: React.FC<Props> = ({
                             <CartComponent
                               onCheck={(id, checked) => onCheck?.(id, checked)}
                               data={data}
+                              rowNumber={rowNumberFor(pageIndex + 1, index)}
                               refreshGrid={() => refetch()}
                               onEdit={onEditItem}
                             />

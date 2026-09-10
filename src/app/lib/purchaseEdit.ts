@@ -1,4 +1,37 @@
+import type { SettlementMode } from "@/app/admin/multiCartState";
+import { formatAmountInput } from "@/app/lib/amountInput";
 import { catalogItemKey, isProducedGoodItem, isRawMaterialItem } from "@/app/lib/catalogItems";
+import type { PaymentType } from "@/app/lib/paymentTypes";
+
+const PURCHASE_EDIT_STASH_KEY = "webinoo_purchase_edit_stash";
+const PURCHASE_EDIT_STASH_MAX_AGE_MS = 30 * 60 * 1000;
+
+function moneyField(n: number): string {
+  return formatAmountInput(String(Math.max(0, Math.floor(n || 0))));
+}
+
+export type PurchaseEditApplyState = {
+  cart: any[];
+  total: number;
+  phone: string;
+  discounttype: number;
+  discountDisplay: string;
+  paymentType: PaymentType;
+  installmentCount: number;
+  useCreditAmount: number;
+  selectedChequeId: number | null;
+  settlementMode: SettlementMode;
+  cardAmountInput: string;
+  cashAmountInput: string;
+  editingPurchaseId: number;
+  editStockBonus: Record<string, number>;
+  editHasReturns: boolean;
+  editReuseCredit: boolean;
+};
+
+export type PurchaseEditPayload =
+  | { ok: true; state: PurchaseEditApplyState }
+  | { ok: false; reason: string };
 
 export function canReplacePurchase(purchase: any): { ok: boolean; reason: string } {
   if (!purchase?.id) {
@@ -111,6 +144,86 @@ export function purchaseEditStockBonus(lines: any[]): Record<string, number> {
 
 export function purchaseEditHref(purchaseId: number | string): string {
   return `/admin?editPurchase=${purchaseId}`;
+}
+
+export function stashPurchaseForEdit(purchase: any): void {
+  if (typeof window === "undefined" || purchase?.id == null) return;
+  try {
+    sessionStorage.setItem(
+      PURCHASE_EDIT_STASH_KEY,
+      JSON.stringify({
+        id: Number(purchase.id),
+        savedAt: Date.now(),
+        purchase,
+      }),
+    );
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
+export function consumeStashedPurchaseForEdit(id: number | string): any | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(PURCHASE_EDIT_STASH_KEY);
+    if (!raw) return null;
+    sessionStorage.removeItem(PURCHASE_EDIT_STASH_KEY);
+    const parsed = JSON.parse(raw) as { id: number; savedAt: number; purchase: any };
+    if (Number(parsed.id) !== Number(id)) return null;
+    if (Date.now() - Number(parsed.savedAt) > PURCHASE_EDIT_STASH_MAX_AGE_MS) return null;
+    if (!parsed.purchase || !Array.isArray(parsed.purchase.purchased_products)) return null;
+    return parsed.purchase;
+  } catch {
+    return null;
+  }
+}
+
+export function buildPurchaseEditPayload(purchase: any, catalog: any[] = []): PurchaseEditPayload {
+  const gate = canReplacePurchase(purchase);
+  if (!gate.ok) {
+    return { ok: false, reason: gate.reason };
+  }
+
+  const lines = Array.isArray(purchase.purchased_products) ? purchase.purchased_products : [];
+  const cartItems = lines.map((line: any) => purchasedLineToCartItem(line, catalog));
+  const totalAmt = cartItems.reduce(
+    (sum: number, item: any) => sum + Number(item.sale_price) * Number(item.quantity),
+    0,
+  );
+  const discount = Number(purchase.discount_amount) || 0;
+  const card = Number(purchase.card_amount) || 0;
+  const cash = Number(purchase.cash_amount) || 0;
+
+  return {
+    ok: true,
+    state: {
+      cart: cartItems,
+      total: totalAmt,
+      phone: typeof purchase.phone === "string" ? purchase.phone : "",
+      discounttype: discount,
+      discountDisplay: discount > 0 ? formatAmountInput(String(Math.floor(discount))) : "",
+      paymentType: (purchase.payment_type || "cash") as PaymentType,
+      installmentCount: Number(purchase.installment_count) || 2,
+      useCreditAmount: Number(purchase.credit_used) > 0 ? Number(purchase.credit_used) : 0,
+      selectedChequeId: purchase.cheque_id || purchase.cheque?.id || null,
+      settlementMode: (card > 0 && cash > 0 ? "split" : cash > 0 ? "cash_all" : "card_all") as SettlementMode,
+      cardAmountInput: moneyField(card),
+      cashAmountInput: moneyField(cash),
+      editingPurchaseId: Number(purchase.id),
+      editStockBonus: purchaseEditStockBonus(lines),
+      editHasReturns: purchaseHasReturns(purchase),
+      editReuseCredit: Number(purchase.credit_used) > 0,
+    },
+  };
+}
+
+export function navigateToPurchaseEdit(
+  router: { push: (href: string) => void },
+  purchase: any,
+): void {
+  if (purchase?.id == null) return;
+  stashPurchaseForEdit(purchase);
+  router.push(purchaseEditHref(purchase.id));
 }
 
 export function isProducedOrRaw(item: any): boolean {

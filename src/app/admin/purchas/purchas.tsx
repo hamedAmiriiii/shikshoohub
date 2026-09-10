@@ -46,7 +46,7 @@ import {
   returnFullPurchase,
   returnPurchaseItem,
 } from "@/app/lib/purchaseReturns";
-import { canReplacePurchase, purchaseEditHref } from "@/app/lib/purchaseEdit";
+import { canReplacePurchase, navigateToPurchaseEdit } from "@/app/lib/purchaseEdit";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -545,7 +545,7 @@ export default function purchas(props: any) {
                     size="small"
                     variant="outlined"
                     startIcon={<EditIcon />}
-                    onClick={() => router.push(purchaseEditHref(data.id))}
+                    onClick={() => navigateToPurchaseEdit(router, data)}
                     sx={{ color: "#ef6c00", borderColor: "#ffcc80" }}
                   >
                     ویرایش سفارش
@@ -559,7 +559,7 @@ export default function purchas(props: any) {
                       size="small"
                       variant="outlined"
                       startIcon={<EditIcon />}
-                      onClick={() => router.push(purchaseEditHref(data.id))}
+                      onClick={() => navigateToPurchaseEdit(router, data)}
                       sx={{
                         color: "#ef6c00",
                         borderColor: "#ffcc80",

@@ -55,6 +55,9 @@ export default function TableOrdersPendingProvider({ children }: { children: Rea
 
   const playNewOrderSound = useCallback((label?: string | null) => {
     void announceTableEvent(label || "", "order");
+    if (typeof navigator !== "undefined" && navigator.vibrate) {
+      navigator.vibrate([120, 60, 120, 60, 180]);
+    }
   }, []);
 
   const refresh = useCallback(async () => {

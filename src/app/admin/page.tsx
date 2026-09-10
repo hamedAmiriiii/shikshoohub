@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { Button, Modal, Dialog, DialogTitle, DialogContent, DialogActions, Box, Typography, Table, TableBody, TableContainer, TableHead, TableRow, Paper, IconButton, Input, Card, CardContent, Grid, Container, CircularProgress, TextField, FormControl, FormLabel, RadioGroup, FormControlLabel, Radio, Tooltip, MenuItem, Select, InputLabel } from '@mui/material';
 import SafeBarcodeScanner from "@/app/coponent/SafeBarcodeScanner";
@@ -110,10 +110,8 @@ const ChequeFormSheet = dynamic(() => import('@/app/admin/cheques/ChequeFormShee
   ssr: false,
 });
 import {
-  canReplacePurchase,
-  purchasedLineToCartItem,
-  purchaseEditStockBonus,
-  purchaseHasReturns,
+  buildPurchaseEditPayload,
+  consumeStashedPurchaseForEdit,
 } from '@/app/lib/purchaseEdit';
 
 
@@ -1770,46 +1768,41 @@ export default function ShoppingPage() {
     if (editLoadedRef.current === raw) return;
     let cancelled = false;
     const load = async () => {
-      const token = tokenCode();
-      const res = await FetchWithJwtClient("GET", `/api/purchased-products/${raw}`, token, {});
+      let res = consumeStashedPurchaseForEdit(raw);
+      if (!res) {
+        const token = tokenCode();
+        res = await FetchWithJwtClient("GET", `/api/purchased-products/${raw}`, token, {});
+      }
       if (cancelled) return;
       if (!res || res.hasError) {
         toast.error("فاکتور برای ویرایش بارگذاری نشد");
         return;
       }
-      const gate = canReplacePurchase(res);
-      if (!gate.ok) {
-        toast.error(gate.reason);
+      const payload = buildPurchaseEditPayload(res, items);
+      if (!payload.ok) {
+        toast.error(payload.reason);
         return;
       }
-      const lines = Array.isArray(res.purchased_products) ? res.purchased_products : [];
-      const cartItems = lines.map((line: any) => purchasedLineToCartItem(line, items));
-      const totalAmt = cartItems.reduce(
-        (sum: number, item: any) => sum + Number(item.sale_price) * Number(item.quantity),
-        0,
-      );
-      const discount = Number(res.discount_amount) || 0;
-      const card = Number(res.card_amount) || 0;
-      const cash = Number(res.cash_amount) || 0;
+      const { state } = payload;
       applyCartSlot({
         ...createEmptyCartSlot(),
-        cart: cartItems,
-        total: totalAmt,
-        phone: typeof res.phone === "string" ? res.phone : "",
-        discounttype: discount,
-        discountDisplay: discount > 0 ? formatAmountInput(String(Math.floor(discount))) : "",
-        paymentType: (res.payment_type || "cash") as PaymentType,
-        installmentCount: Number(res.installment_count) || 2,
-        useCreditAmount: Number(res.credit_used) > 0 ? Number(res.credit_used) : 0,
-        selectedChequeId: res.cheque_id || res.cheque?.id || null,
-        settlementMode: card > 0 && cash > 0 ? "split" : cash > 0 ? "cash_all" : "card_all",
-        cardAmountInput: moneyField(card),
-        cashAmountInput: moneyField(cash),
+        cart: state.cart,
+        total: state.total,
+        phone: state.phone,
+        discounttype: state.discounttype,
+        discountDisplay: state.discountDisplay,
+        paymentType: state.paymentType,
+        installmentCount: state.installmentCount,
+        useCreditAmount: state.useCreditAmount,
+        selectedChequeId: state.selectedChequeId,
+        settlementMode: state.settlementMode,
+        cardAmountInput: state.cardAmountInput,
+        cashAmountInput: state.cashAmountInput,
       });
-      setEditingPurchaseId(Number(res.id));
-      setEditStockBonus(purchaseEditStockBonus(lines));
-      setEditHasReturns(purchaseHasReturns(res));
-      setEditReuseCredit(Number(res.credit_used) > 0);
+      setEditingPurchaseId(state.editingPurchaseId);
+      setEditStockBonus(state.editStockBonus);
+      setEditHasReturns(state.editHasReturns);
+      setEditReuseCredit(state.editReuseCredit);
       editLoadedRef.current = raw;
     };
     void load();
@@ -2215,7 +2208,7 @@ export default function ShoppingPage() {
               fontWeight: 600,
             }}
           >
-            ویرایش فاکتور #{editingPurchaseId} — کالا را کم یا زیاد کنید. ثبت، کل این خرید را جایگزین می‌کند
+            ویرایش فاکتور #{editingPurchaseId}
             {editHasReturns ? " و برگشت‌های قبلی این فاکتور هم برگردانده می‌شود." : "."}
           </Box>
         ) : null}

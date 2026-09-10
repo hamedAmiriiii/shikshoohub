@@ -1,11 +1,10 @@
 ﻿"use client";
 
-import { Box, Button, Chip, Typography } from "@mui/material";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import EditIcon from "@mui/icons-material/Edit";
-import { useRouter } from "next/navigation";
+import { Box, Chip, Typography } from "@mui/material";
 import { paymentTypeLabel } from "@/app/lib/paymentTypes";
-import { canReplacePurchase, purchaseEditHref, purchaseHasReturns } from "@/app/lib/purchaseEdit";
+import { purchaseHasReturns } from "@/app/lib/purchaseEdit";
+import { formatPurchaseItemsSummary } from "@/app/lib/purchaseListDisplay";
+import { PurchaseRowActions } from "./PurchaseRowActions";
 import { readAdminPosSettings } from "@/app/lib/adminPosSettings";
 import { dailyTicketFromRecord, formatDailyTicketNumber } from "@/app/lib/dailyTicketNumber";
 
@@ -32,21 +31,21 @@ const formatDate = (dateString: string | null | undefined) => {
   }
 };
 
+const formatRowNumber = (n: number) => new Intl.NumberFormat("fa-IR").format(n);
+
 export default function PurchaseSummaryCard({
   data,
+  rowNumber,
   onOpenDetails,
 }: {
   data: any;
+  rowNumber?: number;
   onOpenDetails: () => void;
 }) {
-  const itemCount = Array.isArray(data?.purchased_products)
-    ? data.purchased_products.length
-    : 0;
+  const itemsSummary = formatPurchaseItemsSummary(data);
   const paymentLabel = data?.payment_type_label || paymentTypeLabel(data?.payment_type || "");
   const isInstallment = data?.payment_type === "installment";
   const isCheque = data?.payment_type === "cheque";
-  const router = useRouter();
-  const editGate = canReplacePurchase(data);
   const hasReturns = purchaseHasReturns(data);
   const showDailyTicket = Boolean(readAdminPosSettings().showDailyTicketNumber);
   const dailyTicket = showDailyTicket ? dailyTicketFromRecord(data) : null;
@@ -59,6 +58,7 @@ export default function PurchaseSummaryCard({
         alignItems: "center",
         gap: 1,
         width: "100%",
+        direction: "rtl",
         backgroundColor: "var(--admin-surface)",
         border: "1px solid var(--admin-border)",
         borderRadius: "12px",
@@ -69,6 +69,20 @@ export default function PurchaseSummaryCard({
         "&:hover": { backgroundColor: "var(--admin-menu-hover)" },
       }}
     >
+      {rowNumber != null ? (
+        <Typography
+          sx={{
+            fontSize: 12,
+            fontWeight: 800,
+            color: "var(--admin-text-muted)",
+            minWidth: 22,
+            textAlign: "center",
+            flexShrink: 0,
+          }}
+        >
+          {formatRowNumber(rowNumber)}
+        </Typography>
+      ) : null}
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 0.25 }}>
           <Typography sx={{ fontSize: 13, fontWeight: 700, color: "var(--admin-text)" }}>
@@ -94,55 +108,15 @@ export default function PurchaseSummaryCard({
           <Typography sx={{ fontSize: 12, fontWeight: 700, color: "var(--admin-accent)" }}>
             {data?.total_amount != null ? `${formatNumber(data.total_amount)} تومان` : "—"}
           </Typography>
-          <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)" }}>
-            {itemCount} کالا · {paymentLabel || "—"}
+          <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)", lineHeight: 1.5 }}>
+            {itemsSummary} · {paymentLabel || "—"}
             {hasReturns ? " · برگشتی دارد" : ""}
           </Typography>
         </Box>
       </Box>
-      <Button
-        size="small"
-        variant="outlined"
-        startIcon={<EditIcon sx={{ fontSize: 16 }} />}
-        disabled={!editGate.ok}
-        title={editGate.ok ? "ویرایش سفارش در سبد" : editGate.reason}
-        onClick={(e) => {
-          e.stopPropagation();
-          if (!editGate.ok) return;
-          router.push(purchaseEditHref(data.id));
-        }}
-        sx={{
-          flexShrink: 0,
-          fontSize: 11,
-          minWidth: 0,
-          px: 1,
-          py: 0.25,
-          color: editGate.ok ? "#ef6c00" : "var(--admin-text-muted)",
-          borderColor: "var(--admin-border)",
-        }}
-      >
-        ویرایش
-      </Button>
-      <Button
-        size="small"
-        variant="outlined"
-        startIcon={<VisibilityIcon sx={{ fontSize: 16 }} />}
-        onClick={(e) => {
-          e.stopPropagation();
-          onOpenDetails();
-        }}
-        sx={{
-          flexShrink: 0,
-          fontSize: 11,
-          minWidth: 0,
-          px: 1,
-          py: 0.25,
-          color: "var(--admin-accent)",
-          borderColor: "var(--admin-border)",
-        }}
-      >
-        جزئیات
-      </Button>
+      <Box onClick={(e) => e.stopPropagation()}>
+        <PurchaseRowActions item={data} onOpenDetails={() => onOpenDetails()} />
+      </Box>
     </Box>
   );
 }
