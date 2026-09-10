@@ -505,20 +505,28 @@ export default function AdminMenuModeView({
                       if (outOfStock) return;
                       onAddProduct(product);
                     }}
-                    sx={{ display: "flex", flexDirection: "column", alignItems: "stretch", height: "100%" }}
+                    sx={{
+                      display: "flex",
+                      flexDirection: showProductImages ? "row" : "column",
+                      alignItems: "stretch",
+                      height: "100%",
+                    }}
                   >
                     {showProductImages ? (
                       <Box
                         sx={{
                           position: "relative",
-                          width: "100%",
+                          width: 52,
                           height: 52,
+                          m: 0.4,
+                          borderRadius: "8px",
                           bgcolor: "var(--admin-surface-alt)",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
                           overflow: "hidden",
                           flexShrink: 0,
+                          alignSelf: "center",
                         }}
                       >
                         {imageUrl ? (
@@ -550,11 +558,11 @@ export default function AdminMenuModeView({
                             <Typography
                               sx={{
                                 color: "var(--admin-on-accent)",
-                                fontSize: "8px",
+                                fontSize: "7px",
                                 fontWeight: 800,
                                 bgcolor: "rgba(80,80,80,0.85)",
-                                px: 0.5,
-                                py: 0.15,
+                                px: 0.4,
+                                py: 0.1,
                                 borderRadius: "4px",
                                 lineHeight: 1.2,
                               }}
@@ -565,7 +573,17 @@ export default function AdminMenuModeView({
                         ) : null}
                       </Box>
                     ) : null}
-                    <CardContent sx={{ p: 0.5, "&:last-child": { pb: 0.5 }, flex: 1 }}>
+                    <CardContent
+                      sx={{
+                        p: 0.5,
+                        "&:last-child": { pb: 0.5 },
+                        flex: 1,
+                        minWidth: 0,
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "center",
+                      }}
+                    >
                       <Typography
                         sx={{
                           color: outOfStock
@@ -576,7 +594,7 @@ export default function AdminMenuModeView({
                           fontWeight: inCart ? 700 : 600,
                           fontSize: "9px",
                           lineHeight: 1.25,
-                          minHeight: "2.5em",
+                          minHeight: showProductImages ? undefined : "2.5em",
                           display: "-webkit-box",
                           WebkitLineClamp: 2,
                           WebkitBoxOrient: "vertical",

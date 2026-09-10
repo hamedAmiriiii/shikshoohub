@@ -3,12 +3,12 @@ import type { Metadata } from "next";
 export const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL ||
   process.env.NEXT_PUBLIC_OIL_PUBLIC_BASE_URL ||
-  "https://webinoplus.ir"
+  "https://webinoo-plus.ir"
 ).replace(/\/$/, "");
 
 export const SITE_NAME = "وبینو";
 export const SITE_NAME_EN = "Webino";
-export const SITE_EMAIL = "info@webinoplus.ir";
+export const SITE_EMAIL = "info@webinoo-plus.ir";
 export const SITE_PHONE = "09399166196";
 export const SITE_PHONE_INTL = "+989399166196";
 export const DEFAULT_OG_IMAGE = "/icon-512.png";
