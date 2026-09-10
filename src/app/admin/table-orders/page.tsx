@@ -46,6 +46,7 @@ import {
   tablePaymentMethodLabel,
   type TableOrder,
 } from "@/app/lib/shopTables";
+import OrderSoundTestButton from "@/app/admin/components/OrderSoundTestButton";
 
 const formatNumber = (n: number) => new Intl.NumberFormat("fa-IR").format(n);
 
@@ -202,7 +203,10 @@ export default function TableOrdersPage() {
 
   return (
     <Box sx={{ ...adminPageSx, p: 2, pb: 12 }}>
-      <Typography sx={{ fontWeight: 800, mb: 1, fontSize: 18 }}>سفارش حضوری</Typography>
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, mb: 1, flexWrap: "wrap" }}>
+        <Typography sx={{ fontWeight: 800, fontSize: 18 }}>سفارش حضوری</Typography>
+        <OrderSoundTestButton variant="outlined" size="small" />
+      </Box>
       {/* <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: 13, mb: 2 }}>
         سفارش‌های QR روی میز تا تأیید پرداخت فاکتور نمی‌شوند. روش انتخاب‌شده مشتری را اینجا می‌بینید.
       </Typography> */}

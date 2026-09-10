@@ -14,7 +14,6 @@ import {
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
-import VolumeUpIcon from "@mui/icons-material/VolumeUp";
 import LoyaltyIcon from "@mui/icons-material/Loyalty";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
@@ -42,7 +41,7 @@ import {
   writeAdminPosSettings,
 } from "@/app/lib/adminPosSettings";
 import { readShopFeatures } from "@/app/lib/shopFeatures";
-import { testTableOrderAnnouncement } from "@/app/lib/speakPersianAnnouncement";
+import OrderSoundTestButton from "@/app/admin/components/OrderSoundTestButton";
 import LoyaltyCreditTiersSettings from "@/app/admin/settings/LoyaltyCreditTiersSettings";
 import ShopBackupSettings from "@/app/admin/settings/ShopBackupSettings";
 import {
@@ -269,7 +268,6 @@ export default function SettingsPage() {
   const [showDailyTicketNumber, setShowDailyTicketNumber] = useState(false);
   const [restaurantCafeEnabled, setRestaurantCafeEnabled] = useState(false);
   const [menuTableOrdersPopupEnabled, setMenuTableOrdersPopupEnabled] = useState(false);
-  const [testingOrderSound, setTestingOrderSound] = useState(false);
   const [receiptPrintSettings, setReceiptPrintSettings] = useState<SaleReceiptPrintSettings>(
     DEFAULT_SALE_RECEIPT_PRINT_SETTINGS,
   );
@@ -366,29 +364,6 @@ export default function SettingsPage() {
         ? "پاپ‌آپ سفارش حضوری در حالت منو فعال شد"
         : "پاپ‌آپ سفارش حضوری در حالت منو غیرفعال شد",
     );
-  };
-
-  const handleTestOrderSound = async () => {
-    setTestingOrderSound(true);
-    try {
-      const result = await testTableOrderAnnouncement();
-      const played = [
-        result.tone ? "زنگ" : null,
-        result.mp3 ? "فایل صوتی" : null,
-        result.speech ? "گفتار" : null,
-      ].filter(Boolean);
-      if (played.length > 0) {
-        toast.success(`پخش شد: ${played.join("، ")} (${result.contextState})`);
-      } else {
-        toast.error(
-          `هیچ صدایی پخش نشد (${result.contextState}). تب مرورگر را فعال کنید و بلندی صدا را چک کنید.`,
-        );
-      }
-    } catch {
-      toast.error("خطا در تست صدای سفارش");
-    } finally {
-      setTestingOrderSound(false);
-    }
   };
 
   const handleToggleKgSales = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -716,6 +691,23 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      <Card sx={settingsCardSx}>
+        <CardContent sx={{ py: 1, px: 1.25, "&:last-child": { pb: 1 } }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 1 }}>
+            <NotificationsActiveIcon sx={{ color: "var(--admin-accent)", fontSize: 20 }} />
+            <Box>
+              <Typography sx={{ color: "var(--admin-text)", fontSize: "13px", fontWeight: 600 }}>
+                صدای اعلان سفارش
+              </Typography>
+              <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "11px" }}>
+                برای تست، دکمه زیر را بزنید
+              </Typography>
+            </Box>
+          </Box>
+          <OrderSoundTestButton fullWidth showHint />
+        </CardContent>
+      </Card>
+
       {restaurantCafeEnabled ? (
       <Card sx={settingsCardSx}>
         <CardContent sx={{ py: 0.5, px: 1.25, "&:last-child": { pb: 0.5 } }}>
@@ -726,41 +718,6 @@ export default function SettingsPage() {
               checked={menuTableOrdersPopupEnabled}
               onChange={handleToggleMenuTableOrdersPopup}
             />
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 0.75,
-                px: 0.5,
-                pb: 1,
-                pt: 0.25,
-                borderTop: "1px solid var(--admin-border)",
-              }}
-            >
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={
-                  testingOrderSound ? (
-                    <CircularProgress size={16} color="inherit" />
-                  ) : (
-                    <VolumeUpIcon sx={{ fontSize: 18 }} />
-                  )
-                }
-                onClick={() => void handleTestOrderSound()}
-                disabled={testingOrderSound}
-                sx={{
-                  alignSelf: "flex-start",
-                  color: "var(--admin-text)",
-                  borderColor: "var(--admin-border)",
-                }}
-              >
-                تست صدای سفارش
-              </Button>
-              <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)", lineHeight: 1.7 }}>
-                زنگ + فایل /reserv/1.mp3 + اعلان «سفارش جدید، میز ۵»
-              </Typography>
-            </Box>
         </CardContent>
       </Card>
       ) : null}
