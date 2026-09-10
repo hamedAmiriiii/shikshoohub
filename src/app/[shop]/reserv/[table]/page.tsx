@@ -40,6 +40,7 @@ import {
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { catalogCartApiLine, catalogItemKey, isProducedGoodItem } from "@/app/lib/catalogItems";
+import { isCatalogItemOutOfStock } from "@/app/lib/productsCache";
 import {
   extractRoomServicesEnabled,
   extractShopServices,
@@ -92,6 +93,7 @@ type Product = {
     image_url?: string | null;
     banner_url?: string | null;
   }>;
+  quantity?: number;
 };
 
 type CartLine = {
@@ -771,6 +773,8 @@ function TableReservPageBody() {
   };
 
   const setQty = (product: Product, quantity: number) => {
+    const currentQty = qtyOf(product);
+    if (isCatalogItemOutOfStock(product) && quantity > currentQty) return;
     const key = catalogItemKey(product);
     persistCart(
       quantity <= 0
@@ -808,6 +812,8 @@ function TableReservPageBody() {
 
   const cartCount = cart.reduce((sum, line) => sum + line.quantity, 0);
   const cartTotal = cart.reduce((sum, line) => sum + line.sale_price * line.quantity, 0);
+  const detailOutOfStock = detailProduct ? isCatalogItemOutOfStock(detailProduct) : false;
+  const detailQty = detailProduct ? qtyOf(detailProduct) : 0;
   const tableLabel = tableInfo?.label || `${shopPlaceNoun(placeKind)} ${tableNumber}`;
   const displayPlaceLabel = translatePlace(tableLabel, placeKind);
   const shopTitle = tableInfo?.shopName || shop?.name || shopCode || t("shop");
@@ -1413,6 +1419,7 @@ function TableReservPageBody() {
             >
               {visibleProducts.map((product, index) => {
                 const qty = qtyOf(product);
+                const outOfStock = isCatalogItemOutOfStock(product);
                 return (
                   <ReservProductCard
                     key={catalogItemKey(product)}
@@ -1421,6 +1428,7 @@ function TableReservPageBody() {
                     price={Number(product.sale_price) || 0}
                     image={productImage(product, categoryImageById)}
                     quantity={qty}
+                    outOfStock={outOfStock}
                     priority={index < 4}
                     theme={theme}
                     onAdd={() => setQty(product, qty + 1)}
@@ -2189,10 +2197,31 @@ function TableReservPageBody() {
                 borderRadius: "16px",
                 bgcolor: SURFACE_ALT,
                 mb: 1.5,
+                opacity: detailOutOfStock ? 0.55 : 1,
+                filter: detailOutOfStock ? "grayscale(0.65)" : "none",
               }}
             />
             <Typography sx={{ fontWeight: 800, fontSize: 20, color: TEXT, mb: 0.6 }}>
               {detailProduct.name}
+              {detailOutOfStock ? (
+                <Box
+                  component="span"
+                  sx={{
+                    ms: 1,
+                    marginInlineStart: 1,
+                    fontSize: 12,
+                    fontWeight: 800,
+                    color: MUTED,
+                    bgcolor: SURFACE_ALT,
+                    px: 1,
+                    py: 0.25,
+                    borderRadius: "8px",
+                    verticalAlign: "middle",
+                  }}
+                >
+                  {t("outOfStock")}
+                </Box>
+              ) : null}
             </Typography>
             {detailProduct.description ? (
               <Typography sx={{ color: MUTED, fontSize: 14, lineHeight: 1.8, mb: 1.2 }}>
@@ -2206,17 +2235,19 @@ function TableReservPageBody() {
               <Box sx={{ display: "flex", alignItems: "center", gap: 0.8 }}>
                 <IconButton
                   aria-label={t("decreaseShort")}
-                  onClick={() => setQty(detailProduct, Math.max(0, qtyOf(detailProduct) - 1))}
+                  disabled={detailQty <= 0}
+                  onClick={() => setQty(detailProduct, Math.max(0, detailQty - 1))}
                   sx={{ width: 31, height: 31, bgcolor: SURFACE_ALT, border: `1px solid ${BORDER}`, color: TEXT }}
                 >
                   <RemoveIcon sx={{ fontSize: 15 }} />
                 </IconButton>
                 <Typography sx={{ minWidth: 22, textAlign: "center", fontWeight: 800, fontSize: 13 }}>
-                  {formatNumber(qtyOf(detailProduct))}
+                  {formatNumber(detailQty)}
                 </Typography>
                 <IconButton
                   aria-label={t("increaseShort")}
-                  onClick={() => setQty(detailProduct, qtyOf(detailProduct) + 1)}
+                  disabled={detailOutOfStock}
+                  onClick={() => setQty(detailProduct, detailQty + 1)}
                   sx={{ width: 31, height: 31, bgcolor: SURFACE_ALT, border: `1px solid ${BORDER}`, color: TEXT }}
                 >
                   <AddIcon sx={{ fontSize: 15 }} />
@@ -2224,8 +2255,9 @@ function TableReservPageBody() {
               </Box>
               <Button
                 variant="contained"
+                disabled={detailOutOfStock && detailQty <= 0}
                 onClick={() => {
-                  if (qtyOf(detailProduct) === 0) setQty(detailProduct, 1);
+                  if (detailQty === 0) setQty(detailProduct, 1);
                   setDetailProduct(null);
                 }}
                 sx={{
@@ -2236,9 +2268,10 @@ function TableReservPageBody() {
                   color: "#1a1712",
                   fontWeight: 800,
                   "&:hover": { bgcolor: ACCENT_DARK, color: "#1a1712" },
+                  "&.Mui-disabled": { bgcolor: SURFACE_ALT, color: MUTED },
                 }}
               >
-                {qtyOf(detailProduct.id) > 0 ? t("confirm") : t("addToCart")}
+                {detailQty > 0 ? t("confirm") : t("addToCart")}
               </Button>
             </Box>
           </Box>

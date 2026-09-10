@@ -432,6 +432,7 @@ type ProductCardProps = {
   price: number;
   image: string;
   quantity: number;
+  outOfStock?: boolean;
   priority?: boolean;
   theme: ReservTheme;
   onAdd: () => void;
@@ -445,6 +446,7 @@ export function ReservProductCard({
   price,
   image,
   quantity,
+  outOfStock = false,
   priority,
   theme,
   onAdd,
@@ -452,6 +454,7 @@ export function ReservProductCard({
   onOpen,
 }: ProductCardProps) {
   const { t, formatNumber: fmt } = useReservI18n();
+  const canIncrease = !outOfStock;
   return (
     <Box
       component="article"
@@ -464,6 +467,8 @@ export function ReservProductCard({
         border: `1px solid ${theme.BORDER}`,
         boxShadow: "0 1px 3px rgba(26,23,18,0.04)",
         minHeight: 108,
+        opacity: outOfStock && quantity <= 0 ? 0.62 : 1,
+        filter: outOfStock && quantity <= 0 ? "grayscale(0.7)" : "none",
       }}
     >
       <Box
@@ -524,6 +529,26 @@ export function ReservProductCard({
           }}
         >
           {name}
+          {outOfStock ? (
+            <Box
+              component="span"
+              sx={{
+                display: "inline-block",
+                ms: 0.75,
+                marginInlineStart: 0.75,
+                fontSize: 11,
+                fontWeight: 800,
+                color: theme.MUTED,
+                bgcolor: theme.SURFACE_ALT,
+                px: 0.75,
+                py: 0.15,
+                borderRadius: "8px",
+                verticalAlign: "middle",
+              }}
+            >
+              {t("outOfStock")}
+            </Box>
+          ) : null}
         </Typography>
         {description ? (
           <Typography
@@ -584,15 +609,17 @@ export function ReservProductCard({
         <IconButton
           aria-label={quantity > 0 ? t("increase", { name }) : t("addItem", { name })}
           onClick={onAdd}
+          disabled={!canIncrease}
           sx={{
             width: 31,
             height: 31,
-            bgcolor: ACCENT,
-            color: "#1a1712",
-            "&:hover": { bgcolor: ACCENT_DARK, color: "#1a1712" },
-            boxShadow: "0 3px 8px rgba(201,162,39,0.28)",
+            bgcolor: canIncrease ? ACCENT : theme.SURFACE_ALT,
+            color: canIncrease ? "#1a1712" : theme.MUTED,
+            border: canIncrease ? "none" : `1px solid ${theme.BORDER}`,
+            "&:hover": canIncrease ? { bgcolor: ACCENT_DARK, color: "#1a1712" } : { bgcolor: theme.SURFACE_ALT },
+            boxShadow: canIncrease ? "0 3px 8px rgba(201,162,39,0.28)" : "none",
             transition: "transform 120ms ease",
-            "&:active": { transform: "scale(0.94)" },
+            "&:active": canIncrease ? { transform: "scale(0.94)" } : undefined,
             ...motionSafe,
           }}
         >
