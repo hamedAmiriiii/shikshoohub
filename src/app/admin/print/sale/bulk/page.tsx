@@ -6,12 +6,12 @@ import { Box, Button, CircularProgress, Typography } from "@mui/material";
 import PrintIcon from "@mui/icons-material/Print";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import {
-  DEFAULT_SALE_RECEIPT_PRINT_SETTINGS,
-  readSaleReceiptPrintSettings,
+  DEFAULT_LIST_RECEIPT_PRINT_SETTINGS,
+  readListReceiptPrintSettings,
   resolvePaperWidthMm,
   type SaleReceiptData,
   type SaleReceiptPrintSettings,
-  writeSaleReceiptPrintSettings,
+  writeListReceiptPrintSettings,
 } from "@/app/lib/saleReceiptPrint";
 import { ReceiptTicketsBlock } from "@/app/admin/print/sale/SaleReceiptTickets";
 import { StationPrinterSettings } from "@/app/admin/print/sale/StationPrinterSettings";
@@ -34,7 +34,7 @@ function BulkSaleReceiptPrintContent() {
     [searchParams],
   );
 
-  const [settings, setSettings] = useState<SaleReceiptPrintSettings>(DEFAULT_SALE_RECEIPT_PRINT_SETTINGS);
+  const [settings, setSettings] = useState<SaleReceiptPrintSettings>(DEFAULT_LIST_RECEIPT_PRINT_SETTINGS);
   const [receipts, setReceipts] = useState<SaleReceiptData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +48,7 @@ function BulkSaleReceiptPrintContent() {
   );
 
   useEffect(() => {
-    setSettings(readSaleReceiptPrintSettings());
+    setSettings(readListReceiptPrintSettings());
   }, []);
 
   useEffect(() => {
@@ -107,7 +107,7 @@ function BulkSaleReceiptPrintContent() {
   }, [loading, error, receipts.length, settings.autoPrint, searchParams, handlePrint]);
 
   const saveSettings = useCallback((partial: Partial<SaleReceiptPrintSettings>) => {
-    setSettings((prev) => writeSaleReceiptPrintSettings({ ...prev, ...partial }));
+    setSettings((prev) => writeListReceiptPrintSettings({ ...prev, ...partial }));
   }, []);
 
   const printStyles = useMemo(
@@ -210,7 +210,7 @@ function BulkSaleReceiptPrintContent() {
             {filterLabel} — {receipts.length} فیش
           </Typography>
           <Typography className="no-print" sx={{ fontSize: 13, color: "var(--admin-text-secondary)", mb: 2 }}>
-            همان قالب فیش سالن / آشپزخانه / بار که در تنظیمات پرینتر تعریف کرده‌اید.
+            فقط فیش سالن — تنظیمات جدا از چاپ لحظه فروش (بدون آشپزخانه/بار).
           </Typography>
 
           {showSettings ? (
@@ -225,7 +225,13 @@ function BulkSaleReceiptPrintContent() {
                 maxWidth: 480,
               }}
             >
-              <StationPrinterSettings compact showReceiptToggles settings={settings} onChange={saveSettings} />
+              <StationPrinterSettings
+                compact
+                showReceiptToggles
+                listMode
+                settings={settings}
+                onChange={saveSettings}
+              />
             </Box>
           ) : null}
 

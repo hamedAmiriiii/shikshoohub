@@ -35,8 +35,8 @@ import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
 import { adminPageSx } from "@/app/admin/theme/adminTheme";
 import { getDebtProductName } from "@/app/lib/purchaseDebts";
 import {
-  openSaleReceiptPrintPage,
-  readSaleReceiptPrintSettings,
+  openListReceiptPrintPage,
+  readListReceiptPrintSettings,
 } from "@/app/lib/saleReceiptPrint";
 import {
   extractTableOrders,
@@ -46,7 +46,6 @@ import {
   tablePaymentMethodLabel,
   type TableOrder,
 } from "@/app/lib/shopTables";
-import OrderSoundTestButton from "@/app/admin/components/OrderSoundTestButton";
 
 const formatNumber = (n: number) => new Intl.NumberFormat("fa-IR").format(n);
 
@@ -138,8 +137,11 @@ export default function TableOrdersPage() {
       toast.error("اقلام این سفارش برای چاپ موجود نیست");
       return;
     }
-    const direct = Boolean(readSaleReceiptPrintSettings().autoPrint);
-    openSaleReceiptPrintPage(direct ? "/admin/print/sale?direct=1" : "/admin/print/sale", receipt);
+    const direct = Boolean(readListReceiptPrintSettings().autoPrint);
+    openListReceiptPrintPage(
+      direct ? "/admin/print/sale?list=1&direct=1" : "/admin/print/sale?list=1",
+      receipt,
+    );
   };
 
   const confirmPay = async () => {
@@ -203,10 +205,7 @@ export default function TableOrdersPage() {
 
   return (
     <Box sx={{ ...adminPageSx, p: 2, pb: 12 }}>
-      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, mb: 1, flexWrap: "wrap" }}>
-        <Typography sx={{ fontWeight: 800, fontSize: 18 }}>سفارش حضوری</Typography>
-        <OrderSoundTestButton variant="outlined" size="small" />
-      </Box>
+      <Typography sx={{ fontWeight: 800, mb: 1, fontSize: 18 }}>سفارش حضوری</Typography>
       {/* <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: 13, mb: 2 }}>
         سفارش‌های QR روی میز تا تأیید پرداخت فاکتور نمی‌شوند. روش انتخاب‌شده مشتری را اینجا می‌بینید.
       </Typography> */}

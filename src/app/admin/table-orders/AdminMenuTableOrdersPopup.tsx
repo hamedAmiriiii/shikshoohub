@@ -32,8 +32,8 @@ import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
 import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
 import { getDebtProductName } from "@/app/lib/purchaseDebts";
 import {
-  openSaleReceiptPrintPage,
-  readSaleReceiptPrintSettings,
+  openListReceiptPrintPage,
+  readListReceiptPrintSettings,
 } from "@/app/lib/saleReceiptPrint";
 import {
   extractTableOrders,
@@ -136,8 +136,11 @@ export default function AdminMenuTableOrdersPopup() {
       toast.error("اقلام این سفارش برای چاپ موجود نیست");
       return;
     }
-    const direct = Boolean(readSaleReceiptPrintSettings().autoPrint);
-    openSaleReceiptPrintPage(direct ? "/admin/print/sale?direct=1" : "/admin/print/sale", receipt);
+    const direct = Boolean(readListReceiptPrintSettings().autoPrint);
+    openListReceiptPrintPage(
+      direct ? "/admin/print/sale?list=1&direct=1" : "/admin/print/sale?list=1",
+      receipt,
+    );
   };
 
   const confirmPay = async () => {

@@ -404,11 +404,14 @@ export function StationPrinterSettings({
   onChange,
   compact = false,
   showReceiptToggles = false,
+  listMode = false,
 }: {
   settings: SaleReceiptPrintSettings;
   onChange: (partial: Partial<SaleReceiptPrintSettings>) => void;
   compact?: boolean;
   showReceiptToggles?: boolean;
+  /** چاپ مجدد از لیست — فقط یک پرینتر (سالن) */
+  listMode?: boolean;
 }) {
   const [printers, setPrinters] = useState<string[]>(() => {
     const current = [settings.hallPrinter, settings.kitchenPrinter, settings.extraPrinter].filter(Boolean);
@@ -424,10 +427,11 @@ export function StationPrinterSettings({
   });
 
   const stations = useMemo(() => {
+    if (listMode) return ["hall"] as ReceiptPrintStation[];
     const list: ReceiptPrintStation[] = ["hall", "kitchen"];
     if (showReceiptToggles || settings.printExtra) list.push("extra");
     return list;
-  }, [settings.printExtra, showReceiptToggles]);
+  }, [listMode, settings.printExtra, showReceiptToggles]);
 
   const refresh = useCallback(async () => {
     setBusy(true);
@@ -469,11 +473,19 @@ export function StationPrinterSettings({
 
   return (
     <Box sx={{ gridColumn: "1 / -1", display: "grid", gap: 1 }}>
+      {listMode ? (
+        <Typography sx={{ fontSize: 12, color: "var(--admin-text-secondary)", lineHeight: 1.7 }}>
+          فقط یک فیش سالن — بدون ارسال به آشپزخانه یا بار
+        </Typography>
+      ) : null}
+
       {showReceiptToggles ? (
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", py: 0.25 }}>
           <Box>
             <Typography sx={{ fontSize: 13, fontWeight: 600 }}>چاپ خودکار</Typography>
-            <Typography sx={{ fontSize: 11, color: "var(--admin-text-secondary)" }}>بعد از فروش</Typography>
+            <Typography sx={{ fontSize: 11, color: "var(--admin-text-secondary)" }}>
+              {listMode ? "باز کردن صفحه چاپ گروهی" : "بعد از فروش"}
+            </Typography>
           </Box>
           <Switch
             size="small"
@@ -506,7 +518,9 @@ export function StationPrinterSettings({
             }}
           >
             <Box sx={{ minWidth: 0, flex: 1 }}>
-              <Typography sx={{ fontSize: 13, fontWeight: 700 }}>{STATION_LABEL[station]}</Typography>
+              <Typography sx={{ fontSize: 13, fontWeight: 700 }}>
+                {listMode ? "پرینتر لیست فروش" : STATION_LABEL[station]}
+              </Typography>
               <Typography sx={{ fontSize: 11, color: "var(--admin-text-secondary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {STATION_HINT[station]} · {paperLabel(layout)}
                 {printer ? ` · ${printer}` : " · بدون پرینتر"}

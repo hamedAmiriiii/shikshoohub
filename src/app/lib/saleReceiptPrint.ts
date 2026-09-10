@@ -2,6 +2,7 @@ import { dailyTicketFromRecord } from "@/app/lib/dailyTicketNumber";
 
 export const SALE_RECEIPT_PRINT_DATA_KEY = "sale_receipt_print_data";
 export const SALE_RECEIPT_PRINT_SETTINGS_KEY = "sale_receipt_print_settings";
+export const LIST_RECEIPT_PRINT_SETTINGS_KEY = "list_receipt_print_settings";
 
 export const RECEIPT_PAPER_PRESETS = [
   { id: "48", widthMm: 48, label: "48 میلی‌متر", hint: "حرارتی خیلی باریک" },
@@ -122,6 +123,29 @@ export const DEFAULT_SALE_RECEIPT_PRINT_SETTINGS: SaleReceiptPrintSettings = {
   qzCertificate: "",
   qzPrivateKey: "",
 };
+
+/** چاپ مجدد از لیست فروش/سفارش — پیش‌فرض فقط سالن، بدون آشپزخانه/بار */
+export const DEFAULT_LIST_RECEIPT_PRINT_SETTINGS: SaleReceiptPrintSettings = {
+  ...DEFAULT_SALE_RECEIPT_PRINT_SETTINGS,
+  printHall: true,
+  printKitchen: false,
+  printExtra: false,
+  autoPrint: false,
+  hallPrinter: "",
+  kitchenPrinter: "",
+  extraPrinter: "",
+};
+
+function inheritQzCredentials(settings: SaleReceiptPrintSettings): SaleReceiptPrintSettings {
+  if (settings.qzCertificate?.trim() && settings.qzPrivateKey?.trim()) return settings;
+  const pos = readSaleReceiptPrintSettings();
+  if (!pos.qzCertificate?.trim() || !pos.qzPrivateKey?.trim()) return settings;
+  return {
+    ...settings,
+    qzCertificate: settings.qzCertificate || pos.qzCertificate,
+    qzPrivateKey: settings.qzPrivateKey || pos.qzPrivateKey,
+  };
+}
 
 function normalizeSaleReceiptPrintSettings(
   raw: Partial<SaleReceiptPrintSettings> & { paperWidthMm?: number },
@@ -321,6 +345,36 @@ export function writeSaleReceiptPrintSettings(
   return merged;
 }
 
+export function readListReceiptPrintSettings(): SaleReceiptPrintSettings {
+  if (typeof window === "undefined") return { ...DEFAULT_LIST_RECEIPT_PRINT_SETTINGS };
+  try {
+    const raw = localStorage.getItem(LIST_RECEIPT_PRINT_SETTINGS_KEY);
+    if (!raw) return inheritQzCredentials({ ...DEFAULT_LIST_RECEIPT_PRINT_SETTINGS });
+    const normalized = normalizeSaleReceiptPrintSettings(JSON.parse(raw));
+    normalized.printKitchen = false;
+    normalized.printExtra = false;
+    normalized.printHall = normalized.printHall !== false;
+    return inheritQzCredentials(normalized);
+  } catch {
+    return inheritQzCredentials({ ...DEFAULT_LIST_RECEIPT_PRINT_SETTINGS });
+  }
+}
+
+export function writeListReceiptPrintSettings(
+  partial: Partial<SaleReceiptPrintSettings>,
+): SaleReceiptPrintSettings {
+  const merged = normalizeSaleReceiptPrintSettings({
+    ...readListReceiptPrintSettings(),
+    ...partial,
+    printKitchen: false,
+    printExtra: false,
+  });
+  if (typeof window !== "undefined") {
+    localStorage.setItem(LIST_RECEIPT_PRINT_SETTINGS_KEY, JSON.stringify(merged));
+  }
+  return merged;
+}
+
 export function resetSaleReceiptPrintSettings(): SaleReceiptPrintSettings {
   if (typeof window !== "undefined") {
     localStorage.setItem(
@@ -374,12 +428,12 @@ export function openSaleReceiptPrintPage(
   void dispatchSaleReceiptPrint(basePath, data);
 }
 
-export async function dispatchSaleReceiptPrint(
-  basePath = "/admin/print/sale",
+async function dispatchReceiptPrintWithSettings(
+  basePath: string,
+  settings: SaleReceiptPrintSettings,
   data?: SaleReceiptData | null,
 ): Promise<"silent" | "dialog"> {
   if (typeof window === "undefined") return "dialog";
-  const settings = readSaleReceiptPrintSettings();
   let receipt = data ?? readSaleReceiptPrintData();
   if (receipt && receipt.dailyTicketNumber == null) {
     const stored = dailyTicketFromRecord(receipt);
@@ -401,6 +455,27 @@ export async function dispatchSaleReceiptPrint(
   }
   window.open(basePath, "_blank", "noopener,noreferrer");
   return "dialog";
+}
+
+export async function dispatchSaleReceiptPrint(
+  basePath = "/admin/print/sale",
+  data?: SaleReceiptData | null,
+): Promise<"silent" | "dialog"> {
+  return dispatchReceiptPrintWithSettings(basePath, readSaleReceiptPrintSettings(), data);
+}
+
+export async function dispatchListReceiptPrint(
+  basePath = "/admin/print/sale?list=1",
+  data?: SaleReceiptData | null,
+): Promise<"silent" | "dialog"> {
+  return dispatchReceiptPrintWithSettings(basePath, readListReceiptPrintSettings(), data);
+}
+
+export function openListReceiptPrintPage(
+  basePath = "/admin/print/sale?list=1",
+  data?: SaleReceiptData | null,
+): void {
+  void dispatchListReceiptPrint(basePath, data);
 }
 
 export function getPaymentTypeLabel(receipt: SaleReceiptData): string {

@@ -41,12 +41,14 @@ import {
   writeAdminPosSettings,
 } from "@/app/lib/adminPosSettings";
 import { readShopFeatures } from "@/app/lib/shopFeatures";
-import OrderSoundTestButton from "@/app/admin/components/OrderSoundTestButton";
 import LoyaltyCreditTiersSettings from "@/app/admin/settings/LoyaltyCreditTiersSettings";
 import ShopBackupSettings from "@/app/admin/settings/ShopBackupSettings";
 import {
+  DEFAULT_LIST_RECEIPT_PRINT_SETTINGS,
   DEFAULT_SALE_RECEIPT_PRINT_SETTINGS,
+  readListReceiptPrintSettings,
   readSaleReceiptPrintSettings,
+  writeListReceiptPrintSettings,
   writeSaleReceiptPrintSettings,
   type SaleReceiptPrintSettings,
 } from "@/app/lib/saleReceiptPrint";
@@ -271,11 +273,15 @@ export default function SettingsPage() {
   const [receiptPrintSettings, setReceiptPrintSettings] = useState<SaleReceiptPrintSettings>(
     DEFAULT_SALE_RECEIPT_PRINT_SETTINGS,
   );
+  const [listReceiptPrintSettings, setListReceiptPrintSettings] = useState<SaleReceiptPrintSettings>(
+    DEFAULT_LIST_RECEIPT_PRINT_SETTINGS,
+  );
   const [shopCardNumber, setShopCardNumber] = useState("");
   const [shopCardHolder, setShopCardHolder] = useState("");
   const [shopBankName, setShopBankName] = useState("");
   const [isSavingShopCard, setIsSavingShopCard] = useState(false);
   const [printerOpen, setPrinterOpen] = useState(false);
+  const [listPrinterOpen, setListPrinterOpen] = useState(false);
 
   useEffect(() => {
     const settings = readAdminPosSettings();
@@ -294,6 +300,7 @@ export default function SettingsPage() {
     setMenuTableOrdersPopupEnabled(settings.menuTableOrdersPopupEnabled);
     const printSettings = readSaleReceiptPrintSettings();
     setReceiptPrintSettings(printSettings);
+    setListReceiptPrintSettings(readListReceiptPrintSettings());
   }, []);
 
   const handleToggleProductListOnMainPage = (
@@ -691,23 +698,6 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card sx={settingsCardSx}>
-        <CardContent sx={{ py: 1, px: 1.25, "&:last-child": { pb: 1 } }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 1 }}>
-            <NotificationsActiveIcon sx={{ color: "var(--admin-accent)", fontSize: 20 }} />
-            <Box>
-              <Typography sx={{ color: "var(--admin-text)", fontSize: "13px", fontWeight: 600 }}>
-                صدای اعلان سفارش
-              </Typography>
-              <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "11px" }}>
-                برای تست، دکمه زیر را بزنید
-              </Typography>
-            </Box>
-          </Box>
-          <OrderSoundTestButton fullWidth showHint />
-        </CardContent>
-      </Card>
-
       {restaurantCafeEnabled ? (
       <Card sx={settingsCardSx}>
         <CardContent sx={{ py: 0.5, px: 1.25, "&:last-child": { pb: 0.5 } }}>
@@ -809,8 +799,8 @@ export default function SettingsPage() {
 
       <SettingsSectionCard
         icon={<PrintIcon sx={{ fontSize: 18 }} />}
-        title="تنظیمات پرینتر"
-        hint="چاپ مستقیم، فیش‌ها، انتخاب پرینتر و اتصال QZ"
+        title="تنظیمات پرینتر فروش"
+        hint="چاپ لحظه فروش — سالن، آشپزخانه، بار"
         action={
           printerOpen ? undefined : (
             <Button size="small" variant="outlined" onClick={() => setPrinterOpen(true)} sx={viewBtnSx}>
@@ -831,6 +821,34 @@ export default function SettingsPage() {
             }}
           />
         </Box>
+        ) : null}
+      </SettingsSectionCard>
+
+      <SettingsSectionCard
+        icon={<PrintIcon sx={{ fontSize: 18 }} />}
+        title="چاپ از لیست فروش/سفارش"
+        hint="چاپ مجدد یک یا چند فیش — فقط پرینتر سالن"
+        action={
+          listPrinterOpen ? undefined : (
+            <Button size="small" variant="outlined" onClick={() => setListPrinterOpen(true)} sx={viewBtnSx}>
+              مشاهده
+            </Button>
+          )
+        }
+      >
+        {listPrinterOpen ? (
+          <Box sx={{ mt: 1 }}>
+            <StationPrinterSettings
+              compact
+              showReceiptToggles
+              listMode
+              settings={listReceiptPrintSettings}
+              onChange={(partial) => {
+                const next = writeListReceiptPrintSettings(partial);
+                setListReceiptPrintSettings(next);
+              }}
+            />
+          </Box>
         ) : null}
       </SettingsSectionCard>
 

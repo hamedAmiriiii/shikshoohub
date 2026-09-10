@@ -37,7 +37,7 @@ import {
   buildPurchasesListApiUrl,
   purchasesFilterLabel,
 } from "@/app/lib/purchaseReceiptPrint";
-import { readSaleReceiptPrintSettings } from "@/app/lib/saleReceiptPrint";
+import { readListReceiptPrintSettings } from "@/app/lib/saleReceiptPrint";
 import {
   formatPurchaseItemsBreakdown,
   formatPurchaseItemsTotal,
@@ -168,7 +168,7 @@ export default function ListPurches() {
     const handlePrintAllReceipts = () => {
         const query = buildPurchasesBulkPrintQuery(filterMode, dateRange);
         if (!query) return;
-        const direct = readSaleReceiptPrintSettings().autoPrint ? "&direct=1" : "";
+        const direct = readListReceiptPrintSettings().autoPrint ? "&direct=1" : "";
         window.open(`/admin/print/sale/bulk?${query}${direct}`, "_blank", "noopener,noreferrer");
     };
 

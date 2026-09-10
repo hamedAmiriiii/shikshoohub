@@ -7,7 +7,7 @@ import PrintIcon from "@mui/icons-material/Print";
 import { useRouter } from "next/navigation";
 import { canReplacePurchase, navigateToPurchaseEdit } from "@/app/lib/purchaseEdit";
 import { purchaseToSaleReceipt } from "@/app/lib/purchaseReceiptPrint";
-import { openSaleReceiptPrintPage, readSaleReceiptPrintSettings } from "@/app/lib/saleReceiptPrint";
+import { openListReceiptPrintPage, readListReceiptPrintSettings } from "@/app/lib/saleReceiptPrint";
 
 const iconBtnSx = {
   width: 28,
@@ -31,9 +31,9 @@ export function PurchaseRowActions({ item, onOpenDetails }: PurchaseRowActionsPr
   const handlePrint = (e: React.MouseEvent) => {
     e.stopPropagation();
     const receipt = purchaseToSaleReceipt(item);
-    const direct = readSaleReceiptPrintSettings().autoPrint;
-    openSaleReceiptPrintPage(
-      direct ? "/admin/print/sale?direct=1" : "/admin/print/sale",
+    const direct = readListReceiptPrintSettings().autoPrint;
+    openListReceiptPrintPage(
+      direct ? "/admin/print/sale?list=1&direct=1" : "/admin/print/sale?list=1",
       receipt,
     );
   };

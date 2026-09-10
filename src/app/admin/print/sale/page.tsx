@@ -9,7 +9,9 @@ import {
   type SaleReceiptData,
   type SaleReceiptPrintSettings,
   readSaleReceiptPrintData,
+  readListReceiptPrintSettings,
   readSaleReceiptPrintSettings,
+  writeListReceiptPrintSettings,
   writeSaleReceiptPrintSettings,
   resolvePaperWidthMm,
   DEFAULT_SALE_RECEIPT_PRINT_SETTINGS,
@@ -30,14 +32,15 @@ function SaleReceiptPrintContent() {
   const [printing, setPrinting] = useState(false);
   const autoPrintedRef = useRef(false);
   const directPrintMode = searchParams.get("direct") === "1";
+  const listPrintMode = searchParams.get("list") === "1";
 
   const paperWidthMm = useMemo(() => resolvePaperWidthMm(settings), [settings]);
   const stations = useMemo(() => getEnabledReceiptPrintStations(settings), [settings]);
 
   useEffect(() => {
-    setSettings(readSaleReceiptPrintSettings());
+    setSettings(listPrintMode ? readListReceiptPrintSettings() : readSaleReceiptPrintSettings());
     setReceipt(readSaleReceiptPrintData());
-  }, []);
+  }, [listPrintMode]);
 
   const handlePrint = useCallback(async () => {
     if (printing || !receipt) return;
@@ -81,9 +84,16 @@ function SaleReceiptPrintContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [directPrintMode, receipt, settings.autoPrint]);
 
-  const saveSettings = useCallback((partial: Partial<SaleReceiptPrintSettings>) => {
-    setSettings((prev) => writeSaleReceiptPrintSettings({ ...prev, ...partial }));
-  }, []);
+  const saveSettings = useCallback(
+    (partial: Partial<SaleReceiptPrintSettings>) => {
+      setSettings((prev) =>
+        listPrintMode
+          ? writeListReceiptPrintSettings({ ...prev, ...partial })
+          : writeSaleReceiptPrintSettings({ ...prev, ...partial }),
+      );
+    },
+    [listPrintMode],
+  );
 
   const printStyles = useMemo(
     () => `
@@ -183,7 +193,13 @@ function SaleReceiptPrintContent() {
                   maxWidth: 480,
                 }}
               >
-                <StationPrinterSettings compact showReceiptToggles settings={settings} onChange={saveSettings} />
+                <StationPrinterSettings
+                  compact
+                  showReceiptToggles
+                  listMode={listPrintMode}
+                  settings={settings}
+                  onChange={saveSettings}
+                />
               </Box>
             )}
 
