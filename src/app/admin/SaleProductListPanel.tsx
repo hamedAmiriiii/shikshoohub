@@ -157,7 +157,7 @@ export default function SaleProductListPanel({
                     <Typography
                       component="span"
                       sx={{
-                        color: "#fff",
+                        color: "var(--admin-on-accent)",
                         bgcolor: "var(--admin-text-muted)",
                         fontSize: "9px",
                         fontWeight: 800,

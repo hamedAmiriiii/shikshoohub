@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import {
@@ -169,8 +169,8 @@ export default function SmsPackageOrderActions({ item, onSuccess, variant = "row
         startIcon={<CancelOutlinedIcon />}
         onClick={() => setRejectOpen(true)}
         sx={{
-          borderColor: "#e57373",
-          color: "#e57373",
+          borderColor: "var(--admin-error-soft)",
+          color: "var(--admin-error-soft)",
           fontSize: variant === "card" ? "12px" : "13px",
         }}
       >

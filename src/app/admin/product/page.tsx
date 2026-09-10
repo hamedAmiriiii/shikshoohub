@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import List from "@/app/coponent/grid/Grid";
 import React, { useState, Suspense, useEffect, useMemo, useRef, useCallback } from "react";
 
@@ -416,10 +416,10 @@ export default function ListData() {
                     {formatNumber(item.sale_price)} تومان
                   </Typography>
                   <Typography sx={{ 
-                    color: "#ff9100", 
+                    color: "var(--admin-warning-strong)", 
                     fontSize: "9px", 
                     fontWeight: "600",
-                    backgroundColor: "rgba(255, 145, 0, 0.1)",
+                    backgroundColor: "var(--admin-warning-bg)",
                     padding: "1px 4px",
                     borderRadius: "4px"
                   }}>
@@ -439,8 +439,8 @@ export default function ListData() {
           const sale = parseFloat(item?.sale_price) || 0;
           if (purchase <= 0 || sale <= 0) return '-';
           const profitPercent = ((sale - purchase) / purchase) * 100;
-          const color = profitPercent < 30 ? "#ff4444" : profitPercent < 40 ? "#ff9100" : "var(--admin-accent)";
-          const bgColor = profitPercent < 30 ? "rgba(255, 68, 68, 0.1)" : profitPercent < 40 ? "rgba(255, 145, 0, 0.1)" : "var(--admin-menu-hover)";
+          const color = profitPercent < 30 ? "var(--admin-error)" : profitPercent < 40 ? "var(--admin-warning-strong)" : "var(--admin-accent)";
+          const bgColor = profitPercent < 30 ? "var(--admin-error-bg)" : profitPercent < 40 ? "var(--admin-warning-bg)" : "var(--admin-menu-hover)";
           return (
             <Typography sx={{ 
               color: color, 
@@ -875,7 +875,7 @@ export default function ListData() {
             <Box
               onClick={() => router.push("/admin/printAll")}
               sx={{
-                backgroundColor: "#ff9100",
+                backgroundColor: "var(--admin-warning-strong)",
                 borderRadius: "12px",
                 border: "1px solid var(--admin-border)",
                 width: "120px",
@@ -976,7 +976,7 @@ export default function ListData() {
                     borderRadius: "8px",
                     fontSize: "11px",
                     height: "32px",
-                    "& .MuiOutlinedInput-notchedOutline": { borderColor: "#505669" },
+                    "& .MuiOutlinedInput-notchedOutline": { borderColor: "var(--admin-border)" },
                     "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "var(--admin-accent)" },
                     "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "var(--admin-accent)" },
                     "& .MuiSvgIcon-root": { color: "var(--admin-text)" },
@@ -1130,7 +1130,7 @@ export default function ListData() {
               variant="contained"
               fullWidth
               sx={{
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                background: "var(--admin-title-gradient)",
                 fontWeight: 600,
                 borderRadius: "10px",
               }}
@@ -1161,7 +1161,7 @@ export default function ListData() {
             display: "flex", 
             justifyContent: "space-between", 
             alignItems: "center",
-            borderBottom: "1px solid #505669",
+            borderBottom: "1px solid var(--admin-border)",
             paddingBottom: "16px"
           }}>
             <Typography sx={{ fontSize: "18px", fontWeight: "600" }}>
@@ -1201,12 +1201,12 @@ export default function ListData() {
                         borderRadius: "12px",
                         fontWeight: "600",
                         fontSize: "15px",
-                        backgroundColor: isSelected ? "#ff9100" : "transparent",
+                        backgroundColor: isSelected ? "var(--admin-warning-strong)" : "transparent",
                         color: isSelected ? "#fff" : "var(--admin-text-secondary)",
-                        borderColor: isSelected ? "#ff9100" : "#4b5563",
+                        borderColor: isSelected ? "var(--admin-warning-strong)" : "var(--admin-border)",
                         "&:hover": {
-                          backgroundColor: isSelected ? "#e68000" : "#1f2937",
-                          borderColor: isSelected ? "#e68000" : "#6b7280",
+                          backgroundColor: isSelected ? "#e68000" : "var(--admin-surface-alt)",
+                          borderColor: isSelected ? "#e68000" : "var(--admin-text-muted)",
                           color: "var(--admin-text)",
                         },
                       }}
@@ -1292,13 +1292,13 @@ export default function ListData() {
                           backgroundColor: "var(--admin-surface-alt)",
                           color: "var(--admin-text)",
                           "& fieldset": {
-                            borderColor: "#505669",
+                            borderColor: "var(--admin-border)",
                           },
                           "&:hover fieldset": {
-                            borderColor: "#9c27b0",
+                            borderColor: "var(--admin-action-purple)",
                           },
                           "&.Mui-focused fieldset": {
-                            borderColor: "#9c27b0",
+                            borderColor: "var(--admin-action-purple)",
                           },
                         },
                         "& .MuiInputBase-input": {
@@ -1327,10 +1327,10 @@ export default function ListData() {
                   }}
                   disabled={!newColorInput.trim() || colors.includes(newColorInput.trim())}
                   sx={{
-                    backgroundColor: "#9c27b0",
+                    backgroundColor: "var(--admin-action-purple)",
                     color: "var(--admin-text)",
-                    "&:hover": { backgroundColor: "#7b1fa2" },
-                    "&:disabled": { backgroundColor: "#4b5563", color: "#6b7280" }
+                    "&:hover": { backgroundColor: "var(--admin-action-purple-hover)" },
+                    "&:disabled": { backgroundColor: "var(--admin-border)", color: "var(--admin-text-muted)" }
                   }}
                 >
                   <AddIcon />
@@ -1346,13 +1346,13 @@ export default function ListData() {
                       label={color}
                       onDelete={() => setColors(colors.filter((_, i) => i !== index))}
                       sx={{
-                        backgroundColor: "#1f2937",
+                        backgroundColor: "var(--admin-surface-alt)",
                         color: "var(--admin-text)",
                         border: "1px solid #4b5563",
                         fontSize: "14px",
                         fontWeight: "500",
                         "& .MuiChip-deleteIcon": {
-                          color: "#9ca3af",
+                          color: "var(--admin-text-secondary)",
                           "&:hover": {
                             color: "#ef4444",
                           },
@@ -1365,11 +1365,11 @@ export default function ListData() {
             </Box>
           </DialogContent>
 
-          <DialogActions sx={{ padding: "16px 24px", borderTop: "1px solid #505669", gap: "8px" }}>
+          <DialogActions sx={{ padding: "16px 24px", borderTop: "1px solid var(--admin-border)", gap: "8px" }}>
             <Button
               onClick={() => setSizeColorModalOpen(false)}
               sx={{
-                color: "#9ca3af",
+                color: "var(--admin-text-secondary)",
                 "&:hover": { backgroundColor: "rgba(156, 163, 175, 0.1)" }
               }}
             >
@@ -1428,9 +1428,9 @@ export default function ListData() {
               }}
               variant="contained"
               sx={{
-                backgroundColor: "#9c27b0",
+                backgroundColor: "var(--admin-action-purple)",
                 color: "var(--admin-text)",
-                "&:hover": { backgroundColor: "#7b1fa2" }
+                "&:hover": { backgroundColor: "var(--admin-action-purple-hover)" }
               }}
             >
               ذخیره
@@ -1457,7 +1457,7 @@ export default function ListData() {
             display: "flex", 
             justifyContent: "space-between", 
             alignItems: "center",
-            borderBottom: "1px solid #505669",
+            borderBottom: "1px solid var(--admin-border)",
             paddingBottom: "16px"
           }}>
             <Typography sx={{ fontSize: "18px", fontWeight: "600" }}>
@@ -1481,13 +1481,13 @@ export default function ListData() {
                 sx={{
                   color: 'var(--admin-text)',
                   '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: '#505669',
+                    borderColor: 'var(--admin-border)',
                   },
                   '&:hover .MuiOutlinedInput-notchedOutline': {
-                    borderColor: '#2196f3',
+                    borderColor: 'var(--admin-online)',
                   },
                   '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                    borderColor: '#2196f3',
+                    borderColor: 'var(--admin-online)',
                   },
                   '& .MuiSvgIcon-root': {
                     color: 'var(--admin-text)',
@@ -1506,11 +1506,11 @@ export default function ListData() {
             </FormControl>
           </DialogContent>
 
-          <DialogActions sx={{ padding: "16px 24px", borderTop: "1px solid #505669", gap: "8px" }}>
+          <DialogActions sx={{ padding: "16px 24px", borderTop: "1px solid var(--admin-border)", gap: "8px" }}>
             <Button
               onClick={() => setManufacturerModalOpen(false)}
               sx={{
-                color: "#9ca3af",
+                color: "var(--admin-text-secondary)",
                 "&:hover": { backgroundColor: "rgba(156, 163, 175, 0.1)" }
               }}
             >
@@ -1520,8 +1520,8 @@ export default function ListData() {
               onClick={handleSaveManufacturer}
               variant="contained"
               sx={{
-                backgroundColor: "#2196f3",
-                "&:hover": { backgroundColor: "#1976d2" }
+                backgroundColor: "var(--admin-online)",
+                "&:hover": { backgroundColor: "var(--admin-primary-blue)" }
               }}
             >
               ذخیره
@@ -1593,9 +1593,9 @@ export default function ListData() {
               disabled={deletingProduct}
               startIcon={deletingProduct ? <CircularProgress size={18} color="inherit" /> : undefined}
               sx={{
-                backgroundColor: "#ff4444",
+                backgroundColor: "var(--admin-error)",
                 minWidth: 100,
-                "&:hover": { backgroundColor: "#cc0000" },
+                "&:hover": { backgroundColor: "var(--admin-error-hover)" },
               }}
             >
               {deletingProduct ? "در حال حذف..." : "حذف"}

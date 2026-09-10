@@ -256,7 +256,7 @@ export default function LoyaltyCreditTiersSettings({
   };
 
   const headCellSx = {
-    color: "#fff",
+    color: "var(--admin-on-accent)",
     fontWeight: 700,
     fontSize: "12px",
     py: 0.85,
@@ -477,7 +477,7 @@ export default function LoyaltyCreditTiersSettings({
                     py: 0.65,
                     px: 1.5,
                     bgcolor: "var(--admin-accent)",
-                    color: "#fff",
+                    color: "var(--admin-on-accent)",
                     boxShadow: "none",
                     "&:hover": { bgcolor: "var(--admin-accent-hover)", boxShadow: "none" },
                   }}
@@ -498,7 +498,7 @@ export default function LoyaltyCreditTiersSettings({
                     py: 0.65,
                     px: 1.5,
                     bgcolor: "#2e7d32",
-                    color: "#fff",
+                    color: "var(--admin-on-accent)",
                     boxShadow: "none",
                     "&:hover": { bgcolor: "#1b5e20", boxShadow: "none" },
                     "&.Mui-disabled": {

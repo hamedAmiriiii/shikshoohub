@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { Button, Modal, Dialog, DialogTitle, DialogContent, DialogActions, Box, Typography, Table, TableBody, TableContainer, TableHead, TableRow, Paper, IconButton, Input, Card, CardContent, Grid, Container, CircularProgress, TextField, FormControl, FormLabel, RadioGroup, FormControlLabel, Radio, Tooltip, MenuItem, Select, InputLabel } from '@mui/material';
 import SafeBarcodeScanner from "@/app/coponent/SafeBarcodeScanner";
@@ -90,6 +90,12 @@ import {
   readSaleReceiptPrintSettings,
 } from '@/app/lib/saleReceiptPrint';
 import { dailyTicketFromRecord, formatDailyTicketNumber } from '@/app/lib/dailyTicketNumber';
+import {
+  adminFieldSx,
+  adminCartTableContainerSx,
+  adminCartTableHeadCellSx,
+  adminCartTableRowSx,
+} from '@/app/admin/theme/adminTheme';
 import dynamic from "next/dynamic";
 import {
   buildAvailableChequesForSaleUrl,
@@ -519,14 +525,8 @@ export default function ShoppingPage() {
     [payableNow, settlementMode, cardAmountInput, cashAmountInput, parseAmountInput],
   );
 
-  const darkFieldSx = {
-    "& .MuiOutlinedInput-root": {
-      backgroundColor: "var(--admin-surface-alt)",
-      color: "var(--admin-text)",
-      "& fieldset": { borderColor: "#505669" },
-      "&:hover fieldset": { borderColor: "var(--admin-accent)" },
-      "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
-    },
+  const posFieldSx = {
+    ...adminFieldSx,
     "& .MuiInputBase-input": {
       color: "var(--admin-text)",
       fontSize: { xs: "13px", md: "14px" },
@@ -534,7 +534,7 @@ export default function ShoppingPage() {
       textAlign: "right",
       direction: "ltr",
     },
-    "& .MuiFormHelperText-root": { color: "#ff4444", fontSize: { xs: "11px", md: "12px" } },
+    "& .MuiFormHelperText-root": { color: "var(--admin-error)", fontSize: { xs: "11px", md: "12px" } },
   } as const;
   
   // Online/Offline detection
@@ -2205,9 +2205,9 @@ export default function ShoppingPage() {
         {editingPurchaseId ? (
           <Box
             sx={{
-              backgroundColor: "#fff8e1",
-              border: "1px solid #ffcc80",
-              color: "#5d4037",
+              backgroundColor: "var(--admin-warning-banner-bg)",
+              border: "1px solid var(--admin-warning-banner-border)",
+              color: "var(--admin-warning-banner-text)",
               padding: { xs: "8px 12px", md: "10px 16px" },
               borderRadius: "12px",
               marginBottom: { xs: "12px", md: "16px" },
@@ -2224,7 +2224,7 @@ export default function ShoppingPage() {
         {(!effectiveOnline || pendingPurchases.length > 0) && (
           <Box
             sx={{
-              backgroundColor: !effectiveOnline ? "#ff9800" : "#2196f3",
+              backgroundColor: !effectiveOnline ? "var(--admin-warning)" : "var(--admin-online)",
               color: "var(--admin-text)",
               padding: { xs: "6px 10px", md: "8px 14px" },
               borderRadius: { xs: "8px", md: "12px" },
@@ -2301,11 +2301,11 @@ export default function ShoppingPage() {
                     minWidth: 0,
                     px: { xs: 1, md: 1.5 },
                     py: 0.35,
-                    bgcolor: "#fff",
-                    color: "#d97706",
+                    bgcolor: "var(--admin-on-accent)",
+                    color: "var(--admin-warning)",
                     fontSize: { xs: "10px", md: "12px" },
                     whiteSpace: "nowrap",
-                    "&:hover": { bgcolor: "#f8fafc" },
+                    "&:hover": { bgcolor: "var(--admin-surface-alt)" },
                   }}
                 >
                   {isCheckingNetworkSpeed ? "..." : "بررسی شبکه"}
@@ -2321,11 +2321,11 @@ export default function ShoppingPage() {
                     minWidth: 0,
                     px: { xs: 1, md: 1.5 },
                     py: 0.35,
-                    bgcolor: "#fff",
-                    color: !effectiveOnline ? "#d97706" : "#1565c0",
+                    bgcolor: "var(--admin-on-accent)",
+                    color: !effectiveOnline ? "var(--admin-warning)" : "var(--admin-primary-blue-hover)",
                     fontSize: { xs: "10px", md: "12px" },
                     whiteSpace: "nowrap",
-                    "&:hover": { bgcolor: "#f8fafc" },
+                    "&:hover": { bgcolor: "var(--admin-surface-alt)" },
                   }}
                 >
                   مشاهده صف
@@ -2377,17 +2377,7 @@ export default function ShoppingPage() {
               <Box sx={{ marginBottom: { xs: "12px", md: "0" } }}>
                 <TableContainer 
                   component={Paper} 
-                  sx={{ 
-                    maxWidth: '100%', 
-                    overflowX: 'auto',
-                    borderRadius: { xs: "16px", md: "20px" },
-                    backgroundColor: "#1e2330",
-                    border: "1px solid rgba(120, 181, 104, 0.2)",
-                    transition: "all 0.3s ease",
-                    "&:hover": {
-                      border: "1px solid rgba(120, 181, 104, 0.3)",
-                    }
-                  }}
+                  sx={adminCartTableContainerSx}
                 >
                   <Table aria-label="shopping table" size="small" sx={{
                 "& .MuiTableCell-root": {
@@ -2397,44 +2387,16 @@ export default function ShoppingPage() {
               }}>
                     <TableHead>
                       <TableRow>
-                        <StyledTableCell align="right" sx={{ 
-                          color: "var(--admin-text)", 
-                          fontWeight: "700", 
-                          backgroundColor: "#0f1117",
-                          fontSize: { xs: "13px", md: "17px" },
-                          padding: { xs: "12px 16px", md: "18px 28px" },
-                          borderBottom: "2px solid rgba(120, 181, 104, 0.3)"
-                        }}>
+                        <StyledTableCell align="right" sx={{ ...adminCartTableHeadCellSx, fontSize: { xs: "13px", md: "17px" }, padding: { xs: "12px 16px", md: "18px 28px" } }}>
                           کالا
                         </StyledTableCell>
-                        <StyledTableCell align="right" sx={{ 
-                          color: "var(--admin-text)", 
-                          fontWeight: "700", 
-                          backgroundColor: "#0f1117",
-                          fontSize: { xs: "13px", md: "17px" },
-                          padding: { xs: "12px 16px", md: "18px 28px" },
-                          borderBottom: "2px solid rgba(120, 181, 104, 0.3)"
-                        }}>
+                        <StyledTableCell align="right" sx={{ ...adminCartTableHeadCellSx, fontSize: { xs: "13px", md: "17px" }, padding: { xs: "12px 16px", md: "18px 28px" } }}>
                           قیمت
                         </StyledTableCell>
-                        <StyledTableCell align="right" sx={{ 
-                          color: "var(--admin-text)", 
-                          fontWeight: "700", 
-                          backgroundColor: "#0f1117",
-                          fontSize: { xs: "13px", md: "17px" },
-                          padding: { xs: "12px 16px", md: "18px 28px" },
-                          borderBottom: "2px solid rgba(120, 181, 104, 0.3)"
-                        }}>
+                        <StyledTableCell align="right" sx={{ ...adminCartTableHeadCellSx, fontSize: { xs: "13px", md: "17px" }, padding: { xs: "12px 16px", md: "18px 28px" } }}>
                           تعداد
                         </StyledTableCell>
-                        <StyledTableCell align="right" sx={{ 
-                          color: "var(--admin-text)", 
-                          fontWeight: "700", 
-                          backgroundColor: "#0f1117",
-                          fontSize: { xs: "13px", md: "17px" },
-                          padding: { xs: "12px 16px", md: "18px 28px" },
-                          borderBottom: "2px solid rgba(120, 181, 104, 0.3)"
-                        }}>
+                        <StyledTableCell align="right" sx={{ ...adminCartTableHeadCellSx, fontSize: { xs: "13px", md: "17px" }, padding: { xs: "12px 16px", md: "18px 28px" } }}>
                           حذف
                         </StyledTableCell>
                       </TableRow>
@@ -2444,13 +2406,11 @@ export default function ShoppingPage() {
                     <StyledTableRow 
                       key={catalogItemKey(item)}
                       sx={{
-                        backgroundColor: "#1e2330",
-                        borderBottom: "1px solid var(--admin-menu-hover)",
-                        transition: "all 0.2s ease",
+                        ...adminCartTableRowSx,
                         "&:hover": {
-                          backgroundColor: "#252a3a",
+                          ...adminCartTableRowSx["&:hover"],
                           transform: "translateX(-4px)",
-                          }
+                        },
                       }}
                     >
                       <StyledTableCell align="right" component="th" scope="row" sx={{ 
@@ -2490,7 +2450,7 @@ export default function ShoppingPage() {
                             />
                             {item.default_sale_price != null &&
                               Number(item.sale_price) !== Number(item.default_sale_price) && (
-                              <Typography sx={{ fontSize: "10px", color: "#ff9800" }}>
+                              <Typography sx={{ fontSize: "10px", color: "var(--admin-warning)" }}>
                                 پیش‌فرض: {formatNumber(Number(item.default_sale_price))}
                               </Typography>
                             )}
@@ -2515,10 +2475,10 @@ export default function ShoppingPage() {
                                 )}
                               </Typography>
                               <Typography sx={{ 
-                                color: "#ff9100", 
+                                color: "var(--admin-warning-strong)", 
                                 fontSize: "10px", 
                                 fontWeight: "600",
-                                backgroundColor: "rgba(255, 145, 0, 0.1)",
+                                backgroundColor: "var(--admin-warning-bg)",
                                 padding: "2px 6px",
                                 borderRadius: "4px"
                               }}>
@@ -2548,10 +2508,10 @@ export default function ShoppingPage() {
                         <IconButton 
                           onClick={() => removeItemFromCart(catalogItemKey(item))} 
                           sx={{ 
-                            color: "#ff4444",
+                            color: "var(--admin-error)",
                             padding: { xs: "4px", md: "8px" },
                             "&:hover": { 
-                              backgroundColor: "rgba(255, 68, 68, 0.1)",
+                              backgroundColor: "var(--admin-error-bg)",
                               transform: "scale(1.1)"
                             }
                           }}
@@ -2568,15 +2528,15 @@ export default function ShoppingPage() {
             ) : backPrice > 0 ? (
               <Card
                 sx={{
-                  backgroundColor: "#1e2330",
+                  backgroundColor: "var(--admin-cart-surface)",
                   borderRadius: { xs: "16px", md: "20px" },
-                  border: "1px solid rgba(26, 180, 77, 0.35)",
+                  border: "1px solid var(--admin-success-border)",
                   marginBottom: { xs: "12px", md: "0" },
                 }}
               >
                 <CardContent sx={{ textAlign: "center", padding: { xs: "24px", md: "40px" } }}>
-                  <CheckCircleIcon sx={{ fontSize: { xs: 48, md: 64 }, color: "rgba(26, 180, 77, 0.85)", mb: 1.5 }} />
-                  <Typography sx={{ color: "rgba(26, 180, 77, 0.9)", fontSize: { xs: "15px", md: "18px" }, fontWeight: 600 }}>
+                  <CheckCircleIcon sx={{ fontSize: { xs: 48, md: 64 }, color: "var(--admin-success-soft)", mb: 1.5 }} />
+                  <Typography sx={{ color: "var(--admin-success-soft)", fontSize: { xs: "15px", md: "18px" }, fontWeight: 600 }}>
                     کالا با موفقیت برگشت خورد
                   </Typography>
                   <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: { xs: "12px", md: "14px" }, mt: 1 }}>
@@ -2653,7 +2613,7 @@ export default function ShoppingPage() {
                               label: "تعداد کالا",
                               value: productsCount > 0 ? formatNumber(productsCount) : "—",
                               suffix: productsCount > 0 ? "عدد" : "",
-                              gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                              gradient: "var(--admin-title-gradient)",
                             },
                             {
                               icon: <Inventory2Icon sx={{ fontSize: 20 }} />,
@@ -2671,7 +2631,7 @@ export default function ShoppingPage() {
                                     label: "وصول نسیه",
                                     value: formatNumber(todayDashboard.debtsCollected ?? 0),
                                     suffix: "تومان",
-                                    gradient: "linear-gradient(135deg, #ff9800 0%, #f57c00 100%)",
+                                    gradient: "linear-gradient(135deg, var(--admin-warning) 0%, var(--admin-warning-hover) 100%)",
                                   },
                                   {
                                     icon: <WarningIcon sx={{ fontSize: 20 }} />,
@@ -3145,13 +3105,13 @@ export default function ShoppingPage() {
                           backgroundColor: "var(--admin-surface-alt)",
                           color: "var(--admin-text)",
                           "& fieldset": {
-                            borderColor: discountError ? "#ff4444" : "var(--admin-border)",
+                            borderColor: discountError ? "var(--admin-error)" : "var(--admin-border)",
                           },
                           "&:hover fieldset": {
-                            borderColor: discountError ? "#ff4444" : "var(--admin-accent)",
+                            borderColor: discountError ? "var(--admin-error)" : "var(--admin-accent)",
                           },
                           "&.Mui-focused fieldset": {
-                            borderColor: discountError ? "#ff4444" : "var(--admin-accent)",
+                            borderColor: discountError ? "var(--admin-error)" : "var(--admin-accent)",
                           },
                         },
                         "& .MuiInputBase-input": {
@@ -3166,7 +3126,7 @@ export default function ShoppingPage() {
                           opacity: 1
                         },
                         "& .MuiFormHelperText-root": {
-                          color: "#ff4444",
+                          color: "var(--admin-error)",
                           fontSize: { xs: "11px", md: "12px" },
                           marginTop: "4px"
                         }
@@ -3314,11 +3274,11 @@ export default function ShoppingPage() {
                     )}
                     {paymentType === 'debt' && (
                       <Box sx={{ mt: { xs: "8px", md: "12px" }, p: { xs: "8px", md: "12px" }, bgcolor: "var(--admin-surface-alt)", borderRadius: "8px" }}>
-                        <Typography sx={{ color: "#ff9800", fontSize: { xs: "11px", md: "13px" } }}>
+                        <Typography sx={{ color: "var(--admin-warning)", fontSize: { xs: "11px", md: "13px" } }}>
                           فاکتور نسیه — مبلغ به بدهی مشتری اضافه می‌شود و پرداخت نقد/کارت ثبت نمی‌شود.
                         </Typography>
                         {(!phone || phone.trim() === '') && (
-                          <Typography sx={{ color: "#e57373", fontSize: { xs: "11px", md: "12px" }, mt: 0.5 }}>
+                          <Typography sx={{ color: "var(--admin-error-soft)", fontSize: { xs: "11px", md: "12px" }, mt: 0.5 }}>
                             شماره تلفن مشتری الزامی است
                           </Typography>
                         )}
@@ -3345,7 +3305,7 @@ export default function ShoppingPage() {
                             : " — چک را انتخاب کنید؛ باقی‌مانده با نقد یا کارت تسویه می‌شود"}
                         </Typography>
                         <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-                          <FormControl fullWidth size="small" sx={darkFieldSx} disabled={loadingAvailableCheques}>
+                          <FormControl fullWidth size="small" sx={posFieldSx} disabled={loadingAvailableCheques}>
                             <InputLabel sx={{ color: "var(--admin-text-muted)" }}>انتخاب چک دریافتی</InputLabel>
                             <Select
                               value={selectedChequeId ?? ""}
@@ -3390,7 +3350,7 @@ export default function ShoppingPage() {
                             </Typography>
                           </Box>
                         ) : matchingCheques.length === 0 ? (
-                          <Typography sx={{ color: "#e57373", fontSize: { xs: "11px", md: "13px" }, mt: 1 }}>
+                          <Typography sx={{ color: "var(--admin-error-soft)", fontSize: { xs: "11px", md: "13px" }, mt: 1 }}>
                             چک مناسب یافت نشد — با + چک دریافتی ثبت کنید (مبلغ می‌تواند کمتر از فاکتور باشد).
                           </Typography>
                         ) : null}
@@ -3458,7 +3418,7 @@ export default function ShoppingPage() {
                                 size="small"
                                 fullWidth
                                 InputLabelProps={{ sx: { color: "var(--admin-text-muted)" } }}
-                                sx={darkFieldSx}
+                                sx={posFieldSx}
                               />
                               <TextField
                                 label="نقدی"
@@ -3467,7 +3427,7 @@ export default function ShoppingPage() {
                                 size="small"
                                 fullWidth
                                 InputLabelProps={{ sx: { color: "var(--admin-text-muted)" } }}
-                                sx={darkFieldSx}
+                                sx={posFieldSx}
                               />
                             </Box>
                           )}
@@ -3496,7 +3456,7 @@ export default function ShoppingPage() {
                             </Typography>
                           )}
                           {paymentSplitError && (
-                            <Typography sx={{ color: "#ff4444", fontSize: { xs: "11px", md: "12px" }, mt: 1 }}>
+                            <Typography sx={{ color: "var(--admin-error)", fontSize: { xs: "11px", md: "12px" }, mt: 1 }}>
                               {paymentSplitError}
                             </Typography>
                           )}
@@ -3560,7 +3520,7 @@ export default function ShoppingPage() {
                           }}>
                             {!phone || phone.trim() === '' ? (
                               <Typography sx={{ 
-                                color: "#ff9800", 
+                                color: "var(--admin-warning)", 
                                 fontSize: { xs: "10px", md: "12px" }
                               }}>
                                 لطفاً شماره تلفن مشتری را وارد کنید
@@ -3578,7 +3538,7 @@ export default function ShoppingPage() {
                             ) : installmentCreditError ? (
                               <Box>
                                 <Typography sx={{ 
-                                  color: "#ff4444", 
+                                  color: "var(--admin-error)", 
                                   fontSize: { xs: "11px", md: "13px" },
                                   marginBottom: { xs: "4px", md: "6px" },
                                   fontWeight: "600"
@@ -3607,7 +3567,7 @@ export default function ShoppingPage() {
                                     {installmentCalculation.credit_shortage != null &&
                                       Math.floor(installmentCalculation.credit_shortage) > 0 && (
                                       <Typography sx={{ 
-                                        color: "#ff9800", 
+                                        color: "var(--admin-warning)", 
                                         fontSize: { xs: "9px", md: "11px" }
                                       }}>
                                         کمبود اعتبار: {formatNumber(Math.floor(installmentCalculation.credit_shortage))} تومان
@@ -3757,7 +3717,7 @@ export default function ShoppingPage() {
                               size="small"
                               fullWidth
                               InputLabelProps={{ sx: { color: "var(--admin-text-muted)" } }}
-                              sx={darkFieldSx}
+                              sx={posFieldSx}
                             />
                             <TextField
                               label="نقدی"
@@ -3767,10 +3727,10 @@ export default function ShoppingPage() {
                               size="small"
                               fullWidth
                               InputLabelProps={{ sx: { color: "var(--admin-text-muted)" } }}
-                              sx={darkFieldSx}
+                              sx={posFieldSx}
                             />
                             {!paymentFieldsValid && (
-                              <Typography sx={{ color: "#ff4444", fontSize: { xs: "11px", md: "12px" } }}>
+                              <Typography sx={{ color: "var(--admin-error)", fontSize: { xs: "11px", md: "12px" } }}>
                                 جمع کارت ({formatNumber(parseAmountInput(cardAmountInput))}) و نقد (
                                 {formatNumber(parseAmountInput(cashAmountInput))}) باید برابر{" "}
                                 {formatNumber(payableNow)} تومان باشد
@@ -3779,7 +3739,7 @@ export default function ShoppingPage() {
                           </Box>
                         )}
                         {paymentSplitError && (
-                          <Typography sx={{ color: "#ff4444", fontSize: { xs: "11px", md: "12px" }, marginTop: "8px" }}>
+                          <Typography sx={{ color: "var(--admin-error)", fontSize: { xs: "11px", md: "12px" }, marginTop: "8px" }}>
                             {paymentSplitError}
                           </Typography>
                         )}
@@ -3897,7 +3857,7 @@ export default function ShoppingPage() {
                          installmentCalculation.installment_details[0]?.payment_type === "cash" &&
                          Math.floor(installmentCalculation.installment_details[0]?.base_payment || 0) > 0 && (
                           <Typography sx={{ 
-                            color: "#fde68a", 
+                            color: "var(--admin-warning-banner-text)", 
                             fontSize: { xs: "12px", md: "14px" },
                             marginBottom: { xs: "4px", md: "6px" },
                             fontWeight: "600"
@@ -3937,7 +3897,7 @@ export default function ShoppingPage() {
                           installmentCalculation.total_interest != null &&
                           Math.floor(installmentCalculation.total_interest) > 0 && (
                           <Typography sx={{ 
-                            color: "#fde68a", 
+                            color: "var(--admin-warning-banner-text)", 
                             fontSize: { xs: "10px", md: "12px" },
                             marginBottom: { xs: "2px", md: "4px" }
                           }}>
@@ -3950,7 +3910,7 @@ export default function ShoppingPage() {
                         {(installmentCalculation?.user_credit !== undefined ||
                           installmentCalculation?.user_installment_credit !== undefined) && (
                           <Typography sx={{ 
-                            color: installmentCalculation.has_enough_credit ? "#ecfdf5" : "#fecaca", 
+                            color: installmentCalculation.has_enough_credit ? "var(--admin-success-bg)" : "var(--admin-error-bg)", 
                             fontSize: { xs: "10px", md: "12px" },
                             fontWeight: 600,
                           }}>
@@ -3993,13 +3953,13 @@ export default function ShoppingPage() {
                   fullWidth
                   startIcon={
                     isSubmitting ? (
-                      <CircularProgress size={20} sx={{ color: "#fff" }} />
+                      <CircularProgress size={20} sx={{ color: "var(--admin-on-accent)" }} />
                     ) : (
                       <CheckCircleIcon sx={{ fontSize: { xs: "18px", md: "24px" } }} />
                     )
                   }
                   sx={{
-                    color: "#fff",
+                    color: "var(--admin-on-accent)",
                     height: { xs: "48px", md: "60px" },
                     borderRadius: { xs: "16px", md: "20px" },
                     marginBottom: { xs: "24px", md: "12px" },
@@ -4010,7 +3970,7 @@ export default function ShoppingPage() {
                     fontSize: { xs: "15px", md: "19px" },
                     transition: "all 0.3s ease",
                     "&:hover": {
-                      color: "#fff",
+                      color: "var(--admin-on-accent)",
                       transform: total && !isSubmitting ? "translateY(-3px) scale(1.02)" : "none",
                      
                       background: total && !isSubmitting 
@@ -4089,7 +4049,7 @@ export default function ShoppingPage() {
                 width: { xs: "56px", md: "72px" },
                 height: { xs: "56px", md: "72px" },
                 minWidth: { xs: "56px", md: "72px" },
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                background: "var(--admin-title-gradient)",
                 color: "white",
                 fontSize: { xs: "28px", md: "36px" },
                 fontWeight: 300,
@@ -4206,7 +4166,7 @@ export default function ShoppingPage() {
               fullWidth
               sx={{ 
                 marginTop: '12px', 
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                background: "var(--admin-title-gradient)",
                 color: 'var(--admin-text)',
                 height: "40px",
                 borderRadius: "10px",
@@ -4243,7 +4203,7 @@ export default function ShoppingPage() {
             border: "1px solid var(--admin-menu-hover)",
           }}
         >
-          <CheckCircleIcon sx={{ fontSize: 56, color: "#1ab44d", mb: 1.5 }} />
+          <CheckCircleIcon sx={{ fontSize: 56, color: "var(--admin-success)", mb: 1.5 }} />
           <Typography id="sale-success-modal" sx={{ fontWeight: 700, fontSize: "18px", color: "var(--admin-text)", mb: 1 }}>
             {lastSaleReceipt?.purchaseId != null ? "خرید با موفقیت ثبت شد" : "خرید در صف آفلاین ثبت شد"}
           </Typography>
@@ -4263,8 +4223,8 @@ export default function ShoppingPage() {
               startIcon={<PrintIcon />}
               onClick={handlePrintLastSaleReceipt}
               sx={{
-                bgcolor: "#78b568",
-                "&:hover": { bgcolor: "#5a9a4a" },
+                bgcolor: "var(--admin-accent)",
+                "&:hover": { bgcolor: "var(--admin-accent-hover)" },
                 borderRadius: "12px",
                 py: 1.2,
               }}

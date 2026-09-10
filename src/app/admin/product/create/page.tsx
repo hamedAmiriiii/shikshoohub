@@ -633,9 +633,9 @@ export default function Page() {
   const chipSx = {
     height: 22,
     backgroundColor: "#e67e22",
-    color: "#fff",
+    color: "var(--admin-on-accent)",
     "& .MuiChip-label": { px: 0.75, fontSize: "11px" },
-    "& .MuiChip-deleteIcon": { color: "#fff", fontSize: 14 },
+    "& .MuiChip-deleteIcon": { color: "var(--admin-on-accent)", fontSize: 14 },
   } as const;
 
   const listCheckSx = {
@@ -769,7 +769,7 @@ export default function Page() {
                             height: 28,
                             borderRadius: "8px",
                             backgroundColor: "var(--admin-accent)",
-                            color: "#fff",
+                            color: "var(--admin-on-accent)",
                             "&:hover": { backgroundColor: "var(--admin-accent-hover)" },
                           }}
                         >
@@ -862,7 +862,7 @@ export default function Page() {
                           fontSize: "11px",
                           "&.Mui-selected": {
                             bgcolor: "#e67e22",
-                            color: "#fff",
+                            color: "var(--admin-on-accent)",
                             "&:hover": { bgcolor: "#d35400" },
                           },
                         },
@@ -1104,7 +1104,7 @@ export default function Page() {
                                 right: 2,
                                 p: 0.25,
                                 backgroundColor: "rgba(0,0,0,0.55)",
-                                color: "#fff",
+                                color: "var(--admin-on-accent)",
                                 "&:hover": { backgroundColor: "rgba(244,67,54,0.9)" },
                               }}
                             >
@@ -1141,7 +1141,7 @@ export default function Page() {
                 borderRadius: "12px",
                 py: 0.85,
                 backgroundColor: "var(--admin-accent)",
-                color: "#fff",
+                color: "var(--admin-on-accent)",
                 fontWeight: 800,
                 fontSize: "14px",
                 boxShadow: "none",
@@ -1327,7 +1327,7 @@ export default function Page() {
             variant="contained"
             fullWidth
             sx={{
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              background: "var(--admin-title-gradient)",
               fontWeight: 600,
               borderRadius: "10px",
             }}

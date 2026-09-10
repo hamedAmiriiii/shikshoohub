@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Box, Button, Chip, Typography } from "@mui/material";
 import VisibilityIcon from "@mui/icons-material/Visibility";
@@ -78,10 +78,10 @@ export default function PurchaseSummaryCard({
             <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)" }}>#{data?.id ?? "—"}</Typography>
           ) : null}
           {isInstallment ? (
-            <Chip label="اقساطی" size="small" sx={{ height: 18, fontSize: 10, backgroundColor: "#ff9800", color: "#fff" }} />
+            <Chip label="اقساطی" size="small" sx={{ height: 18, fontSize: 10, backgroundColor: "var(--admin-warning)", color: "var(--admin-on-accent)" }} />
           ) : null}
           {isCheque ? (
-            <Chip label="چکی" size="small" sx={{ height: 18, fontSize: 10, backgroundColor: "#2196f3", color: "#fff" }} />
+            <Chip label="چکی" size="small" sx={{ height: 18, fontSize: 10, backgroundColor: "var(--admin-online)", color: "var(--admin-on-accent)" }} />
           ) : null}
           <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)" }}>
             {formatDate(data?.created_at || data?.createdAt)}

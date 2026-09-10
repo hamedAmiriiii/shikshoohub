@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import {
@@ -210,7 +210,7 @@ export default function AgencyRequestActions({
             variant="outlined"
             startIcon={<DeleteIcon />}
             onClick={() => setDeleteOpen(true)}
-            sx={{ borderColor: "#e57373", color: "#e57373", fontSize: "12px" }}
+            sx={{ borderColor: "var(--admin-error-soft)", color: "var(--admin-error-soft)", fontSize: "12px" }}
           >
             حذف
           </Button>
@@ -222,7 +222,7 @@ export default function AgencyRequestActions({
               onClick={() => setEditOpen(true)}
               sx={{
                 backgroundColor: "var(--admin-accent)",
-                color: "#fff",
+                color: "var(--admin-on-accent)",
                 "&:hover": { backgroundColor: "var(--admin-accent-hover)" },
               }}
             >
@@ -233,9 +233,9 @@ export default function AgencyRequestActions({
             <IconButton
               onClick={() => setDeleteOpen(true)}
               sx={{
-                backgroundColor: "#ff4444",
-                color: "#fff",
-                "&:hover": { backgroundColor: "#cc0000" },
+                backgroundColor: "var(--admin-error)",
+                color: "var(--admin-on-accent)",
+                "&:hover": { backgroundColor: "var(--admin-error-hover)" },
               }}
             >
               <DeleteIcon />

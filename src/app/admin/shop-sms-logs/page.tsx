@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useEffect } from 'react';
 import { 
   Box, 
@@ -108,8 +108,8 @@ const SMS_TYPE_LABELS: Record<string, string> = {
 
 const SMS_TYPE_COLORS: Record<string, string> = {
   purchase: "var(--admin-accent)",
-  credit: "#2196f3",
-  warning: "#ff9100",
+  credit: "var(--admin-online)",
+  warning: "var(--admin-warning-strong)",
   customer_register: "#7c4dff",
   broadcast: "#5c6bc0",
 };
@@ -513,7 +513,7 @@ export default function ShopSmsLogsPage() {
             display: "flex", 
             justifyContent: "space-between", 
             alignItems: "center",
-            borderBottom: "1px solid #505669",
+            borderBottom: "1px solid var(--admin-border)",
             paddingBottom: "16px"
           }}>
             <Typography sx={{ fontSize: "18px", fontWeight: "600" }}>
@@ -580,7 +580,7 @@ export default function ShopSmsLogsPage() {
               </Box>
             )}
           </DialogContent>
-          <DialogActions sx={{ padding: '16px 24px', borderTop: '1px solid #505669' }}>
+          <DialogActions sx={{ padding: '16px 24px', borderTop: '1px solid var(--admin-border)' }}>
             <Button 
               onClick={() => setOpenDetailDialog(false)}
               sx={{ color: 'var(--admin-text)' }}
@@ -613,7 +613,7 @@ export default function ShopSmsLogsPage() {
                   '& .MuiOutlinedInput-root': {
                     color: 'var(--admin-text)',
                     '& fieldset': {
-                      borderColor: '#505669',
+                      borderColor: 'var(--admin-border)',
                     },
                     '&:hover fieldset': {
                       borderColor: 'var(--admin-accent)',
@@ -632,7 +632,7 @@ export default function ShopSmsLogsPage() {
                   sx={{
                     color: 'var(--admin-text)',
                     '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#505669',
+                      borderColor: 'var(--admin-border)',
                     },
                     '&:hover .MuiOutlinedInput-notchedOutline': {
                       borderColor: 'var(--admin-accent)',
@@ -663,7 +663,7 @@ export default function ShopSmsLogsPage() {
                   sx={{
                     color: 'var(--admin-text)',
                     '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#505669',
+                      borderColor: 'var(--admin-border)',
                     },
                     '&:hover .MuiOutlinedInput-notchedOutline': {
                       borderColor: 'var(--admin-accent)',
@@ -745,7 +745,7 @@ export default function ShopSmsLogsPage() {
                 variant="outlined"
                 fullWidth
                 sx={{
-                  borderColor: '#505669',
+                  borderColor: 'var(--admin-border)',
                   color: 'var(--admin-text)',
                   '&:hover': {
                     borderColor: 'var(--admin-accent)',

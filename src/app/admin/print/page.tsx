@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -284,7 +284,7 @@ function PrintLabelContent() {
         }
 
         .back-btn {
-          background-color: #ff9100;
+          background-color: var(--admin-warning-strong);
           color: white;
           border: none;
           padding: 12px 24px;

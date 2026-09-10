@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
 import {
@@ -176,13 +176,13 @@ export default function ShopBackupSettings() {
           size="small"
           variant="contained"
           disabled={downloading}
-          startIcon={downloading ? <CircularProgress size={12} sx={{ color: "#fff" }} /> : <CloudDownloadIcon sx={{ fontSize: 16 }} />}
+          startIcon={downloading ? <CircularProgress size={12} sx={{ color: "var(--admin-on-accent)" }} /> : <CloudDownloadIcon sx={{ fontSize: 16 }} />}
           onClick={() => void handleDownload()}
           sx={{
             ...btnSx,
             bgcolor: "var(--admin-accent)",
-            color: "#fff",
-            "&:hover": { bgcolor: "var(--admin-accent-hover)", color: "#fff" },
+            color: "var(--admin-on-accent)",
+            "&:hover": { bgcolor: "var(--admin-accent-hover)", color: "var(--admin-on-accent)" },
           }}
         >
           {downloading ? "در حال دانلود..." : "دانلود پشتیبان"}
@@ -261,7 +261,7 @@ export default function ShopBackupSettings() {
             variant="contained"
             disabled={restoring || confirmText.trim() !== CONFIRM_WORD}
             onClick={() => void handleRestore()}
-            sx={{ backgroundColor: "#ff4444", fontSize: 12, "&:hover": { backgroundColor: "#cc0000" } }}
+            sx={{ backgroundColor: "var(--admin-error)", fontSize: 12, "&:hover": { backgroundColor: "var(--admin-error-hover)" } }}
           >
             {restoring ? "در حال بازگردانی..." : "بازگردانی"}
           </Button>

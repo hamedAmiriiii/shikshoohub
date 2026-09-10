@@ -202,7 +202,7 @@ export default function ShopHeader({ searchQuery = '', onSearchChange }: ShopHea
       <AppBar
         position="sticky"
         sx={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          background: 'var(--admin-title-gradient)',
           boxShadow: isScrolled ? '0 4px 20px rgba(102, 126, 234, 0.3)' : 'none',
           transition: 'box-shadow 0.3s ease',
           zIndex: 1300,
@@ -619,7 +619,7 @@ export default function ShopHeader({ searchQuery = '', onSearchChange }: ShopHea
         {/* Drawer Header */}
         <Box 
           sx={{ 
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'var(--admin-title-gradient)',
             padding: '24px 20px',
             display: 'flex',
             alignItems: 'center',
@@ -785,7 +785,7 @@ export default function ShopHeader({ searchQuery = '', onSearchChange }: ShopHea
             }}
             startIcon={<StorefrontIcon />}
             sx={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: 'var(--admin-title-gradient)',
               color: '#fff',
               padding: '12px',
               borderRadius: '12px',

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import {
@@ -116,7 +116,7 @@ const inputSx = {
   "& .MuiOutlinedInput-root": {
     color: "var(--admin-text)",
     backgroundColor: "var(--admin-surface-alt)",
-    "& fieldset": { borderColor: "#505669" },
+    "& fieldset": { borderColor: "var(--admin-border)" },
     "&:hover fieldset": { borderColor: "var(--admin-accent)" },
     "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
   },
@@ -342,7 +342,7 @@ export default function ShopSmsQuotaActions({ item, onSuccess, variant = "row" }
             <IconButton
               size="small"
               onClick={openPaidPlan}
-              sx={{ ...iconBtnSx, borderColor: "#9c27b0", color: "#ce93d8" }}
+              sx={{ ...iconBtnSx, borderColor: "var(--admin-action-purple)", color: "#ce93d8" }}
             >
               <VerifiedIcon sx={{ fontSize: 15 }} />
             </IconButton>
@@ -352,7 +352,7 @@ export default function ShopSmsQuotaActions({ item, onSuccess, variant = "row" }
           <IconButton
             size="small"
             onClick={openAccess}
-            sx={{ ...iconBtnSx, borderColor: "#2196f3", color: "#64b5f6" }}
+            sx={{ ...iconBtnSx, borderColor: "var(--admin-online)", color: "#64b5f6" }}
           >
             <EventIcon sx={{ fontSize: 15 }} />
           </IconButton>
@@ -388,7 +388,7 @@ export default function ShopSmsQuotaActions({ item, onSuccess, variant = "row" }
           <IconButton
             size="small"
             onClick={() => setChargeOpen(true)}
-            sx={{ ...iconBtnSx, borderColor: "#ff9800", color: "#ffb74d" }}
+            sx={{ ...iconBtnSx, borderColor: "var(--admin-warning)", color: "#ffb74d" }}
           >
             <AddCircleOutlineIcon sx={{ fontSize: 15 }} />
           </IconButton>
@@ -416,7 +416,7 @@ export default function ShopSmsQuotaActions({ item, onSuccess, variant = "row" }
         <DialogContent sx={{ overflow: "visible" }}>
           <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "13px", mb: 1.5 }}>
             وضعیت فعلی:{" "}
-            <Box component="span" sx={{ fontWeight: 700, color: "#ff9800" }}>
+            <Box component="span" sx={{ fontWeight: 700, color: "var(--admin-warning)" }}>
               رایگان (trial)
             </Box>
           </Typography>
@@ -462,7 +462,7 @@ export default function ShopSmsQuotaActions({ item, onSuccess, variant = "row" }
             onClick={handleActivatePaidPlan}
             disabled={saving}
             variant="contained"
-            sx={{ backgroundColor: "#9c27b0", "&:hover": { backgroundColor: "#7b1fa2" } }}
+            sx={{ backgroundColor: "var(--admin-action-purple)", "&:hover": { backgroundColor: "var(--admin-action-purple-hover)" } }}
           >
             {saving ? "..." : "تأیید پلن پولی"}
           </Button>
@@ -530,7 +530,7 @@ export default function ShopSmsQuotaActions({ item, onSuccess, variant = "row" }
             onClick={handleSetAccessEnd}
             disabled={saving}
             variant="contained"
-            sx={{ backgroundColor: "#2196f3" }}
+            sx={{ backgroundColor: "var(--admin-online)" }}
           >
             {saving ? "..." : "ذخیره"}
           </Button>
@@ -596,7 +596,7 @@ export default function ShopSmsQuotaActions({ item, onSuccess, variant = "row" }
             onClick={handleCharge}
             disabled={saving}
             variant="contained"
-            sx={{ backgroundColor: "#ff9800" }}
+            sx={{ backgroundColor: "var(--admin-warning)" }}
           >
             {saving ? "..." : "شارژ"}
           </Button>

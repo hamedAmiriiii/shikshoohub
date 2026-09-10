@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -244,7 +244,7 @@ export default function ChequesPage() {
           sx={{
             ...adminButtonStartIconSx,
             bgcolor: "var(--admin-accent)",
-            color: "#fff",
+            color: "var(--admin-on-accent)",
             borderRadius: "12px",
             "&:hover": { bgcolor: "var(--admin-accent-hover)" },
           }}
@@ -264,7 +264,7 @@ export default function ChequesPage() {
         {hasFilters ? (
           <IconButton
             onClick={handleClearFilters}
-            sx={{ color: "#ff4444", bgcolor: "rgba(255,68,68,0.1)" }}
+            sx={{ color: "var(--admin-error)", bgcolor: "rgba(255,68,68,0.1)" }}
             size="small"
           >
             <DeleteIcon />
@@ -440,8 +440,8 @@ export default function ChequesPage() {
                 onClick={handleClearFilters}
                 sx={{
                   ...adminButtonStartIconSx,
-                  color: "#ff4444",
-                  borderColor: "#ff4444",
+                  color: "var(--admin-error)",
+                  borderColor: "var(--admin-error)",
                 }}
               >
                 حذف فیلترها
@@ -592,9 +592,9 @@ export default function ChequesPage() {
             onClick={confirmUnclear}
             disabled={unclearing}
             sx={{
-              bgcolor: "#ff9800",
-              color: "#fff",
-              "&:hover": { bgcolor: "#f57c00" },
+              bgcolor: "var(--admin-warning)",
+              color: "var(--admin-on-accent)",
+              "&:hover": { bgcolor: "var(--admin-warning-hover)" },
             }}
             startIcon={unclearing ? <CircularProgress size={16} color="inherit" /> : undefined}
           >

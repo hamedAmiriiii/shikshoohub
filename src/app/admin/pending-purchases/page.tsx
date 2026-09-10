@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -169,7 +169,7 @@ export default function PendingPurchasesPage() {
         </Box>
 
         {!isOnline && (
-          <Box sx={{ backgroundColor: "#ff9800", color: "var(--admin-text)", p: 1.5, borderRadius: 2, mb: 2, display: "flex", alignItems: "center", gap: 1 }}>
+          <Box sx={{ backgroundColor: "var(--admin-warning)", color: "var(--admin-text)", p: 1.5, borderRadius: 2, mb: 2, display: "flex", alignItems: "center", gap: 1 }}>
             <CloudQueueIcon />
             <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
               حالت Offline — پس از اتصال، همگام‌سازی کنید
@@ -208,7 +208,7 @@ export default function PendingPurchasesPage() {
             <Button
               onClick={() => setConfirmClearOpen(true)}
               variant="outlined"
-              sx={{ borderColor: "#ff4444", color: "#ff4444" }}
+              sx={{ borderColor: "var(--admin-error)", color: "var(--admin-error)" }}
             >
               حذف همه
             </Button>
@@ -252,7 +252,7 @@ export default function PendingPurchasesPage() {
                             <ReplayIcon fontSize="small" />
                           </IconButton>
                         ) : null}
-                        <IconButton size="small" onClick={() => deleteOne(item.id)} sx={{ color: "#ff4444" }}>
+                        <IconButton size="small" onClick={() => deleteOne(item.id)} sx={{ color: "var(--admin-error)" }}>
                           <DeleteIcon fontSize="small" />
                         </IconButton>
                       </TableCell>

@@ -278,7 +278,7 @@ export default function PurchaseDebtsPage() {
                 sx={{
                   fontWeight: 600,
                   ...(invoiceStatus === filter.value
-                    ? { bgcolor: "var(--admin-accent)", color: "#fff" }
+                    ? { bgcolor: "var(--admin-accent)", color: "var(--admin-on-accent)" }
                     : { bgcolor: "var(--admin-surface-alt)", color: "var(--admin-text)" }),
                 }}
               />

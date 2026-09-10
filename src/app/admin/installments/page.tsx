@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import List from "@/app/coponent/grid/Grid";
 import React, { useState, Suspense } from "react";
 import { Box, Typography, IconButton, RadioGroup, FormControlLabel, Radio, Button, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, TextField, CircularProgress } from "@mui/material";
@@ -147,11 +147,11 @@ export default function InstallmentsPage() {
                         startIcon={<DeleteIcon />}
                         onClick={handleClearFilters}
                         sx={{
-                            color: "#ff4444",
-                            borderColor: "#ff4444",
+                            color: "var(--admin-error)",
+                            borderColor: "var(--admin-error)",
                             "&:hover": {
                                 borderColor: "#ff6666",
-                                backgroundColor: "rgba(255, 68, 68, 0.1)"
+                                backgroundColor: "var(--admin-error-bg)"
                             }
                         }}
                     >
@@ -218,8 +218,8 @@ export default function InstallmentsPage() {
                                 <IconButton
                                     onClick={handleClearFilters}
                                     sx={{
-                                        color: "#ff4444",
-                                        backgroundColor: "rgba(255, 68, 68, 0.1)",
+                                        color: "var(--admin-error)",
+                                        backgroundColor: "var(--admin-error-bg)",
                                         "&:hover": {
                                             backgroundColor: "rgba(255, 68, 68, 0.2)"
                                         }
@@ -315,7 +315,7 @@ export default function InstallmentsPage() {
                                     backgroundColor: "var(--admin-surface-alt)",
                                     color: "var(--admin-text)",
                                     "& fieldset": {
-                                        borderColor: "#505669",
+                                        borderColor: "var(--admin-border)",
                                     },
                                     "&:hover fieldset": {
                                         borderColor: "var(--admin-accent)",

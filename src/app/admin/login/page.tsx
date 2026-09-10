@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Box, Button, TextField, Typography, InputAdornment } from "@mui/material";
 import React, { useState, useEffect, useRef } from "react";
@@ -302,7 +302,7 @@ export default function ShikshooLoginPage() {
                 {msg}{" "}
                 <a
                   href="/oil"
-                  style={{ color: "#fff", fontWeight: 800, textDecoration: "underline" }}
+                  style={{ color: "var(--admin-on-accent)", fontWeight: 800, textDecoration: "underline" }}
                 >
                   ورود تعویض روغن
                 </a>
@@ -390,7 +390,7 @@ export default function ShikshooLoginPage() {
               borderRadius: "12px",
               backgroundColor: "var(--admin-surface-alt)",
               color: "var(--admin-text)",
-              "& fieldset": { borderColor: "#505669" },
+              "& fieldset": { borderColor: "var(--admin-border)" },
               "&:hover fieldset": { borderColor: "var(--admin-accent)" },
               "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
             },
@@ -507,7 +507,7 @@ export default function ShikshooLoginPage() {
           sx={{
             ...primaryBtnSx,
             bgcolor: phon && password && !isLoading ? "var(--admin-accent)" : "var(--admin-border)",
-            color: "#fff",
+            color: "var(--admin-on-accent)",
             "&:hover": {
               bgcolor: phon && password && !isLoading ? "var(--admin-accent-hover)" : "var(--admin-border)",
             },
@@ -574,8 +574,8 @@ export default function ShikshooLoginPage() {
         sx={{
           ...primaryBtnSx,
           borderRadius: "14px",
-          bgcolor: isPhoneValid ? "var(--admin-accent)" : "#505669",
-          "&:hover": { bgcolor: isPhoneValid ? "var(--admin-accent-hover)" : "#505669" },
+          bgcolor: isPhoneValid ? "var(--admin-accent)" : "var(--admin-border)",
+          "&:hover": { bgcolor: isPhoneValid ? "var(--admin-accent-hover)" : "var(--admin-border)" },
         }}
       >
         {isLoading ? "در حال ارسال..." : "دریافت کد پیامکی"}
@@ -586,7 +586,7 @@ export default function ShikshooLoginPage() {
           variant="text"
           onClick={goToLogin}
           sx={{
-            color: "#ff9800",
+            color: "var(--admin-warning)",
             textTransform: "none",
             fontSize: "14px",
             "&:hover": { backgroundColor: "transparent", textDecoration: "underline" },
@@ -621,7 +621,7 @@ export default function ShikshooLoginPage() {
           </Box>
         </Typography>
       ) : (
-        <Typography sx={{ mb: 1, fontSize: "13px", color: "#ff9800", textAlign: "center", fontWeight: 600 }}>
+        <Typography sx={{ mb: 1, fontSize: "13px", color: "var(--admin-warning)", textAlign: "center", fontWeight: 600 }}>
           زمان اعتبار کد تمام شد — کد جدید دریافت کنید
         </Typography>
       )}
@@ -684,9 +684,9 @@ export default function ShikshooLoginPage() {
         sx={{
           ...primaryBtnSx,
           borderRadius: "14px",
-          bgcolor: isResetFormValid && !isCodeExpired ? "#1976d2" : "#505669",
+          bgcolor: isResetFormValid && !isCodeExpired ? "var(--admin-primary-blue)" : "var(--admin-disabled-bg)",
           "&:hover": {
-            bgcolor: isResetFormValid && !isCodeExpired ? "#1565c0" : "#505669",
+            bgcolor: isResetFormValid && !isCodeExpired ? "var(--admin-primary-blue-hover)" : "var(--admin-disabled-bg)",
           },
         }}
       >
@@ -702,7 +702,7 @@ export default function ShikshooLoginPage() {
             setCodeDigits(["", "", "", "", ""]);
           }}
           sx={{
-            color: "#ff9800",
+            color: "var(--admin-warning)",
             textTransform: "none",
             fontSize: "14px",
             "&:hover": { backgroundColor: "transparent", textDecoration: "underline" },

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -287,7 +287,7 @@ export default function PrintAllLabels() {
         }
 
         .back-btn {
-          background-color: #ff9100;
+          background-color: var(--admin-warning-strong);
           color: white;
           border: none;
           padding: 12px 24px;

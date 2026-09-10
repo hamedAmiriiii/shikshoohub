@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   Box,
@@ -95,8 +95,8 @@ function RegisterShopPageInner() {
     fontWeight: 600,
     textTransform: "none",
     boxShadow: "none",
-    color: "#fff",
-    "&:hover": { color: "#fff" },
+    color: "var(--admin-on-accent)",
+    "&:hover": { color: "var(--admin-on-accent)" },
     "&.Mui-disabled": {
       bgcolor: "var(--admin-border)",
       color: "var(--admin-text-secondary)",
@@ -108,7 +108,7 @@ function RegisterShopPageInner() {
       borderRadius: "14px",
       backgroundColor: "var(--admin-surface)",
       color: "var(--admin-text)",
-      "& fieldset": { borderColor: "#505669" },
+      "& fieldset": { borderColor: "var(--admin-border)" },
       "&:hover fieldset": { borderColor: "var(--admin-accent)" },
       "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
     },
@@ -295,7 +295,7 @@ function RegisterShopPageInner() {
               backgroundColor: "var(--admin-surface)",
               color: "var(--admin-text)",
               direction: "ltr",
-              "& fieldset": { borderColor: "#505669" },
+              "& fieldset": { borderColor: "var(--admin-border)" },
               "&:hover fieldset": { borderColor: "var(--admin-accent)" },
               "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
             },
@@ -341,7 +341,7 @@ function RegisterShopPageInner() {
           bgcolor: isPhoneValid && !isLoading ? "var(--admin-accent)" : "var(--admin-border)",
           "&:hover": {
             bgcolor: isPhoneValid && !isLoading ? "var(--admin-accent-hover)" : "var(--admin-border)",
-            color: "#fff",
+            color: "var(--admin-on-accent)",
           },
         }}
       >
@@ -504,7 +504,7 @@ function RegisterShopPageInner() {
           </Box>
         </Typography>
       ) : (
-        <Typography sx={{ mb: 1, fontSize: "13px", color: "#ff9800", textAlign: "center", fontWeight: 600 }}>
+        <Typography sx={{ mb: 1, fontSize: "13px", color: "var(--admin-warning)", textAlign: "center", fontWeight: 600 }}>
           زمان اعتبار کد تمام شد — کد جدید دریافت کنید
         </Typography>
       )}
@@ -542,7 +542,7 @@ function RegisterShopPageInner() {
               isFormValid && isCodeValid && !isCodeExpired && !isLoading
                 ? "var(--admin-accent-hover)"
                 : "var(--admin-border)",
-            color: "#fff",
+            color: "var(--admin-on-accent)",
           },
         }}
       >
@@ -558,7 +558,7 @@ function RegisterShopPageInner() {
             setCodeDigits(["", "", "", "", ""]);
           }}
           sx={{
-            color: "#ff9800",
+            color: "var(--admin-warning)",
             textTransform: "none",
             fontSize: "14px",
             "&:hover": { backgroundColor: "transparent", textDecoration: "underline" },

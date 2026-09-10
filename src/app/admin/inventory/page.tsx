@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, type ReactNode } from "react";
 import { Box, Typography, Paper, Grid, CircularProgress } from "@mui/material";
@@ -142,14 +142,14 @@ function InventorySection({
           title="قیمت فروش کل"
           value={formatNumber(inventory.total_sale_value)}
           icon={<TrendingUpIcon sx={{ color: "var(--admin-text)", fontSize: 20 }} />}
-          gradient="linear-gradient(135deg, #ff9100 0%, #ff6f00 100%)"
+          gradient="linear-gradient(135deg, var(--admin-warning-strong) 0%, #ff6f00 100%)"
         />
         <StatCard
           title="سود احتمالی"
           value={formatNumber(profitOf(inventory))}
           hint={`${profitPercent(inventory)}٪`}
           icon={<InventoryIcon sx={{ color: "var(--admin-text)", fontSize: 20 }} />}
-          gradient="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+          gradient="var(--admin-title-gradient)"
         />
       </Grid>
     </Box>

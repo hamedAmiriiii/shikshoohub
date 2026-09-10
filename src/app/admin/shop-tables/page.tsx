@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -248,7 +248,7 @@ export default function ShopTablesPage() {
             borderColor: "var(--admin-border)",
             "&.Mui-selected": {
               bgcolor: "var(--admin-accent)",
-              color: "#fff",
+              color: "var(--admin-on-accent)",
               "&:hover": { bgcolor: "var(--admin-accent-hover)" },
             },
           },
@@ -351,7 +351,7 @@ export default function ShopTablesPage() {
                   <IconButton onClick={() => openEdit(table)} sx={{ color: "var(--admin-text)" }}>
                     <EditIcon />
                   </IconButton>
-                  <IconButton onClick={() => deleteTable(table)} sx={{ color: "#e57373" }}>
+                  <IconButton onClick={() => deleteTable(table)} sx={{ color: "var(--admin-error-soft)" }}>
                     <DeleteIcon />
                   </IconButton>
                 </Box>
@@ -440,7 +440,7 @@ export default function ShopTablesPage() {
                     borderColor: "var(--admin-border)",
                     "&.Mui-selected": {
                       bgcolor: "var(--admin-accent)",
-                      color: "#fff",
+                      color: "var(--admin-on-accent)",
                       "&:hover": { bgcolor: "var(--admin-accent-hover)" },
                     },
                   },

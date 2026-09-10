@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useEffect } from 'react';
 import { 
   Box, 
@@ -262,10 +262,10 @@ export default function ManufacturersPage() {
               startIcon={<AssessmentIcon />}
               onClick={() => router.push('/admin/manufacturers/report')}
               sx={{
-                backgroundColor: '#2196f3',
+                backgroundColor: 'var(--admin-online)',
                 color: 'var(--admin-text)',
                 '&:hover': {
-                  backgroundColor: '#1976d2',
+                  backgroundColor: 'var(--admin-primary-blue)',
                 },
                 borderRadius: '12px',
                 padding: { xs: '8px 16px', md: '10px 24px' }
@@ -334,7 +334,7 @@ export default function ManufacturersPage() {
                       </Typography>
                     </StyledTableCell>
                     <StyledTableCell align="right">
-                      <Typography sx={{ color: '#ff9100', fontWeight: '600' }}>
+                      <Typography sx={{ color: 'var(--admin-warning-strong)', fontWeight: '600' }}>
                         {formatNumber(manufacturer.total_sold_quantity || 0)}
                       </Typography>
                     </StyledTableCell>
@@ -354,9 +354,9 @@ export default function ManufacturersPage() {
                         <IconButton
                           onClick={() => openDeleteDialogHandler(manufacturer.id)}
                           sx={{
-                            color: '#ff4444',
+                            color: 'var(--admin-error)',
                             '&:hover': {
-                              backgroundColor: 'rgba(255, 68, 68, 0.1)',
+                              backgroundColor: 'var(--admin-error-bg)',
                             }
                           }}
                         >
@@ -403,7 +403,7 @@ export default function ManufacturersPage() {
                   '& .MuiOutlinedInput-root': {
                     color: 'var(--admin-text)',
                     '& fieldset': {
-                      borderColor: '#505669',
+                      borderColor: 'var(--admin-border)',
                     },
                     '&:hover fieldset': {
                       borderColor: 'var(--admin-accent)',
@@ -477,7 +477,7 @@ export default function ManufacturersPage() {
                   '& .MuiOutlinedInput-root': {
                     color: 'var(--admin-text)',
                     '& fieldset': {
-                      borderColor: '#505669',
+                      borderColor: 'var(--admin-border)',
                     },
                     '&:hover fieldset': {
                       borderColor: 'var(--admin-accent)',
@@ -556,9 +556,9 @@ export default function ManufacturersPage() {
               onClick={handleDeleteManufacturer}
               variant="contained"
               sx={{
-                backgroundColor: '#ff4444',
+                backgroundColor: 'var(--admin-error)',
                 '&:hover': {
-                  backgroundColor: '#cc0000',
+                  backgroundColor: 'var(--admin-error-hover)',
                 },
               }}
             >

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -235,7 +235,7 @@ export default function AdminMenuModeView({
       >
         <MenuItem onClick={() => void handleOutOfStock()} disabled={saving} sx={{ fontSize: 13 }}>
           <ListItemIcon sx={{ minWidth: 32 }}>
-            <BlockIcon fontSize="small" sx={{ color: "#e57373" }} />
+            <BlockIcon fontSize="small" sx={{ color: "var(--admin-error-soft)" }} />
           </ListItemIcon>
           <ListItemText primary="اتمام موجودی" />
         </MenuItem>
@@ -549,7 +549,7 @@ export default function AdminMenuModeView({
                           >
                             <Typography
                               sx={{
-                                color: "#fff",
+                                color: "var(--admin-on-accent)",
                                 fontSize: "8px",
                                 fontWeight: 800,
                                 bgcolor: "rgba(80,80,80,0.85)",

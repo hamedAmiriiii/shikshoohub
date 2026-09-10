@@ -228,7 +228,7 @@ export default function InstallmentCreditsPage() {
             sx={{
               ...adminButtonStartIconSx,
               backgroundColor: "var(--admin-accent)",
-              color: "#fff",
+              color: "var(--admin-on-accent)",
               "&:hover": { backgroundColor: "var(--admin-accent-hover)" },
             }}
           >
@@ -300,7 +300,7 @@ export default function InstallmentCreditsPage() {
                 variant="contained"
                 sx={{
                   backgroundColor: "var(--admin-accent)",
-                  color: "#fff",
+                  color: "var(--admin-on-accent)",
                   "&:hover": { backgroundColor: "var(--admin-accent-hover)" },
                 }}
               >

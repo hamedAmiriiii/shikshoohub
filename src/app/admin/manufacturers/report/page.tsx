@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useEffect } from 'react';
 import { 
   Box, 
@@ -532,7 +532,7 @@ export default function ManufacturerReportPage() {
                   sx={{
                     color: 'var(--admin-text)',
                     '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#505669',
+                      borderColor: 'var(--admin-border)',
                     },
                     '&:hover .MuiOutlinedInput-notchedOutline': {
                       borderColor: 'var(--admin-accent)',
@@ -556,7 +556,7 @@ export default function ManufacturerReportPage() {
                   sx={{
                     color: 'var(--admin-text)',
                     '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#505669',
+                      borderColor: 'var(--admin-border)',
                     },
                     '&:hover .MuiOutlinedInput-notchedOutline': {
                       borderColor: 'var(--admin-accent)',
@@ -580,7 +580,7 @@ export default function ManufacturerReportPage() {
                 fullWidth
                 sx={{
                   color: 'var(--admin-text)',
-                  borderColor: '#505669',
+                  borderColor: 'var(--admin-border)',
                   '&:hover': {
                     borderColor: 'var(--admin-accent)',
                   },

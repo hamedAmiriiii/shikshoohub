@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState, Fragment } from "react";
 import {
@@ -750,7 +750,7 @@ export default function ProductionCostingPage() {
             sx={{
               ...adminButtonStartIconSx,
               backgroundColor: "var(--admin-accent)",
-              color: "#fff",
+              color: "var(--admin-on-accent)",
               fontSize: 12,
               minHeight: 28,
               py: 0.25,
@@ -852,7 +852,7 @@ export default function ProductionCostingPage() {
                       <StyledTableCell align="center">
                         <Box sx={{ display: "flex", gap: 0.25, justifyContent: "center" }}>
                           <Tooltip title="قیمت فروش">
-                            <IconButton size="small" onClick={() => openSalePrice(good)} sx={{ ...actionBtnSx, color: "#ff9100" }}>
+                            <IconButton size="small" onClick={() => openSalePrice(good)} sx={{ ...actionBtnSx, color: "var(--admin-warning-strong)" }}>
                               <LocalOfferIcon sx={{ fontSize: 18 }} />
                             </IconButton>
                           </Tooltip>
@@ -875,7 +875,7 @@ export default function ProductionCostingPage() {
                             </IconButton>
                           </Tooltip>
                           <Tooltip title="حذف">
-                            <IconButton size="small" onClick={() => setDeleteTarget({ kind: "good", item: good })} sx={{ ...actionBtnSx, color: "#ff4444" }}>
+                            <IconButton size="small" onClick={() => setDeleteTarget({ kind: "good", item: good })} sx={{ ...actionBtnSx, color: "var(--admin-error)" }}>
                               <DeleteOutlineIcon sx={{ fontSize: 18 }} />
                             </IconButton>
                           </Tooltip>
@@ -1327,7 +1327,7 @@ export default function ProductionCostingPage() {
                 borderColor: "var(--admin-border)",
                 "&.Mui-selected": {
                   bgcolor: "var(--admin-accent)",
-                  color: "#fff",
+                  color: "var(--admin-on-accent)",
                   "&:hover": { bgcolor: "var(--admin-accent-hover)" },
                 },
               },

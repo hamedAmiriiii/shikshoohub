@@ -5,6 +5,7 @@ import { RESERV_LOCALES, useReservI18n } from "./reservI18n";
 import AddIcon from "@mui/icons-material/Add";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import HistoryIcon from "@mui/icons-material/History";
+import LanguageIcon from "@mui/icons-material/Language";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import RemoveIcon from "@mui/icons-material/Remove";
@@ -19,11 +20,13 @@ import {
   Button,
   IconButton,
   InputAdornment,
+  Menu,
+  MenuItem,
   Skeleton,
   TextField,
   Typography,
 } from "@mui/material";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 export type ReservThemeMode = "dark" | "light";
 
@@ -103,6 +106,8 @@ export function ReservHeader({
   onHistory,
 }: HeaderProps) {
   const { t, locale, setLocale } = useReservI18n();
+  const [langAnchor, setLangAnchor] = useState<null | HTMLElement>(null);
+  const langOpen = Boolean(langAnchor);
   const iconBtn = {
     width: 44,
     height: 44,
@@ -190,47 +195,61 @@ export function ReservHeader({
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0, flexWrap: "wrap", justifyContent: "flex-end" }}>
           {showLanguageSwitch ? (
-            <Box
-              role="group"
-              aria-label="Language"
-              sx={{
-                display: "inline-flex",
-                p: 0.25,
-                borderRadius: "12px",
-                border: `1px solid ${theme.BORDER}`,
-                bgcolor: theme.SURFACE,
-              }}
-            >
-              {RESERV_LOCALES.map((item) => {
-                const active = locale === item.id;
-                return (
-                  <Box
+            <>
+              <IconButton
+                onClick={(e) => setLangAnchor(e.currentTarget)}
+                aria-label="Language"
+                aria-haspopup="menu"
+                aria-expanded={langOpen}
+                sx={{ ...iconBtn, width: 40, height: 40 }}
+              >
+                <LanguageIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+              <Menu
+                anchorEl={langAnchor}
+                open={langOpen}
+                onClose={() => setLangAnchor(null)}
+                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                transformOrigin={{ vertical: "top", horizontal: "right" }}
+                slotProps={{
+                  paper: {
+                    sx: {
+                      mt: 0.5,
+                      minWidth: 140,
+                      borderRadius: "12px",
+                      bgcolor: theme.SURFACE,
+                      border: `1px solid ${theme.BORDER}`,
+                      boxShadow: "0 8px 24px rgba(26,23,18,0.12)",
+                      "& .MuiMenuItem-root": {
+                        fontFamily: APP_FONT_FAMILY,
+                        fontWeight: 700,
+                        fontSize: 14,
+                        color: theme.TEXT,
+                        py: 1.1,
+                      },
+                      "& .MuiMenuItem-root.Mui-selected": {
+                        bgcolor: ACCENT_SOFT,
+                        color: ACCENT_DARK,
+                        "&:hover": { bgcolor: ACCENT_SOFT },
+                      },
+                    },
+                  },
+                }}
+              >
+                {RESERV_LOCALES.map((item) => (
+                  <MenuItem
                     key={item.id}
-                    component="button"
-                    type="button"
-                    onClick={() => setLocale(item.id)}
-                    aria-pressed={active}
-                    aria-label={t(item.id === "fa" ? "langFa" : item.id === "en" ? "langEn" : "langAr")}
-                    sx={{
-                      appearance: "none",
-                      border: 0,
-                      cursor: "pointer",
-                      minWidth: 40,
-                      height: 32,
-                      px: 0.85,
-                      borderRadius: "10px",
-                      fontFamily: APP_FONT_FAMILY,
-                      fontWeight: 800,
-                      fontSize: 10,
-                      bgcolor: active ? ACCENT : "transparent",
-                      color: active ? "#1a1712" : theme.TEXT,
+                    selected={locale === item.id}
+                    onClick={() => {
+                      setLocale(item.id);
+                      setLangAnchor(null);
                     }}
                   >
-                    {item.short}
-                  </Box>
-                );
-              })}
-            </Box>
+                    {t(item.id === "fa" ? "langFa" : item.id === "en" ? "langEn" : "langAr")}
+                  </MenuItem>
+                ))}
+              </Menu>
+            </>
           ) : null}
           <Button
             onClick={onLogin}

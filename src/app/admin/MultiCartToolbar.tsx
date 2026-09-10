@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Box, Button, IconButton, Tooltip, Typography } from "@mui/material";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
@@ -199,12 +199,12 @@ export default function MultiCartToolbar({
               border: "1px solid var(--admin-border)",
               borderRadius: "6px",
               "&:hover": {
-                borderColor: "#e57373",
+                borderColor: "var(--admin-error-soft)",
                 bgcolor: "rgba(229, 115, 115, 0.08)",
               },
             }}
           >
-            <DeleteOutlineIcon sx={{ fontSize: compact ? 16 : 18, color: "#e57373" }} />
+            <DeleteOutlineIcon sx={{ fontSize: compact ? 16 : 18, color: "var(--admin-error-soft)" }} />
           </IconButton>
         </span>
       </Tooltip>

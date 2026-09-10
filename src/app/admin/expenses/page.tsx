@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -665,7 +665,7 @@ export default function ExpensesPage() {
                                 setDeletingExpense(expense);
                                 setOpenDeleteDialog(true);
                               }}
-                              sx={{ color: "#ff4444" }}
+                              sx={{ color: "var(--admin-error)" }}
                             >
                               <DeleteIcon sx={{ fontSize: 16 }} />
                             </IconButton>
@@ -692,7 +692,7 @@ export default function ExpensesPage() {
               size="small"
               sx={{
                 "& .MuiPaginationItem-root": { color: "var(--admin-text)", fontSize: 12 },
-                "& .Mui-selected": { backgroundColor: "var(--admin-accent) !important", color: "#fff" },
+                "& .Mui-selected": { backgroundColor: "var(--admin-accent) !important", color: "var(--admin-on-accent)" },
               }}
             />
           </Box>
@@ -837,7 +837,7 @@ export default function ExpensesPage() {
               variant="contained"
               disabled={saving}
               onClick={() => void handleDelete()}
-              sx={{ backgroundColor: "#ff4444", fontSize: 12, "&:hover": { backgroundColor: "#cc0000" } }}
+              sx={{ backgroundColor: "var(--admin-error)", fontSize: 12, "&:hover": { backgroundColor: "var(--admin-error-hover)" } }}
             >
               حذف
             </Button>

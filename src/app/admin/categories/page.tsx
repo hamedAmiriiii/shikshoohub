@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useEffect } from 'react';
 import {
   Box,
@@ -334,8 +334,8 @@ export default function CategoriesPage() {
                   onClick={() => handleDelete(category.id)}
                   size="small"
                   sx={{
-                    color: '#ff4444',
-                    backgroundColor: 'rgba(255, 68, 68, 0.1)',
+                    color: 'var(--admin-error)',
+                    backgroundColor: 'var(--admin-error-bg)',
                     '&:hover': {
                       backgroundColor: 'rgba(255, 68, 68, 0.2)',
                     },
@@ -620,7 +620,7 @@ export default function CategoriesPage() {
                       top: 6,
                       right: 6,
                       backgroundColor: 'rgba(0,0,0,0.55)',
-                      color: '#fff',
+                      color: 'var(--admin-on-accent)',
                       '&:hover': { backgroundColor: 'rgba(244,67,54,0.9)' },
                     }}
                   >

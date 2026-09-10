@@ -29,6 +29,41 @@
   --admin-info-bg: rgba(33, 150, 243, 0.12);
   --admin-info-border: rgba(33, 150, 243, 0.25);
   --admin-info-icon: #2196f3;
+  --admin-error: #ff4444;
+  --admin-error-hover: #cc0000;
+  --admin-error-soft: #e57373;
+  --admin-error-bg: rgba(255, 68, 68, 0.1);
+  --admin-warning: #ff9800;
+  --admin-warning-strong: #ff9100;
+  --admin-warning-hover: #e68100;
+  --admin-warning-bg: rgba(255, 145, 0, 0.1);
+  --admin-success: #1ab44d;
+  --admin-success-soft: rgba(26, 180, 77, 0.9);
+  --admin-success-bg: rgba(26, 180, 77, 0.12);
+  --admin-success-border: rgba(26, 180, 77, 0.35);
+  --admin-disabled-bg: #505669;
+  --admin-on-accent: #ffffff;
+  --admin-cart-surface: #1e2330;
+  --admin-cart-head-bg: #0f1117;
+  --admin-cart-row-hover: #252a3a;
+  --admin-action-edit: #ff9100;
+  --admin-action-edit-hover: #e68100;
+  --admin-action-purple: #9c27b0;
+  --admin-action-purple-hover: #7b1fa2;
+  --admin-action-blue: #2196f3;
+  --admin-action-blue-hover: #1976d2;
+  --admin-action-delete: #ff4444;
+  --admin-action-delete-hover: #cc0000;
+  --admin-warning-banner-bg: rgba(255, 152, 0, 0.12);
+  --admin-warning-banner-border: rgba(255, 152, 0, 0.35);
+  --admin-warning-banner-text: #fde68a;
+  --admin-shadow: rgba(15, 23, 42, 0.12);
+  --admin-primary-blue: #1976d2;
+  --admin-primary-blue-hover: #1565c0;
+  --admin-offline: #ff9800;
+  --admin-online: #2196f3;
+  --admin-overlay-soft: rgba(255, 255, 255, 0.12);
+  --admin-overlay-border: rgba(255, 255, 255, 0.28);
 }
 
 /* تم ادمین — تیره (پیش‌فرض، بدون تغییر ظاهر فعلی) */
@@ -62,6 +97,41 @@ html:not([data-admin-theme]) {
   --admin-info-bg: rgba(33, 150, 243, 0.12);
   --admin-info-border: rgba(33, 150, 243, 0.25);
   --admin-info-icon: #2196f3;
+  --admin-error: #ff4444;
+  --admin-error-hover: #cc0000;
+  --admin-error-soft: #e57373;
+  --admin-error-bg: rgba(255, 68, 68, 0.1);
+  --admin-warning: #ff9800;
+  --admin-warning-strong: #ff9100;
+  --admin-warning-hover: #e68100;
+  --admin-warning-bg: rgba(255, 145, 0, 0.1);
+  --admin-success: #1ab44d;
+  --admin-success-soft: rgba(26, 180, 77, 0.9);
+  --admin-success-bg: rgba(26, 180, 77, 0.12);
+  --admin-success-border: rgba(26, 180, 77, 0.35);
+  --admin-disabled-bg: #505669;
+  --admin-on-accent: #ffffff;
+  --admin-cart-surface: #1e2330;
+  --admin-cart-head-bg: #0f1117;
+  --admin-cart-row-hover: #252a3a;
+  --admin-action-edit: #ff9100;
+  --admin-action-edit-hover: #e68100;
+  --admin-action-purple: #9c27b0;
+  --admin-action-purple-hover: #7b1fa2;
+  --admin-action-blue: #2196f3;
+  --admin-action-blue-hover: #1976d2;
+  --admin-action-delete: #ff4444;
+  --admin-action-delete-hover: #cc0000;
+  --admin-warning-banner-bg: rgba(255, 152, 0, 0.12);
+  --admin-warning-banner-border: rgba(255, 152, 0, 0.35);
+  --admin-warning-banner-text: #fde68a;
+  --admin-shadow: rgba(15, 23, 42, 0.12);
+  --admin-primary-blue: #1976d2;
+  --admin-primary-blue-hover: #1565c0;
+  --admin-offline: #ff9800;
+  --admin-online: #2196f3;
+  --admin-overlay-soft: rgba(255, 255, 255, 0.12);
+  --admin-overlay-border: rgba(255, 255, 255, 0.28);
 }
 
 /* تم روشن — کمی تیره‌تر از سفید خالص (خوانایی بهتر) */
@@ -94,48 +164,89 @@ html[data-admin-theme="light"] {
   --admin-info-icon: #059669;
   --admin-input-bg: #ffffff;
   --admin-input-border: #94a3b8;
+  --admin-error: #dc2626;
+  --admin-error-hover: #b91c1c;
+  --admin-error-soft: #ef4444;
+  --admin-error-bg: rgba(220, 38, 38, 0.08);
+  --admin-warning: #d97706;
+  --admin-warning-strong: #ea580c;
+  --admin-warning-hover: #c2410c;
+  --admin-warning-bg: rgba(234, 88, 12, 0.1);
+  --admin-success: #059669;
+  --admin-success-soft: #047857;
+  --admin-success-bg: rgba(5, 150, 105, 0.1);
+  --admin-success-border: rgba(5, 150, 105, 0.28);
+  --admin-disabled-bg: #94a3b8;
+  --admin-on-accent: #ffffff;
+  --admin-cart-surface: var(--admin-surface);
+  --admin-cart-head-bg: var(--admin-surface-alt);
+  --admin-cart-row-hover: var(--admin-menu-hover);
+  --admin-warning-banner-bg: #fffbeb;
+  --admin-warning-banner-border: #fcd34d;
+  --admin-warning-banner-text: #92400e;
+  --admin-shadow: rgba(15, 23, 42, 0.08);
+  --admin-overlay-soft: rgba(15, 23, 42, 0.04);
+  --admin-overlay-border: rgba(15, 23, 42, 0.1);
 }
 
 html[data-admin-theme="light"] body {
-  background-color: #d8e2ea;
-  color: #0f172a;
+  background-color: var(--admin-surface-deep);
+  color: var(--admin-text);
 }
 
 html[data-admin-theme="dark"] body,
 html:not([data-admin-theme]) body {
-  background-color: #090d19;
+  background-color: var(--admin-surface-alt);
+  color: var(--admin-text);
 }
 
-/* گرید و جدول — تم روشن (پشتیبان برای استایل‌های قدیمی) */
-html[data-admin-theme="light"] .MuiTableContainer-root {
+/* گرید و جدول — هر دو تم */
+html[data-admin-theme] .admin-app .MuiTableContainer-root,
+html[data-admin-theme] .MuiTableContainer-root {
   background-color: var(--admin-surface) !important;
+  border-color: var(--admin-border) !important;
+  color: var(--admin-text);
+}
+
+html[data-admin-theme] .admin-app .MuiTableHead-root .MuiTableCell-root,
+html[data-admin-theme] .MuiTableHead-root .MuiTableCell-root {
+  background-color: var(--admin-surface-alt) !important;
+  color: var(--admin-text) !important;
   border-color: var(--admin-border) !important;
 }
 
-html[data-admin-theme="light"] .MuiTableHead-root .MuiTableCell-root {
-  background-color: var(--admin-surface-alt) !important;
+html[data-admin-theme] .admin-app .MuiTableBody-root .MuiTableCell-root,
+html[data-admin-theme] .MuiTableBody-root .MuiTableCell-root {
   color: var(--admin-text) !important;
+  border-color: var(--admin-divider) !important;
 }
 
-html[data-admin-theme="light"] .MuiTableBody-root .MuiTableCell-root {
-  color: var(--admin-text) !important;
-}
-
-html[data-admin-theme="light"] .MuiTableBody-root .MuiTableRow-root {
+html[data-admin-theme] .admin-app .MuiTableBody-root .MuiTableRow-root,
+html[data-admin-theme] .MuiTableBody-root .MuiTableRow-root {
   background-color: var(--admin-surface) !important;
 }
 
-html[data-admin-theme="light"] .MuiTableBody-root .MuiTableRow-root:nth-of-type(even) {
+html[data-admin-theme] .admin-app .MuiTableBody-root .MuiTableRow-root:nth-of-type(even),
+html[data-admin-theme] .MuiTableBody-root .MuiTableRow-root:nth-of-type(even) {
   background-color: var(--admin-surface-alt) !important;
 }
 
-html[data-admin-theme="light"] .MuiPaginationItem-root {
+html[data-admin-theme] .admin-app .MuiTableBody-root .MuiTableRow-root:hover,
+html[data-admin-theme] .MuiTableBody-root .MuiTableRow-root:hover {
+  background-color: var(--admin-menu-hover) !important;
+}
+
+html[data-admin-theme] .MuiPaginationItem-root {
   color: var(--admin-text) !important;
 }
 
-html[data-admin-theme="light"] .MuiPaginationItem-root.Mui-selected {
+html[data-admin-theme] .MuiPaginationItem-root.Mui-selected {
   background-color: var(--admin-accent) !important;
-  color: #fff !important;
+  color: var(--admin-on-accent) !important;
+}
+
+html[data-admin-theme] .MuiFormHelperText-root.Mui-error {
+  color: var(--admin-error) !important;
 }
 
 /* کارت‌های لیست موبایل */

@@ -757,7 +757,7 @@ export default function AdminHamburgerSidebar({
               flexShrink: 0,
             }}
           >
-            <StorefrontIcon sx={{ fontSize: 16, color: "#fff" }} />
+            <StorefrontIcon sx={{ fontSize: 16, color: "var(--admin-on-accent)" }} />
           </Box>
           <Typography
             sx={{

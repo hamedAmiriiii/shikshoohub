@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Box, Chip, IconButton, Typography } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
@@ -77,7 +77,7 @@ export default function ManualTradeCard({ trade, onEdit, onDelete }: ManualTrade
             onClick={() => onDelete(trade)}
             title="حذف"
             sx={{
-              color: "#ff4444",
+              color: "var(--admin-error)",
               bgcolor: "rgba(255, 68, 68, 0.15)",
               "&:hover": { bgcolor: "rgba(255, 68, 68, 0.3)" },
             }}
@@ -93,7 +93,7 @@ export default function ManualTradeCard({ trade, onEdit, onDelete }: ManualTrade
 
       <Typography
         sx={{
-          color: isPurchase ? "#ff9800" : "var(--admin-accent)",
+          color: isPurchase ? "var(--admin-warning)" : "var(--admin-accent)",
           fontWeight: 700,
           fontSize: 18,
           mb: 1,

@@ -25,7 +25,7 @@ function ticketSx(paperWidthMm: number, settings: SaleReceiptPrintSettings) {
     width: `${paperWidthMm}mm`,
     maxWidth: "100%",
     mx: "auto",
-    bgcolor: "#fff",
+    bgcolor: "var(--admin-on-accent)",
     color: "#111",
     fontFamily: "Tahoma, Arial, sans-serif",
     fontSize: `${settings.fontSize}px`,

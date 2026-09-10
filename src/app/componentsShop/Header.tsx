@@ -195,7 +195,7 @@ export default function Header({
               }}
             >
               <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 0.5 }}>
-                <WarningAmberIcon sx={{ color: "#ff5252", fontSize: 16 }} />
+                <WarningAmberIcon sx={{ color: "var(--admin-error)", fontSize: 16 }} />
                 <Typography
                   sx={{ color: "var(--admin-text)", fontSize: "11px", fontWeight: 700 }}
                 >
@@ -346,7 +346,7 @@ export default function Header({
               }}
             >
               <WarningAmberIcon
-                sx={{ color: "#ff5252", fontSize: 22, mt: 0.25, flexShrink: 0 }}
+                sx={{ color: "var(--admin-error)", fontSize: 22, mt: 0.25, flexShrink: 0 }}
               />
               <Box sx={{ minWidth: 0, flex: 1 }}>
                 <Typography
@@ -384,13 +384,13 @@ export default function Header({
               sx={{
                 flexShrink: 0,
                 width: { xs: "100%", sm: "auto" },
-                backgroundColor: "#ff9800",
+                backgroundColor: "var(--admin-warning)",
                 fontWeight: 700,
                 fontSize: { xs: "13px", md: "14px" },
                 py: { xs: 1, sm: 0.75 },
                 px: 2,
                 whiteSpace: "nowrap",
-                "&:hover": { backgroundColor: "#f57c00" },
+                "&:hover": { backgroundColor: "var(--admin-warning-hover)" },
               }}
             >
               خرید اشتراک
@@ -622,7 +622,7 @@ export default function Header({
                 <IconButton
                   onClick={handleLogout}
                   sx={{
-                    color: "#ff4444",
+                    color: "var(--admin-error)",
                     backgroundColor: "rgba(255, 68, 68, 0.1)",
                     padding: { xs: "5px", md: "8px" },
                     flexShrink: 0,

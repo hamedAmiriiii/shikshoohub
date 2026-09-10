@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -148,7 +148,7 @@ function SaleReceiptPrintContent() {
                 startIcon={<PrintIcon />}
                 onClick={() => void handlePrint()}
                 disabled={printing}
-                sx={{ bgcolor: "#78b568", "&:hover": { bgcolor: "#5a9a4a" } }}
+                sx={{ bgcolor: "var(--admin-accent)", "&:hover": { bgcolor: "var(--admin-accent-hover)" } }}
               >
                 {printing ? "در حال چاپ..." : stations.length > 1 ? `چاپ ${stations.length} فیش` : "چاپ فاکتور"}
               </Button>
@@ -190,7 +190,7 @@ function SaleReceiptPrintContent() {
             <Box
               className="print-preview"
               sx={{
-                bgcolor: "#fff",
+                bgcolor: "var(--admin-on-accent)",
                 color: "#111",
                 borderRadius: 2,
                 p: 2,
@@ -201,7 +201,7 @@ function SaleReceiptPrintContent() {
                 gap: 3,
               }}
             >
-              <Typography className="no-print" sx={{ fontSize: 12, color: "#888", textAlign: "center" }}>
+              <Typography className="no-print" sx={{ fontSize: 12, color: "var(--admin-text-secondary)", textAlign: "center" }}>
                 پیش‌نمایش — عرض {paperWidthMm}mm
                 {stations.length > 1 ? ` — ${stations.length} فیش` : ""}
               </Typography>

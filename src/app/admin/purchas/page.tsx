@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import List from "@/app/coponent/grid/Grid";
 import React, { useEffect, useMemo, useState, Suspense } from "react";
 
@@ -204,7 +204,7 @@ export default function ListPurches() {
                     style={{ 
                         height: "50px", 
                         borderRadius: "15px", 
-                        backgroundColor: "#fff",
+                        backgroundColor: "var(--admin-surface)",
                         width: "100%"
                     }}
                     className="rmdp-mobile"
@@ -267,11 +267,11 @@ export default function ListPurches() {
                         startIcon={<DeleteIcon />}
                         onClick={handleClearFilters}
                         sx={{
-                            color: "#ff4444",
-                            borderColor: "#ff4444",
+                            color: "var(--admin-error)",
+                            borderColor: "var(--admin-error)",
                             "&:hover": {
                                 borderColor: "#ff6666",
-                                backgroundColor: "rgba(255, 68, 68, 0.1)"
+                                backgroundColor: "var(--admin-error-bg)"
                             }
                         }}
                     >
@@ -361,8 +361,8 @@ export default function ListPurches() {
                     <IconButton
                       onClick={handleClearFilters}
                       sx={{
-                        color: "#ff4444",
-                        backgroundColor: "rgba(255, 68, 68, 0.1)",
+                        color: "var(--admin-error)",
+                        backgroundColor: "var(--admin-error-bg)",
                         "&:hover": {
                           backgroundColor: "rgba(255, 68, 68, 0.2)"
                         }

@@ -272,7 +272,7 @@ export default function AdminAgencyRequestsPage() {
                   ...(statusFilter === chip.value
                     ? {
                         bgcolor: "var(--admin-accent)",
-                        color: "#fff",
+                        color: "var(--admin-on-accent)",
                         "&:hover": { bgcolor: "var(--admin-accent-hover)" },
                       }
                     : {

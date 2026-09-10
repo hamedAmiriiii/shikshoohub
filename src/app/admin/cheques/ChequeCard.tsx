@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   Box,
@@ -118,7 +118,7 @@ export default function ChequeCard({
               onClick={() => onUnclear(cheque)}
               title="برگشت وصول"
               sx={{
-                color: "#ff9800",
+                color: "var(--admin-warning)",
                 bgcolor: "rgba(255, 152, 0, 0.15)",
                 "&:hover": { bgcolor: "rgba(255, 152, 0, 0.3)" },
               }}
@@ -132,7 +132,7 @@ export default function ChequeCard({
               onClick={() => onDelete(cheque)}
               title="حذف"
               sx={{
-                color: "#ff4444",
+                color: "var(--admin-error)",
                 bgcolor: "rgba(255, 68, 68, 0.15)",
                 "&:hover": { bgcolor: "rgba(255, 68, 68, 0.3)" },
               }}
@@ -173,7 +173,7 @@ export default function ChequeCard({
             mt: 1.5,
             borderRadius: "10px",
             bgcolor: "var(--admin-accent)",
-            color: "#fff",
+            color: "var(--admin-on-accent)",
             gap: "8px",
             "& .MuiButton-startIcon": { m: 0 },
             "&:hover": { bgcolor: "var(--admin-accent-hover)" },
@@ -192,12 +192,12 @@ export default function ChequeCard({
           sx={{
             mt: 1.5,
             borderRadius: "10px",
-            borderColor: "#ff9800",
-            color: "#ff9800",
+            borderColor: "var(--admin-warning)",
+            color: "var(--admin-warning)",
             gap: "8px",
             "& .MuiButton-startIcon": { m: 0 },
             "&:hover": {
-              borderColor: "#f57c00",
+              borderColor: "var(--admin-warning-hover)",
               bgcolor: "rgba(255, 152, 0, 0.08)",
             },
           }}

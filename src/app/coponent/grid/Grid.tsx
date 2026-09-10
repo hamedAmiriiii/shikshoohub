@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import React, { ReactNode, useEffect, useState, useMemo, useRef } from "react";
 import Image from "next/image";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
@@ -70,9 +70,9 @@ const DesktopActionsCell: React.FC<{
             size="small"
             onClick={() => onEdit(item)}
             sx={{
-              backgroundColor: "#ff9100",
+              backgroundColor: "var(--admin-warning-strong)",
               color: "#fff",
-              "&:hover": { backgroundColor: "#e68100" },
+              "&:hover": { backgroundColor: "var(--admin-action-edit-hover)" },
               ...actionBtnSx,
             }}
           >
@@ -86,9 +86,9 @@ const DesktopActionsCell: React.FC<{
             size="small"
             onClick={() => onSizeColor(item)}
             sx={{
-              backgroundColor: "#9c27b0",
+              backgroundColor: "var(--admin-action-purple)",
               color: "#fff",
-              "&:hover": { backgroundColor: "#7b1fa2" },
+              "&:hover": { backgroundColor: "var(--admin-action-purple-hover)" },
               ...actionBtnSx,
             }}
           >
@@ -102,9 +102,9 @@ const DesktopActionsCell: React.FC<{
             size="small"
             onClick={() => onManufacturer(item)}
             sx={{
-              backgroundColor: "#2196f3",
+              backgroundColor: "var(--admin-action-blue)",
               color: "#fff",
-              "&:hover": { backgroundColor: "#1976d2" },
+              "&:hover": { backgroundColor: "var(--admin-action-blue-hover)" },
               ...actionBtnSx,
             }}
           >
@@ -134,9 +134,9 @@ const DesktopActionsCell: React.FC<{
             size="small"
             onClick={() => onDelete(item)}
             sx={{
-              backgroundColor: "#ff4444",
+              backgroundColor: "var(--admin-action-delete)",
               color: "#fff",
-              "&:hover": { backgroundColor: "#cc0000" },
+              "&:hover": { backgroundColor: "var(--admin-action-delete-hover)" },
               ...actionBtnSx,
             }}
           >

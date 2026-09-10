@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useEffect } from 'react';
 import { 
   Box, 
@@ -793,9 +793,9 @@ export default function InvoicesPage() {
                           size="small"
                           onClick={() => openDeleteDialogHandler(invoice.id)}
                           sx={{
-                            color: '#ff4444',
+                            color: 'var(--admin-error)',
                             '&:hover': {
-                              backgroundColor: 'rgba(255, 68, 68, 0.1)',
+                              backgroundColor: 'var(--admin-error-bg)',
                             }
                           }}
                         >
@@ -1003,7 +1003,7 @@ export default function InvoicesPage() {
                   '& .MuiOutlinedInput-root': {
                     color: 'var(--admin-text)',
                     '& fieldset': {
-                      borderColor: '#505669',
+                      borderColor: 'var(--admin-border)',
                     },
                     '&:hover fieldset': {
                       borderColor: 'var(--admin-accent)',
@@ -1034,7 +1034,7 @@ export default function InvoicesPage() {
                   '& .MuiOutlinedInput-root': {
                     color: 'var(--admin-text)',
                     '& fieldset': {
-                      borderColor: '#505669',
+                      borderColor: 'var(--admin-border)',
                     },
                     '&:hover fieldset': {
                       borderColor: 'var(--admin-accent)',
@@ -1060,7 +1060,7 @@ export default function InvoicesPage() {
                   '& .MuiOutlinedInput-root': {
                     color: 'var(--admin-text)',
                     '& fieldset': {
-                      borderColor: '#505669',
+                      borderColor: 'var(--admin-border)',
                     },
                     '&:hover fieldset': {
                       borderColor: 'var(--admin-accent)',
@@ -1156,9 +1156,9 @@ export default function InvoicesPage() {
               onClick={handleDeleteInvoice}
               variant="contained"
               sx={{
-                backgroundColor: '#ff4444',
+                backgroundColor: 'var(--admin-error)',
                 '&:hover': {
-                  backgroundColor: '#cc0000',
+                  backgroundColor: 'var(--admin-error-hover)',
                 },
               }}
             >
@@ -1192,7 +1192,7 @@ export default function InvoicesPage() {
                 '& .MuiOutlinedInput-root': {
                   color: 'var(--admin-text)',
                   '& fieldset': {
-                    borderColor: '#505669',
+                    borderColor: 'var(--admin-border)',
                   },
                   '&:hover fieldset': {
                     borderColor: 'var(--admin-accent)',
@@ -1302,7 +1302,7 @@ export default function InvoicesPage() {
                 fullWidth
                 sx={{
                   color: 'var(--admin-text)',
-                  borderColor: '#505669',
+                  borderColor: 'var(--admin-border)',
                   '&:hover': {
                     borderColor: 'var(--admin-accent)',
                   },

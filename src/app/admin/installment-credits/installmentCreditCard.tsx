@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import React from "react";
 import { Card, CardContent, Typography, Box, IconButton } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
@@ -79,8 +79,8 @@ export default function InstallmentCreditCard({ props, onEdit, onDelete }: Insta
             <IconButton
               onClick={() => onDelete(row)}
               sx={{
-                color: "#ff4444",
-                backgroundColor: "rgba(255, 68, 68, 0.1)",
+                color: "var(--admin-error)",
+                backgroundColor: "var(--admin-error-bg)",
                 padding: "6px",
                 "&:hover": { backgroundColor: "rgba(255, 68, 68, 0.2)" },
               }}
@@ -104,7 +104,7 @@ export default function InstallmentCreditCard({ props, onEdit, onDelete }: Insta
             <Typography sx={{ fontSize: { xs: "12px", md: "14px" }, color: "var(--admin-text-muted)", marginBottom: "4px" }}>
               اعتبار عادی
             </Typography>
-            <Typography sx={{ fontSize: { xs: "18px", md: "22px" }, fontWeight: "700", color: "#2196f3" }}>
+            <Typography sx={{ fontSize: { xs: "18px", md: "22px" }, fontWeight: "700", color: "var(--admin-online)" }}>
               {formatCreditMoney(row.credit)} تومان
             </Typography>
           </Box>

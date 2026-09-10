@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect } from "react";
 import {
@@ -300,7 +300,7 @@ export default function AdminMenuModeCartPanel({
                 sx={{ p: 0.15, mt: -0.25 }}
                 aria-label="حذف"
               >
-                <DeleteOutlineIcon sx={{ fontSize: 13, color: "#e57373" }} />
+                <DeleteOutlineIcon sx={{ fontSize: 13, color: "var(--admin-error-soft)" }} />
               </IconButton>
             </Box>
             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mt: 0.25, gap: 0.25 }}>
@@ -440,7 +440,7 @@ export default function AdminMenuModeCartPanel({
         )}
 
         {paymentType === "debt" && (
-          <Typography sx={{ fontSize: "8px", color: "#ff9800", lineHeight: 1.3 }}>
+          <Typography sx={{ fontSize: "8px", color: "var(--admin-warning)", lineHeight: 1.3 }}>
             ثبت قرضی — مبلغ به بدهی مشتری اضافه می‌شود
           </Typography>
         )}
@@ -498,12 +498,12 @@ export default function AdminMenuModeCartPanel({
               )}
             </Box>
             {!loadingAvailableCheques && matchingCheques.length === 0 && (
-              <Typography sx={{ fontSize: "8px", color: "#e57373", lineHeight: 1.3 }}>
+              <Typography sx={{ fontSize: "8px", color: "var(--admin-error-soft)", lineHeight: 1.3 }}>
                 چک مناسب نیست — با + ثبت کنید
               </Typography>
             )}
             {selectedChequeId && chequeRemainder === 0 && (
-              <Typography sx={{ fontSize: "8px", color: "#2196f3", lineHeight: 1.3 }}>
+              <Typography sx={{ fontSize: "8px", color: "var(--admin-online)", lineHeight: 1.3 }}>
                 چک کل مبلغ را پوشش می‌دهد
               </Typography>
             )}
@@ -589,7 +589,7 @@ export default function AdminMenuModeCartPanel({
         )}
 
         {paymentSplitError && (
-          <Typography sx={{ fontSize: "8px", color: "#e57373" }}>{paymentSplitError}</Typography>
+          <Typography sx={{ fontSize: "8px", color: "var(--admin-error-soft)" }}>{paymentSplitError}</Typography>
         )}
 
         {installmentPaymentEnabled && paymentType === "installment" && calculatingInstallments && (
@@ -599,7 +599,7 @@ export default function AdminMenuModeCartPanel({
           </Box>
         )}
         {installmentPaymentEnabled && paymentType === "installment" && installmentCreditError && (
-          <Typography sx={{ fontSize: "8px", color: "#e57373", lineHeight: 1.3 }}>
+          <Typography sx={{ fontSize: "8px", color: "var(--admin-error-soft)", lineHeight: 1.3 }}>
             {installmentCreditError}
           </Typography>
         )}
@@ -613,7 +613,7 @@ export default function AdminMenuModeCartPanel({
         {useCreditAmount > 0 && (
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 0.5 }}>
             <Typography sx={{ fontSize: "12px", color: "var(--admin-text-muted)" }}>اعتبار</Typography>
-            <Typography sx={{ fontSize: "13px", fontWeight: 700, color: "#e57373", lineHeight: 1.2 }}>
+            <Typography sx={{ fontSize: "13px", fontWeight: 700, color: "var(--admin-error-soft)", lineHeight: 1.2 }}>
               -{formatNumber(useCreditAmount)}
             </Typography>
           </Box>
@@ -621,7 +621,7 @@ export default function AdminMenuModeCartPanel({
         {backPrice > 0 && (
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 0.5 }}>
             <Typography sx={{ fontSize: "12px", color: "var(--admin-text-muted)" }}>برگشتی</Typography>
-            <Typography sx={{ fontSize: "13px", fontWeight: 700, color: "#e57373", lineHeight: 1.2 }}>
+            <Typography sx={{ fontSize: "13px", fontWeight: 700, color: "var(--admin-error-soft)", lineHeight: 1.2 }}>
               -{formatNumber(backPrice)}
             </Typography>
           </Box>

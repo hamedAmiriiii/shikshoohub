@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useEffect, useState } from 'react';
 import { Box, Typography, Paper, CircularProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Select, MenuItem, FormControl, InputLabel, Chip, Grid } from '@mui/material';
 import { useRouter } from 'next/navigation';
@@ -160,7 +160,7 @@ export default function ProfitLossPage() {
             }}
             label="انتخاب سال"
             sx={{
-              backgroundColor: "#fff",
+              backgroundColor: "var(--admin-surface)",
               borderRadius: "15px",
               "& .MuiOutlinedInput-notchedOutline": {
                 borderColor: "#e0e0e0",
@@ -230,11 +230,11 @@ export default function ProfitLossPage() {
             startIcon={<DeleteIcon />}
             onClick={handleClearFilters}
             sx={{
-              color: "#ff4444",
-              borderColor: "#ff4444",
+              color: "var(--admin-error)",
+              borderColor: "var(--admin-error)",
               "&:hover": {
                 borderColor: "#ff6666",
-                backgroundColor: "rgba(255, 68, 68, 0.1)"
+                backgroundColor: "var(--admin-error-bg)"
               }
             }}
           >
@@ -350,22 +350,22 @@ export default function ProfitLossPage() {
                         <TableCell align="right" sx={{ color: "var(--admin-text)" }}>
                           {formatNumber(report.total_purchases)} 
                         </TableCell>
-                        <TableCell align="right" sx={{ color: "#ff9800" }}>
+                        <TableCell align="right" sx={{ color: "var(--admin-warning)" }}>
                           {formatNumber(report.total_manual_purchases ?? 0)} 
                         </TableCell>
                         <TableCell align="right" sx={{ color: "var(--admin-accent)", fontWeight: "600" }}>
                           {formatNumber(report.total_profit)} 
                         </TableCell>
-                        <TableCell align="right" sx={{ color: "#ff9800" }}>
+                        <TableCell align="right" sx={{ color: "var(--admin-warning)" }}>
                           {formatNumber(report.total_expenses)} 
                         </TableCell>
                         <TableCell align="right" sx={{ color: "var(--admin-text)" }}>
                           {formatNumber(report.total_invoices)} 
                         </TableCell>
-                        <TableCell align="right" sx={{ color: report.net_profit >= 0 ? "var(--admin-accent)" : "#ff4444", fontWeight: "600" }}>
+                        <TableCell align="right" sx={{ color: report.net_profit >= 0 ? "var(--admin-accent)" : "var(--admin-error)", fontWeight: "600" }}>
                           {formatNumber(report.net_profit)} 
                         </TableCell>
-                        <TableCell align="right" sx={{ color: report.account_balance >= 0 ? "#2196f3" : "#ff4444", fontWeight: "600" }}>
+                        <TableCell align="right" sx={{ color: report.account_balance >= 0 ? "var(--admin-online)" : "var(--admin-error)", fontWeight: "600" }}>
                           {formatNumber(report.account_balance)} 
                         </TableCell>
                       </TableRow>
@@ -446,7 +446,7 @@ export default function ProfitLossPage() {
                         }}
                       >
                         <TableCell sx={{ color: "var(--admin-text)" }}>سند خرید دستی</TableCell>
-                        <TableCell align="right" sx={{ color: "#ff9800", fontWeight: "600" }}>
+                        <TableCell align="right" sx={{ color: "var(--admin-warning)", fontWeight: "600" }}>
                           {formatNumber(data.totals.total_manual_purchases ?? 0)} تومان
                         </TableCell>
                       </TableRow>
@@ -470,7 +470,7 @@ export default function ProfitLossPage() {
                         }}
                       >
                         <TableCell sx={{ color: "var(--admin-text)" }}>کل هزینه‌های جاری</TableCell>
-                        <TableCell align="right" sx={{ color: "#ff9800", fontWeight: "600" }}>
+                        <TableCell align="right" sx={{ color: "var(--admin-warning)", fontWeight: "600" }}>
                           {formatNumber(data.totals.total_expenses)} تومان
                         </TableCell>
                       </TableRow>
@@ -494,7 +494,7 @@ export default function ProfitLossPage() {
                         }}
                       >
                         <TableCell sx={{ color: "var(--admin-text)" }}>خالص سود</TableCell>
-                        <TableCell align="right" sx={{ color: data.totals.total_net_profit >= 0 ? "var(--admin-accent)" : "#ff4444", fontWeight: "700", fontSize: "18px" }}>
+                        <TableCell align="right" sx={{ color: data.totals.total_net_profit >= 0 ? "var(--admin-accent)" : "var(--admin-error)", fontWeight: "700", fontSize: "18px" }}>
                           {formatNumber(data.totals.total_net_profit)} تومان
                         </TableCell>
                       </TableRow>
@@ -506,7 +506,7 @@ export default function ProfitLossPage() {
                         }}
                       >
                         <TableCell sx={{ color: "var(--admin-text)" }}>موجودی حساب</TableCell>
-                        <TableCell align="right" sx={{ color: data.totals.total_account_balance >= 0 ? "#2196f3" : "#ff4444", fontWeight: "700", fontSize: "18px" }}>
+                        <TableCell align="right" sx={{ color: data.totals.total_account_balance >= 0 ? "var(--admin-online)" : "var(--admin-error)", fontWeight: "700", fontSize: "18px" }}>
                           {formatNumber(data.totals.total_account_balance)} تومان
                         </TableCell>
                       </TableRow>

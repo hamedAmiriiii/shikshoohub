@@ -58,7 +58,7 @@ function statusChip(voucher: AccountingVoucher) {
     <Chip
       size="small"
       label={label}
-      sx={{ height: 22, fontSize: 11, bgcolor: "var(--admin-accent)", color: "#fff" }}
+      sx={{ height: 22, fontSize: 11, bgcolor: "var(--admin-accent)", color: "var(--admin-on-accent)" }}
     />
   );
 }

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useEffect } from 'react';
 import { Box, Container, Grid, Card, CardContent, CardMedia, Typography, CircularProgress, Chip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Avatar } from '@mui/material';
 import { styled } from '@mui/material/styles';
@@ -236,7 +236,7 @@ export default function BestSellingPage() {
                         </StyledTableCell>
                         <StyledTableCell align="right">
                           <Typography sx={{ 
-                            color: product.quantity !== undefined && product.quantity > 0 ? 'var(--admin-accent)' : '#ff4444', 
+                            color: product.quantity !== undefined && product.quantity > 0 ? 'var(--admin-accent)' : 'var(--admin-error)', 
                             fontSize: '16px',
                             fontWeight: '600'
                           }}>
@@ -383,7 +383,7 @@ export default function BestSellingPage() {
                               موجودی:
                             </Typography>
                             <Typography sx={{ 
-                              color: product.quantity > 0 ? 'var(--admin-accent)' : '#ff4444', 
+                              color: product.quantity > 0 ? 'var(--admin-accent)' : 'var(--admin-error)', 
                               fontSize: '14px',
                               fontWeight: '600'
                             }}>

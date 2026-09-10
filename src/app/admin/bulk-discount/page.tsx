@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from "react";
 import { Box, Grid, Typography, Button, Checkbox, CircularProgress, Card, CardContent } from "@mui/material";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -207,7 +207,7 @@ export default function BulkDiscountPage() {
                 backgroundColor: "var(--admin-accent-hover)"
               },
               "&:disabled": {
-                backgroundColor: "#505669",
+                backgroundColor: "var(--admin-border)",
                 color: "var(--admin-text-secondary)"
               }
             }}
@@ -220,7 +220,7 @@ export default function BulkDiscountPage() {
       {/* Products List */}
       {loading ? (
         <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "200px" }}>
-          <CircularProgress sx={{ color: "#ff9100" }} />
+          <CircularProgress sx={{ color: "var(--admin-warning-strong)" }} />
         </Box>
       ) : products.length === 0 ? (
         <Box sx={{ textAlign: "center", padding: "40px" }}>
@@ -238,9 +238,9 @@ export default function BulkDiscountPage() {
                   checked={allSelected}
                   onChange={handleSelectAll}
                   sx={{
-                    color: "#ff9100",
+                    color: "var(--admin-warning-strong)",
                     "&.Mui-checked": {
-                      color: "#ff9100"
+                      color: "var(--admin-warning-strong)"
                     }
                   }}
                 />
@@ -258,10 +258,10 @@ export default function BulkDiscountPage() {
                 <Card
                   sx={{
                     backgroundColor: "var(--admin-surface-alt)",
-                    border: selectedProducts.includes(catalogItemKey(product)) ? "2px solid #ff9100" : "1px solid #505669",
+                    border: selectedProducts.includes(catalogItemKey(product)) ? "2px solid var(--admin-warning-strong)" : "1px solid var(--admin-border)",
                     transition: "all 0.3s ease",
                     "&:hover": {
-                      borderColor: "#ff9100",
+                      borderColor: "var(--admin-warning-strong)",
                       transform: "translateY(-2px)"
                     }
                   }}
@@ -272,9 +272,9 @@ export default function BulkDiscountPage() {
                         checked={selectedProducts.includes(catalogItemKey(product))}
                         onChange={() => handleProductSelect(product)}
                         sx={{
-                          color: "#ff9100",
+                          color: "var(--admin-warning-strong)",
                           "&.Mui-checked": {
-                            color: "#ff9100"
+                            color: "var(--admin-warning-strong)"
                           }
                         }}
                       />
@@ -282,7 +282,7 @@ export default function BulkDiscountPage() {
                         <Typography sx={{ color: "var(--admin-text)", fontSize: "16px", fontWeight: "600", marginBottom: "8px" }}>
                           {product.name || "بدون نام"}
                           {isProducedGoodItem(product) ? (
-                            <Box component="span" sx={{ color: "#ff9100", fontSize: "12px", fontWeight: 700, mr: 1 }}>
+                            <Box component="span" sx={{ color: "var(--admin-warning-strong)", fontSize: "12px", fontWeight: 700, mr: 1 }}>
                               تولیدی
                             </Box>
                           ) : null}
@@ -302,10 +302,10 @@ export default function BulkDiscountPage() {
                                 قیمت با تخفیف: {formatNumber(product.sale_price)} تومان
                               </Typography>
                               <Typography sx={{ 
-                                color: "#ff9100", 
+                                color: "var(--admin-warning-strong)", 
                                 fontSize: "14px", 
                                 fontWeight: "600",
-                                backgroundColor: "rgba(255, 145, 0, 0.1)",
+                                backgroundColor: "var(--admin-warning-bg)",
                                 padding: "2px 8px",
                                 borderRadius: "4px"
                               }}>

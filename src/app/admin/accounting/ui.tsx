@@ -33,7 +33,7 @@ export const accountingFieldSx = {
 export const accountingButtonSx = {
   ...adminButtonStartIconSx,
   bgcolor: "var(--admin-accent)",
-  color: "#fff",
+  color: "var(--admin-on-accent)",
   "&:hover": { bgcolor: "var(--admin-accent-hover)" },
   "&.Mui-disabled": { bgcolor: "var(--admin-border)", color: "var(--admin-text-muted)" },
 } as const;
@@ -42,7 +42,7 @@ export const accountingPaginationSx = {
   "& .MuiPaginationItem-root": { color: "var(--admin-text)", fontSize: 12 },
   "& .Mui-selected": {
     backgroundColor: "var(--admin-accent) !important",
-    color: "#fff",
+    color: "var(--admin-on-accent)",
   },
 } as const;
 

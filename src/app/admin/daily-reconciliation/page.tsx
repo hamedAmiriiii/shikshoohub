@@ -1555,7 +1555,7 @@ export default function DailyReconciliationPage() {
                             onClick={() => handleSave(row)}
                             aria-label="ثبت"
                             sx={{
-                              color: "#fff",
+                              color: "var(--admin-on-accent)",
                               bgcolor: "var(--admin-accent)",
                               width: 28,
                               height: 28,

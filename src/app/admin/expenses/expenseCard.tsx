@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import {
   Box,
   Grid,
@@ -112,7 +112,7 @@ export default function ExpenseCard(props: any) {
                 }
               }}
               sx={{
-                color: "#ff4444",
+                color: "var(--admin-error)",
                 padding: "6px",
                 minWidth: "36px",
                 minHeight: "36px",

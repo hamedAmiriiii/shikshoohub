@@ -160,8 +160,8 @@ export default function AdminOnboardingTour({
                 py: 1.25,
                 fontWeight: 700,
                 bgcolor: "var(--admin-accent)",
-                color: "#fff",
-                "&:hover": { bgcolor: "var(--admin-accent-hover)", color: "#fff" },
+                color: "var(--admin-on-accent)",
+                "&:hover": { bgcolor: "var(--admin-accent-hover)", color: "var(--admin-on-accent)" },
               }}
             >
               شروع این مرحله
@@ -177,8 +177,8 @@ export default function AdminOnboardingTour({
                 py: 1.25,
                 fontWeight: 700,
                 bgcolor: "var(--admin-accent)",
-                color: "#fff",
-                "&:hover": { bgcolor: "var(--admin-accent-hover)", color: "#fff" },
+                color: "var(--admin-on-accent)",
+                "&:hover": { bgcolor: "var(--admin-accent-hover)", color: "var(--admin-on-accent)" },
               }}
             >
               بزن بریم
@@ -194,8 +194,8 @@ export default function AdminOnboardingTour({
                 py: 1.25,
                 fontWeight: 700,
                 bgcolor: "var(--admin-accent)",
-                color: "#fff",
-                "&:hover": { bgcolor: "var(--admin-accent-hover)", color: "#fff" },
+                color: "var(--admin-on-accent)",
+                "&:hover": { bgcolor: "var(--admin-accent-hover)", color: "var(--admin-on-accent)" },
               }}
             >
               پایان آموزش

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState } from "react";
 import { Box, Typography, Chip, Button, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, TextField, IconButton, CircularProgress } from "@mui/material";
 import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
@@ -87,7 +87,7 @@ export default function InstallmentCard(props: any) {
                 label="پرداخت نشده"
                 size="small"
                 sx={{
-                  backgroundColor: "#ff9800",
+                  backgroundColor: "var(--admin-warning)",
                   color: "var(--admin-text)",
                   fontSize: "11px",
                   height: "22px"
@@ -205,7 +205,7 @@ export default function InstallmentCard(props: any) {
                 backgroundColor: "var(--admin-surface-alt)",
                 color: "var(--admin-text)",
                 "& fieldset": {
-                  borderColor: "#505669",
+                  borderColor: "var(--admin-border)",
                 },
                 "&:hover fieldset": {
                   borderColor: "var(--admin-accent)",

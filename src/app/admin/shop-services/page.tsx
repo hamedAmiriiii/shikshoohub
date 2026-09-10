@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -378,7 +378,7 @@ export default function ShopServicesPage() {
                           size="small"
                           onClick={() => actOnRequest(row, "cancel")}
                           disabled={actingId === row.id}
-                          sx={{ color: "#e57373" }}
+                          sx={{ color: "var(--admin-error-soft)" }}
                         >
                           <CloseRoundedIcon fontSize="small" />
                         </IconButton>
@@ -441,7 +441,7 @@ export default function ShopServicesPage() {
                 <IconButton size="small" onClick={() => openEdit(service)}>
                   <EditIcon fontSize="small" />
                 </IconButton>
-                <IconButton size="small" onClick={() => deleteService(service)} sx={{ color: "#e57373" }}>
+                <IconButton size="small" onClick={() => deleteService(service)} sx={{ color: "var(--admin-error-soft)" }}>
                   <DeleteIcon fontSize="small" />
                 </IconButton>
               </CardContent>

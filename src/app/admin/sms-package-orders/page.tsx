@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Box, Chip, CircularProgress, Typography } from "@mui/material";
@@ -176,7 +176,7 @@ export default function AdminSmsPackageOrdersPage() {
     >
       <Box sx={{ width: "100%", maxWidth: "100%" }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
-          <ReceiptLongIcon sx={{ color: "#ff9800", fontSize: 32 }} />
+          <ReceiptLongIcon sx={{ color: "var(--admin-warning)", fontSize: 32 }} />
           <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: "22px" }}>
             درخواست‌های خرید بسته پیامک
           </Typography>
@@ -195,7 +195,7 @@ export default function AdminSmsPackageOrdersPage() {
                 ...(statusFilter === filter.value
                   ? {
                       bgcolor: "var(--admin-accent)",
-                      color: "#fff",
+                      color: "var(--admin-on-accent)",
                       "&:hover": { bgcolor: "var(--admin-accent-hover)" },
                     }
                   : {

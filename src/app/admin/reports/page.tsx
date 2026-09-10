@@ -68,7 +68,7 @@ export default function ReportsPage() {
   const getGradient = (title: string) => {
     switch (title) {
       case "امروز":
-        return "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
+        return "var(--admin-title-gradient)";
       case "دیروز":
         return "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)";
       case "هفته جاری":
@@ -80,7 +80,7 @@ export default function ReportsPage() {
       case "سال جاری":
         return "linear-gradient(135deg,rgb(17, 109, 109) 0%, #330867 100%)";
       default:
-        return "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
+        return "var(--admin-title-gradient)";
     }
   };
 
@@ -248,7 +248,7 @@ export default function ReportsPage() {
                 className="admin-report-gradient-card"
                 sx={{
                   padding: "20px",
-                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                  background: "var(--admin-title-gradient)",
                   borderRadius: "16px",
                   color: gradientCardText,
                   overflow: "hidden",

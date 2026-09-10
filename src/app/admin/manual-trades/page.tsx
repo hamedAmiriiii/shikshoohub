@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -162,7 +162,7 @@ export default function ManualTradesPage() {
             sx={{
               ...adminButtonStartIconSx,
               bgcolor: "var(--admin-accent)",
-              color: "#fff",
+              color: "var(--admin-on-accent)",
               borderRadius: "12px",
               "&:hover": { bgcolor: "var(--admin-accent-hover)" },
             }}
@@ -187,7 +187,7 @@ export default function ManualTradesPage() {
           {totals.count.toLocaleString("fa-IR")} مورد
         </Typography>
         <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
-          <Typography sx={{ color: "#ff9800", fontWeight: 700, fontSize: 13 }}>
+          <Typography sx={{ color: "var(--admin-warning)", fontWeight: 700, fontSize: 13 }}>
             خرید: {formatNumber(totals.purchases)} تومان
           </Typography>
           <Typography sx={{ color: "var(--admin-accent)", fontWeight: 700, fontSize: 13 }}>
@@ -280,11 +280,11 @@ export default function ManualTradesPage() {
                 setFilterSheetOpen(false);
               }}
               sx={{
-                color: "#ff4444",
-                borderColor: "#ff4444",
+                color: "var(--admin-error)",
+                borderColor: "var(--admin-error)",
                 "&:hover": {
                   borderColor: "#ff6666",
-                  backgroundColor: "rgba(255, 68, 68, 0.1)",
+                  backgroundColor: "var(--admin-error-bg)",
                 },
               }}
             >
@@ -361,9 +361,9 @@ export default function ManualTradesPage() {
             disabled={deleting}
             startIcon={deleting ? <CircularProgress size={18} color="inherit" /> : undefined}
             sx={{
-              backgroundColor: "#ff4444",
+              backgroundColor: "var(--admin-error)",
               minWidth: 100,
-              "&:hover": { backgroundColor: "#cc0000" },
+              "&:hover": { backgroundColor: "var(--admin-error-hover)" },
             }}
           >
             {deleting ? "در حال حذف..." : "حذف"}

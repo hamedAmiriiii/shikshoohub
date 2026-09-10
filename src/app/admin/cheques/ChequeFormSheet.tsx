@@ -438,7 +438,7 @@ export default function ChequeFormSheet({
           disabled={saving}
           sx={{
             bgcolor: "var(--admin-accent)",
-            color: "#fff",
+            color: "var(--admin-on-accent)",
             borderRadius: "8px",
             py: 0.9,
             mt: 0.5,

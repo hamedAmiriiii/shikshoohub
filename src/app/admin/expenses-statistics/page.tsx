@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useEffect, useState } from 'react';
 import { Box, Typography, Paper, Grid, CircularProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, RadioGroup, FormControlLabel, Radio, Button } from '@mui/material';
 import { useRouter } from 'next/navigation';
@@ -190,7 +190,7 @@ export default function ExpensesStatisticsPage() {
           style={{ 
             height: "50px", 
             borderRadius: "15px", 
-            backgroundColor: "#fff",
+            backgroundColor: "var(--admin-surface)",
             width: "100%"
           }}
           className="rmdp-mobile"
@@ -246,11 +246,11 @@ export default function ExpensesStatisticsPage() {
             startIcon={<DeleteIcon />}
             onClick={handleClearFilters}
             sx={{
-              color: "#ff4444",
-              borderColor: "#ff4444",
+              color: "var(--admin-error)",
+              borderColor: "var(--admin-error)",
               "&:hover": {
                 borderColor: "#ff6666",
-                backgroundColor: "rgba(255, 68, 68, 0.1)"
+                backgroundColor: "var(--admin-error-bg)"
               }
             }}
           >
@@ -358,7 +358,7 @@ export default function ExpensesStatisticsPage() {
                 title="هزینه‌های جاری"
                 value={data.total_current_expenses}
                 icon={<AccountBalanceWalletIcon sx={{ color: "var(--admin-text)", fontSize: "24px" }} />}
-                gradient="linear-gradient(135deg, #ff9100 0%, #e68100 100%)"
+                gradient="linear-gradient(135deg, var(--admin-warning-strong) 0%, var(--admin-action-edit-hover) 100%)"
               />
             </Grid>
             <Grid item xs={12} sm={6} md={4}>
@@ -366,7 +366,7 @@ export default function ExpensesStatisticsPage() {
                 title="هزینه‌های سرمایه"
                 value={data.total_capital_expenses}
                 icon={<BusinessIcon sx={{ color: "var(--admin-text)", fontSize: "24px" }} />}
-                gradient="linear-gradient(135deg, #9c27b0 0%, #673ab7 100%)"
+                gradient="linear-gradient(135deg, var(--admin-action-purple) 0%, #673ab7 100%)"
               />
             </Grid>
           </Grid>

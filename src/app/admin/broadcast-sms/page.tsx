@@ -395,8 +395,8 @@ export default function BroadcastSMSPage() {
               py: 1,
               fontWeight: 700,
               bgcolor: "var(--admin-accent)",
-              color: "#fff",
-              "&:hover": { bgcolor: "var(--admin-accent-hover)", color: "#fff" },
+              color: "var(--admin-on-accent)",
+              "&:hover": { bgcolor: "var(--admin-accent-hover)", color: "var(--admin-on-accent)" },
               "&.Mui-disabled": {
                 bgcolor: "var(--admin-border)",
                 color: "var(--admin-text-secondary)",

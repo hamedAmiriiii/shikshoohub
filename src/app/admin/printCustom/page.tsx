@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -579,7 +579,7 @@ function PrintLabelContent() {
             height: 18px;
             margin: 0;
             padding: 0;
-            accent-color: var(--admin-accent, #78b568);
+            accent-color: var(--admin-accent, var(--admin-accent));
             cursor: pointer;
           }
 
@@ -607,7 +607,7 @@ function PrintLabelContent() {
           }
 
           .reset-btn:hover {
-            background-color: #ff5252;
+            background-color: var(--admin-error);
           }
 
           .controls {
@@ -655,7 +655,7 @@ function PrintLabelContent() {
           }
 
           .back-btn {
-            background-color: #ff9100;
+            background-color: var(--admin-warning-strong);
             color: white;
             border: none;
             padding: 12px 24px;
@@ -879,7 +879,7 @@ function PrintLabelContent() {
           height: 18px;
           margin: 0;
           padding: 0;
-          accent-color: var(--admin-accent, #78b568);
+          accent-color: var(--admin-accent, var(--admin-accent));
           cursor: pointer;
         }
 
@@ -940,7 +940,7 @@ function PrintLabelContent() {
         }
 
         .back-btn {
-          background-color: #ff9100;
+          background-color: var(--admin-warning-strong);
           color: white;
           border: none;
           padding: 12px 24px;

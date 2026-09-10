@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   Box,
@@ -227,7 +227,7 @@ export default function AdminClassicPosView({
   ];
 
   const headCellSx = {
-    color: "#fff",
+    color: "var(--admin-on-accent)",
     fontWeight: 700,
     fontSize: "11px",
     py: 0.6,
@@ -522,7 +522,7 @@ export default function AdminClassicPosView({
               <Typography sx={{ fontSize: "13px", color: "var(--admin-text-muted)" }}>
                 مبلغ برگشتی
               </Typography>
-              <Typography sx={{ fontSize: "15px", fontWeight: 700, color: "#e57373", lineHeight: 1.2 }}>
+              <Typography sx={{ fontSize: "15px", fontWeight: 700, color: "var(--admin-error-soft)", lineHeight: 1.2 }}>
                 -{formatNumber(backPrice)}
               </Typography>
             </Box>
@@ -650,7 +650,7 @@ export default function AdminClassicPosView({
                 />
               </Box>
               {paymentSplitError ? (
-                <Typography sx={{ fontSize: "10px", color: "#e57373" }}>
+                <Typography sx={{ fontSize: "10px", color: "var(--admin-error-soft)" }}>
                   {paymentSplitError}
                 </Typography>
               ) : null}
@@ -739,12 +739,12 @@ export default function AdminClassicPosView({
                 )}
               </Box>
               {!loadingAvailableCheques && matchingCheques.length === 0 && (
-                <Typography sx={{ fontSize: "10px", color: "#e57373" }}>
+                <Typography sx={{ fontSize: "10px", color: "var(--admin-error-soft)" }}>
                   چک مناسب نیست — با + ثبت کنید (مبلغ می‌تواند کمتر از فاکتور باشد)
                 </Typography>
               )}
               {selectedChequeId && chequeRemainder === 0 && (
-                <Typography sx={{ fontSize: "10px", color: "#2196f3" }}>
+                <Typography sx={{ fontSize: "10px", color: "var(--admin-online)" }}>
                   چک کل مبلغ را پوشش می‌دهد — نقد/کارت صفر
                 </Typography>
               )}
@@ -815,7 +815,7 @@ export default function AdminClassicPosView({
 
           {paymentSplitError &&
             !(paymentType === "cash" && settlementMode === "split" && payableNow > 0) && (
-            <Typography sx={{ fontSize: "10px", color: "#e57373" }}>
+            <Typography sx={{ fontSize: "10px", color: "var(--admin-error-soft)" }}>
               {paymentSplitError}
             </Typography>
           )}
@@ -828,13 +828,13 @@ export default function AdminClassicPosView({
           )}
 
           {installmentCreditError && (
-            <Typography sx={{ fontSize: "10px", color: "#e57373" }}>
+            <Typography sx={{ fontSize: "10px", color: "var(--admin-error-soft)" }}>
               {installmentCreditError}
             </Typography>
           )}
 
           {paymentType === "debt" && (
-            <Typography sx={{ fontSize: "10px", color: "#ff9800" }}>
+            <Typography sx={{ fontSize: "10px", color: "var(--admin-warning)" }}>
               مبلغ به بدهی مشتری اضافه می‌شود
             </Typography>
           )}

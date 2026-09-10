@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Box, Typography, CircularProgress } from "@mui/material";
@@ -183,7 +183,7 @@ export default function AdminShopSmsQuotaPage() {
     >
       <Box sx={{ width: "100%", maxWidth: "100%" }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
-          <StorefrontIcon sx={{ color: "#ff9800", fontSize: 20 }} />
+          <StorefrontIcon sx={{ color: "var(--admin-warning)", fontSize: 20 }} />
           <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: "16px" }}>
             مدیریت فروشگاه‌ها
           </Typography>

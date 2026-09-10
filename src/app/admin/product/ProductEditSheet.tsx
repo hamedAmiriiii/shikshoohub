@@ -103,7 +103,7 @@ export default function ProductEditSheet({
                         height: 28,
                         borderRadius: "8px",
                         backgroundColor: "var(--admin-accent)",
-                        color: "#fff",
+                        color: "var(--admin-on-accent)",
                         "&:hover": { backgroundColor: "var(--admin-accent-hover)" },
                       }}
                     >
@@ -223,7 +223,7 @@ export default function ProductEditSheet({
                         right: 2,
                         p: 0.2,
                         backgroundColor: "rgba(0,0,0,0.55)",
-                        color: "#fff",
+                        color: "var(--admin-on-accent)",
                         "&:hover": { backgroundColor: "rgba(244,67,54,0.9)" },
                       }}
                     >
@@ -253,9 +253,9 @@ export default function ProductEditSheet({
                     sx={{
                       height: 22,
                       backgroundColor: "var(--admin-accent)",
-                      color: "#fff",
+                      color: "var(--admin-on-accent)",
                       "& .MuiChip-label": { px: 0.75, fontSize: "11px" },
-                      "& .MuiChip-deleteIcon": { color: "#fff", fontSize: 14 },
+                      "& .MuiChip-deleteIcon": { color: "var(--admin-on-accent)", fontSize: 14 },
                     }}
                   />
                 ))}
@@ -283,7 +283,7 @@ export default function ProductEditSheet({
             fullWidth
             sx={{
               backgroundColor: "var(--admin-accent)",
-              color: "#fff",
+              color: "var(--admin-on-accent)",
               py: 0.85,
               fontSize: "14px",
               fontWeight: 800,

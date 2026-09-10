@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -105,9 +105,9 @@ interface Order {
 }
 
 const statusColors: Record<string, string> = {
-  pending: "#ff9800",
-  processing: "#2196f3",
-  shipped: "#9c27b0",
+  pending: "var(--admin-warning)",
+  processing: "var(--admin-online)",
+  shipped: "var(--admin-action-purple)",
   delivered: "#4caf50",
   completed: "#4caf50",
   cancelled: "#f44336",
@@ -125,7 +125,7 @@ const statusLabels: Record<string, string> = {
 const paymentStatusColors: Record<string, string> = {
   paid: "#4caf50",
   unpaid: "#f44336",
-  partial: "#ff9800",
+  partial: "var(--admin-warning)",
 };
 
 const paymentStatusLabels: Record<string, string> = {
@@ -335,7 +335,7 @@ export default function OrdersPage() {
           justifyContent: "space-between",
           marginBottom: "24px",
           padding: "16px 20px",
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          background: "var(--admin-title-gradient)",
           borderRadius: "16px",
           boxShadow: "0 4px 20px rgba(102, 126, 234, 0.3)",
         }}
@@ -416,11 +416,11 @@ export default function OrdersPage() {
           label="ارسال شده"
           onClick={() => setStatusFilter("shipped")}
           sx={{
-            backgroundColor: statusFilter === "shipped" ? "#9c27b0" : "var(--admin-divider)",
+            backgroundColor: statusFilter === "shipped" ? "var(--admin-action-purple)" : "var(--admin-divider)",
             color: "var(--admin-text)",
             cursor: "pointer",
             "&:hover": {
-              backgroundColor: statusFilter === "shipped" ? "#7b1fa2" : "var(--admin-icon-bg)",
+              backgroundColor: statusFilter === "shipped" ? "var(--admin-action-purple-hover)" : "var(--admin-icon-bg)",
             },
             fontWeight: statusFilter === "shipped" ? "700" : "500",
           }}
@@ -462,7 +462,7 @@ export default function OrdersPage() {
           }}
         >
           <ShoppingBagIcon
-            sx={{ fontSize: "60px", color: "#666", marginBottom: "16px" }}
+            sx={{ fontSize: "60px", color: "var(--admin-text-muted)", marginBottom: "16px" }}
           />
           <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "16px" }}>
             هیچ سفارشی یافت نشد
@@ -509,9 +509,9 @@ export default function OrdersPage() {
                         sx={{ display: "flex", alignItems: "center", gap: "4px" }}
                       >
                         <CalendarTodayIcon
-                          sx={{ fontSize: "14px", color: "#888" }}
+                          sx={{ fontSize: "14px", color: "var(--admin-text-secondary)" }}
                         />
-                        <Typography sx={{ color: "#888", fontSize: "12px" }}>
+                        <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "12px" }}>
                           {formatDate(order.created_at)}
                         </Typography>
                       </Box>
@@ -606,7 +606,7 @@ export default function OrdersPage() {
                     }}
                   >
                     <Box>
-                      <Typography sx={{ color: "#888", fontSize: "12px" }}>
+                      <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "12px" }}>
                         مبلغ کل
                       </Typography>
                       <Typography
@@ -743,8 +743,8 @@ export default function OrdersPage() {
                   <Box sx={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
                     <Box sx={{ flex: "1", minWidth: "200px" }}>
                       <Box sx={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-                        <PersonIcon sx={{ fontSize: "16px", color: "#888" }} />
-                        <Typography sx={{ color: "#888", fontSize: "12px", fontWeight: "500" }}>
+                        <PersonIcon sx={{ fontSize: "16px", color: "var(--admin-text-secondary)" }} />
+                        <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "12px", fontWeight: "500" }}>
                           نام و نام خانوادگی
                         </Typography>
                       </Box>
@@ -754,8 +754,8 @@ export default function OrdersPage() {
                     </Box>
                     <Box sx={{ flex: "1", minWidth: "200px" }}>
                       <Box sx={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-                        <PhoneIcon sx={{ fontSize: "16px", color: "#888" }} />
-                        <Typography sx={{ color: "#888", fontSize: "12px", fontWeight: "500" }}>
+                        <PhoneIcon sx={{ fontSize: "16px", color: "var(--admin-text-secondary)" }} />
+                        <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "12px", fontWeight: "500" }}>
                           شماره تماس
                         </Typography>
                       </Box>
@@ -771,8 +771,8 @@ export default function OrdersPage() {
                   {selectedOrder.customer?.address && (
                     <Box>
                       <Box sx={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-                        <LocationOnIcon sx={{ fontSize: "16px", color: "#888" }} />
-                        <Typography sx={{ color: "#888", fontSize: "12px", fontWeight: "500" }}>
+                        <LocationOnIcon sx={{ fontSize: "16px", color: "var(--admin-text-secondary)" }} />
+                        <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "12px", fontWeight: "500" }}>
                           آدرس
                         </Typography>
                       </Box>
@@ -787,7 +787,7 @@ export default function OrdersPage() {
                     <Box sx={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
                       {selectedOrder.customer?.postal_code && (
                         <Box sx={{ flex: "1", minWidth: "150px" }}>
-                          <Typography sx={{ color: "#888", fontSize: "12px", fontWeight: "500", marginBottom: "6px" }}>
+                          <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "12px", fontWeight: "500", marginBottom: "6px" }}>
                             کد پستی
                           </Typography>
                           <Typography sx={{ color: "var(--admin-text)", fontSize: "15px", direction: "ltr" }}>
@@ -797,7 +797,7 @@ export default function OrdersPage() {
                       )}
                       {(selectedOrder.customer?.state_id || selectedOrder.customer?.city_id) && (
                         <Box sx={{ flex: "1", minWidth: "150px" }}>
-                          <Typography sx={{ color: "#888", fontSize: "12px", fontWeight: "500", marginBottom: "6px" }}>
+                          <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "12px", fontWeight: "500", marginBottom: "6px" }}>
                             استان / شهر
                           </Typography>
                           <Typography sx={{ color: "var(--admin-text)", fontSize: "15px" }}>
@@ -835,16 +835,16 @@ export default function OrdersPage() {
                     <Table size="small">
                       <TableHead>
                         <TableRow>
-                          <TableCell sx={{ color: "#888", borderBottom: "1px solid var(--admin-divider)" }}>
+                          <TableCell sx={{ color: "var(--admin-text-secondary)", borderBottom: "1px solid var(--admin-divider)" }}>
                             محصول
                           </TableCell>
-                          <TableCell sx={{ color: "#888", borderBottom: "1px solid var(--admin-divider)" }} align="center">
+                          <TableCell sx={{ color: "var(--admin-text-secondary)", borderBottom: "1px solid var(--admin-divider)" }} align="center">
                             تعداد
                           </TableCell>
-                          <TableCell sx={{ color: "#888", borderBottom: "1px solid var(--admin-divider)" }} align="center">
+                          <TableCell sx={{ color: "var(--admin-text-secondary)", borderBottom: "1px solid var(--admin-divider)" }} align="center">
                             قیمت واحد
                           </TableCell>
-                          <TableCell sx={{ color: "#888", borderBottom: "1px solid var(--admin-divider)" }} align="left">
+                          <TableCell sx={{ color: "var(--admin-text-secondary)", borderBottom: "1px solid var(--admin-divider)" }} align="left">
                             جمع
                           </TableCell>
                         </TableRow>
@@ -956,13 +956,13 @@ export default function OrdersPage() {
                       borderColor: "var(--admin-text-secondary)",
                     },
                     "&.Mui-focused fieldset": {
-                      borderColor: "#ff9800",
+                      borderColor: "var(--admin-warning)",
                     },
                   },
                   "& .MuiInputLabel-root": {
                     color: "var(--admin-text-muted)",
                     "&.Mui-focused": {
-                      color: "#ff9800",
+                      color: "var(--admin-warning)",
                     },
                   },
                   "& .MuiSvgIcon-root": {
@@ -998,11 +998,11 @@ export default function OrdersPage() {
                 disabled={updatingStatus || (newStatus || selectedOrder.status) === selectedOrder.status}
                 variant="contained"
                 sx={{
-                  backgroundColor: "#ff9800",
+                  backgroundColor: "var(--admin-warning)",
                   color: "var(--admin-text)",
                   borderRadius: "12px",
                   padding: "8px 20px",
-                  "&:hover": { backgroundColor: "#f57c00" },
+                  "&:hover": { backgroundColor: "var(--admin-warning-hover)" },
                   "&:disabled": { 
                     backgroundColor: "rgba(255, 152, 0, 0.3)", 
                     color: "var(--admin-text-secondary)" 

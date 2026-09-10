@@ -1,4 +1,4 @@
-
+﻿
 "use client";
 import { Box, Grid, IconButton, TextField, Typography, Button, Card, CardMedia, Dialog, DialogTitle, DialogContent, DialogActions, Chip, Paper, Autocomplete, Select, MenuItem, FormControl, InputLabel, Tooltip } from "@mui/material";
 import PrintIcon from '@mui/icons-material/Print';
@@ -386,7 +386,7 @@ export default function CardUser(props: any) {
       backgroundColor: "var(--admin-surface-alt)",
       color: "var(--admin-text)",
       "& fieldset": {
-        borderColor: "#505669",
+        borderColor: "var(--admin-border)",
       },
       "&:hover fieldset": {
         borderColor: "var(--admin-accent)",
@@ -406,7 +406,7 @@ export default function CardUser(props: any) {
     width: 28,
     height: 28,
     p: 0.35,
-    "& .MuiSvgIcon-root": { fontSize: 16, color: "#fff" },
+    "& .MuiSvgIcon-root": { fontSize: 16, color: "var(--admin-on-accent)" },
   };
 
   return load ? (
@@ -520,10 +520,10 @@ export default function CardUser(props: any) {
                 "& .MuiOutlinedInput-root": {
                   ...compactFieldSx["& .MuiOutlinedInput-root"],
                   "&:hover fieldset": {
-                    borderColor: "#ff9100",
+                    borderColor: "var(--admin-warning-strong)",
                   },
                   "&.Mui-focused fieldset": {
-                    borderColor: "#ff9100",
+                    borderColor: "var(--admin-warning-strong)",
                   },
                 },
               }}
@@ -564,10 +564,10 @@ export default function CardUser(props: any) {
               border: (() => {
                 const purchase = parseFloat(purchasePrice) || 0;
                 const sale = parseFloat(salePrice) || 0;
-                if (purchase <= 0 || sale <= 0) return "1px solid #505669";
+                if (purchase <= 0 || sale <= 0) return "1px solid var(--admin-border)";
                 const profitPercent = ((sale - purchase) / purchase) * 100;
-                if (profitPercent < 30) return "1px solid #ff4444";
-                if (profitPercent < 40) return "1px solid #ff9100";
+                if (profitPercent < 30) return "1px solid var(--admin-error)";
+                if (profitPercent < 40) return "1px solid var(--admin-warning-strong)";
                 return "1px solid var(--admin-accent)";
               })(),
               borderRadius: "4px",
@@ -582,8 +582,8 @@ export default function CardUser(props: any) {
                   const sale = parseFloat(salePrice) || 0;
                   if (purchase <= 0 || sale <= 0) return "#999";
                   const profitPercent = ((sale - purchase) / purchase) * 100;
-                  if (profitPercent < 30) return "#ff4444";
-                  if (profitPercent < 40) return "#ff9100";
+                  if (profitPercent < 30) return "var(--admin-error)";
+                  if (profitPercent < 40) return "var(--admin-warning-strong)";
                   return "var(--admin-accent)";
                 })(),
                 fontSize: "12px",
@@ -604,7 +604,7 @@ export default function CardUser(props: any) {
         {/* نمایش اطلاعات تخفیف (اگر تخفیف دارد) - full width */}
         {props.props.data?.has_discount && (
           <Grid xs={12} sx={{ paddingBottom: 0 }}>
-            <Box sx={{ marginTop: "4px", padding: "6px", backgroundColor: "rgba(255, 145, 0, 0.1)", borderRadius: "8px" }}>
+            <Box sx={{ marginTop: "4px", padding: "6px", backgroundColor: "var(--admin-warning-bg)", borderRadius: "8px" }}>
               <Box sx={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "2px" }}>
                 <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "10px", textDecoration: "line-through" }}>
                   قیمت اصلی: {formatNumber(props.props.data.original_sale_price)} تومان
@@ -664,9 +664,9 @@ export default function CardUser(props: any) {
                 size="small"
                 onClick={() => onEdit(props.props.data)}
                 sx={{
-                  backgroundColor: "#ff9100",
-                  color: "#fff",
-                  "&:hover": { backgroundColor: "#e68000", color: "#fff" },
+                  backgroundColor: "var(--admin-warning-strong)",
+                  color: "var(--admin-on-accent)",
+                  "&:hover": { backgroundColor: "#e68000", color: "var(--admin-on-accent)" },
                   ...compactActionBtnSx,
                 }}
               >
@@ -693,9 +693,9 @@ export default function CardUser(props: any) {
                 setSizeColorModalOpen(true);
               }}
               sx={{
-                backgroundColor: "#9c27b0",
-                color: "#fff",
-                "&:hover": { backgroundColor: "#7b1fa2", color: "#fff" },
+                backgroundColor: "var(--admin-action-purple)",
+                color: "var(--admin-on-accent)",
+                "&:hover": { backgroundColor: "var(--admin-action-purple-hover)", color: "var(--admin-on-accent)" },
                 ...compactActionBtnSx,
               }}
             >
@@ -709,8 +709,8 @@ export default function CardUser(props: any) {
               onClick={handlePrint}
               sx={{
                 backgroundColor: "var(--admin-accent)",
-                color: "#fff",
-                "&:hover": { backgroundColor: "var(--admin-accent-hover)", color: "#fff" },
+                color: "var(--admin-on-accent)",
+                "&:hover": { backgroundColor: "var(--admin-accent-hover)", color: "var(--admin-on-accent)" },
                 ...compactActionBtnSx,
               }}
             >
@@ -731,9 +731,9 @@ export default function CardUser(props: any) {
                 setManufacturerModalOpen(true);
               }}
               sx={{
-                backgroundColor: "#2196f3",
-                color: "#fff",
-                "&:hover": { backgroundColor: "#1976d2", color: "#fff" },
+                backgroundColor: "var(--admin-online)",
+                color: "var(--admin-on-accent)",
+                "&:hover": { backgroundColor: "var(--admin-primary-blue)", color: "var(--admin-on-accent)" },
                 ...compactActionBtnSx,
               }}
             >
@@ -747,9 +747,9 @@ export default function CardUser(props: any) {
                 size="small"
                 onClick={() => onDelete(props.props.data)}
                 sx={{
-                  backgroundColor: "#ff4444",
-                  color: "#fff",
-                  "&:hover": { backgroundColor: "#cc0000", color: "#fff" },
+                  backgroundColor: "var(--admin-error)",
+                  color: "var(--admin-on-accent)",
+                  "&:hover": { backgroundColor: "var(--admin-error-hover)", color: "var(--admin-on-accent)" },
                   ...compactActionBtnSx,
                 }}
               >
@@ -779,7 +779,7 @@ export default function CardUser(props: any) {
           display: "flex", 
           justifyContent: "space-between", 
           alignItems: "center",
-          borderBottom: "1px solid #505669",
+          borderBottom: "1px solid var(--admin-border)",
           paddingBottom: "16px"
         }}>
           <Typography sx={{ fontSize: "18px", fontWeight: "600" }}>
@@ -819,12 +819,12 @@ export default function CardUser(props: any) {
                       borderRadius: "12px",
                       fontWeight: "600",
                       fontSize: "15px",
-                      backgroundColor: isSelected ? "#ff9100" : "transparent",
+                      backgroundColor: isSelected ? "var(--admin-warning-strong)" : "transparent",
                       color: isSelected ? "#fff" : "var(--admin-text-secondary)",
-                      borderColor: isSelected ? "#ff9100" : "#4b5563",
+                      borderColor: isSelected ? "var(--admin-warning-strong)" : "var(--admin-border)",
                       "&:hover": {
-                        backgroundColor: isSelected ? "#e68000" : "#1f2937",
-                        borderColor: isSelected ? "#e68000" : "#6b7280",
+                        backgroundColor: isSelected ? "#e68000" : "var(--admin-surface-alt)",
+                        borderColor: isSelected ? "#e68000" : "var(--admin-text-muted)",
                         color: "var(--admin-text)",
                       },
                     }}
@@ -910,13 +910,13 @@ export default function CardUser(props: any) {
                         backgroundColor: "var(--admin-surface-alt)",
                         color: "var(--admin-text)",
                         "& fieldset": {
-                          borderColor: "#505669",
+                          borderColor: "var(--admin-border)",
                         },
                         "&:hover fieldset": {
-                          borderColor: "#9c27b0",
+                          borderColor: "var(--admin-action-purple)",
                         },
                         "&.Mui-focused fieldset": {
-                          borderColor: "#9c27b0",
+                          borderColor: "var(--admin-action-purple)",
                         },
                       },
                       "& .MuiInputBase-input": {
@@ -945,10 +945,10 @@ export default function CardUser(props: any) {
                 }}
                 disabled={!newColorInput.trim() || colors.includes(newColorInput.trim())}
                 sx={{
-                  backgroundColor: "#9c27b0",
+                  backgroundColor: "var(--admin-action-purple)",
                   color: "var(--admin-text)",
-                  "&:hover": { backgroundColor: "#7b1fa2" },
-                  "&:disabled": { backgroundColor: "#4b5563", color: "#6b7280" }
+                  "&:hover": { backgroundColor: "var(--admin-action-purple-hover)" },
+                  "&:disabled": { backgroundColor: "var(--admin-border)", color: "var(--admin-text-muted)" }
                 }}
               >
                 <AddIcon />
@@ -964,7 +964,7 @@ export default function CardUser(props: any) {
                     label={color}
                     onDelete={() => setColors(colors.filter((_, i) => i !== index))}
                     sx={{
-                      backgroundColor: "#1f2937",
+                      backgroundColor: "var(--admin-surface-alt)",
                       color: "var(--admin-text)",
                       border: "1px solid #4b5563",
                       fontSize: "14px",
@@ -983,7 +983,7 @@ export default function CardUser(props: any) {
           </Box>
         </DialogContent>
 
-        <DialogActions sx={{ padding: "16px 24px", borderTop: "1px solid #505669", gap: "8px" }}>
+        <DialogActions sx={{ padding: "16px 24px", borderTop: "1px solid var(--admin-border)", gap: "8px" }}>
           <Button
             onClick={() => setSizeColorModalOpen(false)}
             sx={{
@@ -1042,9 +1042,9 @@ export default function CardUser(props: any) {
             }}
             variant="contained"
             sx={{
-              backgroundColor: "#9c27b0",
+              backgroundColor: "var(--admin-action-purple)",
               color: "var(--admin-text)",
-              "&:hover": { backgroundColor: "#7b1fa2" }
+              "&:hover": { backgroundColor: "var(--admin-action-purple-hover)" }
             }}
           >
             ذخیره
@@ -1071,7 +1071,7 @@ export default function CardUser(props: any) {
           display: "flex", 
           justifyContent: "space-between", 
           alignItems: "center",
-          borderBottom: "1px solid #505669",
+          borderBottom: "1px solid var(--admin-border)",
           paddingBottom: "16px"
         }}>
           <Typography sx={{ fontSize: "18px", fontWeight: "600" }}>
@@ -1095,13 +1095,13 @@ export default function CardUser(props: any) {
               sx={{
                 color: 'var(--admin-text)',
                 '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#505669',
+                  borderColor: 'var(--admin-border)',
                 },
                 '&:hover .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#2196f3',
+                  borderColor: 'var(--admin-online)',
                 },
                 '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#2196f3',
+                  borderColor: 'var(--admin-online)',
                 },
                 '& .MuiSvgIcon-root': {
                   color: 'var(--admin-text)',
@@ -1120,7 +1120,7 @@ export default function CardUser(props: any) {
           </FormControl>
         </DialogContent>
 
-        <DialogActions sx={{ padding: "16px 24px", borderTop: "1px solid #505669", gap: "8px" }}>
+        <DialogActions sx={{ padding: "16px 24px", borderTop: "1px solid var(--admin-border)", gap: "8px" }}>
           <Button
             onClick={() => setManufacturerModalOpen(false)}
             sx={{
@@ -1174,8 +1174,8 @@ export default function CardUser(props: any) {
             }}
             variant="contained"
             sx={{
-              backgroundColor: "#2196f3",
-              "&:hover": { backgroundColor: "#1976d2" }
+              backgroundColor: "var(--admin-online)",
+              "&:hover": { backgroundColor: "var(--admin-primary-blue)" }
             }}
           >
             ذخیره

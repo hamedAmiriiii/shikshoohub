@@ -63,3 +63,101 @@ export const adminButtonStartIconSx = {
     marginInlineStart: "8px",
   },
 } as const;
+
+/** کارت/پنل سطح اول */
+export const adminSurfaceCardSx = {
+  backgroundColor: "var(--admin-surface)",
+  border: "1px solid var(--admin-border)",
+  borderRadius: "16px",
+  color: "var(--admin-text)",
+} as const;
+
+/** فیلدهای ورودی — هر دو تم */
+export const adminFieldSx = {
+  "& .MuiOutlinedInput-root": {
+    backgroundColor: "var(--admin-input-bg, var(--admin-surface-alt))",
+    color: "var(--admin-text)",
+    "& fieldset": { borderColor: "var(--admin-input-border, var(--admin-border))" },
+    "&:hover fieldset": { borderColor: "var(--admin-accent)" },
+    "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
+  },
+  "& .MuiInputBase-input": {
+    color: "var(--admin-text)",
+  },
+  "& .MuiInputLabel-root": {
+    color: "var(--admin-text-muted)",
+  },
+  "& .MuiFormHelperText-root": {
+    color: "var(--admin-error)",
+  },
+} as const;
+
+export const adminDialogPaperSx = {
+  backgroundColor: "var(--admin-surface)",
+  color: "var(--admin-text)",
+  backgroundImage: "none",
+  border: "1px solid var(--admin-border)",
+} as const;
+
+export const adminDialogTitleSx = {
+  color: "var(--admin-text)",
+  borderBottom: "1px solid var(--admin-border)",
+} as const;
+
+export const adminDialogActionsSx = {
+  padding: "16px 24px",
+  borderTop: "1px solid var(--admin-border)",
+  gap: "8px",
+} as const;
+
+export const adminCartTableContainerSx = {
+  maxWidth: "100%",
+  overflowX: "auto",
+  borderRadius: { xs: "16px", md: "20px" },
+  backgroundColor: "var(--admin-cart-surface)",
+  border: "1px solid var(--admin-accent-border)",
+  transition: "all 0.3s ease",
+  "&:hover": {
+    border: "1px solid var(--admin-accent)",
+  },
+} as const;
+
+export const adminCartTableHeadCellSx = {
+  color: "var(--admin-text)",
+  fontWeight: 700,
+  backgroundColor: "var(--admin-cart-head-bg)",
+  borderBottom: "2px solid var(--admin-accent-border)",
+} as const;
+
+export const adminCartTableRowSx = {
+  backgroundColor: "var(--admin-cart-surface)",
+  borderBottom: "1px solid var(--admin-divider)",
+  transition: "all 0.2s ease",
+  "&:hover": {
+    backgroundColor: "var(--admin-cart-row-hover)",
+  },
+} as const;
+
+export const adminActionEditButtonSx = {
+  backgroundColor: "var(--admin-action-edit)",
+  color: "var(--admin-on-accent)",
+  "&:hover": { backgroundColor: "var(--admin-action-edit-hover)" },
+} as const;
+
+export const adminActionPurpleButtonSx = {
+  backgroundColor: "var(--admin-action-purple)",
+  color: "var(--admin-on-accent)",
+  "&:hover": { backgroundColor: "var(--admin-action-purple-hover)" },
+} as const;
+
+export const adminActionBlueButtonSx = {
+  backgroundColor: "var(--admin-action-blue)",
+  color: "var(--admin-on-accent)",
+  "&:hover": { backgroundColor: "var(--admin-action-blue-hover)" },
+} as const;
+
+export const adminActionDeleteButtonSx = {
+  backgroundColor: "var(--admin-action-delete)",
+  color: "var(--admin-on-accent)",
+  "&:hover": { backgroundColor: "var(--admin-action-delete-hover)" },
+} as const;

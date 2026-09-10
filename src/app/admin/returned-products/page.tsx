@@ -827,7 +827,7 @@ export default function ReturnedProductsPage() {
                 <Box sx={{ position: "absolute", top: 10, right: 10 }}>
                   <IconButton
                     onClick={() => setTorchOn(!torchOn)}
-                    sx={{ backgroundColor: "rgba(0,0,0,0.5)", color: "#fff" }}
+                    sx={{ backgroundColor: "rgba(0,0,0,0.5)", color: "var(--admin-on-accent)" }}
                   >
                     {torchOn ? <FlashlightOffIcon /> : <FlashlightOnIcon />}
                   </IconButton>
