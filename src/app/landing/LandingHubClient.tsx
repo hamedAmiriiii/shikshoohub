@@ -25,6 +25,7 @@ import {
   LANDING_PRODUCTS,
   REGISTER_URL,
   TRIAL_CTA,
+  TRIAL_SHORT,
   type ProductIconName,
 } from "./catalog";
 
