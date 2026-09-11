@@ -33,7 +33,14 @@ interface Customer {
   phone: string;
   name?: string | null;
   total_purchases: number;
+  total_spent: number;
 }
+
+type CustomerSort =
+  | "count_desc"
+  | "count_asc"
+  | "amount_desc"
+  | "amount_asc";
 
 const fieldSx = {
   "& .MuiOutlinedInput-root": {
@@ -50,8 +57,16 @@ const fieldSx = {
   },
 };
 
+const formatMoney = (n: number) =>
+  new Intl.NumberFormat("fa-IR").format(Math.round(n));
+
 function purchaseCount(customer: Customer): number {
   const n = Number(customer.total_purchases);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+function purchaseAmount(customer: Customer): number {
+  const n = Number(customer.total_spent);
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
@@ -65,10 +80,14 @@ function extractCustomers(res: unknown): Customer[] {
     const purchases = Number(
       row.total_purchases ?? row.purchase_count ?? row.purchases_count ?? row.orders_count ?? 0,
     );
+    const spent = Number(
+      row.total_spent ?? row.spent_total ?? row.total_amount ?? row.purchase_total ?? 0,
+    );
     return {
       phone: typeof row.phone === "string" ? row.phone : String(row.phone ?? ""),
       name: typeof row.name === "string" ? row.name : null,
       total_purchases: Number.isFinite(purchases) ? purchases : 0,
+      total_spent: Number.isFinite(spent) ? spent : 0,
     };
   });
 }
@@ -77,6 +96,7 @@ function PhoneRow({
   phone,
   name,
   purchases,
+  spent,
   selected,
   manual,
   onToggle,
@@ -85,6 +105,7 @@ function PhoneRow({
   phone: string;
   name?: string | null;
   purchases?: number;
+  spent?: number;
   selected: boolean;
   manual?: boolean;
   onToggle: () => void;
@@ -131,19 +152,35 @@ function PhoneRow({
           {phone}
         </Typography>
       </Box>
-      {typeof purchases === "number" ? (
-        <Chip
-          label={`${purchases} خرید`}
-          size="small"
-          sx={{
-            height: 20,
-            fontSize: "10px",
-            bgcolor: "var(--admin-surface-alt)",
-            color: "var(--admin-text-muted)",
-            border: "1px solid var(--admin-border)",
-          }}
-        />
-      ) : null}
+      <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 0.35, flexShrink: 0 }}>
+        {typeof spent === "number" ? (
+          <Chip
+            label={`${formatMoney(spent)} ت`}
+            size="small"
+            sx={{
+              height: 20,
+              fontSize: "10px",
+              fontWeight: 700,
+              bgcolor: "var(--admin-accent-soft, var(--admin-surface-alt))",
+              color: "var(--admin-accent)",
+              border: "1px solid var(--admin-accent-border)",
+            }}
+          />
+        ) : null}
+        {typeof purchases === "number" ? (
+          <Chip
+            label={`${purchases} خرید`}
+            size="small"
+            sx={{
+              height: 20,
+              fontSize: "10px",
+              bgcolor: "var(--admin-surface-alt)",
+              color: "var(--admin-text-muted)",
+              border: "1px solid var(--admin-border)",
+            }}
+          />
+        ) : null}
+      </Box>
       {manual && (
         <Chip
           label="دستی"
@@ -175,7 +212,7 @@ export default function BroadcastSMSPage() {
   const [message, setMessage] = useState("");
   const [phoneSearch, setPhoneSearch] = useState("");
   const [minPurchases, setMinPurchases] = useState(0);
-  const [purchaseSort, setPurchaseSort] = useState<"desc" | "asc">("desc");
+  const [customerSort, setCustomerSort] = useState<CustomerSort>("amount_desc");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -211,10 +248,14 @@ export default function BroadcastSMSPage() {
       return phone.includes(searchNorm) || name.includes(searchNorm);
     });
     return [...list].sort((a, b) => {
-      const diff = purchaseCount(a) - purchaseCount(b);
-      return purchaseSort === "desc" ? -diff : diff;
+      if (customerSort === "count_desc" || customerSort === "count_asc") {
+        const diff = purchaseCount(a) - purchaseCount(b);
+        return customerSort === "count_desc" ? -diff : diff;
+      }
+      const diff = purchaseAmount(a) - purchaseAmount(b);
+      return customerSort === "amount_desc" ? -diff : diff;
     });
-  }, [customers, searchNorm, minPurchases, purchaseSort]);
+  }, [customers, searchNorm, minPurchases, customerSort]);
 
   const filteredManualPhones = useMemo(() => {
     if (!searchNorm) return manualPhones;
@@ -461,13 +502,15 @@ export default function BroadcastSMSPage() {
               size="small"
               select
               label="مرتب‌سازی"
-              value={purchaseSort}
-              onChange={(e) => setPurchaseSort(e.target.value as "desc" | "asc")}
+              value={customerSort}
+              onChange={(e) => setCustomerSort(e.target.value as CustomerSort)}
               sx={{ ...fieldSx, flex: 1, minWidth: 0 }}
               InputLabelProps={{ sx: { color: "var(--admin-text-muted)", fontSize: "13px" } }}
             >
-              <MenuItem value="desc">بیشترین خرید</MenuItem>
-              <MenuItem value="asc">کمترین خرید</MenuItem>
+              <MenuItem value="amount_desc">بیشترین مبلغ</MenuItem>
+              <MenuItem value="amount_asc">کمترین مبلغ</MenuItem>
+              <MenuItem value="count_desc">بیشترین تعداد خرید</MenuItem>
+              <MenuItem value="count_asc">کمترین تعداد خرید</MenuItem>
             </TextField>
           </Box>
           <Box
@@ -545,6 +588,7 @@ export default function BroadcastSMSPage() {
                 phone={customer.phone || "بدون شماره"}
                 name={customer.name}
                 purchases={purchaseCount(customer)}
+                spent={purchaseAmount(customer)}
                 selected={selectedPhones.includes(customer.phone)}
                 onToggle={() => togglePhone(customer.phone)}
               />
