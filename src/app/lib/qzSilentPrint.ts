@@ -225,14 +225,16 @@ async function withTicketIframe<T>(
   const layoutWidthPx = mmToPx(widthMm, LAYOUT_DPI);
   const iframe = document.createElement("iframe");
   iframe.setAttribute("aria-hidden", "true");
+  // Keep near-viewport (not far offscreen): html2canvas skips distant/opacity-0 nodes.
   iframe.style.cssText = [
     "position:fixed",
-    "left:-12000px",
+    "left:0",
     "top:0",
     `width:${layoutWidthPx}px`,
     "height:8px",
     "border:0",
-    "opacity:0",
+    "opacity:0.01",
+    "z-index:-1",
     "pointer-events:none",
     "background:#fff",
   ].join(";");
@@ -288,8 +290,8 @@ async function measureTicketMetrics(html: string, widthMm: number): Promise<Tick
 }
 
 /**
- * Build a clean XHTML fragment for SVG foreignObject.
- * Serializing a full HTML5 document often yields invalid XML and a blank/tiny render.
+ * Build a clean XHTML fragment for SVG foreignObject (fallback only).
+ * Prefer html2canvas for Persian — SVG often breaks Arabic letter joining.
  */
 function buildForeignObjectMarkup(doc: Document, layoutWidthPx: number, heightPx: number): string {
   const styles = Array.from(doc.querySelectorAll("style"))
@@ -311,9 +313,112 @@ function buildForeignObjectMarkup(doc: Document, layoutWidthPx: number, heightPx
     `style="width:${layoutWidthPx}px;min-width:${layoutWidthPx}px;max-width:${layoutWidthPx}px;` +
     `height:${heightPx}px;margin:0;padding:${pad};box-sizing:border-box;` +
     `background:#ffffff;color:#000000;font-family:${fontFamily};font-size:${fontSize};` +
-    `line-height:${lineHeight};overflow:visible;">` +
+    `line-height:${lineHeight};overflow:visible;direction:rtl;text-align:right;">` +
     `<style>${styles}</style>${bodyHtml}</div>`
   );
+}
+
+async function rasterizeViaHtml2Canvas(
+  doc: Document,
+  layoutWidthPx: number,
+  heightPx: number,
+  widthMm: number,
+  targetWidthDots?: number,
+): Promise<RasterizedTicket> {
+  const html2canvas = (await import("html2canvas")).default;
+  const scale = PRINT_DPI / LAYOUT_DPI;
+  const captured = await html2canvas(doc.body, {
+    backgroundColor: "#ffffff",
+    scale,
+    width: layoutWidthPx,
+    height: heightPx,
+    windowWidth: layoutWidthPx,
+    windowHeight: heightPx,
+    useCORS: true,
+    logging: false,
+    onclone: (clonedDoc) => {
+      clonedDoc.documentElement.setAttribute("dir", "rtl");
+      clonedDoc.documentElement.setAttribute("lang", "fa");
+      clonedDoc.body.style.direction = "rtl";
+      clonedDoc.body.style.textAlign = "right";
+      clonedDoc.body.style.width = `${layoutWidthPx}px`;
+    },
+  });
+
+  const outW = targetWidthDots && targetWidthDots > 0 ? targetWidthDots : captured.width;
+  const outH = Math.max(1, Math.round(captured.height * (outW / Math.max(captured.width, 1))));
+  const canvas = document.createElement("canvas");
+  canvas.width = outW;
+  canvas.height = outH;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("QZ_RENDER_FAILED");
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, outW, outH);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(captured, 0, 0, outW, outH);
+
+  const sample = ctx.getImageData(0, 0, outW, outH).data;
+  let ink = 0;
+  for (let i = 0; i < sample.length; i += 64) {
+    if (sample[i] < 248 || sample[i + 1] < 248 || sample[i + 2] < 248) ink += 1;
+  }
+  if (ink < 4) throw new Error("QZ_RENDER_EMPTY");
+
+  return {
+    png: canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, ""),
+    widthMm,
+    heightMm: Math.max(pxToMm(outH, PRINT_DPI) + 3, 25),
+    widthPx: outW,
+    heightPx: outH,
+  };
+}
+
+async function rasterizeViaSvgForeignObject(
+  doc: Document,
+  layoutWidthPx: number,
+  heightPx: number,
+  widthMm: number,
+  targetWidthDots?: number,
+): Promise<RasterizedTicket> {
+  const xhtml = buildForeignObjectMarkup(doc, layoutWidthPx, heightPx);
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${layoutWidthPx}" height="${heightPx}">` +
+    `<foreignObject x="0" y="0" width="${layoutWidthPx}" height="${heightPx}">${xhtml}</foreignObject></svg>`;
+  const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
+
+  try {
+    const image = await loadImage(url);
+    const printScale = PRINT_DPI / LAYOUT_DPI;
+    const naturalW = Math.round(layoutWidthPx * printScale);
+    const naturalH = Math.round(heightPx * printScale);
+    const canvas = document.createElement("canvas");
+    const outW = targetWidthDots && targetWidthDots > 0 ? targetWidthDots : naturalW;
+    const outH = Math.max(1, Math.round(naturalH * (outW / Math.max(naturalW, 1))));
+    canvas.width = outW;
+    canvas.height = outH;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("QZ_RENDER_FAILED");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const sample = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    let ink = 0;
+    for (let i = 0; i < sample.length; i += 64) {
+      if (sample[i] < 248 || sample[i + 1] < 248 || sample[i + 2] < 248) ink += 1;
+    }
+    if (ink < 4) throw new Error("QZ_RENDER_EMPTY");
+
+    return {
+      png: canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, ""),
+      widthMm,
+      heightMm: Math.max(pxToMm(canvas.height, PRINT_DPI) + 3, 25),
+      widthPx: canvas.width,
+      heightPx: canvas.height,
+    };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 async function rasterizeHtmlToPngBase64(
@@ -323,45 +428,11 @@ async function rasterizeHtmlToPngBase64(
 ): Promise<RasterizedTicket> {
   return withTicketIframe(html, widthMm, async (doc, layoutWidthPx) => {
     const heightPx = measureTicketHeightPx(doc);
-    const xhtml = buildForeignObjectMarkup(doc, layoutWidthPx, heightPx);
-    const svg =
-      `<svg xmlns="http://www.w3.org/2000/svg" width="${layoutWidthPx}" height="${heightPx}">` +
-      `<foreignObject x="0" y="0" width="${layoutWidthPx}" height="${heightPx}">${xhtml}</foreignObject></svg>`;
-    const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
-
     try {
-      const image = await loadImage(url);
-      const printScale = PRINT_DPI / LAYOUT_DPI;
-      const naturalW = Math.round(layoutWidthPx * printScale);
-      const naturalH = Math.round(heightPx * printScale);
-      const canvas = document.createElement("canvas");
-      const outW = targetWidthDots && targetWidthDots > 0 ? targetWidthDots : naturalW;
-      const outH = Math.max(1, Math.round(naturalH * (outW / Math.max(naturalW, 1))));
-      canvas.width = outW;
-      canvas.height = outH;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("QZ_RENDER_FAILED");
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-      const sample = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-      let ink = 0;
-      for (let i = 0; i < sample.length; i += 64) {
-        if (sample[i] < 248 || sample[i + 1] < 248 || sample[i + 2] < 248) ink += 1;
-      }
-      if (ink < 4) throw new Error("QZ_RENDER_EMPTY");
-
-      const heightMm = Math.max(pxToMm(canvas.height, PRINT_DPI) + 3, 25);
-      return {
-        png: canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, ""),
-        widthMm,
-        heightMm,
-        widthPx: canvas.width,
-        heightPx: canvas.height,
-      };
-    } finally {
-      URL.revokeObjectURL(url);
+      // Browser paint keeps Persian letter joining intact (unlike QZ JavaFX HTML).
+      return await rasterizeViaHtml2Canvas(doc, layoutWidthPx, heightPx, widthMm, targetWidthDots);
+    } catch {
+      return await rasterizeViaSvgForeignObject(doc, layoutWidthPx, heightPx, widthMm, targetWidthDots);
     }
   });
 }
@@ -466,18 +537,9 @@ export async function printHtmlToNamedPrinter(
   widthMm: number,
 ): Promise<void> {
   const qz = await connectQzTray();
-  const metrics = await measureTicketMetrics(html, widthMm);
   let lastError: unknown;
 
-  // 1) QZ HTML first — no browser SVG raster, stays silent and sized correctly.
-  try {
-    await printHtmlPixel(qz, printerName, html, metrics.widthMm, metrics.heightMm);
-    return;
-  } catch (error) {
-    lastError = error;
-  }
-
-  // 2) Optional raster paths (ESC/POS / pixel image) when HTML path is unavailable.
+  // Prefer browser raster (html2canvas): QZ JavaFX HTML breaks Persian letter joining.
   try {
     const dots = isThermalPaperWidth(widthMm) ? thermalDotsForWidthMm(widthMm) : undefined;
     const raster = await rasterizeHtmlToPngBase64(html, widthMm, dots);
@@ -507,6 +569,15 @@ export async function printHtmlToNamedPrinter(
         data: raster.png,
       },
     ]);
+    return;
+  } catch (error) {
+    lastError = error;
+  }
+
+  // Last resort: QZ HTML (may distort Persian on some JVMs).
+  try {
+    const metrics = await measureTicketMetrics(html, widthMm);
+    await printHtmlPixel(qz, printerName, html, metrics.widthMm, metrics.heightMm);
     return;
   } catch (error) {
     lastError = error;

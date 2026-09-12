@@ -18,12 +18,16 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function dailyTicketHtml(receipt: SaleReceiptData): string {
-  if (!readAdminPosSettings().showDailyTicketNumber || receipt.dailyTicketNumber == null) return "";
-  return `<div class="sub">فیش ${escapeHtml(formatDailyTicketNumber(receipt.dailyTicketNumber))}</div>`;
+/** Keep digits/LTR fragments from breaking RTL Persian layout. */
+function ltr(value: string): string {
+  return `<span class="ltr">${escapeHtml(value)}</span>`;
 }
 
-/** CSS px-per-mm at the browser reference density used by QZ rasterization. */
+function dailyTicketHtml(receipt: SaleReceiptData): string {
+  if (!readAdminPosSettings().showDailyTicketNumber || receipt.dailyTicketNumber == null) return "";
+  return `<div class="sub">فیش ${ltr(formatDailyTicketNumber(receipt.dailyTicketNumber))}</div>`;
+}
+
 const TICKET_LAYOUT_DPI = 96;
 
 function mmToLayoutPx(mm: number): number {
@@ -32,16 +36,16 @@ function mmToLayoutPx(mm: number): number {
 
 function wrapTicketHtml(inner: string, settings: SaleReceiptPrintSettings): string {
   const widthMm = resolvePaperWidthMm(settings);
-  // Pixel widths avoid SVG foreignObject mis-resolving `mm` into a tiny RTL strip.
   const widthPx = mmToLayoutPx(widthMm);
   const padPx = mmToLayoutPx(settings.paddingMm);
   const font = settings.fontSize;
   const title = settings.titleFontSize;
   const lh = settings.lineHeight;
   return `<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" dir="rtl" lang="fa">
+<html dir="rtl" lang="fa">
 <head>
 <meta charset="utf-8"/>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 <style>
   * { box-sizing: border-box; }
   html, body {
@@ -49,32 +53,46 @@ function wrapTicketHtml(inner: string, settings: SaleReceiptPrintSettings): stri
     padding: 0;
     width: ${widthPx}px;
     max-width: ${widthPx}px;
-    min-width: ${widthPx}px;
-    color: #000000;
-    background: #ffffff;
+    color: #000;
+    background: #fff;
+    direction: rtl;
+    unicode-bidi: embed;
   }
   body {
     padding: ${padPx}px;
-    font-family: Tahoma, "Segoe UI", Arial, sans-serif;
+    font-family: Tahoma, "Segoe UI", "Arial Unicode MS", Arial, sans-serif;
     font-size: ${font}px;
     line-height: ${lh};
-    width: ${widthPx}px;
-    max-width: ${widthPx}px;
-    min-width: ${widthPx}px;
-    overflow: visible;
+    text-align: right;
+    -webkit-font-smoothing: none;
   }
-  h1, .sub, .muted, .item, .note, hr { width: 100%; }
-  h1 { font-size: ${title}px; font-weight: 800; text-align: center; margin: 0 0 4px; color: #000000; }
-  .sub { text-align: center; font-weight: 700; margin: 0 0 6px; color: #000000; }
-  .muted { text-align: center; font-size: ${font - 1}px; margin: 0 0 8px; color: #000000; }
-  table.row { width: 100%; border-collapse: collapse; table-layout: fixed; }
-  table.row td { vertical-align: top; color: #000000; word-wrap: break-word; }
-  table.row td.end { text-align: left; white-space: nowrap; width: 1%; }
-  .item { margin-bottom: ${settings.compactItems ? 4 : 8}px; color: #000000; }
-  .name { font-weight: 700; color: #000000; }
-  hr { border: none; border-top: 1px solid #000000; margin: 8px 0; }
+  h1, .sub, .muted, .item, .note, .row, hr { width: 100%; }
+  h1 {
+    font-size: ${title}px;
+    font-weight: 800;
+    text-align: center;
+    margin: 0 0 4px;
+  }
+  .sub { text-align: center; font-weight: 700; margin: 0 0 6px; }
+  .muted { text-align: center; font-size: ${Math.max(font - 1, 10)}px; margin: 0 0 8px; }
+  .row {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    width: 100%;
+    direction: rtl;
+  }
+  .row .label { flex: 1 1 auto; text-align: right; word-break: break-word; }
+  .row .value { flex: 0 0 auto; text-align: left; white-space: nowrap; direction: ltr; unicode-bidi: embed; }
+  .ltr { direction: ltr; unicode-bidi: embed; display: inline-block; }
+  .item { margin-bottom: ${settings.compactItems ? 4 : 8}px; }
+  .name { font-weight: 700; text-align: right; }
+  hr { border: none; border-top: 1px solid #000; margin: 8px 0; }
   .bold { font-weight: 800; }
-  .note { white-space: pre-wrap; color: #000000; }
+  .note { white-space: pre-wrap; text-align: right; }
+  .block { text-align: right; margin: 0 0 4px; }
 </style>
 </head>
 <body>${inner}</body>
@@ -82,8 +100,8 @@ function wrapTicketHtml(inner: string, settings: SaleReceiptPrintSettings): stri
 }
 
 function rowHtml(label: string, value: string, bold = false): string {
-  const cls = bold ? "bold" : "";
-  return `<table class="row ${cls}"><tr><td>${label}</td><td class="end">${value}</td></tr></table>`;
+  const cls = bold ? " bold" : "";
+  return `<div class="row${cls}"><span class="label">${escapeHtml(label)}</span><span class="value">${value}</span></div>`;
 }
 
 function hallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSettings): string {
@@ -91,34 +109,42 @@ function hallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSettings)
   const items = receipt.items
     .map((item) => {
       const qtyPrice = settings.showItemUnitPrice
-        ? `${formatReceiptNumber(item.quantity)} × ${formatReceiptNumber(item.unitPrice)}`
-        : `تعداد: ${formatReceiptNumber(item.quantity)}`;
-      const note = item.note ? `<div>یادداشت: ${escapeHtml(item.note)}</div>` : "";
-      return `<div class="item"><div class="name">${escapeHtml(item.name)}</div>${note}<table class="row"><tr><td>${qtyPrice}</td><td class="end bold">${formatReceiptNumber(item.lineTotal)}</td></tr></table></div>`;
+        ? `${ltr(formatReceiptNumber(item.quantity))} × ${ltr(formatReceiptNumber(item.unitPrice))}`
+        : `تعداد: ${ltr(formatReceiptNumber(item.quantity))}`;
+      const note = item.note ? `<div class="block">یادداشت: ${escapeHtml(item.note)}</div>` : "";
+      return `<div class="item"><div class="name">${escapeHtml(item.name)}</div>${note}<div class="row"><span class="label">${qtyPrice}</span><span class="value bold">${ltr(formatReceiptNumber(item.lineTotal))}</span></div></div>`;
     })
     .join("");
 
   const extras: string[] = [];
-  extras.push(rowHtml("جمع", formatReceiptNumber(receipt.subtotal)));
-  if (receipt.discount > 0) extras.push(rowHtml("تخفیف", formatReceiptNumber(receipt.discount)));
-  if (receipt.creditUsed > 0) extras.push(rowHtml("اعتبار", formatReceiptNumber(receipt.creditUsed)));
-  if (receipt.backPrice > 0) extras.push(rowHtml("برگشتی", formatReceiptNumber(receipt.backPrice)));
-  extras.push(rowHtml("مبلغ نهایی", `${formatReceiptNumber(receipt.finalTotal)} تومان`, true));
+  extras.push(rowHtml("جمع", ltr(formatReceiptNumber(receipt.subtotal))));
+  if (receipt.discount > 0) extras.push(rowHtml("تخفیف", ltr(formatReceiptNumber(receipt.discount))));
+  if (receipt.creditUsed > 0) extras.push(rowHtml("اعتبار", ltr(formatReceiptNumber(receipt.creditUsed))));
+  if (receipt.backPrice > 0) extras.push(rowHtml("برگشتی", ltr(formatReceiptNumber(receipt.backPrice))));
+  extras.push(rowHtml("مبلغ نهایی", `${ltr(formatReceiptNumber(receipt.finalTotal))} تومان`, true));
   if (receipt.payableNow > 0 && receipt.payableNow !== receipt.finalTotal) {
-    extras.push(rowHtml("قابل پرداخت", `${formatReceiptNumber(receipt.payableNow)} تومان`));
+    extras.push(rowHtml("قابل پرداخت", `${ltr(formatReceiptNumber(receipt.payableNow))} تومان`));
   }
 
   const pay: string[] = [];
   if (settings.showPaymentMethod) {
-    pay.push(`<div>روش پرداخت: ${escapeHtml(getPaymentTypeLabel(receipt))}</div>`);
-    if (receipt.footerNote) pay.push(`<div>${escapeHtml(receipt.footerNote)}</div>`);
-    if (receipt.customerNote) pay.push(`<div class="note">توضیحات: ${escapeHtml(receipt.customerNote)}</div>`);
+    pay.push(`<div class="block">روش پرداخت: ${escapeHtml(getPaymentTypeLabel(receipt))}</div>`);
+    if (receipt.footerNote) pay.push(`<div class="block">${escapeHtml(receipt.footerNote)}</div>`);
+    if (receipt.customerNote) {
+      pay.push(`<div class="note">توضیحات: ${escapeHtml(receipt.customerNote)}</div>`);
+    }
     if (receipt.settlementMode === "split" || receipt.paymentType === "cheque") {
-      if (receipt.cardAmount) pay.push(`<div>کارت: ${formatReceiptNumber(receipt.cardAmount)} تومان</div>`);
-      if (receipt.cashAmount) pay.push(`<div>نقد: ${formatReceiptNumber(receipt.cashAmount)} تومان</div>`);
+      if (receipt.cardAmount) {
+        pay.push(`<div class="block">کارت: ${ltr(formatReceiptNumber(receipt.cardAmount))} تومان</div>`);
+      }
+      if (receipt.cashAmount) {
+        pay.push(`<div class="block">نقد: ${ltr(formatReceiptNumber(receipt.cashAmount))} تومان</div>`);
+      }
     }
     if (receipt.paymentType === "installment" && receipt.installmentAmount != null) {
-      pay.push(`<div>مبلغ هر قسط: ${formatReceiptNumber(Math.floor(receipt.installmentAmount))} تومان</div>`);
+      pay.push(
+        `<div class="block">مبلغ هر قسط: ${ltr(formatReceiptNumber(Math.floor(receipt.installmentAmount)))} تومان</div>`,
+      );
     }
   }
 
@@ -126,16 +152,14 @@ function hallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSettings)
     <h1>${shopTitle}</h1>
     <div class="sub">فیش سالن</div>
     ${dailyTicketHtml(receipt)}
-    ${settings.showDate ? `<div class="muted">${escapeHtml(formatReceiptDate(receipt.createdAt))}</div>` : ""}
-    <table class="row">
-      <tr>
-        <td>
-          ${settings.showPurchaseId && receipt.purchaseId != null ? `<div>شماره فاکتور: ${escapeHtml(String(receipt.purchaseId))}</div>` : ""}
-          ${settings.showCustomerPhone && receipt.phone ? `<div>مشتری: ${escapeHtml(receipt.phone)}</div>` : ""}
-        </td>
-        ${receipt.tableLabel ? `<td class="end bold">${escapeHtml(receipt.tableLabel)}</td>` : ""}
-      </tr>
-    </table>
+    ${settings.showDate ? `<div class="muted">${ltr(formatReceiptDate(receipt.createdAt))}</div>` : ""}
+    <div class="row">
+      <div class="label">
+        ${settings.showPurchaseId && receipt.purchaseId != null ? `<div class="block">شماره فاکتور: ${ltr(String(receipt.purchaseId))}</div>` : ""}
+        ${settings.showCustomerPhone && receipt.phone ? `<div class="block">مشتری: ${ltr(receipt.phone)}</div>` : ""}
+      </div>
+      ${receipt.tableLabel ? `<div class="value bold">${escapeHtml(receipt.tableLabel)}</div>` : ""}
+    </div>
     <hr/>
     ${items}
     <hr/>
@@ -153,8 +177,8 @@ function prepInner(
   const shopTitle = settings.shopTitle || receipt.shopName || "";
   const items = receipt.items
     .map((item) => {
-      const note = item.note ? `<div class="bold">یادداشت: ${escapeHtml(item.note)}</div>` : "";
-      return `<div class="item"><table class="row"><tr><td class="name">${escapeHtml(item.name)}</td><td class="end bold">× ${formatReceiptNumber(item.quantity)}</td></tr></table>${note}</div>`;
+      const note = item.note ? `<div class="bold block">یادداشت: ${escapeHtml(item.note)}</div>` : "";
+      return `<div class="item"><div class="row"><span class="label name">${escapeHtml(item.name)}</span><span class="value bold">× ${ltr(formatReceiptNumber(item.quantity))}</span></div>${note}</div>`;
     })
     .join("");
 
@@ -162,9 +186,9 @@ function prepInner(
     <h1>${escapeHtml(title)}</h1>
     ${dailyTicketHtml(receipt)}
     ${shopTitle ? `<div class="muted">${escapeHtml(shopTitle)}</div>` : ""}
-    ${settings.showDate ? `<div class="muted">${escapeHtml(formatReceiptDate(receipt.createdAt))}</div>` : ""}
+    ${settings.showDate ? `<div class="muted">${ltr(formatReceiptDate(receipt.createdAt))}</div>` : ""}
     ${receipt.tableLabel ? `<div class="sub">${escapeHtml(receipt.tableLabel)}</div>` : ""}
-    ${settings.showPurchaseId && receipt.purchaseId != null ? `<div class="muted">سفارش ${escapeHtml(String(receipt.purchaseId))}</div>` : ""}
+    ${settings.showPurchaseId && receipt.purchaseId != null ? `<div class="muted">سفارش ${ltr(String(receipt.purchaseId))}</div>` : ""}
     <hr/>
     ${items}
     ${receipt.customerNote ? `<hr/><div class="note bold">توضیحات سفارش: ${escapeHtml(receipt.customerNote)}</div>` : ""}
