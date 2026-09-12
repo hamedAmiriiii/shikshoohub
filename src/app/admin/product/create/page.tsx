@@ -607,12 +607,19 @@ export default function Page() {
     "& > div": { marginTop: 0, width: "100%" },
     "& > div > div:last-of-type > div": { width: "100% !important", maxWidth: "100%" },
     "& .MuiTypography-root": {
-      color: "rgba(255,255,255,0.72)",
+      color: "var(--admin-text-muted)",
       fontSize: "11px",
       mb: 0.25,
     },
-    "& .MuiOutlinedInput-input": { py: "7px" },
-    "& .MuiOutlinedInput-root": { borderRadius: "10px" },
+    "& .MuiOutlinedInput-input": { py: "7px", color: "var(--admin-text) !important" },
+    "& .MuiOutlinedInput-root": {
+      borderRadius: "10px",
+      backgroundColor: "var(--admin-input-bg)",
+      color: "var(--admin-text)",
+      "& fieldset": { borderColor: "var(--admin-input-border)" },
+      "&:hover fieldset": { borderColor: "var(--admin-accent)" },
+      "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
+    },
   } as const;
 
   const optionalColSx = {
@@ -625,8 +632,8 @@ export default function Page() {
   const optionalPanelSx = {
     flex: 1,
     minHeight: 0,
-    backgroundColor: "rgba(0,0,0,0.22)",
-    border: "1px dashed rgba(244,208,63,0.28)",
+    backgroundColor: "var(--admin-surface-alt)",
+    border: "1px dashed var(--admin-accent-border)",
     borderRadius: "10px",
     overflow: "auto",
     py: 0.25,
@@ -645,7 +652,7 @@ export default function Page() {
 
   const chipSx = {
     height: 22,
-    backgroundColor: "#e67e22",
+    backgroundColor: "var(--admin-accent)",
     color: "var(--admin-on-accent)",
     "& .MuiChip-label": { px: 0.75, fontSize: "11px" },
     "& .MuiChip-deleteIcon": { color: "var(--admin-on-accent)", fontSize: 14 },
@@ -678,13 +685,13 @@ export default function Page() {
   const panelSearchSx = {
     mb: 0.5,
     "&& .MuiOutlinedInput-root": {
-      backgroundColor: "rgba(0,0,0,0.25)",
+      backgroundColor: "var(--admin-input-bg)",
       color: "var(--admin-text)",
       borderRadius: "10px",
       minHeight: 32,
-      "& fieldset": { borderColor: "rgba(255,255,255,0.12)" },
-      "&:hover fieldset": { borderColor: "#e67e22" },
-      "&.Mui-focused fieldset": { borderColor: "#f4d03f" },
+      "& fieldset": { borderColor: "var(--admin-input-border)" },
+      "&:hover fieldset": { borderColor: "var(--admin-accent)" },
+      "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
     },
     "&& .MuiInputBase-input": { color: "var(--admin-text)", py: 0.55, fontSize: "12px" },
   } as const;
@@ -692,13 +699,13 @@ export default function Page() {
   const barcodeFieldSx = {
     width: "100%",
     "& .MuiOutlinedInput-root": {
-      backgroundColor: "rgba(0,0,0,0.28)",
+      backgroundColor: "var(--admin-input-bg)",
       color: "var(--admin-text)",
       borderRadius: "10px",
       pl: "4px",
-      "& fieldset": { borderColor: "rgba(255,255,255,0.12)" },
-      "&:hover fieldset": { borderColor: "#e67e22" },
-      "&.Mui-focused fieldset": { borderColor: "#f4d03f" },
+      "& fieldset": { borderColor: "var(--admin-input-border)" },
+      "&:hover fieldset": { borderColor: "var(--admin-accent)" },
+      "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
     },
     "& .MuiInputBase-input": {
       color: "var(--admin-text)",
@@ -716,10 +723,17 @@ export default function Page() {
   } as const;
 
   const colLabelSx = {
-    color: "rgba(255,255,255,0.72)",
+    color: "var(--admin-text-muted)",
     fontSize: "11px",
     mb: 0.5,
     flexShrink: 0,
+  } as const;
+
+  const mutedHintSx = {
+    color: "var(--admin-text-muted)",
+    fontSize: "12px",
+    p: 1,
+    textAlign: "center",
   } as const;
 
   return (
@@ -807,12 +821,12 @@ export default function Page() {
                   inputProps={{ maxLength: 500 }}
                   sx={{
                     "& .MuiOutlinedInput-root": {
-                      backgroundColor: "rgba(0,0,0,0.28)",
+                      backgroundColor: "var(--admin-input-bg)",
                       color: "var(--admin-text)",
                       borderRadius: "10px",
-                      "& fieldset": { borderColor: "rgba(255,255,255,0.12)" },
-                      "&:hover fieldset": { borderColor: "#e67e22" },
-                      "&.Mui-focused fieldset": { borderColor: "#f4d03f" },
+                      "& fieldset": { borderColor: "var(--admin-input-border)" },
+                      "&:hover fieldset": { borderColor: "var(--admin-accent)" },
+                      "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
                     },
                     "& .MuiInputBase-input": {
                       color: "var(--admin-text)",
@@ -913,14 +927,14 @@ export default function Page() {
                       fullWidth
                       sx={{
                         "& .MuiToggleButton-root": {
-                          color: "#f7efe3",
-                          borderColor: "rgba(255,255,255,0.16)",
+                          color: "var(--admin-text)",
+                          borderColor: "var(--admin-border)",
                           py: 0.4,
                           fontSize: "11px",
                           "&.Mui-selected": {
-                            bgcolor: "#e67e22",
+                            bgcolor: "var(--admin-accent)",
                             color: "var(--admin-on-accent)",
-                            "&:hover": { bgcolor: "#d35400" },
+                            "&:hover": { bgcolor: "var(--admin-accent-hover)" },
                           },
                         },
                       }}
@@ -948,7 +962,7 @@ export default function Page() {
                     sx={panelSearchSx}
                     slotProps={{
                       input: {
-                        startAdornment: <SearchIcon sx={{ mr: 0.5, fontSize: 16, color: "rgba(255,255,255,0.4)" }} />,
+                        startAdornment: <SearchIcon sx={{ mr: 0.5, fontSize: 16, color: "var(--admin-text-muted)" }} />,
                       },
                     }}
                   />
@@ -971,7 +985,7 @@ export default function Page() {
                       </Box>
                     )}
                     {categoriesLoading ? (
-                      <Typography sx={{ color: "rgba(255,255,255,0.5)", fontSize: "12px", p: 1, textAlign: "center" }}>
+                      <Typography sx={mutedHintSx}>
                         در حال بارگذاری...
                       </Typography>
                     ) : filteredCategories.length > 0 ? (
@@ -983,7 +997,7 @@ export default function Page() {
                         />
                       ))
                     ) : (
-                      <Typography sx={{ color: "rgba(255,255,255,0.5)", fontSize: "12px", p: 1, textAlign: "center" }}>
+                      <Typography sx={mutedHintSx}>
                         {categorySearch.trim() ? "موردی یافت نشد" : "دسته‌بندی‌ای یافت نشد"}
                       </Typography>
                     )}
@@ -1005,7 +1019,7 @@ export default function Page() {
                     sx={panelSearchSx}
                     slotProps={{
                       input: {
-                        startAdornment: <SearchIcon sx={{ mr: 0.5, fontSize: 16, color: "rgba(255,255,255,0.4)" }} />,
+                        startAdornment: <SearchIcon sx={{ mr: 0.5, fontSize: 16, color: "var(--admin-text-muted)" }} />,
                       },
                     }}
                   />
@@ -1021,7 +1035,7 @@ export default function Page() {
                       </Box>
                     )}
                     {manufacturersLoading ? (
-                      <Typography sx={{ color: "rgba(255,255,255,0.5)", fontSize: "12px", p: 1, textAlign: "center" }}>
+                      <Typography sx={mutedHintSx}>
                         در حال بارگذاری...
                       </Typography>
                     ) : (
@@ -1029,7 +1043,7 @@ export default function Page() {
                         <Box
                           sx={{
                             ...panelListRowSx,
-                            backgroundColor: manufacturerId === "" ? "rgba(244,208,63,0.1)" : "transparent",
+                            backgroundColor: manufacturerId === "" ? "var(--admin-menu-hover)" : "transparent",
                             display:
                               manufacturerSearch.trim() &&
                               !"هیچکدام".toLowerCase().includes(manufacturerSearch.trim().toLowerCase())
@@ -1057,7 +1071,7 @@ export default function Page() {
                                 key={manufacturer.id}
                                 sx={{
                                   ...panelListRowSx,
-                                  backgroundColor: isSelected ? "rgba(244,208,63,0.1)" : "transparent",
+                                  backgroundColor: isSelected ? "var(--admin-menu-hover)" : "transparent",
                                 }}
                                 onClick={() => setManufacturerId(manufacturer.id)}
                               >
@@ -1075,11 +1089,11 @@ export default function Page() {
                             );
                           })
                         ) : !manufacturerSearch.trim() ? (
-                          <Typography sx={{ color: "rgba(255,255,255,0.5)", fontSize: "12px", p: 1, textAlign: "center" }}>
+                          <Typography sx={mutedHintSx}>
                             تولیدکننده‌ای یافت نشد
                           </Typography>
                         ) : (
-                          <Typography sx={{ color: "rgba(255,255,255,0.5)", fontSize: "12px", p: 1, textAlign: "center" }}>
+                          <Typography sx={mutedHintSx}>
                             موردی یافت نشد
                           </Typography>
                         )}
@@ -1110,15 +1124,15 @@ export default function Page() {
                       size="small"
                       startIcon={<AddPhotoAlternateIcon sx={{ fontSize: 16 }} />}
                       sx={{
-                        borderColor: "rgba(244,208,63,0.45)",
-                        color: "#f4d03f",
+                        borderColor: "var(--admin-accent)",
+                        color: "var(--admin-accent)",
                         borderRadius: "10px",
                         py: 0.45,
                         mb: 0.5,
                         borderStyle: "dashed",
                         fontSize: "12px",
                         minHeight: 32,
-                        "&:hover": { borderColor: "#f4d03f", backgroundColor: "rgba(244,208,63,0.08)" },
+                        "&:hover": { borderColor: "var(--admin-accent-hover)", backgroundColor: "var(--admin-menu-hover)" },
                       }}
                     >
                       افزودن تصویر
@@ -1171,7 +1185,7 @@ export default function Page() {
                         ))}
                       </Box>
                     ) : (
-                      <Typography sx={{ color: "rgba(255,255,255,0.4)", fontSize: "12px", textAlign: "center", py: 2 }}>
+                      <Typography sx={{ ...mutedHintSx, py: 2 }}>
                         تصویری انتخاب نشده
                       </Typography>
                     )}

@@ -332,9 +332,10 @@ export default function ListData() {
                     sx={{
                         display: 'flex',
                         alignItems: 'center',
-                        padding: compact ? "2px 8px" : "8px 12px",
-                        paddingRight: `${(compact ? 8 : 12) + level * (compact ? 16 : 24)}px`,
+                        padding: compact ? "1px 6px" : "8px 12px",
+                        paddingRight: `${(compact ? 6 : 12) + level * (compact ? 12 : 24)}px`,
                         cursor: hasChildren ? 'pointer' : 'default',
+                        minHeight: compact ? 24 : undefined,
                         '&:hover': {
                             backgroundColor: 'var(--admin-menu-hover)',
                         },
@@ -343,32 +344,34 @@ export default function ListData() {
                 >
                     {hasChildren ? (
                         expanded ? (
-                            <ExpandMoreIcon sx={{ color: 'var(--admin-accent)', fontSize: compact ? '16px' : '20px', marginLeft: compact ? '4px' : '8px' }} />
+                            <ExpandMoreIcon sx={{ color: 'var(--admin-accent)', fontSize: compact ? '14px' : '20px', marginLeft: compact ? '2px' : '8px' }} />
                         ) : (
-                            <ChevronRightIcon sx={{ color: 'var(--admin-accent)', fontSize: compact ? '16px' : '20px', marginLeft: compact ? '4px' : '8px' }} />
+                            <ChevronRightIcon sx={{ color: 'var(--admin-accent)', fontSize: compact ? '14px' : '20px', marginLeft: compact ? '2px' : '8px' }} />
                         )
                     ) : (
-                        <Box sx={{ width: compact ? '16px' : '20px', marginLeft: compact ? '4px' : '8px' }} />
+                        <Box sx={{ width: compact ? '14px' : '20px', marginLeft: compact ? '2px' : '8px', flexShrink: 0 }} />
                     )}
                     <Checkbox
                         checked={isSelected}
                         onChange={handleCheckboxChange}
                         onClick={(e) => e.stopPropagation()}
+                        size="small"
                         sx={{
                             color: 'var(--admin-accent)',
-                            p: compact ? 0.25 : 1,
+                            p: compact ? 0.15 : 1,
+                            '& .MuiSvgIcon-root': { fontSize: compact ? 16 : undefined },
                             '&.Mui-checked': {
                                 color: 'var(--admin-accent)',
                             },
                         }}
                     />
-                    <Typography sx={{ color: 'var(--admin-text)', fontSize: compact ? '12px' : '14px', flex: 1 }}>
+                    <Typography sx={{ color: 'var(--admin-text)', fontSize: compact ? '11px' : '14px', flex: 1, lineHeight: 1.2 }}>
                         {category.name}
                     </Typography>
                 </Box>
                 {hasChildren && (
                     <Collapse in={expanded} timeout="auto" unmountOnExit>
-                        <Box sx={{ paddingRight: '24px' }}>
+                        <Box sx={{ paddingRight: compact ? '12px' : '24px' }}>
                             {category.children.map((child: any) => (
                                 <CategoryTreeItem key={child.id} category={child} level={level + 1} compact={compact} />
                             ))}

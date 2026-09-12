@@ -96,15 +96,63 @@ export default function ProductEditSheet({
     return () => window.removeEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, sync);
   }, []);
 
+  const fieldLabelSx = {
+    color: "var(--admin-text-muted)",
+    fontSize: "11px",
+    mb: 0.25,
+  } as const;
+
+  const fieldWrapSx = {
+    width: "100%",
+    "& > div": { marginTop: 0, width: "100%" },
+    "& > div > div:last-of-type > div": { width: "100% !important", maxWidth: "100%" },
+    "& .MuiTypography-root": fieldLabelSx,
+    "& .MuiOutlinedInput-root": {
+      backgroundColor: "var(--admin-surface-alt)",
+      color: "var(--admin-text)",
+      borderRadius: "10px",
+      minHeight: 42,
+      "& fieldset": { borderColor: "var(--admin-border)" },
+      "&:hover fieldset": { borderColor: "var(--admin-accent)" },
+      "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
+    },
+    "& .MuiOutlinedInput-input": {
+      py: "7px",
+      fontSize: "13px",
+      color: "var(--admin-text)",
+    },
+  } as const;
+
+  const barcodeFieldSx = {
+    "& .MuiOutlinedInput-root": {
+      backgroundColor: "var(--admin-surface-alt)",
+      color: "var(--admin-text)",
+      borderRadius: "10px",
+      minHeight: 42,
+      "& fieldset": { borderColor: "var(--admin-border)" },
+      "&:hover fieldset": { borderColor: "var(--admin-accent)" },
+      "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
+    },
+    "& .MuiInputBase-input": {
+      direction: "ltr",
+      textAlign: "left",
+      py: "7px",
+      fontSize: "13px",
+      color: "var(--admin-text)",
+    },
+  } as const;
+
   return (
     <BottomSheet open={open} onClose={() => onClose()} title="ویرایش کالا" dense>
       <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75, direction: "rtl" }}>
         <Grid container spacing={0.75} alignItems="flex-end">
           <Grid item xs={12} sm={6}>
-            <TextInput value={name} label="نام کالا" onChange={onNameChange} name="name" type="text" />
+            <Box sx={fieldWrapSx}>
+              <TextInput value={name} label="نام کالا" onChange={onNameChange} name="name" type="text" />
+            </Box>
           </Grid>
           <Grid item xs={12} sm={6}>
-            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "11px", mb: 0.25 }}>بارکد</Typography>
+            <Typography sx={fieldLabelSx}>بارکد</Typography>
             <TextField
               value={barcode}
               onChange={(e) => onBarcodeChange(e.target.value.slice(0, 255))}
@@ -134,26 +182,11 @@ export default function ProductEditSheet({
                   </InputAdornment>
                 ),
               }}
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  backgroundColor: "var(--admin-surface-alt)",
-                  color: "var(--admin-text)",
-                  borderRadius: "10px",
-                  "& fieldset": { borderColor: "var(--admin-border)" },
-                  "&:hover fieldset": { borderColor: "var(--admin-accent)" },
-                  "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
-                },
-                "& .MuiInputBase-input": {
-                  direction: "ltr",
-                  textAlign: "left",
-                  py: "7px",
-                  fontSize: "13px",
-                  color: "var(--admin-text)",
-                },
-              }}
+              sx={barcodeFieldSx}
             />
           </Grid>
           <Grid item xs={12}>
+            <Typography sx={fieldLabelSx}>توضیحات (اختیاری)</Typography>
             <TextField
               value={description}
               onChange={(e) => onDescriptionChange(e.target.value.slice(0, 500))}
@@ -164,7 +197,6 @@ export default function ProductEditSheet({
               minRows={2}
               maxRows={4}
               inputProps={{ maxLength: 500 }}
-              label="توضیحات (اختیاری)"
               sx={{
                 "& .MuiOutlinedInput-root": {
                   backgroundColor: "var(--admin-surface-alt)",
@@ -176,169 +208,208 @@ export default function ProductEditSheet({
                 },
                 "& .MuiInputBase-input": {
                   fontSize: "13px",
+                  py: "7px",
                   color: "var(--admin-text)",
                 },
-                "& .MuiInputLabel-root": {
-                  color: "var(--admin-text-muted)",
-                  fontSize: "13px",
-                },
-                "& .MuiInputLabel-root.Mui-focused": { color: "var(--admin-accent)" },
               }}
             />
           </Grid>
           {showDisplayOrder ? (
             <Grid item xs={6} sm={4} md={2}>
-              <TextInput
-                value={displayOrder}
-                label="اولویت"
-                onChange={(v) => onDisplayOrderChange(String(v).replace(/[^\d]/g, "").slice(0, 4))}
-                name="display_order"
-                type="number"
-              />
+              <Box sx={fieldWrapSx}>
+                <TextInput
+                  value={displayOrder}
+                  label="اولویت"
+                  onChange={(v) => onDisplayOrderChange(String(v).replace(/[^\d]/g, "").slice(0, 4))}
+                  name="display_order"
+                  type="number"
+                />
+              </Box>
             </Grid>
           ) : null}
           <Grid item xs={6} sm={4} md={2}>
-            <TextInput
-              value={profitPercentage}
-              label="درصد سود"
-              onChange={onProfitPercentageChange}
-              name="profitPercentage"
-              type="number"
-            />
+            <Box sx={fieldWrapSx}>
+              <TextInput
+                value={profitPercentage}
+                label="درصد سود"
+                onChange={onProfitPercentageChange}
+                name="profitPercentage"
+                type="number"
+              />
+            </Box>
           </Grid>
           <Grid item xs={6} sm={4} md={2}>
-            <TextInput
-              value={purchasePrice}
-              label="قیمت خرید"
-              onChange={onPurchasePriceChange}
-              name="purchase_price"
-              type="number"
-            />
+            <Box sx={fieldWrapSx}>
+              <TextInput
+                value={purchasePrice}
+                label="قیمت خرید"
+                onChange={onPurchasePriceChange}
+                name="purchase_price"
+                type="number"
+              />
+            </Box>
           </Grid>
           <Grid item xs={6} sm={4} md={3}>
-            <TextInput
-              value={salePrice}
-              label="قیمت فروش"
-              onChange={onSalePriceChange}
-              name="sale_price"
-              type="number"
-            />
+            <Box sx={fieldWrapSx}>
+              <TextInput
+                value={salePrice}
+                label="قیمت فروش"
+                onChange={onSalePriceChange}
+                name="sale_price"
+                type="number"
+              />
+            </Box>
           </Grid>
           <Grid item xs={6} sm={4} md={2}>
-            <TextInput value={quantity} label="موجودی" onChange={onQuantityChange} name="quantity" type="number" />
+            <Box sx={fieldWrapSx}>
+              <TextInput value={quantity} label="موجودی" onChange={onQuantityChange} name="quantity" type="number" />
+            </Box>
           </Grid>
           <Grid item xs={12} sm={8} md={3}>
-            <TextInput
-              value={discountPercent}
-              label="تخفیف %"
-              onChange={onDiscountPercentChange}
-              name="discountPercent"
-              type="number"
-            />
+            <Box sx={fieldWrapSx}>
+              <TextInput
+                value={discountPercent}
+                label="تخفیف %"
+                onChange={onDiscountPercentChange}
+                name="discountPercent"
+                type="number"
+              />
+            </Box>
           </Grid>
         </Grid>
 
-        <Grid container spacing={0.75}>
+        <Grid container spacing={1} sx={{ mt: 1, mb: 1 }} alignItems="stretch">
           <Grid item xs={12} sm={6}>
-            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "11px", mb: 0.35 }}>
-              تصاویر (اختیاری)
-            </Typography>
-            <input
-              accept="image/*"
-              style={{ display: "none" }}
-              id="image-upload-edit"
-              multiple
-              type="file"
-              onChange={onImageUpload}
-            />
-            <label htmlFor="image-upload-edit">
-              <Button
-                component="span"
-                variant="outlined"
-                startIcon={<AddPhotoAlternateIcon sx={{ fontSize: 16 }} />}
+            <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+              <Typography sx={{ color: "var(--admin-text)", fontSize: "11px", fontWeight: 600, mb: 0.5 }}>
+                تصاویر محصول (اختیاری)
+              </Typography>
+              <input
+                accept="image/*"
+                style={{ display: "none" }}
+                id="image-upload-edit"
+                multiple
+                type="file"
+                onChange={onImageUpload}
+              />
+              <label htmlFor="image-upload-edit">
+                <Button
+                  component="span"
+                  variant="outlined"
+                  startIcon={<AddPhotoAlternateIcon sx={{ fontSize: 14 }} />}
+                  sx={{
+                    width: "100%",
+                    mb: 0.75,
+                    borderColor: "var(--admin-accent)",
+                    color: "var(--admin-accent)",
+                    borderRadius: "8px",
+                    py: 0.4,
+                    fontSize: "11px",
+                    fontWeight: 600,
+                    minHeight: 28,
+                    "&:hover": {
+                      borderColor: "var(--admin-accent-hover)",
+                      backgroundColor: "var(--admin-menu-hover)",
+                    },
+                  }}
+                >
+                  افزودن تصویر
+                </Button>
+              </label>
+              <Paper
                 sx={{
-                  width: "100%",
-                  minHeight: 32,
-                  py: 0.4,
-                  mb: 0.5,
-                  fontSize: "12px",
-                  borderRadius: "10px",
-                  borderStyle: "dashed",
-                  borderColor: "var(--admin-accent)",
-                  color: "var(--admin-accent)",
-                  "&:hover": {
-                    borderColor: "var(--admin-accent-hover)",
-                    backgroundColor: "var(--admin-menu-hover)",
-                  },
+                  flex: 1,
+                  minHeight: 0,
+                  maxHeight: 210,
+                  backgroundColor: "var(--admin-surface-alt)",
+                  border: "1px solid var(--admin-border)",
+                  borderRadius: "8px",
+                  overflow: "auto",
+                  p: 1,
                 }}
               >
-                افزودن تصویر
-              </Button>
-            </label>
-            {images.length > 0 ? (
-              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 0.5 }}>
-                {images.map((image, index) => (
-                  <Card key={index} sx={{ position: "relative", borderRadius: "8px", overflow: "hidden" }}>
-                    <CardMedia component="img" image={image} alt={`تصویر ${index + 1}`} sx={{ height: 56, objectFit: "cover" }} />
-                    <IconButton
-                      onClick={() => onRemoveImage(index)}
-                      size="small"
-                      sx={{
-                        position: "absolute",
-                        top: 2,
-                        right: 2,
-                        p: 0.2,
-                        backgroundColor: "rgba(0,0,0,0.55)",
-                        color: "var(--admin-on-accent)",
-                        "&:hover": { backgroundColor: "rgba(244,67,54,0.9)" },
-                      }}
-                    >
-                      <DeleteIcon sx={{ fontSize: 14 }} />
-                    </IconButton>
-                  </Card>
-                ))}
-              </Box>
-            ) : (
-              <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "11px", textAlign: "center", py: 0.5 }}>
-                تصویری انتخاب نشده
-              </Typography>
-            )}
+                {images.length > 0 ? (
+                  <Grid container spacing={1}>
+                    {images.map((image, index) => (
+                      <Grid item xs={6} sm={4} key={index}>
+                        <Card sx={{ position: "relative", borderRadius: "10px", overflow: "hidden" }}>
+                          <CardMedia
+                            component="img"
+                            image={image}
+                            alt={`تصویر ${index + 1}`}
+                            sx={{ height: 105, objectFit: "cover" }}
+                          />
+                          <IconButton
+                            onClick={() => onRemoveImage(index)}
+                            size="small"
+                            sx={{
+                              position: "absolute",
+                              top: 4,
+                              right: 4,
+                              backgroundColor: "rgba(0,0,0,0.5)",
+                              color: "var(--admin-on-accent)",
+                              "&:hover": { backgroundColor: "rgba(0,0,0,0.7)" },
+                            }}
+                          >
+                            <DeleteIcon sx={{ fontSize: 18 }} />
+                          </IconButton>
+                        </Card>
+                      </Grid>
+                    ))}
+                  </Grid>
+                ) : (
+                  <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "11px", textAlign: "center", py: 1.5 }}>
+                    تصویری انتخاب نشده
+                  </Typography>
+                )}
+              </Paper>
+            </Box>
           </Grid>
+
           <Grid item xs={12} sm={6}>
-            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "11px", mb: 0.35 }}>
-              دسته‌بندی‌ها (اختیاری)
-            </Typography>
-            {categoryIds.length > 0 && (
-              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.4, mb: 0.5 }}>
-                {categoryIds.map((id) => (
-                  <Chip
-                    key={id}
-                    size="small"
-                    label={flattenCategoryName(id)}
-                    onDelete={() => onRemoveCategory(id)}
-                    sx={{
-                      height: 22,
-                      backgroundColor: "var(--admin-accent)",
-                      color: "var(--admin-on-accent)",
-                      "& .MuiChip-label": { px: 0.75, fontSize: "11px" },
-                      "& .MuiChip-deleteIcon": { color: "var(--admin-on-accent)", fontSize: 14 },
-                    }}
-                  />
-                ))}
-              </Box>
-            )}
-            <Paper
-              sx={{
-                backgroundColor: "var(--admin-surface-alt)",
-                border: "1px dashed var(--admin-border)",
-                borderRadius: "10px",
-                maxHeight: 160,
-                overflow: "auto",
-                py: 0.25,
-              }}
-            >
-              {categoryTree}
-            </Paper>
+            <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+              <Typography sx={{ color: "var(--admin-text)", fontSize: "11px", fontWeight: 600, mb: 0.5 }}>
+                دسته‌بندی‌ها (اختیاری)
+              </Typography>
+              {categoryIds.length > 0 && (
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.35, mb: 0.5 }}>
+                  {categoryIds.map((id) => (
+                    <Chip
+                      key={id}
+                      size="small"
+                      label={flattenCategoryName(id)}
+                      onDelete={() => onRemoveCategory(id)}
+                      sx={{
+                        height: 20,
+                        backgroundColor: "var(--admin-accent)",
+                        color: "var(--admin-on-accent)",
+                        fontSize: "10px",
+                        "& .MuiChip-label": { px: 0.6 },
+                        "& .MuiChip-deleteIcon": {
+                          fontSize: 14,
+                          color: "var(--admin-on-accent)",
+                          "&:hover": { color: "var(--admin-error)" },
+                        },
+                      }}
+                    />
+                  ))}
+                </Box>
+              )}
+              <Paper
+                sx={{
+                  flex: 1,
+                  minHeight: 0,
+                  maxHeight: 210,
+                  backgroundColor: "var(--admin-surface-alt)",
+                  border: "1px solid var(--admin-border)",
+                  borderRadius: "8px",
+                  overflow: "auto",
+                  py: 0.25,
+                }}
+              >
+                {categoryTree}
+              </Paper>
+            </Box>
           </Grid>
         </Grid>
 
