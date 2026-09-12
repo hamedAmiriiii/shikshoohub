@@ -1225,18 +1225,11 @@ export default function ShoppingPage() {
         ...buildSaleReceiptFromCurrentSale(purchaseId),
         dailyTicketNumber: dailyTicketFromRecord(res) ?? dailyTicketFromRecord(res?.data) ?? undefined,
       };
-      const printSettings = readSaleReceiptPrintSettings();
-      const directPrint = Boolean(printSettings.autoPrint);
       saveSaleReceiptPrintData(receipt);
       setLastSaleReceipt(receipt);
-      setSkipPrintPreview(directPrint);
+      setSkipPrintPreview(false);
       setSaleSuccessOpen(true);
       toast.success(successMessage);
-      if (directPrint) {
-        void silentPrintSaleReceiptOrFail(receipt, printSettings).then((result) => {
-          if (!result.ok) toast.warn(result.message);
-        });
-      }
       resetCartAfterSale();
       if (editingPurchaseId) {
         editLoadedRef.current = null;
@@ -1276,8 +1269,6 @@ export default function ShoppingPage() {
       level: "success" | "warn" = "success",
     ) => {
       const receipt = buildSaleReceiptFromCurrentSale();
-      const printSettings = readSaleReceiptPrintSettings();
-      const directPrint = Boolean(printSettings.autoPrint);
       await enqueueOutboxItem({
         type: "purchase",
         clientId,
@@ -1286,13 +1277,8 @@ export default function ShoppingPage() {
       });
       saveSaleReceiptPrintData(receipt);
       setLastSaleReceipt(receipt);
-      setSkipPrintPreview(directPrint);
+      setSkipPrintPreview(false);
       setSaleSuccessOpen(true);
-      if (directPrint) {
-        void silentPrintSaleReceiptOrFail(receipt, printSettings).then((result) => {
-          if (!result.ok) toast.warn(result.message);
-        });
-      }
       const items = await listPendingOutboxItems();
       setPendingPurchases(items.map(outboxItemToLegacyPending));
       if (level === "warn") toast.warn(message);
