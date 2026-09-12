@@ -316,7 +316,11 @@ function buildForeignObjectMarkup(doc: Document, layoutWidthPx: number, heightPx
   );
 }
 
-async function rasterizeHtmlToPngBase64(html: string, widthMm: number): Promise<RasterizedTicket> {
+async function rasterizeHtmlToPngBase64(
+  html: string,
+  widthMm: number,
+  targetWidthDots?: number,
+): Promise<RasterizedTicket> {
   return withTicketIframe(html, widthMm, async (doc, layoutWidthPx) => {
     const heightPx = measureTicketHeightPx(doc);
     const xhtml = buildForeignObjectMarkup(doc, layoutWidthPx, heightPx);
@@ -328,9 +332,13 @@ async function rasterizeHtmlToPngBase64(html: string, widthMm: number): Promise<
     try {
       const image = await loadImage(url);
       const printScale = PRINT_DPI / LAYOUT_DPI;
+      const naturalW = Math.round(layoutWidthPx * printScale);
+      const naturalH = Math.round(heightPx * printScale);
       const canvas = document.createElement("canvas");
-      canvas.width = Math.round(layoutWidthPx * printScale);
-      canvas.height = Math.round(heightPx * printScale);
+      const outW = targetWidthDots && targetWidthDots > 0 ? targetWidthDots : naturalW;
+      const outH = Math.max(1, Math.round(naturalH * (outW / Math.max(naturalW, 1))));
+      canvas.width = outW;
+      canvas.height = outH;
       const ctx = canvas.getContext("2d");
       if (!ctx) throw new Error("QZ_RENDER_FAILED");
       ctx.fillStyle = "#ffffff";
@@ -358,15 +366,35 @@ async function rasterizeHtmlToPngBase64(html: string, widthMm: number): Promise<
   });
 }
 
+/** ESC/POS printable dots for common thermal rolls (Meva TP1000 = 576 @ 80mm). */
+function thermalDotsForWidthMm(widthMm: number): number {
+  if (widthMm <= 58) return 384;
+  if (widthMm <= 76) return 512;
+  if (widthMm <= 80) return 576;
+  if (widthMm <= 112) return 832;
+  return Math.round((widthMm / 25.4) * PRINT_DPI);
+}
+
+function isThermalPaperWidth(widthMm: number): boolean {
+  return widthMm > 0 && widthMm <= 112;
+}
+
 function buildQzPixelConfig(
   qz: QzApi,
   printerName: string,
   widthMm: number,
   heightMm: number,
+  widthDots?: number,
+  heightDots?: number,
 ) {
-  // Inches + DPI so density is never misread as dots-per-mm.
-  // scaleContent must stay false: a short driver page (≈5–6cm) would otherwise
-  // shrink the whole ticket into a tiny strip on one side of the paper.
+  // Prefer explicit image-dot size so the driver cannot invent a short label page.
+  const widthIn =
+    widthDots && widthDots > 0 ? widthDots / PRINT_DPI : widthMm / 25.4;
+  const heightIn =
+    heightDots && heightDots > 0
+      ? heightDots / PRINT_DPI
+      : Math.max(heightMm, 25) / 25.4;
+
   return qz.configs.create(printerName, {
     colorType: "blackwhite",
     interpolation: "nearest-neighbor",
@@ -375,11 +403,39 @@ function buildQzPixelConfig(
     margins: 0,
     units: "in",
     size: {
-      width: widthMm / 25.4,
-      height: Math.max(heightMm, 25) / 25.4,
+      width: widthIn,
+      height: heightIn,
     },
     density: PRINT_DPI,
+    fallbackDensity: PRINT_DPI,
   });
+}
+
+async function printRasterEscPos(
+  qz: QzApi,
+  printerName: string,
+  pngBase64: string,
+): Promise<void> {
+  // Raw ESC/POS bypasses Windows driver page size — required for Meva TP1000 etc.
+  const config = qz.configs.create(printerName, {
+    encoding: "UTF-8",
+  });
+  await qz.print(config, [
+    "\x1B" + "@", // initialize
+    {
+      type: "raw",
+      format: "image",
+      flavor: "base64",
+      data: pngBase64,
+      options: {
+        language: "ESCPOS",
+        // 1:1 with 203dpi / 576-dot heads (Meva TP1000).
+        dotDensity: "single",
+      },
+    },
+    "\n\n\n",
+    "\x1D" + "V" + "\x41" + "\x03", // partial cut
+  ]);
 }
 
 export async function printHtmlToNamedPrinter(
@@ -388,36 +444,54 @@ export async function printHtmlToNamedPrinter(
   widthMm: number,
 ): Promise<void> {
   const qz = await connectQzTray();
-  const metrics = await measureTicketMetrics(html, widthMm);
-  const config = buildQzPixelConfig(qz, printerName, metrics.widthMm, metrics.heightMm);
+  const dots = isThermalPaperWidth(widthMm) ? thermalDotsForWidthMm(widthMm) : undefined;
+  const raster = await rasterizeHtmlToPngBase64(html, widthMm, dots);
 
-  // Prefer QZ HTML: Java WebView lays out full-width RTL tickets correctly.
+  if (isThermalPaperWidth(widthMm)) {
+    try {
+      await printRasterEscPos(qz, printerName, raster.png);
+      return;
+    } catch {
+      // Fall through to pixel/driver printing.
+    }
+  }
+
   try {
-    await qz.print(config, [
+    const imageConfig = buildQzPixelConfig(
+      qz,
+      printerName,
+      raster.widthMm,
+      raster.heightMm,
+      raster.widthPx,
+      raster.heightPx,
+    );
+    await qz.print(imageConfig, [
       {
         type: "pixel",
-        format: "html",
-        flavor: "plain",
-        data: html,
-        options: {
-          pageWidth: metrics.widthPx,
-          pageHeight: metrics.heightPx,
-        },
+        format: "image",
+        flavor: "base64",
+        data: raster.png,
       },
     ]);
     return;
   } catch {
-    // Fall through to browser rasterization.
+    // Fall through to HTML.
   }
 
-  const raster = await rasterizeHtmlToPngBase64(html, widthMm);
-  const imageConfig = buildQzPixelConfig(qz, printerName, raster.widthMm, raster.heightMm);
-  await qz.print(imageConfig, [
+  // pageWidth/pageHeight are physical units (inches here), NOT CSS pixels.
+  // Passing ~302 as if inches made tickets microscopic on Meva TP1000.
+  const metrics = await measureTicketMetrics(html, widthMm);
+  const htmlConfig = buildQzPixelConfig(qz, printerName, metrics.widthMm, metrics.heightMm);
+  await qz.print(htmlConfig, [
     {
       type: "pixel",
-      format: "image",
-      flavor: "base64",
-      data: raster.png,
+      format: "html",
+      flavor: "plain",
+      data: html,
+      options: {
+        pageWidth: metrics.widthMm / 25.4,
+        pageHeight: metrics.heightMm / 25.4,
+      },
     },
   ]);
 }
