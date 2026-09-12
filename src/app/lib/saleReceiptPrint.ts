@@ -428,11 +428,15 @@ export function openSaleReceiptPrintPage(
   void dispatchSaleReceiptPrint(basePath, data);
 }
 
+/**
+ * Print a sale receipt. When QZ printers are assigned, never opens a browser tab
+ * or print dialog — failures stay silent (caller may toast).
+ */
 async function dispatchReceiptPrintWithSettings(
   basePath: string,
   settings: SaleReceiptPrintSettings,
   data?: SaleReceiptData | null,
-): Promise<"silent" | "dialog"> {
+): Promise<"silent" | "dialog" | "failed"> {
   if (typeof window === "undefined") return "dialog";
   let receipt = data ?? readSaleReceiptPrintData();
   if (receipt && receipt.dailyTicketNumber == null) {
@@ -442,41 +446,67 @@ async function dispatchReceiptPrintWithSettings(
   if (receipt) {
     saveSaleReceiptPrintData(receipt);
   }
+
   if (receipt && settings.silentPrint !== false) {
     try {
-      const { canSilentPrint, silentPrintReceiptStations } = await import("@/app/lib/qzSilentPrint");
+      const { canSilentPrint, silentPrintReceiptStations } = await import(
+        "@/app/lib/qzSilentPrint"
+      );
       if (canSilentPrint(settings)) {
         await silentPrintReceiptStations(receipt, settings);
         return "silent";
       }
     } catch (error) {
-      // Assigned QZ printers: keep the flow silent (no browser print dialog).
-      // Still open the receipt page so the user can retry from the Print button.
       console.warn(error);
-      const hasDirect = basePath.includes("direct=1");
-      window.open(
-        hasDirect ? basePath : `${basePath}${basePath.includes("?") ? "&" : "?"}direct=1`,
-        "_blank",
-        "noopener,noreferrer",
-      );
-      return "silent";
+      // Do NOT open /admin/print/sale — user wants fully silent order printing.
+      return "failed";
     }
+  }
+
+  // No QZ printers configured: open preview page only when not in auto/direct mode.
+  if (basePath.includes("direct=1")) {
+    return "failed";
   }
   window.open(basePath, "_blank", "noopener,noreferrer");
   return "dialog";
 }
 
+/** Fully silent print for POS / table orders. Never redirects. */
+export async function silentPrintSaleReceiptOrFail(
+  data: SaleReceiptData,
+  settings?: SaleReceiptPrintSettings,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const resolved = settings ?? readSaleReceiptPrintSettings();
+  saveSaleReceiptPrintData(data);
+  try {
+    const { canSilentPrint, silentPrintReceiptStations } = await import(
+      "@/app/lib/qzSilentPrint"
+    );
+    if (!canSilentPrint(resolved)) {
+      return {
+        ok: false,
+        message: "برای چاپ بی‌صدا، پرینتر سالن/آشپزخانه را در تنظیمات چاپ انتخاب کنید.",
+      };
+    }
+    await silentPrintReceiptStations(data, resolved);
+    return { ok: true };
+  } catch (error) {
+    const { qzErrorMessage } = await import("@/app/lib/qzSilentPrint");
+    return { ok: false, message: qzErrorMessage(error) };
+  }
+}
+
 export async function dispatchSaleReceiptPrint(
   basePath = "/admin/print/sale",
   data?: SaleReceiptData | null,
-): Promise<"silent" | "dialog"> {
+): Promise<"silent" | "dialog" | "failed"> {
   return dispatchReceiptPrintWithSettings(basePath, readSaleReceiptPrintSettings(), data);
 }
 
 export async function dispatchListReceiptPrint(
   basePath = "/admin/print/sale?list=1",
   data?: SaleReceiptData | null,
-): Promise<"silent" | "dialog"> {
+): Promise<"silent" | "dialog" | "failed"> {
   return dispatchReceiptPrintWithSettings(basePath, readListReceiptPrintSettings(), data);
 }
 

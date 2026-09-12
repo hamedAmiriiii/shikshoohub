@@ -233,14 +233,25 @@ export async function printTableOrderLikeSaleReceipt(
     return { ok: false, message: "اقلام این فاکتور برای چاپ موجود نیست" };
   }
 
-  const { openSaleReceiptPrintPage, readSaleReceiptPrintSettings } = await import(
-    "@/app/lib/saleReceiptPrint"
-  );
-  const direct = Boolean(readSaleReceiptPrintSettings().autoPrint);
-  openSaleReceiptPrintPage(
-    direct ? "/admin/print/sale?direct=1" : "/admin/print/sale",
-    receipt,
-  );
+  const {
+    readSaleReceiptPrintSettings,
+    silentPrintSaleReceiptOrFail,
+    openSaleReceiptPrintPage,
+  } = await import("@/app/lib/saleReceiptPrint");
+  const settings = readSaleReceiptPrintSettings();
+
+  // Auto / silent path: never open /admin/print/sale (avoids empty redirect).
+  if (settings.autoPrint || settings.silentPrint !== false) {
+    const silent = await silentPrintSaleReceiptOrFail(receipt, settings);
+    if (silent.ok) return { ok: true };
+    // If printers are assigned, stay fully silent and surface the QZ error.
+    const { canSilentPrint } = await import("@/app/lib/qzSilentPrint");
+    if (canSilentPrint(settings) || settings.autoPrint) {
+      return { ok: false, message: silent.message };
+    }
+  }
+
+  openSaleReceiptPrintPage("/admin/print/sale", receipt);
   return { ok: true };
 }
 

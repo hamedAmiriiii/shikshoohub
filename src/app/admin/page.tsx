@@ -86,8 +86,8 @@ import CategoryIcon from '@mui/icons-material/Category';
 import {
   type SaleReceiptData,
   saveSaleReceiptPrintData,
-  openSaleReceiptPrintPage,
   readSaleReceiptPrintSettings,
+  silentPrintSaleReceiptOrFail,
 } from '@/app/lib/saleReceiptPrint';
 import { dailyTicketFromRecord, formatDailyTicketNumber } from '@/app/lib/dailyTicketNumber';
 import {
@@ -1225,12 +1225,18 @@ export default function ShoppingPage() {
         ...buildSaleReceiptFromCurrentSale(purchaseId),
         dailyTicketNumber: dailyTicketFromRecord(res) ?? dailyTicketFromRecord(res?.data) ?? undefined,
       };
-      const directPrint = Boolean(readSaleReceiptPrintSettings().autoPrint);
+      const printSettings = readSaleReceiptPrintSettings();
+      const directPrint = Boolean(printSettings.autoPrint);
       saveSaleReceiptPrintData(receipt);
       setLastSaleReceipt(receipt);
       setSkipPrintPreview(directPrint);
       setSaleSuccessOpen(true);
       toast.success(successMessage);
+      if (directPrint) {
+        void silentPrintSaleReceiptOrFail(receipt, printSettings).then((result) => {
+          if (!result.ok) toast.warn(result.message);
+        });
+      }
       resetCartAfterSale();
       if (editingPurchaseId) {
         editLoadedRef.current = null;
@@ -1250,10 +1256,11 @@ export default function ShoppingPage() {
       toast.error("اطلاعات فاکتور در دسترس نیست");
       return;
     }
-    openSaleReceiptPrintPage(
-      readSaleReceiptPrintSettings().autoPrint ? "/admin/print/sale?direct=1" : "/admin/print/sale",
-      lastSaleReceipt,
-    );
+    const settings = readSaleReceiptPrintSettings();
+    void silentPrintSaleReceiptOrFail(lastSaleReceipt, settings).then((result) => {
+      if (result.ok) return;
+      toast.warn(result.message);
+    });
   }, [lastSaleReceipt]);
 
   const resetCartAfterQueuedSale = useCallback(() => {
@@ -1269,7 +1276,8 @@ export default function ShoppingPage() {
       level: "success" | "warn" = "success",
     ) => {
       const receipt = buildSaleReceiptFromCurrentSale();
-      const directPrint = Boolean(readSaleReceiptPrintSettings().autoPrint);
+      const printSettings = readSaleReceiptPrintSettings();
+      const directPrint = Boolean(printSettings.autoPrint);
       await enqueueOutboxItem({
         type: "purchase",
         clientId,
@@ -1280,6 +1288,11 @@ export default function ShoppingPage() {
       setLastSaleReceipt(receipt);
       setSkipPrintPreview(directPrint);
       setSaleSuccessOpen(true);
+      if (directPrint) {
+        void silentPrintSaleReceiptOrFail(receipt, printSettings).then((result) => {
+          if (!result.ok) toast.warn(result.message);
+        });
+      }
       const items = await listPendingOutboxItems();
       setPendingPurchases(items.map(outboxItemToLegacyPending));
       if (level === "warn") toast.warn(message);
