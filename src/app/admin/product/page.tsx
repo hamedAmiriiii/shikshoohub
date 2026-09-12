@@ -28,7 +28,7 @@ import { catalogItemKey, isProducedGoodItem } from "@/app/lib/catalogItems";
 import { readAdminPosSettings } from "@/app/lib/adminPosSettings";
 
 const PRODUCT_SORT_OPTIONS = [
-    { value: "", label: "پیش‌فرض" },
+    { value: "", label: "جدیدترین" },
     { value: "quantity_desc", label: "بیشترین موجودی" },
     { value: "quantity_asc", label: "کمترین موجودی" },
     { value: "most_profit_percent", label: "بیشترین سود" },
