@@ -376,12 +376,12 @@ export default function AdminMenuModeCartPanel({
           }}
         />
         {checkingCredit && (
-          <Typography sx={{ fontSize: "8px", color: "var(--admin-text-muted)" }}>
+          <Typography sx={{ fontSize: "9px", color: "var(--admin-text-muted)" }}>
             بررسی اعتبار...
           </Typography>
         )}
         {!checkingCredit && credit > 0 && (
-          <Typography sx={{ fontSize: "8px", color: "var(--admin-accent)" }}>
+          <Typography sx={{ fontSize: "10px", color: "var(--admin-accent)", fontWeight: 600 }}>
             اعتبار: {formatNumber(credit)}
           </Typography>
         )}
@@ -396,7 +396,19 @@ export default function AdminMenuModeCartPanel({
             onBlur={(e) => onDiscountBlur(e.target.value)}
             error={!!discountError}
             helperText={discountError || undefined}
-            sx={tinyFieldSx}
+            sx={{
+              ...tinyFieldSx,
+              "& .MuiOutlinedInput-root": {
+                ...tinyFieldSx["& .MuiOutlinedInput-root"],
+                fontSize: "11px",
+                minHeight: 30,
+              },
+              "& .MuiInputBase-input": {
+                ...tinyFieldSx["& .MuiInputBase-input"],
+                fontSize: "11px",
+                py: 0.6,
+              },
+            }}
             inputMode="numeric"
           />
         )}
@@ -407,32 +419,36 @@ export default function AdminMenuModeCartPanel({
               row
               value={paymentType}
               onChange={(e) => onPaymentTypeChange(e.target.value as PaymentType)}
-              sx={{ gap: 0, flexWrap: "wrap", "& .MuiFormControlLabel-root": { mr: 0, ml: 0 } }}
+              sx={{
+                gap: 0.15,
+                flexWrap: "wrap",
+                "& .MuiFormControlLabel-root": { mr: 0.15, ml: 0, height: 24 },
+              }}
             >
               <FormControlLabel
                 value="cash"
-                control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 14 } }} />}
-                label={<Typography sx={{ fontSize: "9px" }}>نقد</Typography>}
+                control={<Radio size="small" sx={{ p: 0.3, "& .MuiSvgIcon-root": { fontSize: 16 } }} />}
+                label={<Typography sx={{ fontSize: "10px", fontWeight: 600 }}>نقد</Typography>}
               />
               {installmentPaymentEnabled && (
                 <FormControlLabel
                   value="installment"
-                  control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 14 } }} />}
-                  label={<Typography sx={{ fontSize: "9px" }}>قسط</Typography>}
+                  control={<Radio size="small" sx={{ p: 0.3, "& .MuiSvgIcon-root": { fontSize: 16 } }} />}
+                  label={<Typography sx={{ fontSize: "10px", fontWeight: 600 }}>قسط</Typography>}
                 />
               )}
               {debtPaymentEnabled && (
                 <FormControlLabel
                   value="debt"
-                  control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 14 } }} />}
-                  label={<Typography sx={{ fontSize: "9px" }}>نسیه</Typography>}
+                  control={<Radio size="small" sx={{ p: 0.3, "& .MuiSvgIcon-root": { fontSize: 16 } }} />}
+                  label={<Typography sx={{ fontSize: "10px", fontWeight: 600 }}>نسیه</Typography>}
                 />
               )}
               {chequePaymentEnabled && (
                 <FormControlLabel
                   value="cheque"
-                  control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 14 } }} />}
-                  label={<Typography sx={{ fontSize: "9px" }}>چک+نقد</Typography>}
+                  control={<Radio size="small" sx={{ p: 0.3, "& .MuiSvgIcon-root": { fontSize: 16 } }} />}
+                  label={<Typography sx={{ fontSize: "10px", fontWeight: 600 }}>چک+نقد</Typography>}
                 />
               )}
             </RadioGroup>
@@ -545,24 +561,24 @@ export default function AdminMenuModeCartPanel({
               onChange={(e) => onSettlementModeChange(e.target.value as SettlementMode)}
               sx={{
                 flexWrap: "wrap",
-                gap: 0,
-                "& .MuiFormControlLabel-root": { mr: 0, ml: 0, height: 20 },
+                gap: 0.15,
+                "& .MuiFormControlLabel-root": { mr: 0.15, ml: 0, height: 22 },
               }}
             >
               <FormControlLabel
                 value="card_all"
-                control={<Radio size="small" sx={{ p: 0.2, "& .MuiSvgIcon-root": { fontSize: 13 } }} />}
-                label={<Typography sx={{ fontSize: "8px" }}>کارت</Typography>}
+                control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 15 } }} />}
+                label={<Typography sx={{ fontSize: "9px", fontWeight: 600 }}>کارت</Typography>}
               />
               <FormControlLabel
                 value="cash_all"
-                control={<Radio size="small" sx={{ p: 0.2, "& .MuiSvgIcon-root": { fontSize: 13 } }} />}
-                label={<Typography sx={{ fontSize: "8px" }}>نقد</Typography>}
+                control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 15 } }} />}
+                label={<Typography sx={{ fontSize: "9px", fontWeight: 600 }}>نقد</Typography>}
               />
               <FormControlLabel
                 value="split"
-                control={<Radio size="small" sx={{ p: 0.2, "& .MuiSvgIcon-root": { fontSize: 13 } }} />}
-                label={<Typography sx={{ fontSize: "8px" }}>نقد+کارت</Typography>}
+                control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 15 } }} />}
+                label={<Typography sx={{ fontSize: "9px", fontWeight: 600 }}>نقد+کارت</Typography>}
               />
             </RadioGroup>
           </FormControl>
