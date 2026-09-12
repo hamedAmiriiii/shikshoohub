@@ -26,6 +26,8 @@ type ProductEditSheetProps = {
   onNameChange: (value: string) => void;
   description: string;
   onDescriptionChange: (value: string) => void;
+  displayOrder: string;
+  onDisplayOrderChange: (value: string) => void;
   barcode: string;
   onBarcodeChange: (value: string) => void;
   onOpenBarcodeScanner: () => void;
@@ -56,6 +58,8 @@ export default function ProductEditSheet({
   onNameChange,
   description,
   onDescriptionChange,
+  displayOrder,
+  onDisplayOrderChange,
   barcode,
   onBarcodeChange,
   onOpenBarcodeScanner,
@@ -167,6 +171,18 @@ export default function ProductEditSheet({
                 "& .MuiInputLabel-root.Mui-focused": { color: "var(--admin-accent)" },
               }}
             />
+          </Grid>
+          <Grid item xs={6} sm={4} md={2}>
+            <TextInput
+              value={displayOrder}
+              label="ترتیب نمایش منو"
+              onChange={(v) => onDisplayOrderChange(String(v).replace(/[^\d]/g, "").slice(0, 4))}
+              name="display_order"
+              type="number"
+            />
+            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "10px", mt: 0.25 }}>
+              کمتر = بالاتر (پیش‌فرض ۵۰)
+            </Typography>
           </Grid>
           <Grid item xs={6} sm={4} md={2}>
             <TextInput

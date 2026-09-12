@@ -79,6 +79,7 @@ type Product = {
   discount_percent?: number;
   has_discount?: boolean;
   description?: string;
+  display_order?: number;
   image?: string;
   images?: ProductImage[];
   category_id?: number;

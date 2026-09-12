@@ -54,6 +54,7 @@ export default function ListData() {
     // Form states for editing
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
+    const [displayOrder, setDisplayOrder] = useState("50");
     const [barcode, setBarcode] = useState("");
     const [editBarcodeScannerOpen, setEditBarcodeScannerOpen] = useState(false);
     const [editTorchOn, setEditTorchOn] = useState(false);
@@ -687,6 +688,11 @@ export default function ListData() {
       }
       setName(product.name || "");
       setDescription(product.description || "");
+      setDisplayOrder(
+        product.display_order != null && product.display_order !== ""
+          ? String(product.display_order)
+          : "50",
+      );
       setBarcode(product.barcode || "");
       setPurchase_price(product.purchase_price?.toString() || "");
       setSale_price(product.sale_price?.toString() || "");
@@ -712,6 +718,7 @@ export default function ListData() {
       setImages([]); // پاک کردن عکس‌ها هنگام بستن
       setName("");
       setDescription("");
+      setDisplayOrder("50");
       setBarcode("");
       setPurchase_price("");
       setSale_price("");
@@ -769,6 +776,10 @@ export default function ListData() {
       const data: any = {
         name: name.trim(),
         description: description.trim() || null,
+        display_order: (() => {
+          const n = parseInt(String(displayOrder).replace(/,/g, ""), 10);
+          return Number.isFinite(n) ? Math.max(0, Math.min(9999, n)) : 50;
+        })(),
         barcode: trimmedBarcode,
         purchase_price: purchasePriceNum.toString(),
         sale_price: salePriceNum.toString(),
@@ -1010,6 +1021,8 @@ export default function ListData() {
           onNameChange={setName}
           description={description}
           onDescriptionChange={setDescription}
+          displayOrder={displayOrder}
+          onDisplayOrderChange={setDisplayOrder}
           barcode={barcode}
           onBarcodeChange={setBarcode}
           onOpenBarcodeScanner={() => {

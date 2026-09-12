@@ -102,6 +102,7 @@ export default function Page() {
   const [phon, setPhon] = useState("");
   const [full_name, setfull_name] = useState("");
   const [description, setDescription] = useState("");
+  const [displayOrder, setDisplayOrder] = useState("50");
   const [barcode, setBarcode] = useState("");
   const [quantity, setQuantity] = useState("");
   const [purchase_price, setPurchase_price] = useState("");
@@ -460,6 +461,7 @@ export default function Page() {
     setQuantity("");
     setfull_name("");
     setDescription("");
+    setDisplayOrder("50");
     setProfitPercentage(String(readStoredProfitPercent()));
     setDiscountPercent("");
     setImages([]);
@@ -523,6 +525,10 @@ export default function Page() {
       let data: any = {
         "name": full_name,
         "description": description.trim() || null,
+        "display_order": (() => {
+          const n = parseInt(String(displayOrder).replace(/,/g, ""), 10);
+          return Number.isFinite(n) ? Math.max(0, Math.min(9999, n)) : 50;
+        })(),
         "purchase_price": purchase_price,
         "sale_price": sale_price,
         "quantity": qtyNum,
@@ -810,6 +816,20 @@ export default function Page() {
                     },
                   }}
                 />
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Box sx={fieldWrapSx}>
+                  <TextInput
+                    value={displayOrder}
+                    label="ترتیب نمایش منو"
+                    onChange={(v) => setDisplayOrder(String(v).replace(/[^\d]/g, "").slice(0, 4))}
+                    name="display_order"
+                    type="number"
+                  />
+                </Box>
+                <Typography sx={{ ...colLabelSx, mt: 0.5, opacity: 0.75, fontSize: "10px" }}>
+                  کمتر = بالاتر در منوی میز (پیش‌فرض ۵۰)
+                </Typography>
               </Grid>
               <Grid item xs={6} sm={2}>
                 <Box sx={fieldWrapSx}>
