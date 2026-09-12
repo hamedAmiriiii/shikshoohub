@@ -107,7 +107,11 @@ export function purchasesFilterLabel(
 }
 
 export function purchaseToSaleReceipt(purchase: any, shopName?: string): SaleReceiptData {
-  const products = Array.isArray(purchase?.purchased_products) ? purchase.purchased_products : [];
+  const products = Array.isArray(purchase?.purchased_products)
+    ? purchase.purchased_products
+    : Array.isArray(purchase?.purchasedProducts)
+      ? purchase.purchasedProducts
+      : [];
   const items = products.map((line: any) => {
     const quantity = Number(line.quantity) || 1;
     const unitPrice = Number(line.sale_price) || Number(line.product?.sale_price) || 0;
@@ -156,12 +160,19 @@ export function purchaseToSaleReceipt(purchase: any, shopName?: string): SaleRec
       : String(rawCreated).replace(" ", "T")
     : new Date().toISOString();
 
+  const shopTable = purchase?.shop_table || purchase?.shopTable;
+  const tableLabel =
+    purchase?.table_label ||
+    shopTable?.label ||
+    shopTable?.name ||
+    (shopTable?.number != null ? `میز ${shopTable.number}` : undefined);
+
   return {
     purchaseId: purchase?.id,
     createdAt,
     shopName: shopName || getShopNameFromUser(),
     phone: purchase?.phone || undefined,
-    tableLabel: purchase?.table_label || undefined,
+    tableLabel: tableLabel || undefined,
     items,
     subtotal,
     discount,
@@ -181,6 +192,56 @@ export function purchaseToSaleReceipt(purchase: any, shopName?: string): SaleRec
     chequeNumber: purchase?.cheque?.cheque_number || undefined,
     dailyTicketNumber: dailyTicketFromRecord(purchase) ?? undefined,
   };
+}
+
+/** چاپ فاکتور سفارش میز — همان مسیر و تنظیمات /admin/print/sale (پرینتر فروش). */
+export async function printTableOrderLikeSaleReceipt(
+  order: {
+    purchase_id?: number | null;
+    purchase?: any;
+    products?: any[];
+    items?: any[];
+  },
+  options?: { shopName?: string; fallbackReceipt?: SaleReceiptData | null },
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const shopName = options?.shopName || getShopNameFromUser();
+  let purchase = order.purchase;
+  const purchaseId = Number(purchase?.id ?? order.purchase_id);
+
+  const hasLines =
+    Array.isArray(purchase?.purchased_products) || Array.isArray(purchase?.purchasedProducts);
+
+  if ((!purchase || !hasLines) && Number.isFinite(purchaseId) && purchaseId > 0) {
+    try {
+      const res = await FetchWithJwtClient("GET", `/api/purchased-products/${purchaseId}`, null, {});
+      if (!res?.hasError && res) {
+        purchase = res?.data && typeof res.data === "object" ? res.data : res;
+      }
+    } catch {
+      /* fallback below */
+    }
+  }
+
+  let receipt: SaleReceiptData | null = null;
+  if (purchase && (Array.isArray(purchase.purchased_products) || Array.isArray(purchase.purchasedProducts))) {
+    receipt = purchaseToSaleReceipt(purchase, shopName);
+  } else if (options?.fallbackReceipt) {
+    receipt = options.fallbackReceipt;
+  }
+
+  if (!receipt || receipt.items.length === 0) {
+    return { ok: false, message: "اقلام این فاکتور برای چاپ موجود نیست" };
+  }
+
+  const { openSaleReceiptPrintPage, readSaleReceiptPrintSettings } = await import(
+    "@/app/lib/saleReceiptPrint"
+  );
+  const direct = Boolean(readSaleReceiptPrintSettings().autoPrint);
+  openSaleReceiptPrintPage(
+    direct ? "/admin/print/sale?direct=1" : "/admin/print/sale",
+    receipt,
+  );
+  return { ok: true };
 }
 
 export async function fetchAllPurchases(baseUrl: string): Promise<any[]> {

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   Box,
   Button,
@@ -18,6 +19,10 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import QrCodeScannerIcon from "@mui/icons-material/QrCodeScanner";
 import BottomSheet from "@/app/coponent/BottomSheet";
 import TextInput from "@/app/coponent/TextInput/TextInput";
+import {
+  ADMIN_POS_SETTINGS_CHANGED_EVENT,
+  readAdminPosSettings,
+} from "@/app/lib/adminPosSettings";
 
 type ProductEditSheetProps = {
   open: boolean;
@@ -82,6 +87,15 @@ export default function ProductEditSheet({
   flattenCategoryName,
   onSubmit,
 }: ProductEditSheetProps) {
+  const [showDisplayOrder, setShowDisplayOrder] = useState(false);
+
+  useEffect(() => {
+    const sync = () => setShowDisplayOrder(Boolean(readAdminPosSettings().productDisplayOrderEnabled));
+    sync();
+    window.addEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, sync);
+    return () => window.removeEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, sync);
+  }, []);
+
   return (
     <BottomSheet open={open} onClose={() => onClose()} title="ویرایش کالا" dense>
       <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75, direction: "rtl" }}>
@@ -172,18 +186,17 @@ export default function ProductEditSheet({
               }}
             />
           </Grid>
-          <Grid item xs={6} sm={4} md={2}>
-            <TextInput
-              value={displayOrder}
-              label="ترتیب نمایش منو"
-              onChange={(v) => onDisplayOrderChange(String(v).replace(/[^\d]/g, "").slice(0, 4))}
-              name="display_order"
-              type="number"
-            />
-            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "10px", mt: 0.25 }}>
-              کمتر = بالاتر (پیش‌فرض ۵۰)
-            </Typography>
-          </Grid>
+          {showDisplayOrder ? (
+            <Grid item xs={6} sm={4} md={2}>
+              <TextInput
+                value={displayOrder}
+                label="اولویت"
+                onChange={(v) => onDisplayOrderChange(String(v).replace(/[^\d]/g, "").slice(0, 4))}
+                name="display_order"
+                type="number"
+              />
+            </Grid>
+          ) : null}
           <Grid item xs={6} sm={4} md={2}>
             <TextInput
               value={profitPercentage}

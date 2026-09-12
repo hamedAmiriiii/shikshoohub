@@ -72,7 +72,7 @@ export type TableOrder = {
   products?: TableOrderProduct[];
   items?: TableOrderProduct[];
   shop_table?: ShopTable;
-  purchase?: { daily_ticket_number?: number; dailyTicketNumber?: number };
+  purchase?: any;
   daily_ticket_number?: number;
   dailyTicketNumber?: number;
 };

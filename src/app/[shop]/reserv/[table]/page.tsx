@@ -33,6 +33,8 @@ import { extractShopTableInfo, extractPaymentMethods, DEFAULT_TABLE_PAYMENT_METH
 import { placeKindFromPathname } from "@/app/lib/shopStorefront";
 import {
   getActiveRootCategories,
+  getActiveCategoryIdSet,
+  isCatalogItemVisibleForActiveCategories,
   parseCategoriesFromApi,
   resolveCategoryImageUrl,
   type ShopCategory,
@@ -93,6 +95,7 @@ type Product = {
     image?: string | null;
     image_url?: string | null;
     banner_url?: string | null;
+    is_active?: boolean;
   }>;
   quantity?: number;
 };
@@ -690,6 +693,18 @@ function TableReservPageBody() {
     return map;
   }, [shopCategories]);
 
+  const activeCategoryIds = useMemo(
+    () => getActiveCategoryIdSet(shopCategories),
+    [shopCategories],
+  );
+
+  const menuProducts = useMemo(() => {
+    if (shopCategories.length === 0) return products;
+    return products.filter((product) =>
+      isCatalogItemVisibleForActiveCategories(product, activeCategoryIds),
+    );
+  }, [products, shopCategories, activeCategoryIds]);
+
   const categories = useMemo(() => {
     const roots = getActiveRootCategories(shopCategories);
     if (roots.length > 0) {
@@ -704,16 +719,20 @@ function TableReservPageBody() {
     }
     const map = new Map<string, { name: string; image: string | null }>();
     const upsert = (id: string, name?: string, image?: string | null) => {
+      if (activeCategoryIds.size > 0 && !activeCategoryIds.has(Number(id))) {
+        return;
+      }
       const prev = map.get(id);
       map.set(id, {
         name: (name && name.trim()) || prev?.name || t("category"),
         image: image || prev?.image || null,
       });
     };
-    for (const product of products) {
+    for (const product of menuProducts) {
       if (Array.isArray(product.categories)) {
         for (const cat of product.categories) {
           if (cat?.id == null) continue;
+          if (cat.is_active === false) continue;
           upsert(String(cat.id), cat.name, resolveCategoryImageUrl(cat));
         }
       }
@@ -726,6 +745,9 @@ function TableReservPageBody() {
       }
     }
     for (const [id, image] of categoryImageById) {
+      if (activeCategoryIds.size > 0 && !activeCategoryIds.has(Number(id))) {
+        continue;
+      }
       const prev = map.get(id);
       if (prev && !prev.image) map.set(id, { ...prev, image });
     }
@@ -733,11 +755,11 @@ function TableReservPageBody() {
       { id: "all", name: t("all"), image: null as string | null },
       ...Array.from(map.entries()).map(([id, value]) => ({ id, ...value })),
     ];
-  }, [categoryImageById, products, shopCategories, t]);
+  }, [activeCategoryIds, categoryImageById, menuProducts, shopCategories, t]);
 
   const visibleProducts = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return products.filter((product) => {
+    return menuProducts.filter((product) => {
       if (selectedCategory !== "all") {
         const inCategory =
           String(product.category_id) === selectedCategory ||
@@ -748,12 +770,12 @@ function TableReservPageBody() {
       const hay = `${product.name || ""} ${product.description || ""}`.toLowerCase();
       return hay.includes(term);
     });
-  }, [products, search, selectedCategory]);
+  }, [menuProducts, search, selectedCategory]);
 
   const allowMenu = tableInfo?.allowMenu !== false;
   const allowServices = servicesEnabled && tableInfo?.allowServices !== false;
-  const hasMenu = allowMenu && (products.length > 0 || !allowServices);
-  const showBothCatalogs = allowMenu && allowServices && products.length > 0;
+  const hasMenu = allowMenu && (menuProducts.length > 0 || !allowServices);
+  const showBothCatalogs = allowMenu && allowServices && menuProducts.length > 0;
   const visibleServices = useMemo(() => {
     const term = search.trim().toLowerCase();
     if (!term) return services;
@@ -764,10 +786,10 @@ function TableReservPageBody() {
   }, [search, services]);
 
   useEffect(() => {
-    if (!allowMenu || (allowServices && products.length === 0 && services.length > 0)) {
+    if (!allowMenu || (allowServices && menuProducts.length === 0 && services.length > 0)) {
       setCatalogMode("services");
     }
-  }, [allowMenu, allowServices, products.length, services.length]);
+  }, [allowMenu, allowServices, menuProducts.length, services.length]);
 
   const qtyOf = (product: Product | string) => {
     const key = typeof product === "string" ? product : catalogItemKey(product);

@@ -132,10 +132,13 @@ export default function Page() {
   } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [kgSalesEnabled, setKgSalesEnabled] = useState(false);
+  const [productDisplayOrderEnabled, setProductDisplayOrderEnabled] = useState(false);
   const [unitType, setUnitType] = useState<ProductUnitType>("piece");
 
   useEffect(() => {
-    setKgSalesEnabled(readAdminPosSettings().kgSalesEnabled);
+    const settings = readAdminPosSettings();
+    setKgSalesEnabled(settings.kgSalesEnabled);
+    setProductDisplayOrderEnabled(Boolean(settings.productDisplayOrderEnabled));
     setProfitPercentage(String(readStoredProfitPercent()));
   }, []);
 
@@ -525,15 +528,16 @@ export default function Page() {
       let data: any = {
         "name": full_name,
         "description": description.trim() || null,
-        "display_order": (() => {
-          const n = parseInt(String(displayOrder).replace(/,/g, ""), 10);
-          return Number.isFinite(n) ? Math.max(0, Math.min(9999, n)) : 50;
-        })(),
         "purchase_price": purchase_price,
         "sale_price": sale_price,
         "quantity": qtyNum,
         "discount_percent": isNaN(discountValue) ? 0 : discountValue,
       };
+
+      if (productDisplayOrderEnabled) {
+        const n = parseInt(String(displayOrder).replace(/,/g, ""), 10);
+        data.display_order = Number.isFinite(n) ? Math.max(0, Math.min(9999, n)) : 50;
+      }
 
       if (kgSalesEnabled) {
         data.unit_type = unitType;
@@ -817,20 +821,22 @@ export default function Page() {
                   }}
                 />
               </Grid>
-              <Grid item xs={6} sm={3}>
-                <Box sx={fieldWrapSx}>
-                  <TextInput
-                    value={displayOrder}
-                    label="ترتیب نمایش منو"
-                    onChange={(v) => setDisplayOrder(String(v).replace(/[^\d]/g, "").slice(0, 4))}
-                    name="display_order"
-                    type="number"
-                  />
-                </Box>
-                <Typography sx={{ ...colLabelSx, mt: 0.5, opacity: 0.75, fontSize: "10px" }}>
-                  کمتر = بالاتر در منوی میز (پیش‌فرض ۵۰)
-                </Typography>
-              </Grid>
+              {productDisplayOrderEnabled ? (
+                <Grid item xs={6} sm={3}>
+                  <Box sx={fieldWrapSx}>
+                    <TextInput
+                      value={displayOrder}
+                      label="اولویت"
+                      onChange={(v) => setDisplayOrder(String(v).replace(/[^\d]/g, "").slice(0, 4))}
+                      name="display_order"
+                      type="number"
+                    />
+                  </Box>
+                  <Typography sx={{ ...colLabelSx, mt: 0.5, opacity: 0.75, fontSize: "10px" }}>
+                    کمتر = بالاتر در منوی میز (پیش‌فرض ۵۰)
+                  </Typography>
+                </Grid>
+              ) : null}
               <Grid item xs={6} sm={2}>
                 <Box sx={fieldWrapSx}>
                   <TextInput

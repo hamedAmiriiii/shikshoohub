@@ -46,6 +46,71 @@ export function getActiveRootCategories(categories: ShopCategory[]): ShopCategor
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 }
 
+/** شناسهٔ همه دسته‌های فعال (درخت کامل). */
+export function getActiveCategoryIdSet(categories: ShopCategory[]): Set<number> {
+  const ids = new Set<number>();
+  const walk = (cats: ShopCategory[]) => {
+    for (const cat of cats) {
+      if (cat.is_active !== false && cat.id != null) {
+        ids.add(Number(cat.id));
+      }
+      if (cat.children?.length) {
+        walk(cat.children);
+      }
+    }
+  };
+  walk(categories);
+  return ids;
+}
+
+type MenuCatalogItem = {
+  category_id?: number | null;
+  categories?: Array<{ id?: number | null; is_active?: boolean | null }> | null;
+};
+
+/**
+ * آیا کالا در منوی عمومی (میز/اتاق) قابل نمایش است؟
+ * اگر فقط به دسته‌های غیرفعال وصل باشد → خیر.
+ * بدون دسته → بله (در «همه» می‌ماند).
+ */
+export function isCatalogItemVisibleForActiveCategories(
+  item: MenuCatalogItem,
+  activeCategoryIds: Set<number>,
+): boolean {
+  const linkedIds = new Set<number>();
+  if (Array.isArray(item.categories)) {
+    for (const cat of item.categories) {
+      if (cat?.id == null) continue;
+      const id = Number(cat.id);
+      if (!Number.isFinite(id)) continue;
+      if (cat.is_active === false) continue;
+      linkedIds.add(id);
+    }
+  }
+  if (item.category_id != null) {
+    const id = Number(item.category_id);
+    if (Number.isFinite(id)) linkedIds.add(id);
+  }
+
+  if (linkedIds.size === 0) {
+    // یا دسته‌ای ندارد، یا همهٔ دسته‌هایش صراحتاً is_active=false بوده‌اند
+    if (Array.isArray(item.categories) && item.categories.length > 0) {
+      return false;
+    }
+    return true;
+  }
+
+  if (activeCategoryIds.size === 0) {
+    // درخت دسته هنوز نیامده؛ فقط روی is_active خود دسته تکیه می‌کنیم
+    return linkedIds.size > 0;
+  }
+
+  for (const id of linkedIds) {
+    if (activeCategoryIds.has(id)) return true;
+  }
+  return false;
+}
+
 type CategoryImageSource = {
   image?: string | null;
   image_url?: string | null;

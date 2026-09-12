@@ -35,9 +35,9 @@ import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
 import { adminPageSx } from "@/app/admin/theme/adminTheme";
 import { getDebtProductName } from "@/app/lib/purchaseDebts";
 import {
-  openListReceiptPrintPage,
-  readListReceiptPrintSettings,
-} from "@/app/lib/saleReceiptPrint";
+  getShopNameFromUser,
+  printTableOrderLikeSaleReceipt,
+} from "@/app/lib/purchaseReceiptPrint";
 import {
   extractTableOrders,
   getTableOrderAmount,
@@ -120,28 +120,14 @@ export default function TableOrdersPage() {
 
   const pendingTotal = orders.reduce((sum, order) => sum + getTableOrderAmount(order), 0);
 
-  const printOrder = (order: TableOrder) => {
-    let shopName: string | undefined;
-    try {
-      const user = JSON.parse(localStorage.getItem("user") || "{}") as Record<string, unknown>;
-      shopName =
-        (typeof user.atelier_name === "string" && user.atelier_name) ||
-        (typeof user.shop_name === "string" && user.shop_name) ||
-        (typeof user.name === "string" && user.name) ||
-        undefined;
-    } catch {
-      shopName = undefined;
+  const printOrder = async (order: TableOrder) => {
+    const result = await printTableOrderLikeSaleReceipt(order, {
+      shopName: getShopNameFromUser(),
+      fallbackReceipt: tableOrderToSaleReceipt(order, getShopNameFromUser()),
+    });
+    if (!result.ok) {
+      toast.error(result.message);
     }
-    const receipt = tableOrderToSaleReceipt(order, shopName);
-    if (receipt.items.length === 0) {
-      toast.error("اقلام این سفارش برای چاپ موجود نیست");
-      return;
-    }
-    const direct = Boolean(readListReceiptPrintSettings().autoPrint);
-    openListReceiptPrintPage(
-      direct ? "/admin/print/sale?list=1&direct=1" : "/admin/print/sale?list=1",
-      receipt,
-    );
   };
 
   const confirmPay = async () => {
@@ -157,13 +143,14 @@ export default function TableOrdersPage() {
       }
       toast.success(res?.message || "فاکتور ساخته شد");
       const paidId = payOrder.id;
-      const purchaseId = Number(res?.purchase?.id ?? res?.table_order?.purchase_id);
+      const purchase = res?.purchase;
+      const purchaseId = Number(purchase?.id ?? res?.table_order?.purchase_id);
       const ticket =
-        Number(res?.purchase?.daily_ticket_number ?? res?.purchase?.dailyTicketNumber) || undefined;
+        Number(purchase?.daily_ticket_number ?? purchase?.dailyTicketNumber) || undefined;
       setPayOrder({
         ...payOrder,
         purchase_id: Number.isFinite(purchaseId) && purchaseId > 0 ? purchaseId : payOrder.purchase_id,
-        purchase: res?.purchase,
+        purchase,
         daily_ticket_number: ticket,
       });
       setInvoiceReady(true);

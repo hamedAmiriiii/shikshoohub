@@ -25,6 +25,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { mainColors, searchColors } from "../../liberari/colors";
 import { PRODUCTS_CACHE_KEY } from "@/app/lib/productsCache";
 import { catalogItemKey, isProducedGoodItem } from "@/app/lib/catalogItems";
+import { readAdminPosSettings } from "@/app/lib/adminPosSettings";
 
 const PRODUCT_SORT_OPTIONS = [
     { value: "", label: "پیش‌فرض" },
@@ -776,16 +777,17 @@ export default function ListData() {
       const data: any = {
         name: name.trim(),
         description: description.trim() || null,
-        display_order: (() => {
-          const n = parseInt(String(displayOrder).replace(/,/g, ""), 10);
-          return Number.isFinite(n) ? Math.max(0, Math.min(9999, n)) : 50;
-        })(),
         barcode: trimmedBarcode,
         purchase_price: purchasePriceNum.toString(),
         sale_price: salePriceNum.toString(),
         quantity: quantityNum.toString(),
         discount_percent: discountValue
       };
+
+      if (readAdminPosSettings().productDisplayOrderEnabled) {
+        const n = parseInt(String(displayOrder).replace(/,/g, ""), 10);
+        data.display_order = Number.isFinite(n) ? Math.max(0, Math.min(9999, n)) : 50;
+      }
 
       // اضافه کردن فقط عکس‌های جدید (base64) در صورت وجود
       // عکس‌های موجود (URL) نباید ارسال شوند، چون از قبل در API هستند

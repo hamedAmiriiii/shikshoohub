@@ -28,6 +28,7 @@ import ConfirmationNumberOutlinedIcon from "@mui/icons-material/ConfirmationNumb
 import PriceChangeIcon from "@mui/icons-material/PriceChange";
 import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
 import ImageOutlinedIcon from "@mui/icons-material/ImageOutlined";
+import SortIcon from "@mui/icons-material/Sort";
 import CloudDownloadIcon from "@mui/icons-material/CloudDownload";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -268,6 +269,7 @@ export default function SettingsPage() {
   const [classicPosMode, setClassicPosMode] = useState(false);
   const [askCustomerName, setAskCustomerName] = useState(false);
   const [showDailyTicketNumber, setShowDailyTicketNumber] = useState(false);
+  const [productDisplayOrderEnabled, setProductDisplayOrderEnabled] = useState(false);
   const [restaurantCafeEnabled, setRestaurantCafeEnabled] = useState(false);
   const [menuTableOrdersPopupEnabled, setMenuTableOrdersPopupEnabled] = useState(false);
   const [receiptPrintSettings, setReceiptPrintSettings] = useState<SaleReceiptPrintSettings>(
@@ -296,6 +298,7 @@ export default function SettingsPage() {
     setClassicPosMode(settings.classicPosMode);
     setAskCustomerName(settings.askCustomerName);
     setShowDailyTicketNumber(Boolean(settings.showDailyTicketNumber));
+    setProductDisplayOrderEnabled(Boolean(settings.productDisplayOrderEnabled));
     setRestaurantCafeEnabled(readShopFeatures().restaurant_cafe_enabled);
     setMenuTableOrdersPopupEnabled(settings.menuTableOrdersPopupEnabled);
     const printSettings = readSaleReceiptPrintSettings();
@@ -381,6 +384,17 @@ export default function SettingsPage() {
       enabled
         ? "فروش محصولات کیلویی فعال شد — هنگام ثبت کالا می‌توانید واحد کیلو انتخاب کنید"
         : "فروش محصولات کیلویی غیرفعال شد",
+    );
+  };
+
+  const handleToggleProductDisplayOrder = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setProductDisplayOrderEnabled(enabled);
+    writeAdminPosSettings({ productDisplayOrderEnabled: enabled });
+    toast.success(
+      enabled
+        ? "فیلد اولویت کالا در ثبت و ویرایش نمایش داده می‌شود"
+        : "فیلد اولویت کالا مخفی شد",
     );
   };
 
@@ -771,6 +785,13 @@ export default function SettingsPage() {
             hint="واحد کیلو و مقدار اعشاری"
             checked={kgSalesEnabled}
             onChange={handleToggleKgSales}
+          />
+          <SettingsToggleRow
+            icon={<SortIcon sx={{ fontSize: 18 }} />}
+            title="اولویت نمایش کالا"
+            hint="فیلد اولویت در ثبت و ویرایش کالا — برای منوی میز"
+            checked={productDisplayOrderEnabled}
+            onChange={handleToggleProductDisplayOrder}
           />
           <SettingsToggleRow
             icon={<PriceChangeIcon sx={{ fontSize: 18 }} />}

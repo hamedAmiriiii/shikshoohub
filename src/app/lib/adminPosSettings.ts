@@ -28,6 +28,8 @@ export type AdminPosSettings = {
   askCustomerName: boolean;
   /** شماره فیش روزانه از ۱؛ هر روز از نو */
   showDailyTicketNumber: boolean;
+  /** نمایش فیلد اولویت/ترتیب نمایش در ثبت و ویرایش کالا */
+  productDisplayOrderEnabled: boolean;
 };
 
 const DEFAULT_SETTINGS: AdminPosSettings = {
@@ -46,6 +48,7 @@ const DEFAULT_SETTINGS: AdminPosSettings = {
   classicPosMode: false,
   askCustomerName: false,
   showDailyTicketNumber: false,
+  productDisplayOrderEnabled: false,
 };
 
 export function readAdminPosSettings(): AdminPosSettings {
