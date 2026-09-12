@@ -106,8 +106,17 @@ export async function listSystemPrinters(): Promise<string[]> {
   return Array.isArray(found) ? found.filter(Boolean) : [];
 }
 
+/** CSS reference DPI used for HTML layout before upscaling to the printer. */
+const LAYOUT_DPI = 96;
+/** Typical ESC/POS thermal density. */
+const PRINT_DPI = 203;
+
 function mmToPx(mm: number, dpi: number): number {
   return Math.max(1, Math.round((mm / 25.4) * dpi));
+}
+
+function pxToMm(px: number, dpi: number): number {
+  return (px / dpi) * 25.4;
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -119,12 +128,101 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-async function rasterizeHtmlToPngBase64(html: string, widthMm: number): Promise<string> {
+type TicketMetrics = {
+  widthPx: number;
+  heightPx: number;
+  widthMm: number;
+  heightMm: number;
+};
+
+type RasterizedTicket = TicketMetrics & {
+  png: string;
+};
+
+function rewriteMmUnitsToPx(cssText: string): string {
+  return cssText.replace(/(-?[\d.]+)\s*mm\b/gi, (_, raw: string) => {
+    const mm = Number(raw);
+    if (!Number.isFinite(mm)) return `${raw}mm`;
+    return `${Math.round(mmToPx(mm, LAYOUT_DPI) * 100) / 100}px`;
+  });
+}
+
+/**
+ * Force pixel layout before measuring / SVG capture.
+ * Absolute `mm` inside SVG foreignObject often resolves wrong and shrinks RTL
+ * content into a tiny strip on the right of the ticket.
+ */
+function forcePixelTicketLayout(doc: Document, layoutWidthPx: number): void {
+  doc.querySelectorAll("style").forEach((styleEl) => {
+    styleEl.textContent = rewriteMmUnitsToPx(styleEl.textContent || "");
+  });
+
+  const htmlEl = doc.documentElement;
+  const body = doc.body;
+  htmlEl.setAttribute("dir", "rtl");
+
+  const computed = doc.defaultView?.getComputedStyle(body);
+  if (computed) {
+    body.style.paddingTop = computed.paddingTop;
+    body.style.paddingRight = computed.paddingRight;
+    body.style.paddingBottom = computed.paddingBottom;
+    body.style.paddingLeft = computed.paddingLeft;
+  }
+
+  htmlEl.style.cssText = [
+    `width:${layoutWidthPx}px`,
+    `max-width:${layoutWidthPx}px`,
+    `min-width:${layoutWidthPx}px`,
+    "margin:0",
+    "background:#ffffff",
+  ].join(";");
+
+  body.style.width = `${layoutWidthPx}px`;
+  body.style.maxWidth = `${layoutWidthPx}px`;
+  body.style.minWidth = `${layoutWidthPx}px`;
+  body.style.margin = "0";
+  body.style.background = "#ffffff";
+  body.style.boxSizing = "border-box";
+  body.style.overflow = "visible";
+
+  const style = doc.createElement("style");
+  style.textContent = `
+    html, body {
+      width: ${layoutWidthPx}px !important;
+      max-width: ${layoutWidthPx}px !important;
+      min-width: ${layoutWidthPx}px !important;
+      margin: 0 !important;
+      background: #ffffff !important;
+    }
+    body { box-sizing: border-box !important; overflow: visible !important; }
+    table.row { width: 100% !important; table-layout: fixed !important; }
+    h1, .sub, .muted, .item, .note, hr { width: 100% !important; }
+  `;
+  doc.head.appendChild(style);
+}
+
+function measureTicketHeightPx(doc: Document): number {
+  const body = doc.body;
+  const root = doc.documentElement;
+  return Math.max(
+    body.scrollHeight,
+    body.offsetHeight,
+    root.scrollHeight,
+    root.offsetHeight,
+    48,
+  );
+}
+
+async function withTicketIframe<T>(
+  html: string,
+  widthMm: number,
+  run: (doc: Document, layoutWidthPx: number) => Promise<T>,
+): Promise<T> {
   if (typeof document === "undefined") {
     throw new Error("QZ_UNAVAILABLE");
   }
 
-  const layoutWidthPx = mmToPx(widthMm, 96);
+  const layoutWidthPx = mmToPx(widthMm, LAYOUT_DPI);
   const iframe = document.createElement("iframe");
   iframe.setAttribute("aria-hidden", "true");
   iframe.style.cssText = [
@@ -132,7 +230,7 @@ async function rasterizeHtmlToPngBase64(html: string, widthMm: number): Promise<
     "left:-12000px",
     "top:0",
     `width:${layoutWidthPx}px`,
-    "height:40px",
+    "height:8px",
     "border:0",
     "opacity:0",
     "pointer-events:none",
@@ -156,22 +254,80 @@ async function rasterizeHtmlToPngBase64(html: string, widthMm: number): Promise<
 
     const doc = iframe.contentDocument;
     if (!doc?.body) throw new Error("QZ_RENDER_FAILED");
+
+    forcePixelTicketLayout(doc, layoutWidthPx);
+
     if (doc.fonts?.ready) {
       await doc.fonts.ready.catch(() => undefined);
     }
     await new Promise((resolve) => window.setTimeout(resolve, 40));
 
-    const heightPx = Math.max(doc.body.scrollHeight, doc.documentElement.scrollHeight, 48);
+    let heightPx = measureTicketHeightPx(doc);
+    iframe.style.height = `${heightPx}px`;
+    heightPx = measureTicketHeightPx(doc);
     iframe.style.height = `${heightPx}px`;
 
-    const xhtml = new XMLSerializer().serializeToString(doc.documentElement);
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${layoutWidthPx}" height="${heightPx}">` +
-      `<foreignObject width="100%" height="100%">${xhtml}</foreignObject></svg>`;
+    return await run(doc, layoutWidthPx);
+  } finally {
+    iframe.remove();
+  }
+}
+
+async function measureTicketMetrics(html: string, widthMm: number): Promise<TicketMetrics> {
+  return withTicketIframe(html, widthMm, async (doc, layoutWidthPx) => {
+    const heightPx = measureTicketHeightPx(doc);
+    // Extra feed so the cutter does not clip the last line.
+    const heightMm = Math.max(pxToMm(heightPx, LAYOUT_DPI) + 3, 25);
+    return {
+      widthPx: layoutWidthPx,
+      heightPx,
+      widthMm,
+      heightMm,
+    };
+  });
+}
+
+/**
+ * Build a clean XHTML fragment for SVG foreignObject.
+ * Serializing a full HTML5 document often yields invalid XML and a blank/tiny render.
+ */
+function buildForeignObjectMarkup(doc: Document, layoutWidthPx: number, heightPx: number): string {
+  const styles = Array.from(doc.querySelectorAll("style"))
+    .map((el) => rewriteMmUnitsToPx(el.textContent || ""))
+    .join("\n");
+
+  const bodyHtml = doc.body.innerHTML
+    .replace(/<br\s*>/gi, "<br/>")
+    .replace(/<hr\s*>/gi, "<hr/>")
+    .replace(/<(img|meta)(\s[^>]*?)?\s*>/gi, "<$1$2/>");
+
+  const pad = doc.body.style.padding || "0";
+  const fontFamily = doc.defaultView?.getComputedStyle(doc.body).fontFamily || "Tahoma, Arial, sans-serif";
+  const fontSize = doc.defaultView?.getComputedStyle(doc.body).fontSize || "14px";
+  const lineHeight = doc.defaultView?.getComputedStyle(doc.body).lineHeight || "1.35";
+
+  return (
+    `<div xmlns="http://www.w3.org/1999/xhtml" dir="rtl" lang="fa" ` +
+    `style="width:${layoutWidthPx}px;min-width:${layoutWidthPx}px;max-width:${layoutWidthPx}px;` +
+    `height:${heightPx}px;margin:0;padding:${pad};box-sizing:border-box;` +
+    `background:#ffffff;color:#000000;font-family:${fontFamily};font-size:${fontSize};` +
+    `line-height:${lineHeight};overflow:visible;">` +
+    `<style>${styles}</style>${bodyHtml}</div>`
+  );
+}
+
+async function rasterizeHtmlToPngBase64(html: string, widthMm: number): Promise<RasterizedTicket> {
+  return withTicketIframe(html, widthMm, async (doc, layoutWidthPx) => {
+    const heightPx = measureTicketHeightPx(doc);
+    const xhtml = buildForeignObjectMarkup(doc, layoutWidthPx, heightPx);
+    const svg =
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${layoutWidthPx}" height="${heightPx}">` +
+      `<foreignObject x="0" y="0" width="${layoutWidthPx}" height="${heightPx}">${xhtml}</foreignObject></svg>`;
     const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
 
     try {
       const image = await loadImage(url);
-      const printScale = 203 / 96;
+      const printScale = PRINT_DPI / LAYOUT_DPI;
       const canvas = document.createElement("canvas");
       canvas.width = Math.round(layoutWidthPx * printScale);
       canvas.height = Math.round(heightPx * printScale);
@@ -179,6 +335,7 @@ async function rasterizeHtmlToPngBase64(html: string, widthMm: number): Promise<
       if (!ctx) throw new Error("QZ_RENDER_FAILED");
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.imageSmoothingEnabled = false;
       ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
       const sample = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
       let ink = 0;
@@ -186,13 +343,43 @@ async function rasterizeHtmlToPngBase64(html: string, widthMm: number): Promise<
         if (sample[i] < 248 || sample[i + 1] < 248 || sample[i + 2] < 248) ink += 1;
       }
       if (ink < 4) throw new Error("QZ_RENDER_EMPTY");
-      return canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, "");
+
+      const heightMm = Math.max(pxToMm(canvas.height, PRINT_DPI) + 3, 25);
+      return {
+        png: canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, ""),
+        widthMm,
+        heightMm,
+        widthPx: canvas.width,
+        heightPx: canvas.height,
+      };
     } finally {
       URL.revokeObjectURL(url);
     }
-  } finally {
-    iframe.remove();
-  }
+  });
+}
+
+function buildQzPixelConfig(
+  qz: QzApi,
+  printerName: string,
+  widthMm: number,
+  heightMm: number,
+) {
+  // Inches + DPI so density is never misread as dots-per-mm.
+  // scaleContent must stay false: a short driver page (≈5–6cm) would otherwise
+  // shrink the whole ticket into a tiny strip on one side of the paper.
+  return qz.configs.create(printerName, {
+    colorType: "blackwhite",
+    interpolation: "nearest-neighbor",
+    rasterize: false,
+    scaleContent: false,
+    margins: 0,
+    units: "in",
+    size: {
+      width: widthMm / 25.4,
+      height: Math.max(heightMm, 25) / 25.4,
+    },
+    density: PRINT_DPI,
+  });
 }
 
 export async function printHtmlToNamedPrinter(
@@ -201,41 +388,36 @@ export async function printHtmlToNamedPrinter(
   widthMm: number,
 ): Promise<void> {
   const qz = await connectQzTray();
-  const config = qz.configs.create(printerName, {
-    colorType: "blackwhite",
-    interpolation: "nearest-neighbor",
-    rasterize: false,
-    scaleContent: true,
-    margins: 0,
-    units: "mm",
-    size: { width: widthMm },
-    density: 203,
-  });
+  const metrics = await measureTicketMetrics(html, widthMm);
+  const config = buildQzPixelConfig(qz, printerName, metrics.widthMm, metrics.heightMm);
 
+  // Prefer QZ HTML: Java WebView lays out full-width RTL tickets correctly.
   try {
-    const png = await rasterizeHtmlToPngBase64(html, widthMm);
     await qz.print(config, [
       {
         type: "pixel",
-        format: "image",
-        flavor: "base64",
-        data: png,
+        format: "html",
+        flavor: "plain",
+        data: html,
+        options: {
+          pageWidth: metrics.widthPx,
+          pageHeight: metrics.heightPx,
+        },
       },
     ]);
     return;
   } catch {
-    // Fall back to QZ HTML if the browser cannot rasterize the ticket.
+    // Fall through to browser rasterization.
   }
 
-  await qz.print(config, [
+  const raster = await rasterizeHtmlToPngBase64(html, widthMm);
+  const imageConfig = buildQzPixelConfig(qz, printerName, raster.widthMm, raster.heightMm);
+  await qz.print(imageConfig, [
     {
       type: "pixel",
-      format: "html",
-      flavor: "plain",
-      data: html,
-      options: {
-        pageWidth: mmToPx(widthMm, 96),
-      },
+      format: "image",
+      flavor: "base64",
+      data: raster.png,
     },
   ]);
 }

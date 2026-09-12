@@ -23,11 +23,20 @@ function dailyTicketHtml(receipt: SaleReceiptData): string {
   return `<div class="sub">فیش ${escapeHtml(formatDailyTicketNumber(receipt.dailyTicketNumber))}</div>`;
 }
 
+/** CSS px-per-mm at the browser reference density used by QZ rasterization. */
+const TICKET_LAYOUT_DPI = 96;
+
+function mmToLayoutPx(mm: number): number {
+  return Math.max(1, Math.round((mm / 25.4) * TICKET_LAYOUT_DPI));
+}
+
 function wrapTicketHtml(inner: string, settings: SaleReceiptPrintSettings): string {
-  const width = resolvePaperWidthMm(settings);
+  const widthMm = resolvePaperWidthMm(settings);
+  // Pixel widths avoid SVG foreignObject mis-resolving `mm` into a tiny RTL strip.
+  const widthPx = mmToLayoutPx(widthMm);
+  const padPx = mmToLayoutPx(settings.paddingMm);
   const font = settings.fontSize;
   const title = settings.titleFontSize;
-  const pad = settings.paddingMm;
   const lh = settings.lineHeight;
   return `<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" dir="rtl" lang="fa">
@@ -37,22 +46,30 @@ function wrapTicketHtml(inner: string, settings: SaleReceiptPrintSettings): stri
   * { box-sizing: border-box; }
   html, body {
     margin: 0;
-    width: ${width}mm;
+    padding: 0;
+    width: ${widthPx}px;
+    max-width: ${widthPx}px;
+    min-width: ${widthPx}px;
     color: #000000;
     background: #ffffff;
   }
   body {
-    padding: ${pad}mm;
+    padding: ${padPx}px;
     font-family: Tahoma, "Segoe UI", Arial, sans-serif;
     font-size: ${font}px;
     line-height: ${lh};
+    width: ${widthPx}px;
+    max-width: ${widthPx}px;
+    min-width: ${widthPx}px;
+    overflow: visible;
   }
+  h1, .sub, .muted, .item, .note, hr { width: 100%; }
   h1 { font-size: ${title}px; font-weight: 800; text-align: center; margin: 0 0 4px; color: #000000; }
   .sub { text-align: center; font-weight: 700; margin: 0 0 6px; color: #000000; }
   .muted { text-align: center; font-size: ${font - 1}px; margin: 0 0 8px; color: #000000; }
-  table.row { width: 100%; border-collapse: collapse; }
-  table.row td { vertical-align: top; color: #000000; }
-  table.row td.end { text-align: left; white-space: nowrap; }
+  table.row { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  table.row td { vertical-align: top; color: #000000; word-wrap: break-word; }
+  table.row td.end { text-align: left; white-space: nowrap; width: 1%; }
   .item { margin-bottom: ${settings.compactItems ? 4 : 8}px; color: #000000; }
   .name { font-weight: 700; color: #000000; }
   hr { border: none; border-top: 1px solid #000000; margin: 8px 0; }
