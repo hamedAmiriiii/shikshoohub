@@ -482,108 +482,33 @@ function buildQzPixelConfig(
   });
 }
 
-async function printRasterEscPos(
-  qz: QzApi,
-  printerName: string,
-  pngBase64: string,
-): Promise<void> {
-  // Raw ESC/POS bypasses Windows driver page size — helpful for Meva TP1000 etc.
-  const config = qz.configs.create(printerName, {
-    encoding: "UTF-8",
-  });
-  await qz.print(config, [
-    "\x1B" + "@",
-    {
-      type: "raw",
-      format: "image",
-      flavor: "base64",
-      data: pngBase64,
-      options: {
-        language: "ESCPOS",
-        dotDensity: "single",
-      },
-    },
-    "\n\n\n",
-    "\x1D" + "V" + "\x41" + "\x03",
-  ]);
-}
-
-async function printHtmlPixel(
-  qz: QzApi,
-  printerName: string,
-  html: string,
-  widthMm: number,
-  heightMm: number,
-): Promise<void> {
-  // pageWidth/pageHeight are physical units matching config.units (inches), NOT CSS px.
-  const config = buildQzPixelConfig(qz, printerName, widthMm, heightMm);
-  await qz.print(config, [
-    {
-      type: "pixel",
-      format: "html",
-      flavor: "plain",
-      data: html,
-      options: {
-        pageWidth: widthMm / 25.4,
-        pageHeight: Math.max(heightMm, 25) / 25.4,
-      },
-    },
-  ]);
-}
-
 export async function printHtmlToNamedPrinter(
   printerName: string,
   html: string,
   widthMm: number,
 ): Promise<void> {
   const qz = await connectQzTray();
-  let lastError: unknown;
 
-  // Prefer browser raster (html2canvas): QZ JavaFX HTML breaks Persian letter joining.
-  try {
-    const dots = isThermalPaperWidth(widthMm) ? thermalDotsForWidthMm(widthMm) : undefined;
-    const raster = await rasterizeHtmlToPngBase64(html, widthMm, dots);
-
-    if (isThermalPaperWidth(widthMm)) {
-      try {
-        await printRasterEscPos(qz, printerName, raster.png);
-        return;
-      } catch (error) {
-        lastError = error;
-      }
-    }
-
-    const imageConfig = buildQzPixelConfig(
-      qz,
-      printerName,
-      raster.widthMm,
-      raster.heightMm,
-      raster.widthPx,
-      raster.heightPx,
-    );
-    await qz.print(imageConfig, [
-      {
-        type: "pixel",
-        format: "image",
-        flavor: "base64",
-        data: raster.png,
-      },
-    ]);
-    return;
-  } catch (error) {
-    lastError = error;
-  }
-
-  // Last resort: QZ HTML (may distort Persian on some JVMs).
-  try {
-    const metrics = await measureTicketMetrics(html, widthMm);
-    await printHtmlPixel(qz, printerName, html, metrics.widthMm, metrics.heightMm);
-    return;
-  } catch (error) {
-    lastError = error;
-  }
-
-  throw lastError || new Error("QZ_PRINT_FAILED");
+  // Always print a browser-rendered PNG via the Windows pixel driver.
+  // Raw ESC/POS on Meva produces garbage chars; QZ HTML breaks Persian shaping.
+  const dots = isThermalPaperWidth(widthMm) ? thermalDotsForWidthMm(widthMm) : undefined;
+  const raster = await rasterizeHtmlToPngBase64(html, widthMm, dots);
+  const imageConfig = buildQzPixelConfig(
+    qz,
+    printerName,
+    raster.widthMm,
+    raster.heightMm,
+    raster.widthPx,
+    raster.heightPx,
+  );
+  await qz.print(imageConfig, [
+    {
+      type: "pixel",
+      format: "image",
+      flavor: "base64",
+      data: raster.png,
+    },
+  ]);
 }
 
 export function stationsWithAssignedPrinters(
