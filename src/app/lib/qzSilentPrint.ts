@@ -416,12 +416,12 @@ async function printRasterEscPos(
   printerName: string,
   pngBase64: string,
 ): Promise<void> {
-  // Raw ESC/POS bypasses Windows driver page size — required for Meva TP1000 etc.
+  // Raw ESC/POS bypasses Windows driver page size — helpful for Meva TP1000 etc.
   const config = qz.configs.create(printerName, {
     encoding: "UTF-8",
   });
   await qz.print(config, [
-    "\x1B" + "@", // initialize
+    "\x1B" + "@",
     {
       type: "raw",
       format: "image",
@@ -429,12 +429,34 @@ async function printRasterEscPos(
       data: pngBase64,
       options: {
         language: "ESCPOS",
-        // 1:1 with 203dpi / 576-dot heads (Meva TP1000).
         dotDensity: "single",
       },
     },
     "\n\n\n",
-    "\x1D" + "V" + "\x41" + "\x03", // partial cut
+    "\x1D" + "V" + "\x41" + "\x03",
+  ]);
+}
+
+async function printHtmlPixel(
+  qz: QzApi,
+  printerName: string,
+  html: string,
+  widthMm: number,
+  heightMm: number,
+): Promise<void> {
+  // pageWidth/pageHeight are physical units matching config.units (inches), NOT CSS px.
+  const config = buildQzPixelConfig(qz, printerName, widthMm, heightMm);
+  await qz.print(config, [
+    {
+      type: "pixel",
+      format: "html",
+      flavor: "plain",
+      data: html,
+      options: {
+        pageWidth: widthMm / 25.4,
+        pageHeight: Math.max(heightMm, 25) / 25.4,
+      },
+    },
   ]);
 }
 
@@ -444,19 +466,31 @@ export async function printHtmlToNamedPrinter(
   widthMm: number,
 ): Promise<void> {
   const qz = await connectQzTray();
-  const dots = isThermalPaperWidth(widthMm) ? thermalDotsForWidthMm(widthMm) : undefined;
-  const raster = await rasterizeHtmlToPngBase64(html, widthMm, dots);
+  const metrics = await measureTicketMetrics(html, widthMm);
+  let lastError: unknown;
 
-  if (isThermalPaperWidth(widthMm)) {
-    try {
-      await printRasterEscPos(qz, printerName, raster.png);
-      return;
-    } catch {
-      // Fall through to pixel/driver printing.
-    }
+  // 1) QZ HTML first — no browser SVG raster, stays silent and sized correctly.
+  try {
+    await printHtmlPixel(qz, printerName, html, metrics.widthMm, metrics.heightMm);
+    return;
+  } catch (error) {
+    lastError = error;
   }
 
+  // 2) Optional raster paths (ESC/POS / pixel image) when HTML path is unavailable.
   try {
+    const dots = isThermalPaperWidth(widthMm) ? thermalDotsForWidthMm(widthMm) : undefined;
+    const raster = await rasterizeHtmlToPngBase64(html, widthMm, dots);
+
+    if (isThermalPaperWidth(widthMm)) {
+      try {
+        await printRasterEscPos(qz, printerName, raster.png);
+        return;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
     const imageConfig = buildQzPixelConfig(
       qz,
       printerName,
@@ -474,26 +508,11 @@ export async function printHtmlToNamedPrinter(
       },
     ]);
     return;
-  } catch {
-    // Fall through to HTML.
+  } catch (error) {
+    lastError = error;
   }
 
-  // pageWidth/pageHeight are physical units (inches here), NOT CSS pixels.
-  // Passing ~302 as if inches made tickets microscopic on Meva TP1000.
-  const metrics = await measureTicketMetrics(html, widthMm);
-  const htmlConfig = buildQzPixelConfig(qz, printerName, metrics.widthMm, metrics.heightMm);
-  await qz.print(htmlConfig, [
-    {
-      type: "pixel",
-      format: "html",
-      flavor: "plain",
-      data: html,
-      options: {
-        pageWidth: metrics.widthMm / 25.4,
-        pageHeight: metrics.heightMm / 25.4,
-      },
-    },
-  ]);
+  throw lastError || new Error("QZ_PRINT_FAILED");
 }
 
 export function stationsWithAssignedPrinters(

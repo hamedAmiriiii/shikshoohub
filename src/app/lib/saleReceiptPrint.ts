@@ -449,8 +449,17 @@ async function dispatchReceiptPrintWithSettings(
         await silentPrintReceiptStations(receipt, settings);
         return "silent";
       }
-    } catch {
-      // Fall back to the browser print dialog.
+    } catch (error) {
+      // Assigned QZ printers: keep the flow silent (no browser print dialog).
+      // Still open the receipt page so the user can retry from the Print button.
+      console.warn(error);
+      const hasDirect = basePath.includes("direct=1");
+      window.open(
+        hasDirect ? basePath : `${basePath}${basePath.includes("?") ? "&" : "?"}direct=1`,
+        "_blank",
+        "noopener,noreferrer",
+      );
+      return "silent";
     }
   }
   window.open(basePath, "_blank", "noopener,noreferrer");

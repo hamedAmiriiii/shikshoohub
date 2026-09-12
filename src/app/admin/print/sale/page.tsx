@@ -52,7 +52,10 @@ function SaleReceiptPrintContent() {
       }
       await printReceiptStationsSequentially(getEnabledReceiptPrintStations(settings));
     } catch (error) {
-      await printReceiptStationsSequentially(getEnabledReceiptPrintStations(settings));
+      // Manual print may still use the browser dialog if QZ is unavailable.
+      if (!canSilentPrint(settings)) {
+        await printReceiptStationsSequentially(getEnabledReceiptPrintStations(settings));
+      }
       console.warn(qzErrorMessage(error));
     } finally {
       setPrinting(false);
@@ -60,24 +63,23 @@ function SaleReceiptPrintContent() {
   }, [printing, receipt, settings]);
 
   useEffect(() => {
-    if (!receipt || !settings.autoPrint || autoPrintedRef.current) return;
+    if (!receipt || !settings.autoPrint || !directPrintMode || autoPrintedRef.current) return;
     autoPrintedRef.current = true;
-    let cancelled = false;
     const timer = window.setTimeout(() => {
       void (async () => {
         try {
           if (canSilentPrint(settings)) {
             await silentPrintReceiptStations(receipt, settings);
-          } else {
-            await printReceiptStationsSequentially(getEnabledReceiptPrintStations(settings));
+            return;
           }
-        } catch {
           await printReceiptStationsSequentially(getEnabledReceiptPrintStations(settings));
+        } catch (error) {
+          // Keep auto/direct flow silent: do not open the browser print dialog.
+          console.warn(qzErrorMessage(error));
         }
       })();
     }, 400);
     return () => {
-      cancelled = true;
       window.clearTimeout(timer);
     };
     // Intentionally only auto-print once after receipt loads.
