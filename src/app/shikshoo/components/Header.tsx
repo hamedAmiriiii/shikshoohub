@@ -21,6 +21,7 @@ import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import FactoryIcon from '@mui/icons-material/Factory';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
+import ArticleIcon from '@mui/icons-material/Article';
 import Divider from '@mui/material/Divider';
 import { useRouter, usePathname } from 'next/navigation';
 
@@ -721,6 +722,27 @@ export default function Header({ title, rightAction, showBack = false, backUrl =
           >
             <CategoryIcon sx={{ color: "#9c27b0", fontSize: "22px" }} />
             دسته‌بندی
+          </MenuItem>
+          <MenuItem
+            onClick={() => handleMenuClick("/shikshoo/admin/blog/posts")}
+            sx={{
+              color: "#fff",
+              fontSize: "15px",
+              padding: "12px 20px",
+              borderRadius: "8px",
+              margin: "4px 8px",
+              transition: "all 0.2s ease",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              "&:hover": {
+                backgroundColor: "rgba(120, 181, 104, 0.15)",
+                transform: "translateX(-4px)",
+              }
+            }}
+          >
+            <ArticleIcon sx={{ color: "#00bcd4", fontSize: "22px" }} />
+            وبلاگ
           </MenuItem>
           <MenuItem
             onClick={() => handleMenuClick("/shikshoo/admin/bulk-discount")}

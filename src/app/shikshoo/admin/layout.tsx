@@ -31,6 +31,10 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/shikshoo/admin/installments': 'اقساط',
     '/shikshoo/admin/installment-credits': 'اعتبار اقساطی',
     '/shikshoo/admin/profit-loss': 'سود و ضرر',
+    '/shikshoo/admin/blog/posts': 'وبلاگ',
+    '/shikshoo/admin/blog/posts/create': 'پست جدید',
+    '/shikshoo/admin/blog/categories': 'دسته‌بندی وبلاگ',
+    '/shikshoo/admin/blog/comments': 'نظرات وبلاگ',
   };
   
   return titleMap[pathname];

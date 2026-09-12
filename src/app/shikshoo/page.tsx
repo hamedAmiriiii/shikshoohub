@@ -50,6 +50,7 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { useRouter } from 'next/navigation';
 import { useShopContext } from './context/ShopContext';
+import HomeBlogSection from './components/HomeBlogSection';
 
 interface ProductImage {
   id: number;
@@ -1223,6 +1224,7 @@ export default function ShopHomePage() {
           </Box>
         )}
 
+        {!searchQuery ? <HomeBlogSection /> : null}
 
 
         

@@ -34,6 +34,7 @@ import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import CloseIcon from '@mui/icons-material/Close';
 import CategoryIcon from '@mui/icons-material/Category';
+import ArticleIcon from '@mui/icons-material/Article';
 import { getCartItemCount } from '../lib/cart';
 
 interface Category {
@@ -253,6 +254,22 @@ export default function ShopHeader({ searchQuery = '', onSearchChange }: ShopHea
                 </Typography>
               </Box>
             </Box>
+
+            <Button
+              onClick={() => router.push('/shikshoo/blog')}
+              startIcon={<ArticleIcon />}
+              sx={{
+                display: { xs: 'none', md: 'inline-flex' },
+                color: '#fff',
+                border: '1px solid rgba(255,255,255,0.25)',
+                borderRadius: '12px',
+                px: 1.5,
+                ml: 1,
+                '&:hover': { backgroundColor: 'rgba(255,255,255,0.12)' },
+              }}
+            >
+              وبلاگ
+            </Button>
           </Box>
 
           {/* Center - Search (Desktop Only) */}
@@ -418,6 +435,32 @@ export default function ShopHeader({ searchQuery = '', onSearchChange }: ShopHea
                       <ShoppingBagIcon sx={{ fontSize: '18px', color: '#667eea' }} />
                     </Box>
                     <Typography sx={{ fontSize: '14px', fontWeight: '500' }}>سفارشات من</Typography>
+                  </MenuItem>
+                  <MenuItem
+                    onClick={() => {
+                      setAnchorEl(null);
+                      router.push('/shikshoo/blog');
+                    }}
+                    sx={{
+                      gap: '12px',
+                      padding: '14px 16px',
+                      '&:hover': {
+                        backgroundColor: 'rgba(0, 188, 212, 0.08)',
+                      },
+                    }}
+                  >
+                    <Box sx={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '10px',
+                      backgroundColor: 'rgba(0, 188, 212, 0.1)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                      <ArticleIcon sx={{ fontSize: '18px', color: '#00bcd4' }} />
+                    </Box>
+                    <Typography sx={{ fontSize: '14px', fontWeight: '500' }}>وبلاگ</Typography>
                   </MenuItem>
                   <MenuItem
                     onClick={handleLogout}
@@ -725,8 +768,30 @@ export default function ShopHeader({ searchQuery = '', onSearchChange }: ShopHea
             padding: '16px 20px',
             borderTop: '1px solid #f0f0f0',
             backgroundColor: '#fafafa',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1,
           }}
         >
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={() => {
+              setDrawerOpen(false);
+              router.push('/shikshoo/blog');
+            }}
+            startIcon={<ArticleIcon />}
+            sx={{
+              color: '#1a1d2e',
+              borderColor: '#d0d5dd',
+              padding: '12px',
+              borderRadius: '12px',
+              fontWeight: '600',
+              fontSize: '14px',
+            }}
+          >
+            وبلاگ
+          </Button>
           <Button
             fullWidth
             variant="contained"
