@@ -275,20 +275,6 @@ async function withTicketIframe<T>(
   }
 }
 
-async function measureTicketMetrics(html: string, widthMm: number): Promise<TicketMetrics> {
-  return withTicketIframe(html, widthMm, async (doc, layoutWidthPx) => {
-    const heightPx = measureTicketHeightPx(doc);
-    // Extra feed so the cutter does not clip the last line.
-    const heightMm = Math.max(pxToMm(heightPx, LAYOUT_DPI) + 3, 25);
-    return {
-      widthPx: layoutWidthPx,
-      heightPx,
-      widthMm,
-      heightMm,
-    };
-  });
-}
-
 /**
  * Build a clean XHTML fragment for SVG foreignObject (fallback only).
  * Prefer html2canvas for Persian — SVG often breaks Arabic letter joining.

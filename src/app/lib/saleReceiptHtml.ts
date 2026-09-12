@@ -56,7 +56,6 @@ function wrapTicketHtml(inner: string, settings: SaleReceiptPrintSettings): stri
     color: #000;
     background: #fff;
     direction: rtl;
-    unicode-bidi: embed;
   }
   body {
     padding: ${padPx}px;
@@ -64,9 +63,8 @@ function wrapTicketHtml(inner: string, settings: SaleReceiptPrintSettings): stri
     font-size: ${font}px;
     line-height: ${lh};
     text-align: right;
-    -webkit-font-smoothing: none;
   }
-  h1, .sub, .muted, .item, .note, .row, hr { width: 100%; }
+  h1, .sub, .muted, .item, .note, .block, hr, table.row { width: 100%; }
   h1 {
     font-size: ${title}px;
     font-weight: 800;
@@ -75,17 +73,20 @@ function wrapTicketHtml(inner: string, settings: SaleReceiptPrintSettings): stri
   }
   .sub { text-align: center; font-weight: 700; margin: 0 0 6px; }
   .muted { text-align: center; font-size: ${Math.max(font - 1, 10)}px; margin: 0 0 8px; }
-  .row {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 8px;
-    width: 100%;
-    direction: rtl;
+  table.row { border-collapse: collapse; table-layout: fixed; }
+  table.row td {
+    vertical-align: top;
+    padding: 1px 0;
+    word-wrap: break-word;
   }
-  .row .label { flex: 1 1 auto; text-align: right; word-break: break-word; }
-  .row .value { flex: 0 0 auto; text-align: left; white-space: nowrap; direction: ltr; unicode-bidi: embed; }
+  table.row td.label { text-align: right; width: 62%; }
+  table.row td.value {
+    text-align: left;
+    width: 38%;
+    white-space: nowrap;
+    direction: ltr;
+    unicode-bidi: embed;
+  }
   .ltr { direction: ltr; unicode-bidi: embed; display: inline-block; }
   .item { margin-bottom: ${settings.compactItems ? 4 : 8}px; }
   .name { font-weight: 700; text-align: right; }
@@ -99,9 +100,9 @@ function wrapTicketHtml(inner: string, settings: SaleReceiptPrintSettings): stri
 </html>`;
 }
 
-function rowHtml(label: string, value: string, bold = false): string {
+function rowHtml(label: string, valueHtml: string, bold = false): string {
   const cls = bold ? " bold" : "";
-  return `<div class="row${cls}"><span class="label">${escapeHtml(label)}</span><span class="value">${value}</span></div>`;
+  return `<table class="row${cls}"><tr><td class="label">${escapeHtml(label)}</td><td class="value">${valueHtml}</td></tr></table>`;
 }
 
 function hallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSettings): string {
@@ -112,7 +113,7 @@ function hallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSettings)
         ? `${ltr(formatReceiptNumber(item.quantity))} × ${ltr(formatReceiptNumber(item.unitPrice))}`
         : `تعداد: ${ltr(formatReceiptNumber(item.quantity))}`;
       const note = item.note ? `<div class="block">یادداشت: ${escapeHtml(item.note)}</div>` : "";
-      return `<div class="item"><div class="name">${escapeHtml(item.name)}</div>${note}<div class="row"><span class="label">${qtyPrice}</span><span class="value bold">${ltr(formatReceiptNumber(item.lineTotal))}</span></div></div>`;
+      return `<div class="item"><div class="name">${escapeHtml(item.name)}</div>${note}<table class="row"><tr><td class="label">${qtyPrice}</td><td class="value bold">${ltr(formatReceiptNumber(item.lineTotal))}</td></tr></table></div>`;
     })
     .join("");
 
@@ -153,13 +154,15 @@ function hallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSettings)
     <div class="sub">فیش سالن</div>
     ${dailyTicketHtml(receipt)}
     ${settings.showDate ? `<div class="muted">${ltr(formatReceiptDate(receipt.createdAt))}</div>` : ""}
-    <div class="row">
-      <div class="label">
-        ${settings.showPurchaseId && receipt.purchaseId != null ? `<div class="block">شماره فاکتور: ${ltr(String(receipt.purchaseId))}</div>` : ""}
-        ${settings.showCustomerPhone && receipt.phone ? `<div class="block">مشتری: ${ltr(receipt.phone)}</div>` : ""}
-      </div>
-      ${receipt.tableLabel ? `<div class="value bold">${escapeHtml(receipt.tableLabel)}</div>` : ""}
-    </div>
+    <table class="row">
+      <tr>
+        <td class="label">
+          ${settings.showPurchaseId && receipt.purchaseId != null ? `<div class="block">شماره فاکتور: ${ltr(String(receipt.purchaseId))}</div>` : ""}
+          ${settings.showCustomerPhone && receipt.phone ? `<div class="block">مشتری: ${ltr(receipt.phone)}</div>` : ""}
+        </td>
+        ${receipt.tableLabel ? `<td class="value bold">${escapeHtml(receipt.tableLabel)}</td>` : ""}
+      </tr>
+    </table>
     <hr/>
     ${items}
     <hr/>
@@ -178,7 +181,7 @@ function prepInner(
   const items = receipt.items
     .map((item) => {
       const note = item.note ? `<div class="bold block">یادداشت: ${escapeHtml(item.note)}</div>` : "";
-      return `<div class="item"><div class="row"><span class="label name">${escapeHtml(item.name)}</span><span class="value bold">× ${ltr(formatReceiptNumber(item.quantity))}</span></div>${note}</div>`;
+      return `<div class="item"><table class="row"><tr><td class="label name">${escapeHtml(item.name)}</td><td class="value bold">× ${ltr(formatReceiptNumber(item.quantity))}</td></tr></table>${note}</div>`;
     })
     .join("");
 
