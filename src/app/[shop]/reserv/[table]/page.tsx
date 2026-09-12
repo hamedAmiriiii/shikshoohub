@@ -5,7 +5,6 @@ import {
   Box,
   Button,
   Checkbox,
-  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -13,6 +12,7 @@ import {
   FormControlLabel,
   IconButton,
   InputAdornment,
+  Skeleton,
   TextField,
   Typography,
 } from "@mui/material";
@@ -53,7 +53,12 @@ import {
 import {
   ACCENT,
   ACCENT_DARK,
+  ACCENT_ON,
+  ACCENT_BORDER,
+  ACCENT_BORDER_SOFT,
+  ACCENT_SOFT,
   ReservCartBar,
+  ReservCategorySkeleton,
   ReservCategoryTabs,
   ReservDesktopCartPanel,
   ReservEmptyState,
@@ -462,7 +467,7 @@ function TableReservPageBody() {
     }
   });
   const theme = THEMES[themeMode];
-  const { BG, SURFACE, SURFACE_ALT, TEXT, MUTED, BORDER } = theme;
+  const { BG, BG_GRADIENT, SURFACE, SURFACE_ALT, TEXT, MUTED, BORDER } = theme;
 
   const toggleTheme = () => {
     setThemeMode((prev) => {
@@ -650,14 +655,16 @@ function TableReservPageBody() {
   }, [placeKind, shop, shopCode, tableNumber, validTable]);
 
   useEffect(() => {
-    if (tableInfo?.allowMenu === false) {
-      setProducts([]);
-      setProductsLoading(false);
-      setCatalogMode("services");
-      return;
-    }
+    if (!shopCode) return;
     void loadProducts(1, true);
-  }, [shopCode, tableInfo?.allowMenu]);
+  }, [shopCode, loadProducts]);
+
+  useEffect(() => {
+    if (tableInfo?.allowMenu !== false) return;
+    setProducts([]);
+    setProductsLoading(false);
+    setCatalogMode("services");
+  }, [tableInfo?.allowMenu]);
 
   useEffect(() => {
     void loadServices();
@@ -1192,7 +1199,7 @@ function TableReservPageBody() {
             width: 88,
             height: 88,
             borderRadius: "50%",
-            bgcolor: submittedCancelled ? "rgba(198,40,40,0.12)" : "rgba(212,175,55,0.12)",
+            bgcolor: submittedCancelled ? "rgba(198,40,40,0.12)" : ACCENT_SOFT,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -1218,7 +1225,7 @@ function TableReservPageBody() {
             : t("orderPendingInvoice", { method: translatePayMethod(selectedPayMethod?.key, selectedPayMethod?.label) || "—" })}
         </Typography>
         {!submittedCancelled && paymentMethod === "card_to_card" && cardToCard?.card_number ? (
-          <Box sx={{ mt: 1, p: 1.5, borderRadius: "16px", bgcolor: SURFACE, border: "1px solid rgba(212,175,55,0.2)", maxWidth: 320, width: "100%" }}>
+          <Box sx={{ mt: 1, p: 1.5, borderRadius: "16px", bgcolor: SURFACE, border: `1px solid ${ACCENT_BORDER}`, maxWidth: 320, width: "100%" }}>
             <Typography sx={{ fontSize: 12, color: MUTED, mb: 0.4 }}>{cardToCard.bank_name || t("cardToCard")}</Typography>
             <Typography sx={{ fontWeight: 800, fontSize: 16, letterSpacing: 1, color: TEXT, direction: "ltr" }}>
               {cardToCard.card_number}
@@ -1242,9 +1249,9 @@ function TableReservPageBody() {
             py: 1.2,
             borderRadius: "14px",
             bgcolor: ACCENT,
-            color: "#1a1408",
+            color: ACCENT_ON,
             fontWeight: 800,
-            "&:hover": { bgcolor: ACCENT_DARK, color: "#1a1408" },
+            "&:hover": { bgcolor: ACCENT_DARK, color: ACCENT_ON },
           }}
         >
           {t("back")}
@@ -1291,6 +1298,8 @@ function TableReservPageBody() {
       sx={{
         minHeight: "100dvh",
         bgcolor: BG,
+        backgroundImage: BG_GRADIENT,
+        backgroundAttachment: "fixed",
         direction: dir,
         color: TEXT,
         fontFamily: APP_FONT_FAMILY,
@@ -1390,13 +1399,17 @@ function TableReservPageBody() {
           ) : (
             <>
           <Box sx={{ mb: 1.5 }}>
-            <ReservCategoryTabs
-              categories={categories}
-              selectedId={selectedCategory}
-              onSelect={setSelectedCategory}
-              theme={theme}
-              dimmed={searchActive}
-            />
+            {productsLoading ? (
+              <ReservCategorySkeleton theme={theme} />
+            ) : (
+              <ReservCategoryTabs
+                categories={categories}
+                selectedId={selectedCategory}
+                onSelect={setSelectedCategory}
+                theme={theme}
+                dimmed={searchActive}
+              />
+            )}
           </Box>
 
           {productsLoading ? (
@@ -1410,12 +1423,12 @@ function TableReservPageBody() {
                   onClick={() => loadProducts(1, true)}
                   sx={{
                     bgcolor: ACCENT,
-                    color: "#1a1712",
+                    color: ACCENT_ON,
                     fontWeight: 800,
                     borderRadius: "14px",
                     px: 2.5,
                     py: 1.1,
-                    "&:hover": { bgcolor: ACCENT_DARK, color: "#1a1712" },
+                    "&:hover": { bgcolor: ACCENT_DARK, color: ACCENT_ON },
                   }}
                 >
                   {t("retry")}
@@ -1518,7 +1531,7 @@ function TableReservPageBody() {
           },
         }}
       >
-        <Box sx={{ width: 42, height: 5, borderRadius: 99, bgcolor: themeMode === "dark" ? "#3a3a3a" : "#d8d2c8", mx: "auto", mb: 1.5 }} />
+        <Box sx={{ width: 42, height: 5, borderRadius: 99, bgcolor: themeMode === "dark" ? "#475569" : "#cbd5e1", mx: "auto", mb: 1.5 }} />
         <Typography sx={{ fontWeight: 800, mb: 1.5, fontSize: 18, color: TEXT }}>{t("orderFor", { label: displayPlaceLabel })}</Typography>
         <Box sx={{ maxHeight: "46vh", overflowY: "auto" }}>
           {cart.map((line) => (
@@ -1566,7 +1579,7 @@ function TableReservPageBody() {
                     size="small"
                     aria-label={t("increaseQty")}
                     onClick={() => adjustCartLine(catalogItemKey(line), line.quantity + 1)}
-                    sx={{ width: 25, height: 25, bgcolor: ACCENT, color: "#1a1712" }}
+                    sx={{ width: 25, height: 25, bgcolor: ACCENT, color: ACCENT_ON }}
                   >
                     <AddIcon sx={{ fontSize: 11 }} />
                   </IconButton>
@@ -1597,7 +1610,7 @@ function TableReservPageBody() {
               borderRadius: "14px",
               bgcolor: SURFACE_ALT,
               color: TEXT,
-              "& fieldset": { borderColor: "rgba(212,175,55,0.12)" },
+              "& fieldset": { borderColor: ACCENT_BORDER_SOFT },
             },
             "& .MuiInputBase-input::placeholder": { color: MUTED, opacity: 1 },
           }}
@@ -1676,7 +1689,7 @@ function TableReservPageBody() {
                   fontSize: 12,
                   fontWeight: 800,
                   lineHeight: 1.3,
-                  border: active ? "none" : "1px solid rgba(212,175,55,0.16)",
+                  border: active ? "none" : `1px solid ${ACCENT_BORDER_SOFT}`,
                 }}
               >
                 {translatePayMethod(method.key, method.label)}
@@ -1732,7 +1745,7 @@ function TableReservPageBody() {
                   py: 1,
                   borderRadius: "14px",
                   color: TEXT,
-                  border: "1px dashed rgba(212,175,55,0.45)",
+                  border: `1px dashed ${ACCENT_BORDER}`,
                   fontWeight: 700,
                 }}
               >
@@ -1751,7 +1764,7 @@ function TableReservPageBody() {
                         borderRadius: "10px",
                         objectFit: "cover",
                         display: "block",
-                        border: "1px solid rgba(212,175,55,0.35)",
+                        border: `1px solid ${ACCENT_BORDER}`,
                       }}
                     />
                   ) : (
@@ -1761,7 +1774,7 @@ function TableReservPageBody() {
                         height: 44,
                         borderRadius: "10px",
                         bgcolor: SURFACE_ALT,
-                        border: "1px solid rgba(212,175,55,0.35)",
+                        border: `1px solid ${ACCENT_BORDER}`,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -1786,7 +1799,7 @@ function TableReservPageBody() {
                       left: -7,
                       width: 18,
                       height: 18,
-                      bgcolor: "#1a1408",
+                      bgcolor: ACCENT_ON,
                       color: "#fff",
                       border: "1px solid rgba(255,255,255,0.25)",
                       "&:hover": { bgcolor: "#000" },
@@ -1809,8 +1822,8 @@ function TableReservPageBody() {
             py: 1.4,
             borderRadius: "16px",
             fontWeight: 800,
-            color: "#1a1408",
-            "&:hover": { bgcolor: ACCENT_DARK, color: "#1a1408" },
+            color: ACCENT_ON,
+            "&:hover": { bgcolor: ACCENT_DARK, color: ACCENT_ON },
           }}
         >
           {submitting ? t("submitting") : t("submitDineIn")}
@@ -1835,13 +1848,11 @@ function TableReservPageBody() {
           },
         }}
       >
-        <Box sx={{ width: 42, height: 5, borderRadius: 99, bgcolor: "#3a3a3a", mx: "auto", mb: 1.5 }} />
+        <Box sx={{ width: 42, height: 5, borderRadius: 99, bgcolor: themeMode === "dark" ? "#475569" : "#cbd5e1", mx: "auto", mb: 1.5 }} />
         <Typography sx={{ fontWeight: 800, mb: 0.4, fontSize: 18, color: TEXT }}>{t("pastOrders")}</Typography>
         <Typography sx={{ color: MUTED, fontSize: 12, mb: 1.5 }}>{normalizedPhone}</Typography>
         {lookupLoading ? (
-          <Box sx={{ display: "flex", justifyContent: "center", py: 5 }}>
-            <CircularProgress size={28} sx={{ color: ACCENT }} />
-          </Box>
+          <ReservProductSkeletonList theme={theme} />
         ) : guestOrders.length === 0 ? (
           <Typography sx={{ textAlign: "center", color: MUTED, py: 4 }}>{t("noOrdersForPhone")}</Typography>
         ) : (
@@ -1857,7 +1868,7 @@ function TableReservPageBody() {
                     borderRadius: "16px",
                     p: 1.25,
                     mb: 1,
-                    border: "1px solid rgba(212,175,55,0.1)",
+                    border: `1px solid ${ACCENT_BORDER_SOFT}`,
                   }}
                 >
                   <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1, mb: 0.6 }}>
@@ -1917,7 +1928,7 @@ function TableReservPageBody() {
           },
         }}
       >
-        <Box sx={{ width: 42, height: 5, borderRadius: 99, bgcolor: "#3a3a3a", mx: "auto", mb: 1.5 }} />
+        <Box sx={{ width: 42, height: 5, borderRadius: 99, bgcolor: themeMode === "dark" ? "#475569" : "#cbd5e1", mx: "auto", mb: 1.5 }} />
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}>
           <Typography sx={{ fontWeight: 800, fontSize: 18, color: TEXT }}>
             {currentDetail ? t("orderDetails") : t("currentOrder")}
@@ -1929,9 +1940,7 @@ function TableReservPageBody() {
           ) : null}
         </Box>
         {currentLoading || currentDetailLoading ? (
-          <Box sx={{ display: "flex", justifyContent: "center", py: 5 }}>
-            <CircularProgress size={28} sx={{ color: ACCENT }} />
-          </Box>
+          <ReservProductSkeletonList theme={theme} />
         ) : currentDetail ? (
           <Box>
             <Typography sx={{ color: ACCENT, fontWeight: 800, fontSize: 16 }}>
@@ -2017,7 +2026,7 @@ function TableReservPageBody() {
                   borderRadius: "16px",
                   p: 1.25,
                   mb: 1,
-                  border: "1px solid rgba(212,175,55,0.1)",
+                  border: `1px solid ${ACCENT_BORDER_SOFT}`,
                   cursor: "pointer",
                   opacity: order.status === "cancelled" ? 0.55 : 1,
                 }}
@@ -2060,7 +2069,7 @@ function TableReservPageBody() {
           },
         }}
       >
-        <Box sx={{ width: 42, height: 5, borderRadius: 99, bgcolor: "#3a3a3a", mx: "auto", mb: 1.5 }} />
+        <Box sx={{ width: 42, height: 5, borderRadius: 99, bgcolor: themeMode === "dark" ? "#475569" : "#cbd5e1", mx: "auto", mb: 1.5 }} />
         <Typography sx={{ fontWeight: 800, fontSize: 18, color: TEXT, mb: 1 }}>{t("roomServicesTitle")}</Typography>
         {serviceRequests.length === 0 ? (
           <Typography sx={{ textAlign: "center", color: MUTED, py: 4 }}>
@@ -2119,17 +2128,15 @@ function TableReservPageBody() {
                   bgcolor: SURFACE_ALT,
                   color: TEXT,
                   fontSize: 14,
-                  "& fieldset": { borderColor: "rgba(212,175,55,0.12)" },
-                  "&:hover fieldset": { borderColor: "rgba(212,175,55,0.35)" },
+                  "& fieldset": { borderColor: ACCENT_BORDER_SOFT },
+                  "&:hover fieldset": { borderColor: ACCENT_BORDER },
                   "&.Mui-focused fieldset": { borderColor: ACCENT },
                 },
                 "& .MuiInputBase-input::placeholder": { color: MUTED, opacity: 1 },
               }}
             />
             {lookupLoading ? (
-              <Box sx={{ width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <CircularProgress size={20} sx={{ color: ACCENT }} />
-              </Box>
+              <Skeleton variant="circular" width={40} height={40} sx={{ flexShrink: 0, bgcolor: SURFACE_ALT }} />
             ) : guestIdentified ? (
               <IconButton
                 aria-label={t("removePhone")}
@@ -2205,7 +2212,7 @@ function TableReservPageBody() {
           },
         }}
       >
-        <Box sx={{ width: 42, height: 5, borderRadius: 99, bgcolor: themeMode === "dark" ? "#3a3a3a" : "#d8d2c8", mx: "auto", mb: 1.5 }} />
+        <Box sx={{ width: 42, height: 5, borderRadius: 99, bgcolor: themeMode === "dark" ? "#475569" : "#cbd5e1", mx: "auto", mb: 1.5 }} />
         {detailProduct ? (
           <Box>
             <Box
@@ -2289,9 +2296,9 @@ function TableReservPageBody() {
                   py: 1.35,
                   borderRadius: "14px",
                   bgcolor: ACCENT,
-                  color: "#1a1712",
+                  color: ACCENT_ON,
                   fontWeight: 800,
-                  "&:hover": { bgcolor: ACCENT_DARK, color: "#1a1712" },
+                  "&:hover": { bgcolor: ACCENT_DARK, color: ACCENT_ON },
                   "&.Mui-disabled": { bgcolor: SURFACE_ALT, color: MUTED },
                 }}
               >

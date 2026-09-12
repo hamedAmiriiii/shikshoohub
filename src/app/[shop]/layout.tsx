@@ -1,13 +1,21 @@
 "use client";
 
 import { Box, CircularProgress, Typography } from "@mui/material";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { useShopContext } from "../context/ShopContext";
 
 export default function ShopLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname() || "";
   const { shopCode, shopLoading, shopError } = useShopContext();
+
+  // هنگام hydrate ممکن است pathname خالی باشد؛ از location واقعی استفاده می‌کنیم
+  // تا اسپینر فروشگاه روی /reserv و /room نپرد و اسکلتون صفحه بماند.
+  const pathForGuard =
+    pathname || (typeof window !== "undefined" ? window.location.pathname : "");
+  const isReservPlace =
+    pathForGuard.includes("/reserv/") || pathForGuard.includes("/room/");
 
   useEffect(() => {
     if (!shopLoading && shopError && shopCode) {
@@ -17,7 +25,8 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
     }
   }, [shopLoading, shopError, shopCode, router]);
 
-  if (shopLoading && !shopError) {
+  // صفحه سفارش میز/اتاق اسکلتون خودش را نشان می‌دهد؛ اسپینر اینجا باعث پرش اسکلتون→دایره→اسکلتون می‌شد
+  if (shopLoading && !shopError && !isReservPlace) {
     return (
       <Box
         sx={{

@@ -30,32 +30,51 @@ import { useState, type ReactNode } from "react";
 
 export type ReservThemeMode = "dark" | "light";
 
-export const ACCENT = "#c9a227";
-export const ACCENT_DARK = "#a8861f";
-export const ACCENT_SOFT = "rgba(201,162,39,0.12)";
+/**
+ * تم صفحه سفارش میز — پالت لندینگ وبینو (webinoo-plus.ir)
+ * آبی #2563eb + زمردی #059669 + گرادیان نرم پس‌زمینه
+ */
+export const ACCENT = "#059669";
+export const ACCENT_DARK = "#047857";
+export const ACCENT_SOFT = "rgba(5, 150, 105, 0.12)";
+export const ACCENT_ON = "#ffffff";
+export const ACCENT_BORDER = "rgba(5, 150, 105, 0.28)";
+export const ACCENT_BORDER_SOFT = "rgba(5, 150, 105, 0.14)";
+export const ACCENT_BLUE = "#2563eb";
+export const ACCENT_BLUE_DARK = "#1d4ed8";
+export const ACCENT_BLUE_SOFT = "rgba(37, 99, 235, 0.1)";
+export const ACCENT_BLUE_BORDER = "rgba(37, 99, 235, 0.28)";
+export const WL_GRADIENT = "linear-gradient(135deg, #2563eb 0%, #059669 100%)";
+export const WL_GRADIENT_SOFT = "linear-gradient(180deg, #ffffff 0%, #eff6ff 35%, #ecfdf5 70%, #f8fafc 100%)";
+export const WL_SHADOW_BLUE = "0 10px 25px rgba(37, 99, 235, 0.22)";
+export const WL_SHADOW_MIXED = "0 8px 24px rgba(37, 99, 235, 0.12)";
 
 export const THEMES = {
   light: {
-    BG: "#f7f5f1",
+    BG: "#f8fafc",
+    BG_GRADIENT: WL_GRADIENT_SOFT,
     SURFACE: "#ffffff",
-    SURFACE_ALT: "#f0ece5",
-    TEXT: "#1a1712",
-    MUTED: "#6b655c",
-    BORDER: "rgba(26,23,18,0.08)",
-    HEADER_BG: "rgba(247,245,241,0.92)",
-    CART_BAR_BG: "#1a1712",
-    CART_BAR_TEXT: "#f7f5f1",
+    SURFACE_ALT: "#f1f5f9",
+    TEXT: "#0f172a",
+    MUTED: "#64748b",
+    BORDER: "#e2e8f0",
+    HEADER_BG: "rgba(255,255,255,0.94)",
+    CART_BAR_BG: WL_GRADIENT,
+    CART_BAR_TEXT: "#ffffff",
+    SHADOW: WL_SHADOW_MIXED,
   },
   dark: {
-    BG: "#0e0e0e",
-    SURFACE: "#181818",
-    SURFACE_ALT: "#222222",
-    TEXT: "#f4efe4",
-    MUTED: "#9a9488",
-    BORDER: "rgba(244,239,228,0.08)",
-    HEADER_BG: "rgba(14,14,14,0.92)",
-    CART_BAR_BG: ACCENT,
-    CART_BAR_TEXT: "#1a1712",
+    BG: "#0f172a",
+    BG_GRADIENT: "linear-gradient(180deg, #0f172a 0%, #1e293b 55%, #0f172a 100%)",
+    SURFACE: "#1e293b",
+    SURFACE_ALT: "#334155",
+    TEXT: "#f8fafc",
+    MUTED: "#94a3b8",
+    BORDER: "rgba(148, 163, 184, 0.18)",
+    HEADER_BG: "rgba(15, 23, 42, 0.94)",
+    CART_BAR_BG: WL_GRADIENT,
+    CART_BAR_TEXT: "#ffffff",
+    SHADOW: "0 8px 24px rgba(0, 0, 0, 0.35)",
   },
 } as const;
 
@@ -145,19 +164,19 @@ export function ReservHeader({
         }}
       >
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}>
-          <Box
+            <Box
             sx={{
               width: 40,
               height: 40,
               borderRadius: "12px",
-              bgcolor: ACCENT_SOFT,
-              color: ACCENT_DARK,
+              background: WL_GRADIENT,
+              color: ACCENT_ON,
               display: "grid",
               placeItems: "center",
               fontWeight: 800,
               fontSize: 15,
               flexShrink: 0,
-              border: `1px solid rgba(201,162,39,0.28)`,
+              boxShadow: WL_SHADOW_BLUE,
             }}
             aria-hidden
           >
@@ -348,8 +367,8 @@ export function ReservSearchBar({ value, onChange, theme, placeholder }: SearchP
           minHeight: 48,
           boxShadow: "0 1px 2px rgba(26,23,18,0.04)",
           "& fieldset": { borderColor: theme.BORDER },
-          "&:hover fieldset": { borderColor: "rgba(201,162,39,0.35)" },
-          "&.Mui-focused fieldset": { borderColor: ACCENT },
+          "&:hover fieldset": { borderColor: ACCENT_BLUE_BORDER },
+          "&.Mui-focused fieldset": { borderColor: ACCENT_BLUE },
         },
         "& .MuiInputBase-input::placeholder": { color: theme.MUTED, opacity: 1 },
       }}
@@ -402,9 +421,9 @@ export function ReservCategoryTabs({ categories, selectedId, onSelect, theme, di
             sx={{
               flexShrink: 0,
               appearance: "none",
-              border: active ? `1.5px solid ${ACCENT}` : `1px solid ${theme.BORDER}`,
-              bgcolor: active ? ACCENT_SOFT : theme.SURFACE,
-              color: active ? ACCENT_DARK : theme.TEXT,
+              border: active ? `1.5px solid ${ACCENT_BLUE}` : `1px solid ${theme.BORDER}`,
+              bgcolor: active ? ACCENT_BLUE_SOFT : theme.SURFACE,
+              color: active ? ACCENT_BLUE_DARK : theme.TEXT,
               px: 1.6,
               py: 1,
               minHeight: 44,
@@ -413,7 +432,7 @@ export function ReservCategoryTabs({ categories, selectedId, onSelect, theme, di
               fontSize: 14,
               fontWeight: active ? 800 : 600,
               fontFamily: APP_FONT_FAMILY,
-              boxShadow: active ? "none" : "0 1px 2px rgba(26,23,18,0.03)",
+              boxShadow: active ? "0 4px 12px rgba(37, 99, 235, 0.15)" : "0 1px 2px rgba(15,23,42,0.04)",
               transition: "background-color 150ms ease, border-color 150ms ease",
               ...motionSafe,
             }}
@@ -616,10 +635,10 @@ export function ReservProductCard({
             width: 31,
             height: 31,
             bgcolor: canIncrease ? ACCENT : theme.SURFACE_ALT,
-            color: canIncrease ? "#1a1712" : theme.MUTED,
+            color: canIncrease ? ACCENT_ON : theme.MUTED,
             border: canIncrease ? "none" : `1px solid ${theme.BORDER}`,
-            "&:hover": canIncrease ? { bgcolor: ACCENT_DARK, color: "#1a1712" } : { bgcolor: theme.SURFACE_ALT },
-            boxShadow: canIncrease ? "0 3px 8px rgba(201,162,39,0.28)" : "none",
+            "&:hover": canIncrease ? { bgcolor: ACCENT_DARK, color: ACCENT_ON } : { bgcolor: theme.SURFACE_ALT },
+            boxShadow: canIncrease ? WL_SHADOW_BLUE : "none",
             transition: "transform 120ms ease",
             "&:active": canIncrease ? { transform: "scale(0.94)" } : undefined,
             ...motionSafe,
@@ -669,12 +688,12 @@ export function ReservCartBar({ count, totalLabel, theme, onOpen }: CartBarProps
           py: 1.5,
           minHeight: 56,
           borderRadius: "18px",
-          bgcolor: theme.CART_BAR_BG,
+          background: theme.CART_BAR_BG,
           color: theme.CART_BAR_TEXT,
           fontWeight: 800,
           fontSize: 15,
-          boxShadow: "0 10px 28px rgba(26,23,18,0.22)",
-          "&:hover": { bgcolor: theme.CART_BAR_BG, filter: "brightness(1.05)" },
+          boxShadow: "0 10px 28px rgba(37, 99, 235, 0.22)",
+          "&:hover": { background: theme.CART_BAR_BG, filter: "brightness(1.05)" },
         }}
       >
         <Box
@@ -866,7 +885,7 @@ export function ReservDesktopCartPanel({
                       size="small"
                       aria-label={t("increaseQty")}
                       onClick={() => onInc(line.key)}
-                      sx={{ width: 22, height: 22, bgcolor: ACCENT, color: "#1a1712" }}
+                      sx={{ width: 22, height: 22, bgcolor: ACCENT, color: ACCENT_ON }}
                     >
                       <AddIcon sx={{ fontSize: 11 }} />
                     </IconButton>
@@ -895,9 +914,9 @@ export function ReservDesktopCartPanel({
               py: 1.35,
               borderRadius: "14px",
               bgcolor: ACCENT,
-              color: "#1a1712",
+              color: ACCENT_ON,
               fontWeight: 800,
-              "&:hover": { bgcolor: ACCENT_DARK, color: "#1a1712" },
+              "&:hover": { bgcolor: ACCENT_DARK, color: ACCENT_ON },
             }}
           >
             {t("placeOrder")}

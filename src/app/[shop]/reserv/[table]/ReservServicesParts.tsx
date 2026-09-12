@@ -5,7 +5,7 @@ import { shopServiceEmoji, type ShopService, type TableServiceRequest } from "@/
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import RoomServiceIcon from "@mui/icons-material/RoomService";
 import { Box, Button, CircularProgress, Typography } from "@mui/material";
-import { ACCENT, ACCENT_DARK, ACCENT_SOFT, type ReservTheme } from "./ReservOrderingParts";
+import { ACCENT, ACCENT_DARK, ACCENT_ON, ACCENT_SOFT, WL_SHADOW_MIXED, type ReservTheme } from "./ReservOrderingParts";
 import { useReservI18n } from "./reservI18n";
 
 type SwitchProps = {
@@ -59,7 +59,7 @@ export function ReservMenuServiceSwitch({ mode, onChange, theme, pendingServiceC
               fontWeight: 800,
               fontSize: 14,
               bgcolor: active ? ACCENT : "transparent",
-              color: active ? "#1a1712" : theme.TEXT,
+              color: active ? ACCENT_ON : theme.TEXT,
               position: "relative",
             }}
           >
@@ -72,8 +72,8 @@ export function ReservMenuServiceSwitch({ mode, onChange, theme, pendingServiceC
                   height: 18,
                   px: 0.4,
                   borderRadius: "999px",
-                  bgcolor: active ? "#1a1712" : ACCENT,
-                  color: active ? ACCENT : "#1a1712",
+                  bgcolor: active ? ACCENT_ON : ACCENT,
+                  color: active ? ACCENT : ACCENT_ON,
                   fontSize: 10,
                   fontWeight: 800,
                   lineHeight: "18px",
@@ -121,7 +121,7 @@ export function ReservServiceGrid({ services, theme, requestingId, pendingServic
               minHeight: 168,
               bgcolor: theme.SURFACE,
               border: pending ? `1.5px solid ${ACCENT}` : `1px solid ${theme.BORDER}`,
-              boxShadow: pending ? "0 8px 24px rgba(201,162,39,0.18)" : "0 1px 3px rgba(26,23,18,0.04)",
+              boxShadow: pending ? WL_SHADOW_MIXED : "0 1px 3px rgba(15, 23, 42, 0.04)",
               display: "flex",
               flexDirection: "column",
             }}
@@ -158,13 +158,13 @@ export function ReservServiceGrid({ services, theme, requestingId, pendingServic
                   py: 0.55,
                   borderRadius: "12px",
                   bgcolor: pending ? ACCENT_SOFT : ACCENT,
-                  color: "#1a1712",
+                  color: pending ? ACCENT_DARK : ACCENT_ON,
                   fontWeight: 800,
                   fontSize: 12,
                   "&:hover": { bgcolor: pending ? ACCENT_SOFT : ACCENT_DARK },
                 }}
               >
-                {loading ? <CircularProgress size={14} sx={{ color: "#1a1712" }} /> : pending ? t("requested") : t("request")}
+                {loading ? <CircularProgress size={14} sx={{ color: pending ? ACCENT_DARK : ACCENT_ON }} /> : pending ? t("requested") : t("request")}
               </Button>
             </Box>
           </Box>
