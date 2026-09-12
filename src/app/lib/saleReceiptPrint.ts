@@ -98,8 +98,8 @@ export type SaleReceiptPrintSettings = {
 export const DEFAULT_SALE_RECEIPT_PRINT_SETTINGS: SaleReceiptPrintSettings = {
   paperPreset: "80",
   customPaperWidthMm: 80,
-  fontSize: 12,
-  titleFontSize: 14,
+  fontSize: 13,
+  titleFontSize: 16,
   paddingMm: 4,
   lineHeight: 1.5,
   shopTitle: "",

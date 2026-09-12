@@ -4,10 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/bump-app-build.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "generate:pwa-icons": "powershell -NoProfile -File scripts/generate-pwa-icons.ps1"
+    "generate:pwa-icons": "powershell -NoProfile -File scripts/generate-pwa-icons.ps1",
+    "bump:build": "node scripts/bump-app-build.mjs"
   },
   "dependencies": {
     "@emotion/react": "^11.13.3",

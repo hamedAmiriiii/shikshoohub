@@ -38,15 +38,24 @@ function wrapTicketHtml(inner: string, settings: SaleReceiptPrintSettings): stri
   const widthMm = resolvePaperWidthMm(settings);
   const widthPx = mmToLayoutPx(widthMm);
   const padPx = mmToLayoutPx(settings.paddingMm);
-  const font = settings.fontSize;
-  const title = settings.titleFontSize;
-  const lh = settings.lineHeight;
+  // Slightly larger than UI settings so thermal dots stay readable.
+  const font = Math.min(18, Math.max(settings.fontSize + 1, 13));
+  const title = Math.min(22, Math.max(settings.titleFontSize + 2, 16));
+  const lh = Math.max(settings.lineHeight, 1.45);
+  const fontUrl = "/fonts/Iranian%20Sans.ttf";
   return `<!DOCTYPE html>
 <html dir="rtl" lang="fa">
 <head>
 <meta charset="utf-8"/>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 <style>
+  @font-face {
+    font-family: "IRANSans";
+    src: url("${fontUrl}") format("truetype");
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: block;
+  }
   * { box-sizing: border-box; }
   html, body {
     margin: 0;
@@ -59,24 +68,28 @@ function wrapTicketHtml(inner: string, settings: SaleReceiptPrintSettings): stri
   }
   body {
     padding: ${padPx}px;
-    font-family: Tahoma, "Segoe UI", "Arial Unicode MS", Arial, sans-serif;
+    font-family: "IRANSans", "Iranian Sans", Tahoma, "Segoe UI", sans-serif;
     font-size: ${font}px;
+    font-weight: 600;
     line-height: ${lh};
     text-align: right;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
   }
   h1, .sub, .muted, .item, .note, .block, hr, table.row { width: 100%; }
   h1 {
     font-size: ${title}px;
     font-weight: 800;
     text-align: center;
-    margin: 0 0 4px;
+    margin: 0 0 6px;
+    letter-spacing: 0;
   }
-  .sub { text-align: center; font-weight: 700; margin: 0 0 6px; }
-  .muted { text-align: center; font-size: ${Math.max(font - 1, 10)}px; margin: 0 0 8px; }
+  .sub { text-align: center; font-weight: 700; margin: 0 0 6px; font-size: ${font + 1}px; }
+  .muted { text-align: center; font-size: ${font}px; margin: 0 0 8px; font-weight: 600; }
   table.row { border-collapse: collapse; table-layout: fixed; }
   table.row td {
     vertical-align: top;
-    padding: 1px 0;
+    padding: 2px 0;
     word-wrap: break-word;
   }
   table.row td.label { text-align: right; width: 62%; }
@@ -86,11 +99,12 @@ function wrapTicketHtml(inner: string, settings: SaleReceiptPrintSettings): stri
     white-space: nowrap;
     direction: ltr;
     unicode-bidi: embed;
+    font-weight: 700;
   }
-  .ltr { direction: ltr; unicode-bidi: embed; display: inline-block; }
-  .item { margin-bottom: ${settings.compactItems ? 4 : 8}px; }
-  .name { font-weight: 700; text-align: right; }
-  hr { border: none; border-top: 1px solid #000; margin: 8px 0; }
+  .ltr { direction: ltr; unicode-bidi: embed; display: inline-block; font-weight: 700; }
+  .item { margin-bottom: ${settings.compactItems ? 5 : 9}px; }
+  .name { font-weight: 800; text-align: right; }
+  hr { border: none; border-top: 2px solid #000; margin: 8px 0; }
   .bold { font-weight: 800; }
   .note { white-space: pre-wrap; text-align: right; }
   .block { text-align: right; margin: 0 0 4px; }

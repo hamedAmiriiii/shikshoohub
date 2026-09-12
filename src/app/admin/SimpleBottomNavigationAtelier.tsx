@@ -12,6 +12,7 @@ import ListData from './List';
 import ListPurches from './ListPurches';
 import { useRouter, usePathname } from 'next/navigation';
 import { useShopPermissionGate } from "@/app/lib/shopPermissions";
+import { getAppBuildLabel } from "@/app/lib/appBuildVersion";
 
 const BOTTOM_NAV_ITEMS = [
   { href: "/admin/product/create", label: "ثبت کالا", permission: "products" as const, tour: "nav-register-product" },
@@ -55,6 +56,25 @@ export default function SimpleBottomNavigationAtelier() {
 
   return (
     <Box sx={{ display: { xs: "block", md: "none" }, width: 500, height: "65" }}>
+      <Typography
+        component="div"
+        title="شماره بیلد فرانت — بعد از هر دیپلوی باید افزایش یابد"
+        sx={{
+          position: "fixed",
+          bottom: 82,
+          left: 0,
+          right: 0,
+          zIndex: 11,
+          textAlign: "center",
+          fontSize: 10,
+          fontWeight: 700,
+          color: "var(--admin-text-muted)",
+          pointerEvents: "none",
+          userSelect: "all",
+        }}
+      >
+        {getAppBuildLabel()}
+      </Typography>
       <Paper data-admin-tour="bottom-nav" sx={{width:"94%", position: 'fixed', bottom: 12, left: '3%', right: 0 ,borderRadius:'30px', height:"65", backgroundColor: 'var(--admin-bottom-nav-bg)', border: '1px solid var(--admin-border)'}} elevation={2}>
         <BottomNavigation
           sx={{borderRadius:'25px'}}

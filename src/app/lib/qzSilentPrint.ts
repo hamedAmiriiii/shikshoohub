@@ -262,7 +262,16 @@ async function withTicketIframe<T>(
     if (doc.fonts?.ready) {
       await doc.fonts.ready.catch(() => undefined);
     }
-    await new Promise((resolve) => window.setTimeout(resolve, 40));
+    try {
+      await Promise.all([
+        doc.fonts?.load(`600 14px IRANSans`),
+        doc.fonts?.load(`800 16px IRANSans`),
+        doc.fonts?.load(`600 14px "Iranian Sans"`),
+      ]);
+    } catch {
+      /* keep system fallbacks */
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, 80));
 
     let heightPx = measureTicketHeightPx(doc);
     iframe.style.height = `${heightPx}px`;
@@ -304,6 +313,26 @@ function buildForeignObjectMarkup(doc: Document, layoutWidthPx: number, heightPx
   );
 }
 
+/** Convert grayscale anti-aliased text to crisp pure black/white for thermal heads. */
+function binarizeCanvas(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  threshold = 170,
+): void {
+  const image = ctx.getImageData(0, 0, width, height);
+  const data = image.data;
+  for (let i = 0; i < data.length; i += 4) {
+    const luma = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+    const v = luma < threshold ? 0 : 255;
+    data[i] = v;
+    data[i + 1] = v;
+    data[i + 2] = v;
+    data[i + 3] = 255;
+  }
+  ctx.putImageData(image, 0, 0);
+}
+
 async function rasterizeViaHtml2Canvas(
   doc: Document,
   layoutWidthPx: number,
@@ -312,26 +341,33 @@ async function rasterizeViaHtml2Canvas(
   targetWidthDots?: number,
 ): Promise<RasterizedTicket> {
   const html2canvas = (await import("html2canvas")).default;
-  const scale = PRINT_DPI / LAYOUT_DPI;
+  // Capture above printer DPI, then downscale — sharper Persian glyphs on 203dpi heads.
+  const captureScale = (PRINT_DPI / LAYOUT_DPI) * 2;
   const captured = await html2canvas(doc.body, {
     backgroundColor: "#ffffff",
-    scale,
+    scale: captureScale,
     width: layoutWidthPx,
     height: heightPx,
     windowWidth: layoutWidthPx,
     windowHeight: heightPx,
     useCORS: true,
+    allowTaint: true,
     logging: false,
+    imageTimeout: 4000,
     onclone: (clonedDoc) => {
       clonedDoc.documentElement.setAttribute("dir", "rtl");
       clonedDoc.documentElement.setAttribute("lang", "fa");
       clonedDoc.body.style.direction = "rtl";
       clonedDoc.body.style.textAlign = "right";
       clonedDoc.body.style.width = `${layoutWidthPx}px`;
+      clonedDoc.body.style.fontFamily = `"IRANSans", "Iranian Sans", Tahoma, sans-serif`;
+      clonedDoc.body.style.fontWeight = "600";
+      clonedDoc.body.style.setProperty("-webkit-font-smoothing", "antialiased");
+      clonedDoc.body.style.setProperty("text-rendering", "geometricPrecision");
     },
   });
 
-  const outW = targetWidthDots && targetWidthDots > 0 ? targetWidthDots : captured.width;
+  const outW = targetWidthDots && targetWidthDots > 0 ? targetWidthDots : Math.round(layoutWidthPx * (PRINT_DPI / LAYOUT_DPI));
   const outH = Math.max(1, Math.round(captured.height * (outW / Math.max(captured.width, 1))));
   const canvas = document.createElement("canvas");
   canvas.width = outW;
@@ -340,8 +376,10 @@ async function rasterizeViaHtml2Canvas(
   if (!ctx) throw new Error("QZ_RENDER_FAILED");
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, outW, outH);
-  ctx.imageSmoothingEnabled = false;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
   ctx.drawImage(captured, 0, 0, outW, outH);
+  binarizeCanvas(ctx, outW, outH, 168);
 
   const sample = ctx.getImageData(0, 0, outW, outH).data;
   let ink = 0;
