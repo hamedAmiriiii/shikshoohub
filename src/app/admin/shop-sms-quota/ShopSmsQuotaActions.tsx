@@ -21,6 +21,7 @@ import EventIcon from "@mui/icons-material/Event";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
 import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
 import DatePicker from "react-multi-date-picker";
@@ -56,6 +57,12 @@ export interface ShopSmsQuotaRow {
   shop_access_suspended?: boolean;
   /** trial = رایگان | paid = پلن خریداری‌شده */
   subscription_status?: SubscriptionStatus;
+  subscription_current_price_rial?: number | null;
+  subscription_current_price_toman?: number | null;
+  subscription_renewal_price_rial?: number | null;
+  subscription_renewal_price_toman?: number | null;
+  subscription_renewal_days?: number | null;
+  has_custom_renewal_price?: boolean;
   referral_code?: string;
   referral_token?: string;
   referral_dashboard_token?: string;
@@ -129,6 +136,22 @@ interface Props {
   variant?: "row" | "card";
 }
 
+function tomanFromRow(
+  toman: number | null | undefined,
+  rial: number | null | undefined,
+): string {
+  if (typeof toman === "number" && Number.isFinite(toman)) return String(toman);
+  if (typeof rial === "number" && Number.isFinite(rial)) return String(Math.floor(rial / 10));
+  return "";
+}
+
+function parseTomanInput(raw: string): number | null {
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return null;
+  const value = parseInt(digits, 10);
+  return Number.isNaN(value) ? null : value;
+}
+
 export default function ShopSmsQuotaActions({ item, onSuccess, variant = "row" }: Props) {
   const shopId = getShopId(item);
   const shopLabel = getShopName(item) || (shopId != null ? `فروشگاه #${shopId}` : "فروشگاه");
@@ -137,6 +160,7 @@ export default function ShopSmsQuotaActions({ item, onSuccess, variant = "row" }
   const [chargeOpen, setChargeOpen] = useState(false);
   const [accessOpen, setAccessOpen] = useState(false);
   const [paidPlanOpen, setPaidPlanOpen] = useState(false);
+  const [pricingOpen, setPricingOpen] = useState(false);
   const [balanceValue, setBalanceValue] = useState(String(getBalance(item)));
   const [chargeValue, setChargeValue] = useState("");
   const [accessEndDate, setAccessEndDate] = useState<DateObject | null>(() =>
@@ -144,6 +168,15 @@ export default function ShopSmsQuotaActions({ item, onSuccess, variant = "row" }
   );
   const [paidPlanEndDate, setPaidPlanEndDate] = useState<DateObject | null>(() =>
     parseAccessEndToDateObject(item.shop_access_ends_at),
+  );
+  const [currentPriceToman, setCurrentPriceToman] = useState(() =>
+    tomanFromRow(item.subscription_current_price_toman, item.subscription_current_price_rial),
+  );
+  const [renewalPriceToman, setRenewalPriceToman] = useState(() =>
+    tomanFromRow(item.subscription_renewal_price_toman, item.subscription_renewal_price_rial),
+  );
+  const [renewalDays, setRenewalDays] = useState(
+    String(item.subscription_renewal_days || 365),
   );
   const [saving, setSaving] = useState(false);
 
@@ -232,15 +265,52 @@ export default function ShopSmsQuotaActions({ item, onSuccess, variant = "row" }
       toast.error("تاریخ پایان اعتبار را انتخاب کنید");
       return;
     }
+    const currentToman = parseTomanInput(currentPriceToman);
+    const renewalToman = parseTomanInput(renewalPriceToman);
+    if (currentToman == null || currentToman <= 0) {
+      toast.error("قیمت فعلی اشتراک (تومان) را وارد کنید");
+      return;
+    }
+    if (renewalToman == null || renewalToman <= 0) {
+      toast.error("قیمت تمدید بعدی (تومان) را وارد کنید");
+      return;
+    }
+    const days = parseInt(renewalDays.replace(/\D/g, ""), 10) || 365;
     const ok = await putShop(
       {
         shop_access_ends_at: apiDate,
         activate_paid_plan: true,
         subscription_status: "paid",
+        subscription_current_price_toman: currentToman,
+        subscription_renewal_price_toman: renewalToman,
+        subscription_renewal_days: days,
       },
-      "پلن پولی فعال شد و فروشگاه تأیید گردید",
+      "پلن پولی فعال شد و مبلغ اشتراک ذخیره گردید",
     );
     if (ok) setPaidPlanOpen(false);
+  };
+
+  const handleSavePricing = async () => {
+    const currentToman = parseTomanInput(currentPriceToman);
+    const renewalToman = parseTomanInput(renewalPriceToman);
+    if (currentToman == null || currentToman < 0) {
+      toast.error("قیمت فعلی نامعتبر است");
+      return;
+    }
+    if (renewalToman == null || renewalToman <= 0) {
+      toast.error("قیمت تمدید بعدی باید بیشتر از صفر باشد");
+      return;
+    }
+    const days = parseInt(renewalDays.replace(/\D/g, ""), 10) || 365;
+    const ok = await putShop(
+      {
+        subscription_current_price_toman: currentToman,
+        subscription_renewal_price_toman: renewalToman,
+        subscription_renewal_days: days,
+      },
+      "مبالغ اشتراک فروشگاه ذخیره شد",
+    );
+    if (ok) setPricingOpen(false);
   };
 
   const copyReferralDashboardLink = async () => {
@@ -278,7 +348,25 @@ export default function ShopSmsQuotaActions({ item, onSuccess, variant = "row" }
 
   const openPaidPlan = () => {
     setPaidPlanEndDate(parseAccessEndToDateObject(item.shop_access_ends_at));
+    setCurrentPriceToman(
+      tomanFromRow(item.subscription_current_price_toman, item.subscription_current_price_rial),
+    );
+    setRenewalPriceToman(
+      tomanFromRow(item.subscription_renewal_price_toman, item.subscription_renewal_price_rial),
+    );
+    setRenewalDays(String(item.subscription_renewal_days || 365));
     setPaidPlanOpen(true);
+  };
+
+  const openPricing = () => {
+    setCurrentPriceToman(
+      tomanFromRow(item.subscription_current_price_toman, item.subscription_current_price_rial),
+    );
+    setRenewalPriceToman(
+      tomanFromRow(item.subscription_renewal_price_toman, item.subscription_renewal_price_rial),
+    );
+    setRenewalDays(String(item.subscription_renewal_days || 365));
+    setPricingOpen(true);
   };
 
   const iconBtnSx = {
@@ -348,6 +436,15 @@ export default function ShopSmsQuotaActions({ item, onSuccess, variant = "row" }
             </IconButton>
           </Tooltip>
         )}
+        <Tooltip title="مبلغ اشتراک" arrow>
+          <IconButton
+            size="small"
+            onClick={openPricing}
+            sx={{ ...iconBtnSx, borderColor: "#f9a825", color: "#ffd54f" }}
+          >
+            <AttachMoneyIcon sx={{ fontSize: 15 }} />
+          </IconButton>
+        </Tooltip>
         <Tooltip title="تاریخ اعتبار" arrow>
           <IconButton
             size="small"
@@ -421,8 +518,32 @@ export default function ShopSmsQuotaActions({ item, onSuccess, variant = "row" }
             </Box>
           </Typography>
           <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "13px", mb: 2 }}>
-            با تأیید، وضعیت به «پولی» تغییر می‌کند، اعتبار تا تاریخ انتخابی تمدید می‌شود و در صورت وجود معرف، پاداش معرفی محاسبه می‌شود.
+            با تأیید، وضعیت به «پولی» تغییر می‌کند، اعتبار تا تاریخ انتخابی تمدید می‌شود و مبلغ تمدید برای همین فروشگاه ذخیره می‌شود تا خودش با همان قیمت تمدید کند.
           </Typography>
+          <TextField
+            fullWidth
+            label="قیمت فعلی اشتراک (تومان)"
+            value={currentPriceToman}
+            onChange={(e) => setCurrentPriceToman(e.target.value)}
+            inputProps={{ inputMode: "numeric" }}
+            sx={{ ...inputSx, mb: 1.5 }}
+          />
+          <TextField
+            fullWidth
+            label="قیمت تمدید بعدی (تومان)"
+            value={renewalPriceToman}
+            onChange={(e) => setRenewalPriceToman(e.target.value)}
+            inputProps={{ inputMode: "numeric" }}
+            sx={{ ...inputSx, mb: 1.5 }}
+          />
+          <TextField
+            fullWidth
+            label="مدت تمدید (روز)"
+            value={renewalDays}
+            onChange={(e) => setRenewalDays(e.target.value)}
+            inputProps={{ inputMode: "numeric" }}
+            sx={{ ...inputSx, mb: 2 }}
+          />
           <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "13px", mb: 1 }}>
             تاریخ پایان اعتبار (شمسی)
           </Typography>
@@ -465,6 +586,63 @@ export default function ShopSmsQuotaActions({ item, onSuccess, variant = "row" }
             sx={{ backgroundColor: "var(--admin-action-purple)", "&:hover": { backgroundColor: "var(--admin-action-purple-hover)" } }}
           >
             {saving ? "..." : "تأیید پلن پولی"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={pricingOpen}
+        onClose={() => !saving && setPricingOpen(false)}
+        PaperProps={{
+          sx: {
+            backgroundColor: "var(--admin-surface)",
+            borderRadius: "16px",
+          },
+        }}
+      >
+        <DialogTitle sx={{ color: "var(--admin-text)" }}>مبلغ اشتراک — {shopLabel}</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "13px", mb: 2 }}>
+            قیمت فعلی برای ثبت قرارداد است؛ قیمت تمدید همان مبلغی است که فروشگاه در صفحه تمدید می‌بیند و پرداخت می‌کند.
+          </Typography>
+          <TextField
+            fullWidth
+            label="قیمت فعلی (تومان)"
+            value={currentPriceToman}
+            onChange={(e) => setCurrentPriceToman(e.target.value)}
+            inputProps={{ inputMode: "numeric" }}
+            sx={{ ...inputSx, mb: 1.5, mt: 0.5 }}
+          />
+          <TextField
+            fullWidth
+            label="قیمت تمدید بعدی (تومان)"
+            value={renewalPriceToman}
+            onChange={(e) => setRenewalPriceToman(e.target.value)}
+            inputProps={{ inputMode: "numeric" }}
+            sx={{ ...inputSx, mb: 1.5 }}
+          />
+          <TextField
+            fullWidth
+            label="مدت هر تمدید (روز)"
+            value={renewalDays}
+            onChange={(e) => setRenewalDays(e.target.value)}
+            inputProps={{ inputMode: "numeric" }}
+            helperText="مثلاً ۳۶۵ برای یک سال"
+            FormHelperTextProps={{ sx: { color: "var(--admin-text-muted)" } }}
+            sx={inputSx}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPricingOpen(false)} disabled={saving} sx={{ color: "var(--admin-text-muted)" }}>
+            انصراف
+          </Button>
+          <Button
+            onClick={() => void handleSavePricing()}
+            disabled={saving}
+            variant="contained"
+            sx={{ backgroundColor: "var(--admin-accent)", "&:hover": { backgroundColor: "var(--admin-accent-hover)" } }}
+          >
+            {saving ? "..." : "ذخیره مبالغ"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -680,6 +858,17 @@ export function ShopSmsQuotaMobileCard({
         {data.shop_access_days_remaining != null &&
           ` · ${data.shop_access_days_remaining.toLocaleString("fa-IR")} روز`}
       </Typography>
+      {(data.subscription_renewal_price_toman != null ||
+        data.subscription_renewal_price_rial != null) && (
+        <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "11px", mb: 0.25 }}>
+          تمدید:{" "}
+          {(
+            data.subscription_renewal_price_toman ??
+            Math.floor((data.subscription_renewal_price_rial || 0) / 10)
+          ).toLocaleString("fa-IR")}{" "}
+          تومان
+        </Typography>
+      )}
       <Typography sx={{ color: "var(--admin-accent)", fontWeight: 700, fontSize: "13px", mb: 1 }}>
         تعداد پیامک: {formatNumber(getBalance(data))}
       </Typography>

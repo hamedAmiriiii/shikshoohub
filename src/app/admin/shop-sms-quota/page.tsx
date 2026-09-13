@@ -129,7 +129,20 @@ export default function AdminShopSmsQuotaPage() {
       {
         label: "پلن",
         field: (item: ShopSmsQuotaRow) => <SubscriptionStatusChip item={item} />,
-        width: "8%",
+        width: "7%",
+        align: "center" as const,
+      },
+      {
+        label: "تمدید",
+        field: (item: ShopSmsQuotaRow) => {
+          const toman =
+            item.subscription_renewal_price_toman ??
+            (item.subscription_renewal_price_rial != null
+              ? Math.floor(item.subscription_renewal_price_rial / 10)
+              : null);
+          return toman != null ? `${formatNumber(toman)} ت` : "—";
+        },
+        width: "9%",
         align: "center" as const,
       },
       {
@@ -139,7 +152,7 @@ export default function AdminShopSmsQuotaPage() {
             {formatNumber(getBalance(item))}
           </Typography>
         ),
-        width: "10%",
+        width: "9%",
         align: "center" as const,
       },
     ],
@@ -192,7 +205,7 @@ export default function AdminShopSmsQuotaPage() {
         <List
           disableFilter
           compactDesktop
-          actionsColumnWidth="168px"
+          actionsColumnWidth="192px"
           searchBoxList={searchBoxList}
           filterBoxList={[]}
           filterComponent={<></>}

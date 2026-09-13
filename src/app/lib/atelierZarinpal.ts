@@ -10,10 +10,21 @@ export type PaymentsCatalogItem = {
   name: string;
   description?: string | null;
   price_toman: number;
+  price_rial?: number;
   sms_count?: number;
   duration_days?: number;
   duration_months?: number;
   is_active?: boolean;
+  is_shop_custom_price?: boolean;
+};
+
+export type ShopSubscriptionPricing = {
+  current_price_rial?: number | null;
+  current_price_toman?: number | null;
+  renewal_price_rial?: number | null;
+  renewal_price_toman?: number | null;
+  renewal_days?: number | null;
+  has_custom_renewal?: boolean;
 };
 
 export type PaymentGatewayId = "zarinpal" | "sep";
@@ -21,6 +32,7 @@ export type PaymentGatewayId = "zarinpal" | "sep";
 export type PaymentsCatalog = {
   sms_packages: PaymentsCatalogItem[];
   shop_plans: PaymentsCatalogItem[];
+  shop_subscription?: ShopSubscriptionPricing | null;
   gateways?: Array<{ id: PaymentGatewayId | string; name: string }>;
   default_gateway?: PaymentGatewayId | string;
 };
@@ -102,21 +114,38 @@ function priceToman(row: Record<string, unknown>): number {
 
 export function parseCatalogItem(value: unknown): PaymentsCatalogItem | null {
   const row = asRecord(value);
-  if (!row) return null;
+  if (!row || row.id === undefined || row.id === null) return null;
   const id = asNumber(row.id);
-  if (!id) return null;
+  if (id < 0) return null;
+  if (id === 0 && !row.is_shop_custom_price) return null;
   const durationDays = asNumber(row.duration_days ?? row.days);
   const durationMonths = asNumber(row.duration_months ?? row.months);
   const smsCount = asNumber(row.sms_count ?? row.message_count);
+  const priceRial = asNumber(row.price_rial ?? row.amount_rial);
   return {
     id,
     name: String(row.name ?? row.title ?? "آیتم"),
     description: typeof row.description === "string" ? row.description : null,
     price_toman: priceToman(row),
+    price_rial: priceRial > 0 ? priceRial : undefined,
     sms_count: smsCount > 0 ? smsCount : undefined,
     duration_days: durationDays > 0 ? durationDays : undefined,
     duration_months: durationMonths > 0 ? durationMonths : undefined,
     is_active: row.is_active !== false && row.active !== false,
+    is_shop_custom_price: Boolean(row.is_shop_custom_price),
+  };
+}
+
+function parseShopSubscription(value: unknown): ShopSubscriptionPricing | null {
+  const row = asRecord(value);
+  if (!row) return null;
+  return {
+    current_price_rial: asNumber(row.current_price_rial) || null,
+    current_price_toman: asNumber(row.current_price_toman) || null,
+    renewal_price_rial: asNumber(row.renewal_price_rial) || null,
+    renewal_price_toman: asNumber(row.renewal_price_toman) || null,
+    renewal_days: asNumber(row.renewal_days) || null,
+    has_custom_renewal: Boolean(row.has_custom_renewal),
   };
 }
 
@@ -135,6 +164,7 @@ export function parsePaymentsCatalog(res: unknown): PaymentsCatalog {
     nested.plans ??
     obj?.shop_plans ??
     obj?.shopPlans;
+  const subscriptionRaw = nested.shop_subscription ?? obj?.shop_subscription;
   return {
     sms_packages: asList(smsRaw)
       .map(parseCatalogItem)
@@ -142,6 +172,7 @@ export function parsePaymentsCatalog(res: unknown): PaymentsCatalog {
     shop_plans: asList(planRaw)
       .map(parseCatalogItem)
       .filter((item): item is PaymentsCatalogItem => Boolean(item && item.is_active !== false)),
+    shop_subscription: parseShopSubscription(subscriptionRaw),
     gateways: parsePaymentGateways(res),
     default_gateway:
       typeof nested.default_gateway === "string"

@@ -31,6 +31,7 @@ import {
   startGatewayPayment,
   type PaymentGatewayId,
   type PaymentsCatalogItem,
+  type ShopSubscriptionPricing,
 } from "@/app/lib/atelierZarinpal";
 
 const packageCardSx = {
@@ -46,6 +47,7 @@ const packageCardSx = {
 export default function ShopPlansPage() {
   const [loading, setLoading] = useState(true);
   const [plans, setPlans] = useState<PaymentsCatalogItem[]>([]);
+  const [shopSubscription, setShopSubscription] = useState<ShopSubscriptionPricing | null>(null);
   const [gateways, setGateways] = useState(DEFAULT_PAYMENT_GATEWAYS);
   const [gateway, setGateway] = useState<PaymentGatewayId>("zarinpal");
   const [buyingId, setBuyingId] = useState<number | null>(null);
@@ -64,6 +66,7 @@ export default function ShopPlansPage() {
         return;
       }
       setPlans(res.shop_plans);
+      setShopSubscription(res.shop_subscription ?? null);
       if (res.gateways?.length) {
         setGateways(res.gateways as typeof DEFAULT_PAYMENT_GATEWAYS);
       }
@@ -113,11 +116,34 @@ export default function ShopPlansPage() {
     }
   };
 
+  const customRenewal = Boolean(shopSubscription?.has_custom_renewal);
+
   return (
     <Box sx={{ ...adminPageSx, p: 2, pb: 12 }}>
       <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "13px", mb: 1.5 }}>
-        پس از پرداخت موفق، اعتبار فروشگاه خودکار تمدید می‌شود.
+        {customRenewal
+          ? "مبلغ تمدید اختصاصی فروشگاه شماست؛ پس از پرداخت، اعتبار با همین قیمت تمدید می‌شود."
+          : "پس از پرداخت موفق، اعتبار فروشگاه خودکار تمدید می‌شود."}
       </Typography>
+
+      {customRenewal && shopSubscription?.renewal_price_toman ? (
+        <Card sx={{ ...packageCardSx, mb: 2, height: "auto", borderColor: "var(--admin-accent)" }}>
+          <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
+            <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: 14, mb: 0.5 }}>
+              تمدید اختصاصی شما
+            </Typography>
+            <Typography sx={{ color: "var(--admin-accent)", fontWeight: 800, fontSize: 22 }}>
+              {formatToman(shopSubscription.renewal_price_toman)}
+            </Typography>
+            {shopSubscription.renewal_days ? (
+              <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: 13, mt: 0.5 }}>
+                مدت هر تمدید:{" "}
+                {new Intl.NumberFormat("fa-IR").format(shopSubscription.renewal_days)} روز
+              </Typography>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card sx={{ ...packageCardSx, mb: 2, height: "auto" }}>
         <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
@@ -134,7 +160,12 @@ export default function ShopPlansPage() {
                 <FormControlLabel
                   key={item.id}
                   value={item.id}
-                  control={<Radio size="small" sx={{ color: "var(--admin-accent)", "&.Mui-checked": { color: "var(--admin-accent)" } }} />}
+                  control={
+                    <Radio
+                      size="small"
+                      sx={{ color: "var(--admin-accent)", "&.Mui-checked": { color: "var(--admin-accent)" } }}
+                    />
+                  }
                   label={
                     <Typography sx={{ color: "var(--admin-text)", fontSize: 13 }}>{item.name}</Typography>
                   }
@@ -163,7 +194,7 @@ export default function ShopPlansPage() {
           {plans.map((plan) => {
             const duration = formatPlanDuration(plan);
             return (
-              <Card key={plan.id} sx={packageCardSx}>
+              <Card key={`${plan.id}-${plan.name}`} sx={packageCardSx}>
                 <CardContent sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 1.5 }}>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                     <CardMembershipIcon sx={{ color: "var(--admin-accent)" }} />
