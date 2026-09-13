@@ -1,8 +1,14 @@
 import { dailyTicketFromRecord } from "@/app/lib/dailyTicketNumber";
+import {
+  normalizeReceiptTemplateId,
+  type ReceiptTemplateId,
+} from "@/app/lib/receiptTemplates";
 
 export const SALE_RECEIPT_PRINT_DATA_KEY = "sale_receipt_print_data";
 export const SALE_RECEIPT_PRINT_SETTINGS_KEY = "sale_receipt_print_settings";
 export const LIST_RECEIPT_PRINT_SETTINGS_KEY = "list_receipt_print_settings";
+/** کلید تنظیمات مشترک فاکتور در جدول settings بک‌اند */
+export const RECEIPT_PRINT_DB_SETTINGS_KEY = "receipt_print_settings";
 
 export const RECEIPT_PAPER_PRESETS = [
   { id: "48", widthMm: 48, label: "48 میلی‌متر", hint: "حرارتی خیلی باریک" },
@@ -33,6 +39,8 @@ export type SaleReceiptData = {
   createdAt: string;
   shopName?: string;
   phone?: string;
+  customerName?: string;
+  cashierName?: string;
   tableLabel?: string;
   items: SaleReceiptItem[];
   subtotal: number;
@@ -70,7 +78,13 @@ export type SaleReceiptPrintSettings = {
   titleFontSize: number;
   paddingMm: number;
   lineHeight: number;
+  /** مدل فاکتور — پیش‌فرض classic = همان طرح فعلی */
+  templateId: ReceiptTemplateId;
   shopTitle: string;
+  shopAddress: string;
+  shopPhone: string;
+  /** برچسب صندوق‌دار روی فاکتور (مثلاً «صندوق‌دار») */
+  cashierLabel: string;
   footerText: string;
   showCustomerPhone: boolean;
   showPurchaseId: boolean;
@@ -97,6 +111,24 @@ export type SaleReceiptPrintSettings = {
   qzPrivateKey: string;
 };
 
+/** فیلدهای مشترک فروشگاه که در دیتابیس یکجا ذخیره می‌شوند (بدون پرینتر/QZ دستگاه) */
+export type ReceiptPrintSharedConfig = {
+  templateId: ReceiptTemplateId;
+  shopTitle: string;
+  shopAddress: string;
+  shopPhone: string;
+  cashierLabel: string;
+  footerText: string;
+  showCustomerPhone: boolean;
+  showPurchaseId: boolean;
+  showDate: boolean;
+  showPaymentMethod: boolean;
+  showItemUnitPrice: boolean;
+  compactItems: boolean;
+  kitchenTitle: string;
+  extraTitle: string;
+};
+
 export const DEFAULT_SALE_RECEIPT_PRINT_SETTINGS: SaleReceiptPrintSettings = {
   paperPreset: "80",
   customPaperWidthMm: 80,
@@ -104,7 +136,11 @@ export const DEFAULT_SALE_RECEIPT_PRINT_SETTINGS: SaleReceiptPrintSettings = {
   titleFontSize: 16,
   paddingMm: 4,
   lineHeight: 1.5,
+  templateId: "classic",
   shopTitle: "",
+  shopAddress: "",
+  shopPhone: "",
+  cashierLabel: "صندوق‌دار",
   footerText: "با تشکر از خرید شما",
   showCustomerPhone: true,
   showPurchaseId: true,
@@ -170,6 +206,12 @@ function normalizeSaleReceiptPrintSettings(
   merged.titleFontSize = Math.min(22, Math.max(10, merged.titleFontSize || 14));
   merged.paddingMm = Math.min(12, Math.max(0, merged.paddingMm ?? 4));
   merged.lineHeight = Math.min(2.2, Math.max(1.1, merged.lineHeight ?? 1.5));
+  merged.templateId = normalizeReceiptTemplateId(merged.templateId);
+  merged.shopTitle = String(merged.shopTitle || "").slice(0, 80);
+  merged.shopAddress = String(merged.shopAddress || "").slice(0, 200);
+  merged.shopPhone = String(merged.shopPhone || "").slice(0, 40);
+  merged.cashierLabel = String(merged.cashierLabel || "صندوق‌دار").slice(0, 40);
+  merged.footerText = String(merged.footerText ?? "با تشکر از خرید شما").slice(0, 200);
   merged.printHall = merged.printHall !== false;
   merged.printKitchen = Boolean(merged.printKitchen);
   merged.printExtra = Boolean(merged.printExtra);
@@ -187,6 +229,74 @@ function normalizeSaleReceiptPrintSettings(
   merged.qzPrivateKey = String(merged.qzPrivateKey || "").slice(0, 32000);
 
   return merged;
+}
+
+export function extractReceiptPrintSharedConfig(
+  settings: SaleReceiptPrintSettings,
+): ReceiptPrintSharedConfig {
+  return {
+    templateId: normalizeReceiptTemplateId(settings.templateId),
+    shopTitle: settings.shopTitle || "",
+    shopAddress: settings.shopAddress || "",
+    shopPhone: settings.shopPhone || "",
+    cashierLabel: settings.cashierLabel || "صندوق‌دار",
+    footerText: settings.footerText ?? "با تشکر از خرید شما",
+    showCustomerPhone: settings.showCustomerPhone !== false,
+    showPurchaseId: settings.showPurchaseId !== false,
+    showDate: settings.showDate !== false,
+    showPaymentMethod: settings.showPaymentMethod !== false,
+    showItemUnitPrice: settings.showItemUnitPrice !== false,
+    compactItems: Boolean(settings.compactItems),
+    kitchenTitle: settings.kitchenTitle || "آشپزخانه",
+    extraTitle: settings.extraTitle || "بار",
+  };
+}
+
+export function applyReceiptPrintSharedConfig(
+  settings: SaleReceiptPrintSettings,
+  shared: Partial<ReceiptPrintSharedConfig> | null | undefined,
+): SaleReceiptPrintSettings {
+  if (!shared) return settings;
+  return normalizeSaleReceiptPrintSettings({
+    ...settings,
+    ...shared,
+    templateId: normalizeReceiptTemplateId(shared.templateId ?? settings.templateId),
+  });
+}
+
+export function parseReceiptPrintSharedConfig(raw: unknown): ReceiptPrintSharedConfig | null {
+  if (raw == null) return null;
+  let value = raw;
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (!trimmed || trimmed === " " || trimmed === "{}") return null;
+    try {
+      value = JSON.parse(trimmed);
+    } catch {
+      return null;
+    }
+  }
+  if (!value || typeof value !== "object") return null;
+  const obj = value as Record<string, unknown>;
+  return extractReceiptPrintSharedConfig(
+    normalizeSaleReceiptPrintSettings({
+      ...DEFAULT_SALE_RECEIPT_PRINT_SETTINGS,
+      templateId: normalizeReceiptTemplateId(obj.templateId),
+      shopTitle: String(obj.shopTitle ?? ""),
+      shopAddress: String(obj.shopAddress ?? ""),
+      shopPhone: String(obj.shopPhone ?? ""),
+      cashierLabel: String(obj.cashierLabel ?? "صندوق‌دار"),
+      footerText: String(obj.footerText ?? "با تشکر از خرید شما"),
+      showCustomerPhone: obj.showCustomerPhone !== false,
+      showPurchaseId: obj.showPurchaseId !== false,
+      showDate: obj.showDate !== false,
+      showPaymentMethod: obj.showPaymentMethod !== false,
+      showItemUnitPrice: obj.showItemUnitPrice !== false,
+      compactItems: Boolean(obj.compactItems),
+      kitchenTitle: String(obj.kitchenTitle ?? "آشپزخانه"),
+      extraTitle: String(obj.extraTitle ?? "بار"),
+    }),
+  );
 }
 
 function defaultStationLayout(): StationTicketLayout {
@@ -422,6 +532,22 @@ export function formatReceiptDate(iso: string): string {
     }).format(new Date(iso));
   } catch {
     return iso;
+  }
+}
+
+export function formatReceiptDateOnly(iso: string): string {
+  try {
+    return new Intl.DateTimeFormat("fa-IR", { dateStyle: "short" }).format(new Date(iso));
+  } catch {
+    return iso;
+  }
+}
+
+export function formatReceiptTimeOnly(iso: string): string {
+  try {
+    return new Intl.DateTimeFormat("fa-IR", { timeStyle: "short" }).format(new Date(iso));
+  } catch {
+    return "";
   }
 }
 

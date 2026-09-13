@@ -15,6 +15,8 @@ import {
 } from "@/app/lib/saleReceiptPrint";
 import { ReceiptTicketsBlock } from "@/app/admin/print/sale/SaleReceiptTickets";
 import { StationPrinterSettings } from "@/app/admin/print/sale/StationPrinterSettings";
+import { ReceiptTemplatePicker } from "@/app/admin/print/sale/ReceiptTemplatePicker";
+import { hydrateReceiptPrintSettingsFromDb, persistSharedReceiptSettings } from "@/app/lib/receiptPrintDbSync";
 import {
   buildPurchasesListApiUrl,
   fetchAllPurchases,
@@ -49,6 +51,9 @@ function BulkSaleReceiptPrintContent() {
 
   useEffect(() => {
     setSettings(readListReceiptPrintSettings());
+    void hydrateReceiptPrintSettingsFromDb().then(() => {
+      setSettings(readListReceiptPrintSettings());
+    });
   }, []);
 
   useEffect(() => {
@@ -107,7 +112,11 @@ function BulkSaleReceiptPrintContent() {
   }, [loading, error, receipts.length, settings.autoPrint, searchParams, handlePrint]);
 
   const saveSettings = useCallback((partial: Partial<SaleReceiptPrintSettings>) => {
-    setSettings((prev) => writeListReceiptPrintSettings({ ...prev, ...partial }));
+    setSettings((prev) => {
+      const next = writeListReceiptPrintSettings({ ...prev, ...partial });
+      void persistSharedReceiptSettings(next);
+      return next;
+    });
   }, []);
 
   const printStyles = useMemo(
@@ -222,7 +231,7 @@ function BulkSaleReceiptPrintContent() {
                 p: 2,
                 mb: 2,
                 border: "1px solid var(--admin-border)",
-                maxWidth: 480,
+                maxWidth: 720,
               }}
             >
               <StationPrinterSettings
@@ -233,7 +242,21 @@ function BulkSaleReceiptPrintContent() {
                 onChange={saveSettings}
               />
             </Box>
-          ) : null}
+          ) : (
+            <Box
+              className="no-print"
+              sx={{
+                bgcolor: "var(--admin-surface)",
+                borderRadius: 2,
+                p: 2,
+                mb: 2,
+                border: "1px solid var(--admin-border)",
+                maxWidth: 720,
+              }}
+            >
+              <ReceiptTemplatePicker settings={settings} onSelect={(templateId) => saveSettings({ templateId })} />
+            </Box>
+          )}
 
           <Box
             className="print-preview"

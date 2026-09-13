@@ -85,10 +85,15 @@ import { publishAdminSaleCartSnapshot } from '@/app/admin/onboarding/adminSaleCa
 import CategoryIcon from '@mui/icons-material/Category';
 import {
   type SaleReceiptData,
+  type SaleReceiptPrintSettings,
+  DEFAULT_SALE_RECEIPT_PRINT_SETTINGS,
   saveSaleReceiptPrintData,
   readSaleReceiptPrintSettings,
+  writeSaleReceiptPrintSettings,
   silentPrintSaleReceiptOrFail,
 } from '@/app/lib/saleReceiptPrint';
+import { persistSharedReceiptSettings } from '@/app/lib/receiptPrintDbSync';
+import { ReceiptTemplatePicker } from '@/app/admin/print/sale/ReceiptTemplatePicker';
 import { dailyTicketFromRecord, formatDailyTicketNumber } from '@/app/lib/dailyTicketNumber';
 import {
   adminFieldSx,
@@ -219,6 +224,9 @@ export default function ShoppingPage() {
   const [salePriceEditEnabled, setSalePriceEditEnabled] = useState(false);
   const [saleSuccessOpen, setSaleSuccessOpen] = useState(false);
   const [lastSaleReceipt, setLastSaleReceipt] = useState<SaleReceiptData | null>(null);
+  const [receiptPrintSettings, setReceiptPrintSettings] = useState<SaleReceiptPrintSettings>(
+    DEFAULT_SALE_RECEIPT_PRINT_SETTINGS,
+  );
   const [skipPrintPreview, setSkipPrintPreview] = useState(false);
   const [isRegisteringUser, setIsRegisteringUser] = useState(false);
   const lastSyncTimeRef = useRef<number>(0);
@@ -1167,6 +1175,7 @@ export default function ShoppingPage() {
         createdAt: new Date().toISOString(),
         shopName: getShopNameFromUser(),
         phone: phone || undefined,
+        customerName: registerName.trim() || undefined,
         items: cart.map((item: any) => {
           const unitPrice = Number(item.sale_price);
           return {
@@ -1211,6 +1220,7 @@ export default function ShoppingPage() {
       selectedCheque,
       getShopNameFromUser,
       parseAmountInput,
+      registerName,
     ],
   );
 
@@ -1227,6 +1237,7 @@ export default function ShoppingPage() {
       };
       saveSaleReceiptPrintData(receipt);
       setLastSaleReceipt(receipt);
+      setReceiptPrintSettings(readSaleReceiptPrintSettings());
       setSkipPrintPreview(false);
       setSaleSuccessOpen(true);
       toast.success(successMessage);
@@ -1256,6 +1267,12 @@ export default function ShoppingPage() {
     });
   }, [lastSaleReceipt]);
 
+  const handleSelectReceiptTemplate = useCallback((templateId: SaleReceiptPrintSettings["templateId"]) => {
+    const next = writeSaleReceiptPrintSettings({ templateId });
+    setReceiptPrintSettings(next);
+    void persistSharedReceiptSettings(next);
+  }, []);
+
   const resetCartAfterQueuedSale = useCallback(() => {
     clearOrRemoveActiveCart({ clearScanned: true });
     setIsSubmitting(false);
@@ -1277,6 +1294,7 @@ export default function ShoppingPage() {
       });
       saveSaleReceiptPrintData(receipt);
       setLastSaleReceipt(receipt);
+      setReceiptPrintSettings(readSaleReceiptPrintSettings());
       setSkipPrintPreview(false);
       setSaleSuccessOpen(true);
       const items = await listPendingOutboxItems();
@@ -4185,7 +4203,9 @@ export default function ShoppingPage() {
             top: "50%",
             left: "50%",
             transform: "translate(-50%, -50%)",
-            width: { xs: "92%", sm: 420 },
+            width: { xs: "94%", sm: 520 },
+            maxHeight: "90vh",
+            overflow: "auto",
             bgcolor: "var(--admin-surface)",
             borderRadius: "16px",
             boxShadow: 24,
@@ -4209,6 +4229,13 @@ export default function ShoppingPage() {
               شماره فاکتور: {lastSaleReceipt.purchaseId}
             </Typography>
           )}
+          <Box sx={{ textAlign: "right", mb: 1.5, maxHeight: 280, overflow: "auto" }}>
+            <ReceiptTemplatePicker
+              compact
+              settings={receiptPrintSettings}
+              onSelect={handleSelectReceiptTemplate}
+            />
+          </Box>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, mt: 2 }}>
             <Button
               variant="contained"

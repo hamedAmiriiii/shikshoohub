@@ -54,6 +54,7 @@ import {
   type SaleReceiptPrintSettings,
 } from "@/app/lib/saleReceiptPrint";
 import { StationPrinterSettings } from "@/app/admin/print/sale/StationPrinterSettings";
+import { hydrateReceiptPrintSettingsFromDb } from "@/app/lib/receiptPrintDbSync";
 import { useShopPermissionGate } from "@/app/lib/shopPermissions";
 
 const settingsCardSx = {
@@ -304,6 +305,10 @@ export default function SettingsPage() {
     const printSettings = readSaleReceiptPrintSettings();
     setReceiptPrintSettings(printSettings);
     setListReceiptPrintSettings(readListReceiptPrintSettings());
+    void hydrateReceiptPrintSettingsFromDb().then((hydrated) => {
+      setReceiptPrintSettings(hydrated);
+      setListReceiptPrintSettings(readListReceiptPrintSettings());
+    });
   }, []);
 
   const handleToggleProductListOnMainPage = (

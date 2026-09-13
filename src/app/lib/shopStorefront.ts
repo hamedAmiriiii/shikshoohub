@@ -191,3 +191,25 @@ export function customerLoginPath(shopCode: string): string {
 export function customerRegisterPath(shopCode: string): string {
   return shopPath(shopCode, "/register");
 }
+
+const PUBLIC_API_BASE = (
+  process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoo-plus.ir"
+).replace(/\/$/, "");
+
+/** نام عمومی فروشگاه برای متای QR / Open Graph (سمت سرور) */
+export async function fetchPublicShopName(shopCode: string): Promise<string | null> {
+  const code = shopCode?.trim();
+  if (!code) return null;
+  try {
+    const res = await fetch(`${PUBLIC_API_BASE}/api/${encodeURIComponent(code)}`, {
+      next: { revalidate: 300 },
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { shop?: { name?: string }; name?: string };
+    const name = data?.shop?.name || data?.name;
+    return typeof name === "string" && name.trim() ? name.trim() : null;
+  } catch {
+    return null;
+  }
+}

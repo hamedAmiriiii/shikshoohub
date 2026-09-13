@@ -21,6 +21,8 @@ import {
 import { ReceiptTicketsBlock } from "@/app/admin/print/sale/SaleReceiptTickets";
 import { StationPrinterSettings } from "@/app/admin/print/sale/StationPrinterSettings";
 import { canSilentPrint, qzErrorMessage, silentPrintReceiptStations } from "@/app/lib/qzSilentPrint";
+import { hydrateReceiptPrintSettingsFromDb, persistSharedReceiptSettings } from "@/app/lib/receiptPrintDbSync";
+import { ReceiptTemplatePicker } from "@/app/admin/print/sale/ReceiptTemplatePicker";
 
 function SaleReceiptPrintContent() {
   const router = useRouter();
@@ -40,6 +42,9 @@ function SaleReceiptPrintContent() {
   useEffect(() => {
     setSettings(listPrintMode ? readListReceiptPrintSettings() : readSaleReceiptPrintSettings());
     setReceipt(readSaleReceiptPrintData());
+    void hydrateReceiptPrintSettingsFromDb().then((hydrated) => {
+      setSettings(listPrintMode ? readListReceiptPrintSettings() : hydrated);
+    });
   }, [listPrintMode]);
 
   const handlePrint = useCallback(async () => {
@@ -88,11 +93,13 @@ function SaleReceiptPrintContent() {
 
   const saveSettings = useCallback(
     (partial: Partial<SaleReceiptPrintSettings>) => {
-      setSettings((prev) =>
-        listPrintMode
+      setSettings((prev) => {
+        const next = listPrintMode
           ? writeListReceiptPrintSettings({ ...prev, ...partial })
-          : writeSaleReceiptPrintSettings({ ...prev, ...partial }),
-      );
+          : writeSaleReceiptPrintSettings({ ...prev, ...partial });
+        void persistSharedReceiptSettings(next);
+        return next;
+      });
     },
     [listPrintMode],
   );
@@ -196,7 +203,7 @@ function SaleReceiptPrintContent() {
                   mb: 2,
                   border: "1px solid var(--admin-border)",
                   color: "var(--admin-text)",
-                  maxWidth: 480,
+                  maxWidth: 720,
                 }}
               >
                 <StationPrinterSettings
@@ -208,6 +215,23 @@ function SaleReceiptPrintContent() {
                 />
               </Box>
             )}
+
+            {!showSettings ? (
+              <Box
+                className="no-print"
+                sx={{
+                  bgcolor: "var(--admin-surface)",
+                  borderRadius: 2,
+                  p: 2,
+                  mb: 2,
+                  border: "1px solid var(--admin-border)",
+                  color: "var(--admin-text)",
+                  maxWidth: 720,
+                }}
+              >
+                <ReceiptTemplatePicker settings={settings} onSelect={(templateId) => saveSettings({ templateId })} />
+              </Box>
+            ) : null}
 
             <Box
               className="print-preview"

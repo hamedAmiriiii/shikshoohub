@@ -111,6 +111,8 @@ type PageMetaInput = {
   keywords?: string[];
   image?: string;
   noIndex?: boolean;
+  /** برای پیش‌نمایش QR: نام کسب‌وکار به‌جای «وبینو» */
+  siteName?: string;
 };
 
 export function pageMetadata({
@@ -120,18 +122,20 @@ export function pageMetadata({
   keywords,
   image,
   noIndex = false,
+  siteName,
 }: PageMetaInput): Metadata {
   const url = absoluteUrl(path);
   const ogImage = absoluteUrl(image || DEFAULT_OG_IMAGE);
+  const brand = (siteName || "").trim() || SITE_NAME;
 
   return {
     title,
     description,
     keywords: keywords?.length ? [...DEFAULT_KEYWORDS, ...keywords] : DEFAULT_KEYWORDS,
-    applicationName: SITE_NAME,
-    authors: [{ name: SITE_NAME, url: SITE_URL }],
-    creator: SITE_NAME,
-    publisher: SITE_NAME,
+    applicationName: brand,
+    authors: [{ name: brand, url: SITE_URL }],
+    creator: brand,
+    publisher: brand,
     category: "technology",
     alternates: {
       canonical: url,
@@ -142,7 +146,7 @@ export function pageMetadata({
       title,
       description,
       url,
-      siteName: SITE_NAME,
+      siteName: brand,
       locale: "fa_IR",
       type: "website",
       images: [{ url: ogImage, width: 512, height: 512, alt: title }],

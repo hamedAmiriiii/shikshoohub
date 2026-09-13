@@ -172,6 +172,7 @@ export function purchaseToSaleReceipt(purchase: any, shopName?: string): SaleRec
     createdAt,
     shopName: shopName || getShopNameFromUser(),
     phone: purchase?.phone || undefined,
+    customerName: purchase?.customer_name || purchase?.name || undefined,
     tableLabel: tableLabel || undefined,
     items,
     subtotal,

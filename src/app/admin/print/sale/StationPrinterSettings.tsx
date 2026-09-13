@@ -32,6 +32,9 @@ import {
   printHtmlToNamedPrinter,
   qzErrorMessage,
 } from "@/app/lib/qzSilentPrint";
+import { ReceiptTemplatePicker } from "@/app/admin/print/sale/ReceiptTemplatePicker";
+import { persistSharedReceiptSettings } from "@/app/lib/receiptPrintDbSync";
+import type { ReceiptTemplateId } from "@/app/lib/receiptTemplates";
 
 const STATION_LABEL: Record<ReceiptPrintStation, string> = {
   hall: "سالن",
@@ -115,6 +118,9 @@ type StationDraft = {
   layout: StationTicketLayout;
   title: string;
   shopTitle: string;
+  shopAddress: string;
+  shopPhone: string;
+  cashierLabel: string;
   footerText: string;
   showDate: boolean;
   showPurchaseId: boolean;
@@ -143,6 +149,9 @@ function draftFromSettings(settings: SaleReceiptPrintSettings, station: ReceiptP
     layout: getStationLayout(settings, station),
     title: station === "kitchen" ? settings.kitchenTitle : station === "extra" ? settings.extraTitle : "فیش سالن",
     shopTitle: settings.shopTitle,
+    shopAddress: settings.shopAddress || "",
+    shopPhone: settings.shopPhone || "",
+    cashierLabel: settings.cashierLabel || "صندوق‌دار",
     footerText: settings.footerText,
     showDate: settings.showDate,
     showPurchaseId: settings.showPurchaseId,
@@ -202,6 +211,9 @@ function StationSettingsDialog({
         paddingMm: draft.layout.paddingMm,
         lineHeight: draft.layout.lineHeight,
         shopTitle: draft.shopTitle,
+        shopAddress: draft.shopAddress,
+        shopPhone: draft.shopPhone,
+        cashierLabel: draft.cashierLabel,
         footerText: draft.footerText,
         showDate: draft.showDate,
         showPurchaseId: draft.showPurchaseId,
@@ -358,6 +370,27 @@ function StationSettingsDialog({
             />
             <TextField
               size="small"
+              label="آدرس فروشگاه"
+              value={draft.shopAddress}
+              onChange={(e) => setDraft({ ...draft, shopAddress: e.target.value })}
+              sx={fieldSx}
+            />
+            <TextField
+              size="small"
+              label="تلفن فروشگاه"
+              value={draft.shopPhone}
+              onChange={(e) => setDraft({ ...draft, shopPhone: e.target.value })}
+              sx={fieldSx}
+            />
+            <TextField
+              size="small"
+              label="برچسب صندوق‌دار"
+              value={draft.cashierLabel}
+              onChange={(e) => setDraft({ ...draft, cashierLabel: e.target.value })}
+              sx={fieldSx}
+            />
+            <TextField
+              size="small"
               label="متن پایین فاکتور"
               value={draft.footerText}
               onChange={(e) => setDraft({ ...draft, footerText: e.target.value })}
@@ -436,6 +469,32 @@ export function StationPrinterSettings({
     privateKey: settings.qzPrivateKey || "",
   });
 
+  const handleChange = useCallback(
+    (partial: Partial<SaleReceiptPrintSettings>) => {
+      onChange(partial);
+      const next = { ...settings, ...partial };
+      const touchesShared =
+        partial.templateId !== undefined ||
+        partial.shopTitle !== undefined ||
+        partial.shopAddress !== undefined ||
+        partial.shopPhone !== undefined ||
+        partial.cashierLabel !== undefined ||
+        partial.footerText !== undefined ||
+        partial.showCustomerPhone !== undefined ||
+        partial.showPurchaseId !== undefined ||
+        partial.showDate !== undefined ||
+        partial.showPaymentMethod !== undefined ||
+        partial.showItemUnitPrice !== undefined ||
+        partial.compactItems !== undefined ||
+        partial.kitchenTitle !== undefined ||
+        partial.extraTitle !== undefined;
+      if (touchesShared) {
+        void persistSharedReceiptSettings(next);
+      }
+    },
+    [onChange, settings],
+  );
+
   const stations = useMemo(() => {
     if (listMode) return ["hall"] as ReceiptPrintStation[];
     const list: ReceiptPrintStation[] = ["hall", "kitchen"];
@@ -483,6 +542,14 @@ export function StationPrinterSettings({
 
   return (
     <Box sx={{ gridColumn: "1 / -1", display: "grid", gap: 1 }}>
+      <ReceiptTemplatePicker
+        compact={compact}
+        settings={settings}
+        onSelect={(templateId: ReceiptTemplateId) => {
+          handleChange({ templateId });
+        }}
+      />
+
       {!listMode ? (
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", py: 0.25 }}>
           <Box>
@@ -494,7 +561,7 @@ export function StationPrinterSettings({
           <Switch
             size="small"
             checked={Boolean(settings.singlePrinterNoQz)}
-            onChange={(e) => onChange({ singlePrinterNoQz: e.target.checked })}
+            onChange={(e) => handleChange({ singlePrinterNoQz: e.target.checked })}
             sx={switchSx}
           />
         </Box>
@@ -517,7 +584,7 @@ export function StationPrinterSettings({
           <Switch
             size="small"
             checked={Boolean(settings.autoPrint)}
-            onChange={(e) => onChange({ autoPrint: e.target.checked })}
+            onChange={(e) => handleChange({ autoPrint: e.target.checked })}
             sx={switchSx}
           />
         </Box>
@@ -612,7 +679,7 @@ export function StationPrinterSettings({
         busy={busy}
         hidePrinterSelect={Boolean(settings.singlePrinterNoQz) && !listMode}
         onClose={() => setEditStation(null)}
-        onSave={onChange}
+        onSave={handleChange}
         onTest={(station, printer, layout) => void testStation(station, printer, layout)}
       />
 
@@ -674,7 +741,7 @@ export function StationPrinterSettings({
             variant="contained"
             sx={containedBtnSx}
             onClick={() => {
-              onChange({ qzCertificate: qzDraft.certificate, qzPrivateKey: qzDraft.privateKey });
+              handleChange({ qzCertificate: qzDraft.certificate, qzPrivateKey: qzDraft.privateKey });
               setQzOpen(false);
             }}
           >
