@@ -4,10 +4,12 @@ import { Box, IconButton, Tooltip } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import PrintIcon from "@mui/icons-material/Print";
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import { useRouter } from "next/navigation";
 import { canReplacePurchase, navigateToPurchaseEdit } from "@/app/lib/purchaseEdit";
 import { purchaseToSaleReceipt } from "@/app/lib/purchaseReceiptPrint";
 import { openListReceiptPrintPage, readListReceiptPrintSettings } from "@/app/lib/saleReceiptPrint";
+import { openFormalInvoicePrint } from "@/app/lib/formalInvoice";
 
 const iconBtnSx = {
   width: 28,
@@ -36,6 +38,13 @@ export function PurchaseRowActions({ item, onOpenDetails }: PurchaseRowActionsPr
       direct ? "/admin/print/sale?list=1&direct=1" : "/admin/print/sale?list=1",
       receipt,
     );
+  };
+
+  const handleFormalPrint = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const id = item?.id;
+    if (id == null) return;
+    openFormalInvoicePrint(id);
   };
 
   return (
@@ -87,6 +96,19 @@ export function PurchaseRowActions({ item, onOpenDetails }: PurchaseRowActionsPr
           }}
         >
           <PrintIcon />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="چاپ فاکتور رسمی" arrow placement="top">
+        <IconButton
+          size="small"
+          aria-label="چاپ فاکتور رسمی"
+          onClick={handleFormalPrint}
+          sx={{
+            ...iconBtnSx,
+            color: "#1565c0",
+          }}
+        >
+          <ReceiptLongIcon />
         </IconButton>
       </Tooltip>
     </Box>

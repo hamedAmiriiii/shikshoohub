@@ -247,7 +247,7 @@ export default function ListPurches() {
               showTotal={true}
               enablePagination={true}
               compactDesktop
-              actionsColumnWidth="108px"
+              actionsColumnWidth="148px"
               desktopColumns={desktopColumns}
               refreshGrid={refreshGrid}
               hidePrintAction
