@@ -5,22 +5,8 @@
   <title>بازگشت از درگاه سامان</title>
 </head>
 <body>
-  <script>
-    (function () {
-      var api = "https://api.webinoo-plus.ir/api/payments/sep/callback";
-      var q = window.location.search || "";
-      // سامان معمولاً با POST برمی‌گرداند؛ اگر فرم به همین صفحه POST شده باشد فیلدها در document نیست.
-      // forwarder فقط query را پاس می‌دهد؛ برای POST از صفحهٔ میانی Laravel استفاده کنید.
-      // اگر پارامترها در URL باشند:
-      if (q && q.length > 1) {
-        location.replace(api + q);
-        return;
-      }
-      // اگر body از POST به این HTML آمده، مرورگر معمولاً آن را نگه نمی‌دارد —
-      // بنابراین در پنل SEP آدرس callback را مستقیم روی API بگذارید یا از فرم زیر استفاده کنید.
-      location.replace(api);
-    })();
-  </script>
-  <p style="font-family:Tahoma;text-align:center;margin-top:40px">در حال بازگشت از درگاه سامان...</p>
+  <p style="font-family:Tahoma;text-align:center;margin-top:40px">
+    برای بازگشت از سامان از <code>sep-callback.php</code> استفاده کنید.
+  </p>
 </body>
 </html>
