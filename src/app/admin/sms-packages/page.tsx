@@ -8,7 +8,11 @@ import {
   CardContent,
   Chip,
   CircularProgress,
+  FormControl,
+  FormControlLabel,
   Grid,
+  Radio,
+  RadioGroup,
   Typography,
 } from "@mui/material";
 import SmsIcon from "@mui/icons-material/Sms";
@@ -27,11 +31,13 @@ import {
 } from "@/app/lib/smsPackages";
 import {
   consumePaymentReturn,
+  DEFAULT_PAYMENT_GATEWAYS,
   fetchPaymentsCatalog,
   formatToman,
   isPaymentsError,
   parseCatalogItem,
-  startZarinpalPayment,
+  startGatewayPayment,
+  type PaymentGatewayId,
   type PaymentsCatalogItem,
 } from "@/app/lib/atelierZarinpal";
 
@@ -74,6 +80,8 @@ export default function SmsPackagesPage() {
   const [orders, setOrders] = useState<SmsPackageOrder[]>([]);
   const [quotaKey, setQuotaKey] = useState(0);
   const [buyingId, setBuyingId] = useState<number | null>(null);
+  const [gateways, setGateways] = useState(DEFAULT_PAYMENT_GATEWAYS);
+  const [gateway, setGateway] = useState<PaymentGatewayId>("zarinpal");
 
   const loadData = useCallback(async () => {
     const token = tokenCode();
@@ -93,6 +101,12 @@ export default function SmsPackagesPage() {
         toast.error(getApiErrorMessage(catalogRes, "خطا در دریافت بسته‌ها"));
       } else if (catalogRes.sms_packages.length > 0) {
         setPackages(catalogRes.sms_packages);
+        if (catalogRes.gateways?.length) {
+          setGateways(catalogRes.gateways as typeof DEFAULT_PAYMENT_GATEWAYS);
+        }
+        if (catalogRes.default_gateway === "sep" || catalogRes.default_gateway === "zarinpal") {
+          setGateway(catalogRes.default_gateway);
+        }
       } else {
         const packagesRes = await FetchWithJwtClient("GET", "/api/sms-packages", token);
         if (packagesRes?.hasError) {
@@ -134,10 +148,11 @@ export default function SmsPackagesPage() {
     if (!token) return;
     setBuyingId(pkg.id);
     try {
-      const res = await startZarinpalPayment({
+      const res = await startGatewayPayment({
         token,
         type: "sms_package",
         itemId: pkg.id,
+        gateway,
         returnUrl: typeof window !== "undefined" ? window.location.href.split("#")[0] : "",
       });
       if (isPaymentsError(res)) {
@@ -153,6 +168,37 @@ export default function SmsPackagesPage() {
       <Box sx={{ mb: 2 }}>
         <ShopSmsQuotaCard key={quotaKey} />
       </Box>
+
+      <Card sx={{ ...packageCardSx, mb: 2, height: "auto" }}>
+        <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
+          <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: 14, mb: 0.75 }}>
+            انتخاب درگاه پرداخت
+          </Typography>
+          <FormControl>
+            <RadioGroup
+              row
+              value={gateway}
+              onChange={(e) => setGateway(e.target.value as PaymentGatewayId)}
+            >
+              {gateways.map((item) => (
+                <FormControlLabel
+                  key={item.id}
+                  value={item.id}
+                  control={
+                    <Radio
+                      size="small"
+                      sx={{ color: "var(--admin-accent)", "&.Mui-checked": { color: "var(--admin-accent)" } }}
+                    />
+                  }
+                  label={
+                    <Typography sx={{ color: "var(--admin-text)", fontSize: 13 }}>{item.name}</Typography>
+                  }
+                />
+              ))}
+            </RadioGroup>
+          </FormControl>
+        </CardContent>
+      </Card>
 
       {loading ? (
         <Box sx={{ py: 6, display: "flex", justifyContent: "center" }}>

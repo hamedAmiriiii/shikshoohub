@@ -8,12 +8,14 @@ import { useOilAuth } from "../OilAuth";
 import {
   OIL_PAYMENTS_API_BASE,
   consumePaymentReturn,
+  DEFAULT_PAYMENT_GATEWAYS,
   fetchPaymentStatus,
   fetchPaymentsCatalog,
   formatPlanDuration,
   formatToman,
   isPaymentsError,
-  startZarinpalPayment,
+  startGatewayPayment,
+  type PaymentGatewayId,
   type PaymentsCatalogItem,
 } from "@/app/lib/atelierZarinpal";
 
@@ -22,6 +24,8 @@ export default function OilPlansPage() {
   const [loading, setLoading] = useState(true);
   const [plans, setPlans] = useState<PaymentsCatalogItem[]>([]);
   const [buyingId, setBuyingId] = useState<number | null>(null);
+  const [gateways, setGateways] = useState(DEFAULT_PAYMENT_GATEWAYS);
+  const [gateway, setGateway] = useState<PaymentGatewayId>("zarinpal");
 
   const loadPlans = useCallback(async () => {
     const token = getOilToken();
@@ -37,6 +41,10 @@ export default function OilPlansPage() {
         return;
       }
       setPlans(res.shop_plans);
+      if (res.gateways?.length) setGateways(res.gateways as typeof DEFAULT_PAYMENT_GATEWAYS);
+      if (res.default_gateway === "sep" || res.default_gateway === "zarinpal") {
+        setGateway(res.default_gateway);
+      }
     } finally {
       setLoading(false);
     }
@@ -71,11 +79,12 @@ export default function OilPlansPage() {
     if (!token) return;
     setBuyingId(plan.id);
     try {
-      const res = await startZarinpalPayment({
+      const res = await startGatewayPayment({
         apiBase: OIL_PAYMENTS_API_BASE,
         token,
         type: "shop_plan",
         itemId: plan.id,
+        gateway,
         returnUrl: typeof window !== "undefined" ? window.location.href.split("#")[0] : "",
       });
       if (isPaymentsError(res)) {
@@ -89,8 +98,26 @@ export default function OilPlansPage() {
   return (
     <div className="oil-page">
       <p className="oil-muted" style={{ marginTop: 0 }}>
-        پس از پرداخت موفق در زرین‌پال، اعتبار مغازه خودکار تمدید می‌شود.
+        پس از پرداخت موفق، اعتبار مغازه خودکار تمدید می‌شود.
       </p>
+
+      <div className="oil-card" style={{ marginBottom: 16, padding: 12 }}>
+        <div style={{ fontWeight: 700, marginBottom: 8 }}>انتخاب درگاه پرداخت</div>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          {gateways.map((item) => (
+            <label key={item.id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <input
+                type="radio"
+                name="gateway"
+                value={item.id}
+                checked={gateway === item.id}
+                onChange={() => setGateway(item.id)}
+              />
+              {item.name}
+            </label>
+          ))}
+        </div>
+      </div>
 
       {loading ? (
         <div className="oil-empty">در حال بارگذاری پلن‌ها…</div>

@@ -7,6 +7,10 @@ import {
   Card,
   CardContent,
   CircularProgress,
+  FormControl,
+  FormControlLabel,
+  Radio,
+  RadioGroup,
   Typography,
 } from "@mui/material";
 import CardMembershipIcon from "@mui/icons-material/CardMembership";
@@ -18,12 +22,14 @@ import { adminButtonStartIconSx, adminPageSx } from "@/app/admin/theme/adminThem
 import {
   applyShopAccessFromPayment,
   consumePaymentReturn,
+  DEFAULT_PAYMENT_GATEWAYS,
   fetchPaymentStatus,
   fetchPaymentsCatalog,
   formatPlanDuration,
   formatToman,
   isPaymentsError,
-  startZarinpalPayment,
+  startGatewayPayment,
+  type PaymentGatewayId,
   type PaymentsCatalogItem,
 } from "@/app/lib/atelierZarinpal";
 
@@ -40,6 +46,8 @@ const packageCardSx = {
 export default function ShopPlansPage() {
   const [loading, setLoading] = useState(true);
   const [plans, setPlans] = useState<PaymentsCatalogItem[]>([]);
+  const [gateways, setGateways] = useState(DEFAULT_PAYMENT_GATEWAYS);
+  const [gateway, setGateway] = useState<PaymentGatewayId>("zarinpal");
   const [buyingId, setBuyingId] = useState<number | null>(null);
 
   const loadPlans = useCallback(async () => {
@@ -56,6 +64,12 @@ export default function ShopPlansPage() {
         return;
       }
       setPlans(res.shop_plans);
+      if (res.gateways?.length) {
+        setGateways(res.gateways as typeof DEFAULT_PAYMENT_GATEWAYS);
+      }
+      if (res.default_gateway === "sep" || res.default_gateway === "zarinpal") {
+        setGateway(res.default_gateway);
+      }
     } finally {
       setLoading(false);
     }
@@ -84,10 +98,11 @@ export default function ShopPlansPage() {
     if (!token) return;
     setBuyingId(plan.id);
     try {
-      const res = await startZarinpalPayment({
+      const res = await startGatewayPayment({
         token,
         type: "shop_plan",
         itemId: plan.id,
+        gateway,
         returnUrl: typeof window !== "undefined" ? window.location.href.split("#")[0] : "",
       });
       if (isPaymentsError(res)) {
@@ -100,9 +115,35 @@ export default function ShopPlansPage() {
 
   return (
     <Box sx={{ ...adminPageSx, p: 2, pb: 12 }}>
-      <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "13px", mb: 2 }}>
-        پس از پرداخت موفق در زرین‌پال، اعتبار فروشگاه خودکار تمدید می‌شود.
+      <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "13px", mb: 1.5 }}>
+        پس از پرداخت موفق، اعتبار فروشگاه خودکار تمدید می‌شود.
       </Typography>
+
+      <Card sx={{ ...packageCardSx, mb: 2, height: "auto" }}>
+        <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
+          <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: 14, mb: 0.75 }}>
+            انتخاب درگاه پرداخت
+          </Typography>
+          <FormControl>
+            <RadioGroup
+              row
+              value={gateway}
+              onChange={(e) => setGateway(e.target.value as PaymentGatewayId)}
+            >
+              {gateways.map((item) => (
+                <FormControlLabel
+                  key={item.id}
+                  value={item.id}
+                  control={<Radio size="small" sx={{ color: "var(--admin-accent)", "&.Mui-checked": { color: "var(--admin-accent)" } }} />}
+                  label={
+                    <Typography sx={{ color: "var(--admin-text)", fontSize: 13 }}>{item.name}</Typography>
+                  }
+                />
+              ))}
+            </RadioGroup>
+          </FormControl>
+        </CardContent>
+      </Card>
 
       {loading ? (
         <Box sx={{ py: 6, display: "flex", justifyContent: "center" }}>

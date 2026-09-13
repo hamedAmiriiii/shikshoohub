@@ -16,10 +16,38 @@ export type PaymentsCatalogItem = {
   is_active?: boolean;
 };
 
+export type PaymentGatewayId = "zarinpal" | "sep";
+
 export type PaymentsCatalog = {
   sms_packages: PaymentsCatalogItem[];
   shop_plans: PaymentsCatalogItem[];
+  gateways?: Array<{ id: PaymentGatewayId | string; name: string }>;
+  default_gateway?: PaymentGatewayId | string;
 };
+
+export const DEFAULT_PAYMENT_GATEWAYS: Array<{ id: PaymentGatewayId; name: string }> = [
+  { id: "zarinpal", name: "زرین‌پال" },
+  { id: "sep", name: "سامان کیش (SEP)" },
+];
+
+export function parsePaymentGateways(res: unknown): Array<{ id: PaymentGatewayId; name: string }> {
+  const obj = asRecord(res);
+  const nested = asRecord(obj?.data) ?? obj ?? {};
+  const raw = nested.gateways ?? obj?.gateways;
+  const list = asList(raw)
+    .map((item) => {
+      const row = asRecord(item);
+      if (!row) return null;
+      const id = String(row.id ?? row.gateway ?? "");
+      if (id !== "zarinpal" && id !== "sep") return null;
+      return {
+        id: id as PaymentGatewayId,
+        name: String(row.name ?? (id === "sep" ? "سامان کیش (SEP)" : "زرین‌پال")),
+      };
+    })
+    .filter((item): item is { id: PaymentGatewayId; name: string } => Boolean(item));
+  return list.length ? list : DEFAULT_PAYMENT_GATEWAYS;
+}
 
 export type ZarinpalReturn = {
   ok: boolean;
@@ -114,6 +142,13 @@ export function parsePaymentsCatalog(res: unknown): PaymentsCatalog {
     shop_plans: asList(planRaw)
       .map(parseCatalogItem)
       .filter((item): item is PaymentsCatalogItem => Boolean(item && item.is_active !== false)),
+    gateways: parsePaymentGateways(res),
+    default_gateway:
+      typeof nested.default_gateway === "string"
+        ? nested.default_gateway
+        : typeof obj?.default_gateway === "string"
+          ? obj.default_gateway
+          : "zarinpal",
   };
 }
 
@@ -221,10 +256,12 @@ export async function startZarinpalPayment(opts: {
   type: PaymentType;
   itemId: number;
   returnUrl?: string;
+  gateway?: PaymentGatewayId | string;
 }): Promise<{ redirected: true } | PaymentsError> {
   const returnUrl =
     opts.returnUrl ||
     (typeof window !== "undefined" ? window.location.href.split("#")[0] : "");
+  const gateway = opts.gateway || "zarinpal";
   const res = await paymentsFetch("POST", "/payments/start", {
     apiBase: opts.apiBase,
     token: opts.token,
@@ -232,10 +269,11 @@ export async function startZarinpalPayment(opts: {
       type: opts.type,
       item_id: opts.itemId,
       return_url: returnUrl,
+      gateway,
     },
   });
   let payload: Record<string, unknown> | PaymentsError = res;
-  if (isPaymentsError(payload) && opts.type === "sms_package") {
+  if (isPaymentsError(payload) && opts.type === "sms_package" && gateway === "zarinpal") {
     const fallback = await paymentsFetch("POST", `/sms-packages/${opts.itemId}/purchase`, {
       apiBase: opts.apiBase,
       token: opts.token,
@@ -252,6 +290,9 @@ export async function startZarinpalPayment(opts: {
   }
   return { redirected: true };
 }
+
+/** Alias واضح‌تر برای شروع پرداخت با انتخاب درگاه */
+export const startGatewayPayment = startZarinpalPayment;
 
 export async function fetchPaymentStatus(opts: {
   apiBase?: string;

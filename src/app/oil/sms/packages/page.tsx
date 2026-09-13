@@ -9,11 +9,13 @@ import OilSmsQuotaCard from "../../OilSmsQuotaCard";
 import {
   OIL_PAYMENTS_API_BASE,
   consumePaymentReturn,
+  DEFAULT_PAYMENT_GATEWAYS,
   fetchPaymentsCatalog,
   formatToman,
   isPaymentsError,
   parseCatalogItem,
-  startZarinpalPayment,
+  startGatewayPayment,
+  type PaymentGatewayId,
   type PaymentsCatalogItem,
 } from "@/app/lib/atelierZarinpal";
 import type { OilSmsPackageOrder } from "@/app/lib/oil/types";
@@ -42,6 +44,8 @@ export default function OilSmsPackagesPage() {
   const [lastPage, setLastPage] = useState(1);
   const [quotaKey, setQuotaKey] = useState(0);
   const [buyingId, setBuyingId] = useState<number | null>(null);
+  const [gateways, setGateways] = useState(DEFAULT_PAYMENT_GATEWAYS);
+  const [gateway, setGateway] = useState<PaymentGatewayId>("zarinpal");
 
   const loadPackages = useCallback(async () => {
     const token = getOilToken();
@@ -49,6 +53,10 @@ export default function OilSmsPackagesPage() {
     const catalog = await fetchPaymentsCatalog({ apiBase: OIL_PAYMENTS_API_BASE, token });
     if (!isPaymentsError(catalog) && catalog.sms_packages.length > 0) {
       setPackages(catalog.sms_packages);
+      if (catalog.gateways?.length) setGateways(catalog.gateways as typeof DEFAULT_PAYMENT_GATEWAYS);
+      if (catalog.default_gateway === "sep" || catalog.default_gateway === "zarinpal") {
+        setGateway(catalog.default_gateway);
+      }
       return;
     }
     const { oilListSmsPackages } = await import("@/app/lib/oil/api");
@@ -113,11 +121,12 @@ export default function OilSmsPackagesPage() {
     if (!token) return;
     setBuyingId(pkg.id);
     try {
-      const res = await startZarinpalPayment({
+      const res = await startGatewayPayment({
         apiBase: OIL_PAYMENTS_API_BASE,
         token,
         type: "sms_package",
         itemId: pkg.id,
+        gateway,
         returnUrl: typeof window !== "undefined" ? window.location.href.split("#")[0] : "",
       });
       if (isPaymentsError(res)) {
@@ -131,6 +140,24 @@ export default function OilSmsPackagesPage() {
   return (
     <div className="oil-page">
       <OilSmsQuotaCard showBuy={false} refreshKey={quotaKey} />
+
+      <div className="oil-card" style={{ marginBottom: 16, padding: 12 }}>
+        <div style={{ fontWeight: 700, marginBottom: 8 }}>انتخاب درگاه پرداخت</div>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          {gateways.map((item) => (
+            <label key={item.id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <input
+                type="radio"
+                name="gateway"
+                value={item.id}
+                checked={gateway === item.id}
+                onChange={() => setGateway(item.id)}
+              />
+              {item.name}
+            </label>
+          ))}
+        </div>
+      </div>
 
       {loading ? (
         <div className="oil-empty">در حال بارگذاری بسته‌ها…</div>

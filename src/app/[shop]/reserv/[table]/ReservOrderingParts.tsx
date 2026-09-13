@@ -8,6 +8,7 @@ import HistoryIcon from "@mui/icons-material/History";
 import LanguageIcon from "@mui/icons-material/Language";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
+import MenuIcon from "@mui/icons-material/Menu";
 import RemoveIcon from "@mui/icons-material/Remove";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import RoomServiceIcon from "@mui/icons-material/RoomService";
@@ -20,6 +21,8 @@ import {
   Button,
   IconButton,
   InputAdornment,
+  ListItemIcon,
+  ListItemText,
   Menu,
   MenuItem,
   Skeleton,
@@ -126,7 +129,11 @@ export function ReservHeader({
 }: HeaderProps) {
   const { t, locale, setLocale } = useReservI18n();
   const [langAnchor, setLangAnchor] = useState<null | HTMLElement>(null);
+  const [moreAnchor, setMoreAnchor] = useState<null | HTMLElement>(null);
   const langOpen = Boolean(langAnchor);
+  const moreOpen = Boolean(moreAnchor);
+  /** با فعال بودن خدمات، روی موبایل دکمه‌های اضافه داخل همبرگر می‌روند */
+  const compactOnMobile = showServiceShortcut;
   const iconBtn = {
     width: 44,
     height: 44,
@@ -136,6 +143,30 @@ export function ReservHeader({
     borderRadius: "14px",
     "&:hover": { bgcolor: theme.SURFACE_ALT },
   } as const;
+
+  const menuPaperSx = {
+    mt: 0.5,
+    minWidth: 180,
+    borderRadius: "12px",
+    bgcolor: theme.SURFACE,
+    border: `1px solid ${theme.BORDER}`,
+    boxShadow: "0 8px 24px rgba(26,23,18,0.12)",
+    "& .MuiMenuItem-root": {
+      fontFamily: APP_FONT_FAMILY,
+      fontWeight: 700,
+      fontSize: 14,
+      color: theme.TEXT,
+      py: 1.1,
+    },
+  } as const;
+
+  const moreBadgeCount = currentOrderCount + currentServiceCount;
+  const inlineActionsSx = compactOnMobile
+    ? { display: { xs: "none", md: "inline-flex" } }
+    : { display: "inline-flex" };
+  const hamburgerSx = compactOnMobile
+    ? { display: { xs: "inline-flex", md: "none" } }
+    : { display: "none" };
 
   return (
     <Box
@@ -212,7 +243,7 @@ export function ReservHeader({
           </Box>
         </Box>
 
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0, flexWrap: "wrap", justifyContent: "flex-end" }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0, justifyContent: "flex-end" }}>
           {showLanguageSwitch ? (
             <>
               <IconButton
@@ -230,30 +261,7 @@ export function ReservHeader({
                 onClose={() => setLangAnchor(null)}
                 anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
                 transformOrigin={{ vertical: "top", horizontal: "right" }}
-                slotProps={{
-                  paper: {
-                    sx: {
-                      mt: 0.5,
-                      minWidth: 140,
-                      borderRadius: "12px",
-                      bgcolor: theme.SURFACE,
-                      border: `1px solid ${theme.BORDER}`,
-                      boxShadow: "0 8px 24px rgba(26,23,18,0.12)",
-                      "& .MuiMenuItem-root": {
-                        fontFamily: APP_FONT_FAMILY,
-                        fontWeight: 700,
-                        fontSize: 14,
-                        color: theme.TEXT,
-                        py: 1.1,
-                      },
-                      "& .MuiMenuItem-root.Mui-selected": {
-                        bgcolor: ACCENT_SOFT,
-                        color: ACCENT_DARK,
-                        "&:hover": { bgcolor: ACCENT_SOFT },
-                      },
-                    },
-                  },
-                }}
+                slotProps={{ paper: { sx: menuPaperSx } }}
               >
                 {RESERV_LOCALES.map((item) => (
                   <MenuItem
@@ -262,6 +270,13 @@ export function ReservHeader({
                     onClick={() => {
                       setLocale(item.id);
                       setLangAnchor(null);
+                    }}
+                    sx={{
+                      "&.Mui-selected": {
+                        bgcolor: ACCENT_SOFT,
+                        color: ACCENT_DARK,
+                        "&:hover": { bgcolor: ACCENT_SOFT },
+                      },
                     }}
                   >
                     {t(item.id === "fa" ? "langFa" : item.id === "en" ? "langEn" : "langAr")}
@@ -288,10 +303,114 @@ export function ReservHeader({
           >
             {guestLabel}
           </Button>
-          <IconButton onClick={onToggleTheme} aria-label={themeMode === "dark" ? t("themeLight") : t("themeDark")} sx={{ ...iconBtn, width: 40, height: 40 }}>
+
+          {compactOnMobile ? (
+            <>
+              <IconButton
+                onClick={(e) => setMoreAnchor(e.currentTarget)}
+                aria-label={t("menu")}
+                aria-haspopup="menu"
+                aria-expanded={moreOpen}
+                sx={{ ...iconBtn, width: 40, height: 40, ...hamburgerSx }}
+              >
+                <Badge
+                  badgeContent={moreBadgeCount}
+                  color="error"
+                  max={9}
+                  invisible={moreBadgeCount <= 0}
+                  sx={{ "& .MuiBadge-badge": { fontSize: "0.55rem", minWidth: 14, height: 14 } }}
+                >
+                  <MenuIcon sx={{ fontSize: 20 }} />
+                </Badge>
+              </IconButton>
+              <Menu
+                anchorEl={moreAnchor}
+                open={moreOpen}
+                onClose={() => setMoreAnchor(null)}
+                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                transformOrigin={{ vertical: "top", horizontal: "right" }}
+                slotProps={{ paper: { sx: menuPaperSx } }}
+              >
+                <MenuItem
+                  onClick={() => {
+                    onToggleTheme();
+                    setMoreAnchor(null);
+                  }}
+                >
+                  <ListItemIcon sx={{ color: theme.TEXT, minWidth: 36 }}>
+                    {themeMode === "dark" ? (
+                      <LightModeIcon sx={{ fontSize: 20 }} />
+                    ) : (
+                      <DarkModeIcon sx={{ fontSize: 20 }} />
+                    )}
+                  </ListItemIcon>
+                  <ListItemText primary={themeMode === "dark" ? t("themeLight") : t("themeDark")} />
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    onCurrentOrders();
+                    setMoreAnchor(null);
+                  }}
+                >
+                  <ListItemIcon sx={{ color: theme.TEXT, minWidth: 36 }}>
+                    <Badge
+                      badgeContent={currentOrderCount}
+                      color="error"
+                      max={9}
+                      sx={{ "& .MuiBadge-badge": { fontSize: "0.55rem", minWidth: 14, height: 14 } }}
+                    >
+                      <RestaurantMenuIcon sx={{ fontSize: 20 }} />
+                    </Badge>
+                  </ListItemIcon>
+                  <ListItemText primary={t("foodOrdersAria")} />
+                </MenuItem>
+                {onCurrentServices ? (
+                  <MenuItem
+                    onClick={() => {
+                      onCurrentServices();
+                      setMoreAnchor(null);
+                    }}
+                  >
+                    <ListItemIcon sx={{ color: theme.TEXT, minWidth: 36 }}>
+                      <Badge
+                        badgeContent={currentServiceCount}
+                        color="error"
+                        max={9}
+                        sx={{ "& .MuiBadge-badge": { fontSize: "0.55rem", minWidth: 14, height: 14 } }}
+                      >
+                        <RoomServiceIcon sx={{ fontSize: 20 }} />
+                      </Badge>
+                    </ListItemIcon>
+                    <ListItemText primary={t("roomServicesAria")} />
+                  </MenuItem>
+                ) : null}
+                <MenuItem
+                  onClick={() => {
+                    onHistory();
+                    setMoreAnchor(null);
+                  }}
+                >
+                  <ListItemIcon sx={{ color: theme.TEXT, minWidth: 36 }}>
+                    <HistoryIcon sx={{ fontSize: 20 }} />
+                  </ListItemIcon>
+                  <ListItemText primary={t("pastOrdersAria")} />
+                </MenuItem>
+              </Menu>
+            </>
+          ) : null}
+
+          <IconButton
+            onClick={onToggleTheme}
+            aria-label={themeMode === "dark" ? t("themeLight") : t("themeDark")}
+            sx={{ ...iconBtn, width: 40, height: 40, ...inlineActionsSx }}
+          >
             {themeMode === "dark" ? <LightModeIcon sx={{ fontSize: 18 }} /> : <DarkModeIcon sx={{ fontSize: 18 }} />}
           </IconButton>
-          <IconButton onClick={onCurrentOrders} aria-label={t("foodOrdersAria")} sx={{ ...iconBtn, width: 40, height: 40 }}>
+          <IconButton
+            onClick={onCurrentOrders}
+            aria-label={t("foodOrdersAria")}
+            sx={{ ...iconBtn, width: 40, height: 40, ...inlineActionsSx }}
+          >
             <Badge
               badgeContent={currentOrderCount}
               color="error"
@@ -302,7 +421,11 @@ export function ReservHeader({
             </Badge>
           </IconButton>
           {showServiceShortcut ? (
-            <IconButton onClick={onCurrentServices} aria-label={t("roomServicesAria")} sx={{ ...iconBtn, width: 40, height: 40 }}>
+            <IconButton
+              onClick={onCurrentServices}
+              aria-label={t("roomServicesAria")}
+              sx={{ ...iconBtn, width: 40, height: 40, ...inlineActionsSx }}
+            >
               <Badge
                 badgeContent={currentServiceCount}
                 color="error"
@@ -313,7 +436,11 @@ export function ReservHeader({
               </Badge>
             </IconButton>
           ) : null}
-          <IconButton onClick={onHistory} aria-label={t("pastOrdersAria")} sx={{ ...iconBtn, width: 40, height: 40 }}>
+          <IconButton
+            onClick={onHistory}
+            aria-label={t("pastOrdersAria")}
+            sx={{ ...iconBtn, width: 40, height: 40, ...inlineActionsSx }}
+          >
             <HistoryIcon sx={{ fontSize: 18 }} />
           </IconButton>
         </Box>
