@@ -345,12 +345,15 @@ export function getAdminRestaurantName(): string {
   try {
     const user = JSON.parse(localStorage.getItem("user") || "{}") as Record<string, unknown>;
     const atelier = asRecord(user.atelier);
+    const shop = asRecord(user.shop);
     const candidates = [
       user.atelier_name,
       user.shop_name,
       atelier?.name,
       atelier?.atelier_name,
       atelier?.shop_name,
+      shop?.name,
+      shop?.shop_name,
     ];
     for (const value of candidates) {
       if (typeof value === "string" && value.trim()) return value.trim();
@@ -359,6 +362,26 @@ export function getAdminRestaurantName(): string {
     // ignore
   }
   return "";
+}
+
+/** نام فروشگاه را از API عمومی می‌گیرد (برای پوستر QR وقتی localStorage خالی باشد) */
+export async function fetchAdminRestaurantName(shopCode?: string | null): Promise<string> {
+  const local = getAdminRestaurantName();
+  if (local) return local;
+  const code = (shopCode || getAdminShopCode() || "").trim();
+  if (!code || typeof window === "undefined") return "";
+  try {
+    const base = (process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoo-plus.ir").replace(/\/$/, "");
+    const res = await fetch(`${base}/api/${encodeURIComponent(code)}`, {
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return "";
+    const data = (await res.json()) as { shop?: { name?: string }; name?: string };
+    const name = data?.shop?.name || data?.name;
+    return typeof name === "string" && name.trim() ? name.trim() : "";
+  } catch {
+    return "";
+  }
 }
 
 export type TableQrPosterTheme = "luxury" | "simple";
@@ -420,12 +443,25 @@ async function fetchQrSvgMarkup(link: string, size = 512): Promise<string> {
   return text;
 }
 
-function composeSimpleQrSvg(qr: { content: string; size: number }): string {
-  const card = 340;
-  const scale = card / qr.size;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${card} ${card}" width="${card}" height="${card}">
-  <rect width="${card}" height="${card}" fill="#ffffff"/>
-  <g transform="scale(${scale})">${qr.content}</g>
+function composeSimpleQrSvg(
+  qr: { content: string; size: number },
+  tableTitle: string,
+  restaurantName: string,
+): string {
+  const cardW = 340;
+  const cardH = 400;
+  const shop = restaurantName.trim() || "فروشگاه";
+  const table = tableTitle.trim() || "میز";
+  const qrBox = 240;
+  const qrX = (cardW - qrBox) / 2;
+  const qrY = 72;
+  const scale = qrBox / qr.size;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${cardW} ${cardH}" width="${cardW}" height="${cardH}">
+  <rect width="${cardW}" height="${cardH}" fill="#ffffff"/>
+  <text x="${cardW / 2}" y="36" fill="#14110c" font-size="18" font-weight="700" text-anchor="middle" font-family="Vazirmatn, IRANSans, Tahoma, sans-serif">${escapeXml(shop)}</text>
+  <text x="${cardW / 2}" y="58" fill="#5a554c" font-size="13" font-weight="600" text-anchor="middle" font-family="Vazirmatn, IRANSans, Tahoma, sans-serif">${escapeXml(table)}</text>
+  <g transform="translate(${qrX} ${qrY}) scale(${scale})">${qr.content}</g>
+  <text x="${cardW / 2}" y="${qrY + qrBox + 28}" fill="#5a554c" font-size="12" text-anchor="middle" font-family="Vazirmatn, IRANSans, Tahoma, sans-serif">اسکن کنید و سفارش ثبت کنید</text>
 </svg>`;
 }
 
@@ -436,7 +472,7 @@ function composeLuxuryQrSvg(
 ): string {
   const cardW = 340;
   const cardH = 340;
-  const shop = restaurantName.trim() || "رستوران";
+  const shop = restaurantName.trim() || "فروشگاه";
   const table = tableTitle.trim() || "میز";
   const gid = `g${Math.abs(hashCode(`${shop}|${table}|${qr.size}`)).toString(36)}`;
   const plaqueW = cardW - 48;
@@ -497,7 +533,9 @@ export async function composeTableQrPoster(
 ): Promise<string> {
   const qr = parseQrSvg(await fetchQrSvgMarkup(link, Math.max(qrSize, 400)));
   const markup =
-    theme === "simple" ? composeSimpleQrSvg(qr) : composeLuxuryQrSvg(qr, tableTitle, restaurantName);
+    theme === "simple"
+      ? composeSimpleQrSvg(qr, tableTitle, restaurantName)
+      : composeLuxuryQrSvg(qr, tableTitle, restaurantName);
   return svgDataUrl(markup);
 }
 

@@ -25,7 +25,7 @@ import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import PhoneIphoneIcon from "@mui/icons-material/PhoneIphone";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
-import { useParams, usePathname } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import { apiRequestError } from "@/app/lib/apiRequestError";
 import { APP_FONT_FAMILY } from "@/app/lib/appFont";
 import { useShopStorefront } from "@/app/context/ShopContext";
@@ -401,6 +401,7 @@ function TableReservPageBody() {
   const { t, dir, locale, formatNumber, formatDateTime, translatePlace, translatePayMethod } = useReservI18n();
   const params = useParams();
   const pathname = usePathname();
+  const router = useRouter();
   const placeKind = placeKindFromPathname(pathname);
   const { shopCode, shopApi, shop } = useShopStorefront();
   const tableNumber = Number(params?.table);
@@ -578,6 +579,15 @@ function TableReservPageBody() {
       }
       const info = extractShopTableInfo(res, tableNumber);
       setTableInfo(info);
+      // اگر اتاق با مسیر /reserv باز شده باشد، به /room هدایت کن (و برعکس)
+      if (info.kind && info.kind !== placeKind && shopCode) {
+        const target =
+          info.kind === "room"
+            ? `/${shopCode}/room/${tableNumber}`
+            : `/${shopCode}/reserv/${tableNumber}`;
+        router.replace(target);
+        return;
+      }
       if (info.allowServices === true || extractRoomServicesEnabled(res)) setServicesEnabled(true);
       if (info.allowServices === false) setServicesEnabled(false);
       const methods = info.paymentMethods?.length
@@ -592,7 +602,7 @@ function TableReservPageBody() {
         label: `${shopPlaceNoun(placeKind)} ${tableNumber}`,
       });
     }
-  }, [placeKind, shop, shopApi, shopCode, tableNumber, validTable]);
+  }, [placeKind, router, shop, shopApi, shopCode, tableNumber, validTable]);
 
   const loadProducts = useCallback(
     async (pageNum: number, isInitial: boolean) => {
@@ -652,7 +662,7 @@ function TableReservPageBody() {
 
   useEffect(() => {
     void loadTable();
-  }, [placeKind, shop, shopCode, tableNumber, validTable]);
+  }, [loadTable]);
 
   useEffect(() => {
     if (!shopCode) return;
@@ -668,7 +678,7 @@ function TableReservPageBody() {
 
   useEffect(() => {
     void loadServices();
-  }, [shopCode]);
+  }, [loadServices, shopCode]);
 
   useEffect(() => {
     if (!shopCode) return;
@@ -793,10 +803,20 @@ function TableReservPageBody() {
   }, [search, services]);
 
   useEffect(() => {
-    if (!allowMenu || (allowServices && menuProducts.length === 0 && services.length > 0)) {
+    if (!allowMenu) {
+      setCatalogMode("services");
+      return;
+    }
+    // تا وقتی منو در حال لود است، روی services نپر (ریس با لود سریع‌تر خدمات)
+    if (productsLoading) return;
+    if (menuProducts.length > 0) {
+      setCatalogMode("menu");
+      return;
+    }
+    if (allowServices && services.length > 0) {
       setCatalogMode("services");
     }
-  }, [allowMenu, allowServices, menuProducts.length, services.length]);
+  }, [allowMenu, allowServices, menuProducts.length, productsLoading, services.length]);
 
   const qtyOf = (product: Product | string) => {
     const key = typeof product === "string" ? product : catalogItemKey(product);
@@ -847,7 +867,23 @@ function TableReservPageBody() {
   const detailQty = detailProduct ? qtyOf(detailProduct) : 0;
   const tableLabel = tableInfo?.label || `${shopPlaceNoun(placeKind)} ${tableNumber}`;
   const displayPlaceLabel = translatePlace(tableLabel, placeKind);
-  const shopTitle = tableInfo?.shopName || shop?.name || shopCode || t("shop");
+  const nestedShop = shop && typeof shop.shop === "object" ? (shop.shop as { name?: string }) : null;
+  const shopTitle =
+    tableInfo?.shopName ||
+    shop?.name ||
+    nestedShop?.name ||
+    (typeof shop?.atelier_name === "string" ? shop.atelier_name : undefined) ||
+    t("shop");
+
+  useEffect(() => {
+    if (!shopTitle || shopTitle === t("shop")) return;
+    const prev = document.title;
+    document.title = shopTitle;
+    return () => {
+      document.title = prev;
+    };
+  }, [shopTitle, t]);
+
   const normalizedPhone = normalizeGuestPhone(phone);
   const phoneReady = isValidGuestPhone(normalizedPhone);
   const canUseCredit = phoneReady && hasCredit && credit > 0;

@@ -97,7 +97,15 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         setShopError(message);
         return;
       }
-      setShop(res as ShopInfo);
+      // API معمولاً { shop: { name, code, ... }, settings } برمی‌گرداند
+      if (res?.shop && typeof res.shop === "object") {
+        setShop({
+          ...(typeof res === "object" ? res : {}),
+          ...(res.shop as object),
+        } as ShopInfo);
+      } else {
+        setShop(res as ShopInfo);
+      }
       console.log("[ShopContext] refreshShop:success");
     } catch (error) {
       console.error("[ShopContext] refreshShop:catch", error);
