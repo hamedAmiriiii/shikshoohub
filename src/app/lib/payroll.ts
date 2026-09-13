@@ -2,11 +2,14 @@ import DateObject from "react-date-object";
 import persian from "react-date-object/calendars/persian";
 import persian_fa from "react-date-object/locales/persian_fa";
 
+export type SalaryType = "monthly" | "daily";
+
 export type Employee = {
   id: number;
   name: string;
   phone?: string;
   username?: string;
+  salary_type?: SalaryType | string;
   base_salary?: number;
   base_work_hours?: number;
   hourly_wage?: number;
@@ -19,6 +22,8 @@ export type PayrollSalaryBreakdown = {
   base_work_hours?: number;
   overtime_hours?: number;
   overtime_amount?: number;
+  days_worked?: number;
+  salary_type?: SalaryType | string;
 };
 
 export type PayrollStatus = "pending" | "partial" | "paid" | string;
@@ -45,7 +50,11 @@ export type Payroll = {
   payroll_year?: number;
   payroll_month?: number;
   hours_worked: number;
+  days_worked?: number;
+  salary_type_snapshot?: SalaryType | string;
   hourly_wage?: number;
+  overtime_hours?: number;
+  overtime_amount?: number;
   salary_amount?: number | string;
   salary_breakdown?: PayrollSalaryBreakdown;
   total_paid?: number | string;
@@ -244,17 +253,48 @@ export function paymentTypeLabel(type?: PayrollPaymentType): string {
   return "پرداخت حقوق";
 }
 
-export function estimateSalaryFromEmployee(employee: Employee | undefined, hoursWorked: number): number {
-  if (!employee || hoursWorked <= 0) return 0;
+export function isDailySalaryEmployee(employee?: Employee | null): boolean {
+  return (employee?.salary_type || "monthly") === "daily";
+}
+
+export function getPayrollSalaryType(
+  payroll?: Payroll | null,
+  employee?: Employee | null,
+): SalaryType {
+  const raw =
+    payroll?.salary_type_snapshot ||
+    payroll?.salary_breakdown?.salary_type ||
+    employee?.salary_type ||
+    payroll?.employee?.salary_type ||
+    "monthly";
+  return raw === "daily" ? "daily" : "monthly";
+}
+
+export function estimateSalaryFromEmployee(
+  employee: Employee | undefined,
+  hoursWorked: number,
+  daysWorked = 0,
+  overtimeHours = 0,
+): number {
+  if (!employee) return 0;
+
+  if (isDailySalaryEmployee(employee)) {
+    if (daysWorked <= 0 && overtimeHours <= 0) return 0;
+    const dailyWage = Number(employee.base_salary) || 0;
+    const overtimeHourly = Number(employee.hourly_wage) || 0;
+    return Math.round(dailyWage * daysWorked + overtimeHourly * overtimeHours);
+  }
+
+  if (hoursWorked <= 0) return 0;
   const baseSalary = Number(employee.base_salary) || 0;
   const baseHours = Number(employee.base_work_hours) || 0;
   const overtimeHourly = Number(employee.hourly_wage) || 0;
 
   if (baseHours > 0 && baseSalary > 0) {
     const regularHours = Math.min(hoursWorked, baseHours);
-    const overtimeHours = Math.max(0, hoursWorked - baseHours);
+    const otHours = Math.max(0, hoursWorked - baseHours);
     const regularPay = (baseSalary / baseHours) * regularHours;
-    return Math.round(regularPay + overtimeHours * overtimeHourly);
+    return Math.round(regularPay + otHours * overtimeHourly);
   }
 
   if (overtimeHourly > 0) return Math.round(hoursWorked * overtimeHourly);
@@ -265,14 +305,21 @@ export function buildPayrollBody(
   employeeId: number,
   year: number,
   month: number,
-  hours: number,
+  input: { hours?: number; days?: number; overtimeHours?: number },
 ): Record<string, number> {
-  return {
+  const body: Record<string, number> = {
     shop_employee_id: employeeId,
     payroll_year: year,
     payroll_month: month,
-    hours_worked: hours,
   };
+  if (input.days != null && input.days > 0) {
+    body.days_worked = input.days;
+    body.overtime_hours = Number(input.overtimeHours) || 0;
+    body.hours_worked = 0;
+  } else {
+    body.hours_worked = Number(input.hours) || 0;
+  }
+  return body;
 }
 
 export function buildAdvanceBody(input: {
@@ -297,7 +344,7 @@ export function buildAdvanceBody(input: {
 }
 
 export function hasPayrollHours(p: Payroll): boolean {
-  return Number(p.hours_worked) > 0;
+  return Number(p.hours_worked) > 0 || Number(p.days_worked) > 0 || Number(p.salary_amount) > 0;
 }
 
 export type PayrollPayslip = {
@@ -306,7 +353,10 @@ export type PayrollPayslip = {
   employeePhone: string;
   periodLabel: string;
   statusLabel: string;
+  salaryType: SalaryType;
   hoursWorked: number;
+  daysWorked: number;
+  dailyWage: number;
   baseHours: number;
   overtimeHours: number;
   shortageHours: number;
@@ -359,26 +409,48 @@ export function buildPayrollPayslip(
 ): PayrollPayslip {
   const emp = employee || payroll.employee;
   const breakdown = payroll.salary_breakdown;
+  const salaryType = getPayrollSalaryType(payroll, emp);
   const hoursWorked = Number(payroll.hours_worked) || 0;
+  const daysWorked =
+    Number(breakdown?.days_worked) || Number(payroll.days_worked) || 0;
   const baseHours =
     Number(breakdown?.base_work_hours) || Number(emp?.base_work_hours) || 0;
   const baseSalary =
     Number(breakdown?.base_salary) || Number(emp?.base_salary) || 0;
   const overtimeHourly =
     Number(emp?.hourly_wage) || Number(payroll.hourly_wage) || 0;
-  const hourlyRate = baseHours > 0 && baseSalary > 0 ? baseSalary / baseHours : 0;
+  const hourlyRate =
+    salaryType === "daily"
+      ? 0
+      : baseHours > 0 && baseSalary > 0
+        ? baseSalary / baseHours
+        : 0;
   const overtimeHours =
     Number(breakdown?.overtime_hours) ||
-    (baseHours > 0 ? Math.max(0, hoursWorked - baseHours) : 0);
+    Number(payroll.overtime_hours) ||
+    (salaryType === "daily"
+      ? 0
+      : baseHours > 0
+        ? Math.max(0, hoursWorked - baseHours)
+        : 0);
   const shortageHours =
-    hoursWorked > 0 && baseHours > 0 ? Math.max(0, baseHours - hoursWorked) : 0;
+    salaryType === "daily"
+      ? 0
+      : hoursWorked > 0 && baseHours > 0
+        ? Math.max(0, baseHours - hoursWorked)
+        : 0;
   const regularHours =
-    hoursWorked > 0 && baseHours > 0
-      ? Math.min(hoursWorked, baseHours)
-      : hoursWorked;
+    salaryType === "daily"
+      ? 0
+      : hoursWorked > 0 && baseHours > 0
+        ? Math.min(hoursWorked, baseHours)
+        : hoursWorked;
   const overtimePay =
     Number(breakdown?.overtime_amount) || Math.round(overtimeHours * overtimeHourly);
-  const regularPay = Math.round(hourlyRate * regularHours);
+  const regularPay =
+    salaryType === "daily"
+      ? Math.round(baseSalary * daysWorked)
+      : Math.round(hourlyRate * regularHours);
   const shortageAmount = Math.round(hourlyRate * shortageHours);
   const salary = getPayrollSalary(payroll);
   const payments = getPayrollPayments(payroll).map((payment) => ({
@@ -404,7 +476,10 @@ export function buildPayrollPayslip(
     employeePhone: emp?.phone || "—",
     periodLabel: formatJalaliYearMonth(getPayrollYear(payroll), getPayrollMonth(payroll)),
     statusLabel: payrollStatusLabel(getPayrollStatus(payroll)),
+    salaryType,
     hoursWorked,
+    daysWorked,
+    dailyWage: salaryType === "daily" ? baseSalary : 0,
     baseHours,
     overtimeHours,
     shortageHours,
@@ -419,7 +494,7 @@ export function buildPayrollPayslip(
     otherPayments,
     totalPaid: getPayrollTotalPaid(payroll),
     remaining: getPayrollRemaining(payroll),
-    hasHours: hoursWorked > 0,
+    hasHours: hoursWorked > 0 || daysWorked > 0,
     payments,
   };
 }

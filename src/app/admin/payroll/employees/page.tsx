@@ -16,6 +16,7 @@ import {
   Grid,
   IconButton,
   InputAdornment,
+  MenuItem,
   Table,
   TableBody,
   TableCell,
@@ -43,10 +44,12 @@ import {
   extractSettings,
   formatInputWithSeparator,
   formatNumber,
+  isDailySalaryEmployee,
   normalizePhoneDigits,
   normalizeSearchText,
   parseAmount,
   type Employee,
+  type SalaryType,
 } from "@/app/lib/payroll";
 import {
   fetchShopPermissionsCatalog,
@@ -95,6 +98,7 @@ export default function PayrollEmployeesPage() {
   const [baseSalary, setBaseSalary] = useState("");
   const [baseWorkHours, setBaseWorkHours] = useState("");
   const [hourlyWage, setHourlyWage] = useState("");
+  const [salaryType, setSalaryType] = useState<SalaryType>("monthly");
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
   const [defaultHours, setDefaultHours] = useState("");
   const [defaultHourly, setDefaultHourly] = useState("");
@@ -152,6 +156,7 @@ export default function PayrollEmployeesPage() {
     setEmployeePhone("");
     setEmployeePassword("");
     setSelectedPermissions([]);
+    setSalaryType("monthly");
     setBaseSalary("");
     setBaseWorkHours(defaultHours ? formatNumber(parseAmount(defaultHours)) : "");
     setHourlyWage(defaultHourly ? formatNumber(parseAmount(defaultHourly)) : "");
@@ -164,6 +169,7 @@ export default function PayrollEmployeesPage() {
     setEmployeePhone(employee.phone || employee.username || "");
     setEmployeePassword("");
     setSelectedPermissions(employeePermissionKeys(employee));
+    setSalaryType(isDailySalaryEmployee(employee) ? "daily" : "monthly");
     setBaseSalary(employee.base_salary != null ? formatNumber(Number(employee.base_salary)) : "");
     setBaseWorkHours(employee.base_work_hours != null ? formatNumber(Number(employee.base_work_hours)) : "");
     setHourlyWage(employee.hourly_wage != null ? formatNumber(Number(employee.hourly_wage)) : "");
@@ -200,10 +206,10 @@ export default function PayrollEmployeesPage() {
     const hours = parseAmount(baseWorkHours);
     const wage = parseAmount(hourlyWage);
     if (salary <= 0) {
-      toast.error("پایه حقوق را وارد کنید");
+      toast.error(salaryType === "daily" ? "دستمزد روزانه را وارد کنید" : "پایه حقوق را وارد کنید");
       return;
     }
-    if (hours <= 0) {
+    if (salaryType === "monthly" && hours <= 0) {
       toast.error("ساعات کارکرد برای دریافت پایه حقوق را وارد کنید");
       return;
     }
@@ -217,8 +223,9 @@ export default function PayrollEmployeesPage() {
       const body: Record<string, unknown> = {
         name: employeeName.trim(),
         phone: phone || null,
+        salary_type: salaryType,
         base_salary: salary,
-        base_work_hours: hours,
+        base_work_hours: salaryType === "daily" ? 0 : hours,
         hourly_wage: wage,
       };
       if (owner) {
@@ -339,15 +346,17 @@ export default function PayrollEmployeesPage() {
                     <TableCell>نام</TableCell>
                     <TableCell>تلفن / نام کاربری</TableCell>
                     <TableCell>دسترسی‌ها</TableCell>
-                    <TableCell align="center">پایه حقوق</TableCell>
+                    <TableCell align="center">نوع حقوق</TableCell>
+                    <TableCell align="center">پایه / روزانه</TableCell>
                     <TableCell align="center">ساعات پایه</TableCell>
-                    <TableCell align="center">دستمزد ساعتی</TableCell>
+                    <TableCell align="center">اضافه‌کار ساعتی</TableCell>
                     <TableCell align="center">عملیات</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {filteredEmployees.map((e) => {
                     const keys = employeePermissionKeys(e);
+                    const daily = isDailySalaryEmployee(e);
                     return (
                       <TableRow key={e.id}>
                         <TableCell>{e.name}</TableCell>
@@ -367,11 +376,16 @@ export default function PayrollEmployeesPage() {
                             ? "بدون دسترسی ورود"
                             : keys.map((key) => permissionTitle(key)).join("، ")}
                         </TableCell>
+                        <TableCell align="center">{daily ? "روزانه" : "ماهانه"}</TableCell>
                         <TableCell align="center">
                           {e.base_salary ? `${formatNumber(Number(e.base_salary))} تومان` : "—"}
                         </TableCell>
                         <TableCell align="center">
-                          {e.base_work_hours ? `${formatNumber(Number(e.base_work_hours))} ساعت` : "—"}
+                          {daily
+                            ? "—"
+                            : e.base_work_hours
+                              ? `${formatNumber(Number(e.base_work_hours))} ساعت`
+                              : "—"}
                         </TableCell>
                         <TableCell align="center">
                           {e.hourly_wage ? `${formatNumber(Number(e.hourly_wage))} تومان` : "—"}
@@ -431,21 +445,39 @@ export default function PayrollEmployeesPage() {
               />
             ) : null}
             <TextField
+              select
               size="small"
-              label="پایه حقوق (تومان)"
+              label="نوع حقوق"
+              value={salaryType}
+              onChange={(e) => setSalaryType(e.target.value as SalaryType)}
+              sx={fieldSx}
+              helperText={
+                salaryType === "daily"
+                  ? "حقوق = روز کارکرد × دستمزد روزانه + ساعت اضافه‌کار × نرخ ساعتی"
+                  : "حقوق ماهانه بر اساس ساعت کارکرد و پایه حقوق"
+              }
+            >
+              <MenuItem value="monthly">ماهانه</MenuItem>
+              <MenuItem value="daily">روزانه (دستمزد روزانه)</MenuItem>
+            </TextField>
+            <TextField
+              size="small"
+              label={salaryType === "daily" ? "دستمزد هر روز (تومان)" : "پایه حقوق (تومان)"}
               value={baseSalary}
               onChange={(e) => setBaseSalary(formatInputWithSeparator(e.target.value))}
               sx={fieldSx}
               inputProps={{ inputMode: "numeric", style: { direction: "ltr", textAlign: "right" } }}
             />
-            <TextField
-              size="small"
-              label="ساعات کارکرد برای دریافت پایه"
-              value={baseWorkHours}
-              onChange={(e) => setBaseWorkHours(formatInputWithSeparator(e.target.value))}
-              sx={fieldSx}
-              inputProps={{ inputMode: "numeric", style: { direction: "ltr", textAlign: "right" } }}
-            />
+            {salaryType === "monthly" ? (
+              <TextField
+                size="small"
+                label="ساعات کارکرد برای دریافت پایه"
+                value={baseWorkHours}
+                onChange={(e) => setBaseWorkHours(formatInputWithSeparator(e.target.value))}
+                sx={fieldSx}
+                inputProps={{ inputMode: "numeric", style: { direction: "ltr", textAlign: "right" } }}
+              />
+            ) : null}
             <TextField
               size="small"
               label="دستمزد ساعتی اضافه‌کار (تومان)"

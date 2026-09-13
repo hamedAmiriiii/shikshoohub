@@ -84,6 +84,8 @@ export type SaleReceiptPrintSettings = {
   printExtra: boolean;
   kitchenTitle: string;
   extraTitle: string;
+  /** یک پرینتر فیزیکی — گفتگوی چاپ مرورگر/ویندوز، بدون QZ */
+  singlePrinterNoQz: boolean;
   silentPrint: boolean;
   hallPrinter: string;
   kitchenPrinter: string;
@@ -116,6 +118,7 @@ export const DEFAULT_SALE_RECEIPT_PRINT_SETTINGS: SaleReceiptPrintSettings = {
   printExtra: false,
   kitchenTitle: "آشپزخانه",
   extraTitle: "بار",
+  singlePrinterNoQz: false,
   silentPrint: true,
   hallPrinter: "",
   kitchenPrinter: "",
@@ -172,6 +175,7 @@ function normalizeSaleReceiptPrintSettings(
   merged.printExtra = Boolean(merged.printExtra);
   merged.kitchenTitle = String(merged.kitchenTitle || "آشپزخانه").slice(0, 40);
   merged.extraTitle = String(merged.extraTitle || "بار").slice(0, 40);
+  merged.singlePrinterNoQz = Boolean(merged.singlePrinterNoQz);
   merged.silentPrint = merged.silentPrint !== false;
   merged.hallPrinter = String(merged.hallPrinter || "").slice(0, 120);
   merged.kitchenPrinter = String(merged.kitchenPrinter || "").slice(0, 120);
@@ -447,7 +451,7 @@ async function dispatchReceiptPrintWithSettings(
     saveSaleReceiptPrintData(receipt);
   }
 
-  if (receipt && settings.silentPrint !== false) {
+  if (receipt && settings.silentPrint !== false && !settings.singlePrinterNoQz) {
     try {
       const { canSilentPrint, silentPrintReceiptStations } = await import(
         "@/app/lib/qzSilentPrint"
@@ -463,21 +467,27 @@ async function dispatchReceiptPrintWithSettings(
     }
   }
 
-  // No QZ printers configured: open preview page only when not in auto/direct mode.
-  if (basePath.includes("direct=1")) {
+  // No QZ printers configured (or تک‌پرینتر بدون QZ): open preview page only when not in auto/direct mode.
+  if (basePath.includes("direct=1") && !settings.singlePrinterNoQz) {
     return "failed";
   }
   window.open(basePath, "_blank", "noopener,noreferrer");
   return "dialog";
 }
 
-/** Fully silent print for POS / table orders. Never redirects. */
+/** Fully silent print for POS / table orders. Never redirects — unless تک‌پرینتر بدون QZ. */
 export async function silentPrintSaleReceiptOrFail(
   data: SaleReceiptData,
   settings?: SaleReceiptPrintSettings,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const resolved = settings ?? readSaleReceiptPrintSettings();
   saveSaleReceiptPrintData(data);
+
+  if (resolved.singlePrinterNoQz) {
+    openSaleReceiptPrintPage("/admin/print/sale", data);
+    return { ok: true };
+  }
+
   try {
     const { canSilentPrint, silentPrintReceiptStations } = await import(
       "@/app/lib/qzSilentPrint"

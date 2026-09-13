@@ -159,6 +159,7 @@ function StationSettingsDialog({
   settings,
   printers,
   busy,
+  hidePrinterSelect = false,
   onClose,
   onSave,
   onTest,
@@ -168,6 +169,7 @@ function StationSettingsDialog({
   settings: SaleReceiptPrintSettings;
   printers: string[];
   busy: boolean;
+  hidePrinterSelect?: boolean;
   onClose: () => void;
   onSave: (partial: Partial<SaleReceiptPrintSettings>) => void;
   onTest: (station: ReceiptPrintStation, printer: string, layout: StationTicketLayout) => void;
@@ -249,21 +251,27 @@ function StationSettingsDialog({
           />
         )}
 
-        <Select
-          size="small"
-          displayEmpty
-          value={draft.printer}
-          onChange={(e) => setDraft({ ...draft, printer: String(e.target.value) })}
-          sx={fieldSx}
-          MenuProps={menuProps}
-        >
-          <MenuItem value="">پرینتر پیش‌فرض ویندوز</MenuItem>
-          {options.map((name) => (
-            <MenuItem key={name} value={name}>
-              {name}
-            </MenuItem>
-          ))}
-        </Select>
+        {!hidePrinterSelect ? (
+          <Select
+            size="small"
+            displayEmpty
+            value={draft.printer}
+            onChange={(e) => setDraft({ ...draft, printer: String(e.target.value) })}
+            sx={fieldSx}
+            MenuProps={menuProps}
+          >
+            <MenuItem value="">پرینتر پیش‌فرض ویندوز</MenuItem>
+            {options.map((name) => (
+              <MenuItem key={name} value={name}>
+                {name}
+              </MenuItem>
+            ))}
+          </Select>
+        ) : (
+          <Typography sx={{ fontSize: 12, color: "var(--admin-text-secondary)" }}>
+            پرینتر از گفتگوی چاپ ویندوز انتخاب می‌شود.
+          </Typography>
+        )}
 
         <Select
           size="small"
@@ -379,15 +387,17 @@ function StationSettingsDialog({
         )}
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
-        <Button
-          size="small"
-          variant="outlined"
-          disabled={busy || !draft.printer}
-          onClick={() => onTest(station, draft.printer, draft.layout)}
-          sx={outlinedBtnSx}
-        >
-          تست
-        </Button>
+        {!hidePrinterSelect ? (
+          <Button
+            size="small"
+            variant="outlined"
+            disabled={busy || !draft.printer}
+            onClick={() => onTest(station, draft.printer, draft.layout)}
+            sx={outlinedBtnSx}
+          >
+            تست
+          </Button>
+        ) : null}
         <Button size="small" onClick={onClose} sx={{ color: "var(--admin-text-secondary)" }}>
           انصراف
         </Button>
@@ -473,6 +483,23 @@ export function StationPrinterSettings({
 
   return (
     <Box sx={{ gridColumn: "1 / -1", display: "grid", gap: 1 }}>
+      {!listMode ? (
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", py: 0.25 }}>
+          <Box>
+            <Typography sx={{ fontSize: 13, fontWeight: 600 }}>یک پرینتر (بدون QZ)</Typography>
+            <Typography sx={{ fontSize: 11, color: "var(--admin-text-secondary)" }}>
+              گفتگوی چاپ ویندوز — بدون انتخاب پرینتر جدا و بدون QZ Tray
+            </Typography>
+          </Box>
+          <Switch
+            size="small"
+            checked={Boolean(settings.singlePrinterNoQz)}
+            onChange={(e) => onChange({ singlePrinterNoQz: e.target.checked })}
+            sx={switchSx}
+          />
+        </Box>
+      ) : null}
+
       {listMode ? (
         <Typography sx={{ fontSize: 12, color: "var(--admin-text-secondary)", lineHeight: 1.7 }}>
           فقط یک فیش سالن — بدون ارسال به آشپزخانه یا بار
@@ -505,6 +532,7 @@ export function StationPrinterSettings({
               : Boolean(settings.printExtra);
         const printer = getStationPrinterName(settings, station);
         const layout = getStationLayout(settings, station);
+        const singleMode = Boolean(settings.singlePrinterNoQz) && !listMode;
         return (
           <Box
             key={station}
@@ -523,7 +551,11 @@ export function StationPrinterSettings({
               </Typography>
               <Typography sx={{ fontSize: 11, color: "var(--admin-text-secondary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {STATION_HINT[station]} · {paperLabel(layout)}
-                {printer ? ` · ${printer}` : " · بدون پرینتر"}
+                {singleMode
+                  ? " · چاپ مرورگر"
+                  : printer
+                    ? ` · ${printer}`
+                    : " · بدون پرینتر"}
               </Typography>
             </Box>
             <Button size="small" variant="outlined" onClick={() => setEditStation(station)} sx={{ ...outlinedBtnSx, minWidth: 72 }}>
@@ -533,29 +565,35 @@ export function StationPrinterSettings({
         );
       })}
 
-      <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", alignItems: "center", pt: 0.5 }}>
-        <Button size="small" variant="contained" disabled={busy} onClick={() => void refresh()} sx={containedBtnSx}>
-          {busy ? "..." : "پرینترها"}
-        </Button>
-        <Button
-          size="small"
-          variant="outlined"
-          onClick={() => {
-            setQzDraft({
-              certificate: settings.qzCertificate || "",
-              privateKey: settings.qzPrivateKey || "",
-            });
-            setQzOpen(true);
-          }}
-          sx={outlinedBtnSx}
-        >
-          اتصال QZ
-        </Button>
-        <Button size="small" variant="text" href={QZ_TRAY_DOWNLOAD_URL} target="_blank" rel="noreferrer" sx={{ color: "var(--admin-text-secondary)", fontSize: 12 }}>
-          دانلود
-        </Button>
-      </Box>
-      {status ? (
+      {!settings.singlePrinterNoQz || listMode ? (
+        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", alignItems: "center", pt: 0.5 }}>
+          <Button size="small" variant="contained" disabled={busy} onClick={() => void refresh()} sx={containedBtnSx}>
+            {busy ? "..." : "پرینترها"}
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={() => {
+              setQzDraft({
+                certificate: settings.qzCertificate || "",
+                privateKey: settings.qzPrivateKey || "",
+              });
+              setQzOpen(true);
+            }}
+            sx={outlinedBtnSx}
+          >
+            اتصال QZ
+          </Button>
+          <Button size="small" variant="text" href={QZ_TRAY_DOWNLOAD_URL} target="_blank" rel="noreferrer" sx={{ color: "var(--admin-text-secondary)", fontSize: 12 }}>
+            دانلود
+          </Button>
+        </Box>
+      ) : (
+        <Typography sx={{ fontSize: 12, color: "var(--admin-text-secondary)", lineHeight: 1.7, pt: 0.5 }}>
+          با این حالت، دکمه چاپ صفحه گفتگوی ویندوز را باز می‌کند. برای چند پرینتر جدا، این گزینه را خاموش کنید.
+        </Typography>
+      )}
+      {status && (!settings.singlePrinterNoQz || listMode) ? (
         <Typography
           sx={{
             fontSize: 12,
@@ -572,6 +610,7 @@ export function StationPrinterSettings({
         settings={settings}
         printers={printers}
         busy={busy}
+        hidePrinterSelect={Boolean(settings.singlePrinterNoQz) && !listMode}
         onClose={() => setEditStation(null)}
         onSave={onChange}
         onTest={(station, printer, layout) => void testStation(station, printer, layout)}

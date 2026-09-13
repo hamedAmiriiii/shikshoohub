@@ -70,7 +70,9 @@ import {
   getPayrollStatus,
   getPayrollTotalPaid,
   getPayrollYear,
+  getPayrollSalaryType,
   hasPayrollHours,
+  isDailySalaryEmployee,
   isPayrollPaid,
   normalizePhoneDigits,
   normalizeSearchText,
@@ -121,6 +123,8 @@ export default function PayrollPage() {
     createJalaliDateObject(currentJalali.year, currentJalali.month),
   );
   const [hoursWorked, setHoursWorked] = useState<string>("");
+  const [daysWorked, setDaysWorked] = useState<string>("");
+  const [overtimeHours, setOvertimeHours] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [confirmState, setConfirmState] = useState<PayrollConfirmState | null>(null);
 
@@ -154,17 +158,29 @@ export default function PayrollPage() {
     return employeeMap.get(Number(payrollEmployeeId));
   }, [employeeMap, payrollEmployeeId]);
 
+  const selectedIsDaily = isDailySalaryEmployee(selectedEmployee);
+
   const estimatedSalary = useMemo(() => {
+    if (!selectedEmployee) return 0;
+    if (selectedIsDaily) {
+      return estimateSalaryFromEmployee(
+        selectedEmployee,
+        0,
+        Number(daysWorked) || 0,
+        Number(overtimeHours) || 0,
+      );
+    }
     const hours = Number(hoursWorked) || 0;
-    if (!selectedEmployee || hours <= 0) return 0;
+    if (hours <= 0) return 0;
     return estimateSalaryFromEmployee(selectedEmployee, hours);
-  }, [hoursWorked, selectedEmployee]);
+  }, [daysWorked, hoursWorked, overtimeHours, selectedEmployee, selectedIsDaily]);
 
   const estimatedOvertime = useMemo(() => {
+    if (selectedIsDaily) return Number(overtimeHours) || 0;
     const hours = Number(hoursWorked) || 0;
     const baseHours = Number(selectedEmployee?.base_work_hours) || 0;
     return Math.max(0, hours - baseHours);
-  }, [hoursWorked, selectedEmployee]);
+  }, [hoursWorked, overtimeHours, selectedEmployee, selectedIsDaily]);
 
   const matchesSearch = useCallback(
     (employee?: Employee | null, fallbackName?: string) => {
@@ -269,6 +285,8 @@ export default function PayrollPage() {
     setPayrollEmployeeId("");
     setPayrollMonthValue(createJalaliDateObject(jalali.year, jalali.month));
     setHoursWorked("");
+    setDaysWorked("");
+    setOvertimeHours("");
     setPayrollDialogOpen(true);
   };
 
@@ -283,6 +301,8 @@ export default function PayrollPage() {
       createJalaliDateObject(getPayrollYear(item), getPayrollMonth(item)),
     );
     setHoursWorked(String(item.hours_worked || ""));
+    setDaysWorked(String(item.days_worked || ""));
+    setOvertimeHours(String(item.overtime_hours || item.salary_breakdown?.overtime_hours || ""));
     setPayrollDialogOpen(true);
   };
 
@@ -321,20 +341,39 @@ export default function PayrollPage() {
       toast.error("سال و ماه شمسی را انتخاب کنید");
       return;
     }
+    const employee = employeeMap.get(Number(payrollEmployeeId));
+    if (!employee?.base_salary) {
+      toast.error(
+        isDailySalaryEmployee(employee)
+          ? "برای این کارمند دستمزد روزانه ثبت نشده است"
+          : "برای این کارمند پایه حقوق ثبت نشده است",
+      );
+      return;
+    }
+
+    const daily = isDailySalaryEmployee(employee);
     const hours = Number(hoursWorked);
-    if (!hours || hours <= 0) {
+    const days = Number(daysWorked);
+    const ot = Number(overtimeHours) || 0;
+    if (daily) {
+      if (!days || days <= 0) {
+        toast.error("تعداد روز کارکرد معتبر نیست");
+        return;
+      }
+    } else if (!hours || hours <= 0) {
       toast.error("ساعت کارکرد معتبر نیست");
       return;
     }
-    const employee = employeeMap.get(Number(payrollEmployeeId));
-    if (!employee?.base_salary) {
-      toast.error("برای این کارمند پایه حقوق ثبت نشده است");
-      return;
-    }
+
     setSaving(true);
     try {
       const token = tokenCode();
-      const body = buildPayrollBody(payrollEmployeeId, jalali.year, jalali.month, hours);
+      const body = buildPayrollBody(
+        payrollEmployeeId,
+        jalali.year,
+        jalali.month,
+        daily ? { days, overtimeHours: ot } : { hours },
+      );
       const res = editingPayroll
         ? await FetchWithJwtClient(
             "PUT",
@@ -833,7 +872,14 @@ export default function PayrollPage() {
                         <TableCell align="center">{formatJalaliYearMonth(payrollYear, payrollMonth)}</TableCell>
                         <TableCell align="center">
                           {hasPayrollHours(p)
-                            ? `${formatNumber(Number(p.hours_worked || 0))} ساعت`
+                            ? getPayrollSalaryType(p, p.employee || employeeMap.get(getPayrollEmployeeId(p))) ===
+                              "daily"
+                              ? `${formatNumber(Number(p.days_worked || 0))} روز${
+                                  Number(p.overtime_hours || p.salary_breakdown?.overtime_hours || 0) > 0
+                                    ? ` + ${formatNumber(Number(p.overtime_hours || p.salary_breakdown?.overtime_hours || 0))} س.اضافه`
+                                    : ""
+                                }`
+                              : `${formatNumber(Number(p.hours_worked || 0))} ساعت`
                             : "ثبت نشده"}
                         </TableCell>
                         <TableCell align="center">{formatNumber(salary)} تومان</TableCell>
@@ -936,18 +982,29 @@ export default function PayrollPage() {
             </TextField>
             {selectedEmployee ? (
               <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>
-                پایه {formatNumber(Number(selectedEmployee.base_salary || 0))} تومان برای{" "}
-                {formatNumber(Number(selectedEmployee.base_work_hours || 0))} ساعت
-                {Number(selectedEmployee.base_salary) > 0 && Number(selectedEmployee.base_work_hours) > 0
-                  ? ` — هر ساعت ${formatNumber(
-                      Math.round(
-                        Number(selectedEmployee.base_salary) / Number(selectedEmployee.base_work_hours),
-                      ),
-                    )} تومان`
-                  : ""}
-                {selectedEmployee.hourly_wage
-                  ? ` — اضافه‌کار ${formatNumber(Number(selectedEmployee.hourly_wage))} تومان`
-                  : ""}
+                {selectedIsDaily ? (
+                  <>
+                    دستمزد روزانه {formatNumber(Number(selectedEmployee.base_salary || 0))} تومان
+                    {selectedEmployee.hourly_wage
+                      ? ` — اضافه‌کار ${formatNumber(Number(selectedEmployee.hourly_wage))} تومان/ساعت`
+                      : ""}
+                  </>
+                ) : (
+                  <>
+                    پایه {formatNumber(Number(selectedEmployee.base_salary || 0))} تومان برای{" "}
+                    {formatNumber(Number(selectedEmployee.base_work_hours || 0))} ساعت
+                    {Number(selectedEmployee.base_salary) > 0 && Number(selectedEmployee.base_work_hours) > 0
+                      ? ` — هر ساعت ${formatNumber(
+                          Math.round(
+                            Number(selectedEmployee.base_salary) / Number(selectedEmployee.base_work_hours),
+                          ),
+                        )} تومان`
+                      : ""}
+                    {selectedEmployee.hourly_wage
+                      ? ` — اضافه‌کار ${formatNumber(Number(selectedEmployee.hourly_wage))} تومان`
+                      : ""}
+                  </>
+                )}
               </Typography>
             ) : null}
             <JalaliMonthPickerField
@@ -955,14 +1012,37 @@ export default function PayrollPage() {
               value={payrollMonthValue}
               onChange={setPayrollMonthValue}
             />
-            <TextField
-              size="small"
-              type="number"
-              label="ساعت کارکرد"
-              value={hoursWorked}
-              onChange={(e) => setHoursWorked(e.target.value)}
-              sx={fieldSx}
-            />
+            {selectedIsDaily ? (
+              <>
+                <TextField
+                  size="small"
+                  type="number"
+                  label="تعداد روز کارکرد"
+                  value={daysWorked}
+                  onChange={(e) => setDaysWorked(e.target.value)}
+                  sx={fieldSx}
+                  inputProps={{ min: 0, max: 31, step: 0.5 }}
+                />
+                <TextField
+                  size="small"
+                  type="number"
+                  label="ساعت اضافه‌کار"
+                  value={overtimeHours}
+                  onChange={(e) => setOvertimeHours(e.target.value)}
+                  sx={fieldSx}
+                  inputProps={{ min: 0, step: 0.5 }}
+                />
+              </>
+            ) : (
+              <TextField
+                size="small"
+                type="number"
+                label="ساعت کارکرد"
+                value={hoursWorked}
+                onChange={(e) => setHoursWorked(e.target.value)}
+                sx={fieldSx}
+              />
+            )}
             {estimatedSalary > 0 ? (
               <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: 13 }}>
                 برآورد حقوق: {formatNumber(estimatedSalary)} تومان

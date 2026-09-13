@@ -544,6 +544,8 @@ export function stationsWithAssignedPrinters(
 }
 
 export function canSilentPrint(settings: SaleReceiptPrintSettings): boolean {
+  // تک‌پرینتر بدون QZ: فقط گفتگوی چاپ مرورگر
+  if (settings.singlePrinterNoQz) return false;
   return settings.silentPrint !== false && stationsWithAssignedPrinters(settings).length > 0;
 }
 

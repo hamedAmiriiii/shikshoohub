@@ -28,7 +28,7 @@ function SaleReceiptPrintContent() {
 
   const [receipt, setReceipt] = useState<SaleReceiptData | null>(null);
   const [settings, setSettings] = useState<SaleReceiptPrintSettings>(DEFAULT_SALE_RECEIPT_PRINT_SETTINGS);
-  const [showSettings, setShowSettings] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
   const [printing, setPrinting] = useState(false);
   const autoPrintedRef = useRef(false);
   const directPrintMode = searchParams.get("direct") === "1";
@@ -175,6 +175,10 @@ function SaleReceiptPrintContent() {
             {canSilentPrint(settings) ? (
               <Typography className="no-print" sx={{ fontSize: 13, color: "var(--admin-accent)", mb: 2 }}>
                 چاپ بی‌صدا فعال است؛ فیش هر بخش مستقیم به پرینتر انتخاب‌شده ارسال می‌شود.
+              </Typography>
+            ) : settings.singlePrinterNoQz ? (
+              <Typography className="no-print" sx={{ fontSize: 13, color: "var(--admin-text-secondary)", mb: 2 }}>
+                حالت یک پرینتر: گفتگوی چاپ ویندوز باز می‌شود (بدون QZ).
               </Typography>
             ) : stations.length > 1 ? (
               <Typography className="no-print" sx={{ fontSize: 13, color: "var(--admin-text-secondary)", mb: 2 }}>

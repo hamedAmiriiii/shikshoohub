@@ -240,6 +240,13 @@ export async function printTableOrderLikeSaleReceipt(
   } = await import("@/app/lib/saleReceiptPrint");
   const settings = readSaleReceiptPrintSettings();
 
+  // تک‌پرینتر بدون QZ: صفحه چاپ مرورگر (بدون خطای انتخاب پرینتر)
+  if (settings.singlePrinterNoQz) {
+    const path = settings.autoPrint ? "/admin/print/sale?direct=1" : "/admin/print/sale";
+    openSaleReceiptPrintPage(path, receipt);
+    return { ok: true };
+  }
+
   // Auto / silent path: never open /admin/print/sale (avoids empty redirect).
   if (settings.autoPrint || settings.silentPrint !== false) {
     const silent = await silentPrintSaleReceiptOrFail(receipt, settings);
@@ -286,7 +293,7 @@ export async function printAllSaleReceipts(
   if (!receipts.length) return;
 
   const { canSilentPrint, silentPrintReceiptStations } = await import("@/app/lib/qzSilentPrint");
-  if (canSilentPrint(settings)) {
+  if (!settings.singlePrinterNoQz && canSilentPrint(settings)) {
     try {
       for (const receipt of receipts) {
         await silentPrintReceiptStations(receipt, settings);
