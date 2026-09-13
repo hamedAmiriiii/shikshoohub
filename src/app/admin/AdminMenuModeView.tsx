@@ -395,12 +395,23 @@ export default function AdminMenuModeView({
       {categories.length > 1 && (
         <Box
           sx={{
-            display: "flex",
+            display: "grid",
+            gridAutoFlow: "column",
+            gridTemplateRows: "auto auto",
+            gridAutoColumns: "max-content",
+            alignContent: "start",
             gap: 0.5,
             overflowX: "auto",
+            overflowY: "hidden",
             pb: 0.75,
             mb: 1,
+            WebkitOverflowScrolling: "touch",
+            scrollbarWidth: "thin",
             "&::-webkit-scrollbar": { height: 4 },
+            "&::-webkit-scrollbar-thumb": {
+              bgcolor: "var(--admin-border)",
+              borderRadius: 4,
+            },
           }}
         >
           {categories.map((category) => (
