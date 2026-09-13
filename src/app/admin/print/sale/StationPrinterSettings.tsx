@@ -32,9 +32,7 @@ import {
   printHtmlToNamedPrinter,
   qzErrorMessage,
 } from "@/app/lib/qzSilentPrint";
-import { ReceiptTemplatePicker } from "@/app/admin/print/sale/ReceiptTemplatePicker";
 import { persistSharedReceiptSettings } from "@/app/lib/receiptPrintDbSync";
-import type { ReceiptTemplateId } from "@/app/lib/receiptTemplates";
 
 const STATION_LABEL: Record<ReceiptPrintStation, string> = {
   hall: "سالن",
@@ -542,14 +540,6 @@ export function StationPrinterSettings({
 
   return (
     <Box sx={{ gridColumn: "1 / -1", display: "grid", gap: 1 }}>
-      <ReceiptTemplatePicker
-        compact={compact}
-        settings={settings}
-        onSelect={(templateId: ReceiptTemplateId) => {
-          handleChange({ templateId });
-        }}
-      />
-
       {!listMode ? (
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", py: 0.25 }}>
           <Box>

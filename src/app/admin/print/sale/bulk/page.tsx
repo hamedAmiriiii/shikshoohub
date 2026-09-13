@@ -15,7 +15,6 @@ import {
 } from "@/app/lib/saleReceiptPrint";
 import { ReceiptTicketsBlock } from "@/app/admin/print/sale/SaleReceiptTickets";
 import { StationPrinterSettings } from "@/app/admin/print/sale/StationPrinterSettings";
-import { ReceiptTemplatePicker } from "@/app/admin/print/sale/ReceiptTemplatePicker";
 import { hydrateReceiptPrintSettingsFromDb, persistSharedReceiptSettings } from "@/app/lib/receiptPrintDbSync";
 import {
   buildPurchasesListApiUrl,
@@ -231,7 +230,7 @@ function BulkSaleReceiptPrintContent() {
                 p: 2,
                 mb: 2,
                 border: "1px solid var(--admin-border)",
-                maxWidth: 720,
+                maxWidth: 480,
               }}
             >
               <StationPrinterSettings
@@ -242,21 +241,7 @@ function BulkSaleReceiptPrintContent() {
                 onChange={saveSettings}
               />
             </Box>
-          ) : (
-            <Box
-              className="no-print"
-              sx={{
-                bgcolor: "var(--admin-surface)",
-                borderRadius: 2,
-                p: 2,
-                mb: 2,
-                border: "1px solid var(--admin-border)",
-                maxWidth: 720,
-              }}
-            >
-              <ReceiptTemplatePicker settings={settings} onSelect={(templateId) => saveSettings({ templateId })} />
-            </Box>
-          )}
+          ) : null}
 
           <Box
             className="print-preview"

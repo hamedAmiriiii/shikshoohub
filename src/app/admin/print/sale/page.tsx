@@ -22,7 +22,6 @@ import { ReceiptTicketsBlock } from "@/app/admin/print/sale/SaleReceiptTickets";
 import { StationPrinterSettings } from "@/app/admin/print/sale/StationPrinterSettings";
 import { canSilentPrint, qzErrorMessage, silentPrintReceiptStations } from "@/app/lib/qzSilentPrint";
 import { hydrateReceiptPrintSettingsFromDb, persistSharedReceiptSettings } from "@/app/lib/receiptPrintDbSync";
-import { ReceiptTemplatePicker } from "@/app/admin/print/sale/ReceiptTemplatePicker";
 
 function SaleReceiptPrintContent() {
   const router = useRouter();
@@ -203,7 +202,7 @@ function SaleReceiptPrintContent() {
                   mb: 2,
                   border: "1px solid var(--admin-border)",
                   color: "var(--admin-text)",
-                  maxWidth: 720,
+                  maxWidth: 480,
                 }}
               >
                 <StationPrinterSettings
@@ -215,23 +214,6 @@ function SaleReceiptPrintContent() {
                 />
               </Box>
             )}
-
-            {!showSettings ? (
-              <Box
-                className="no-print"
-                sx={{
-                  bgcolor: "var(--admin-surface)",
-                  borderRadius: 2,
-                  p: 2,
-                  mb: 2,
-                  border: "1px solid var(--admin-border)",
-                  color: "var(--admin-text)",
-                  maxWidth: 720,
-                }}
-              >
-                <ReceiptTemplatePicker settings={settings} onSelect={(templateId) => saveSettings({ templateId })} />
-              </Box>
-            ) : null}
 
             <Box
               className="print-preview"

@@ -28,7 +28,7 @@ export function ReceiptTemplatePicker({
       <Box>
         <Typography sx={{ fontSize: 13, fontWeight: 700 }}>مدل فاکتور</Typography>
         <Typography sx={{ fontSize: 11, color: "var(--admin-text-secondary)" }}>
-          پیش‌نمایش را ببینید و مدل را انتخاب کنید — پیش‌فرض همان مدل فعلی است
+          انتخاب شما ذخیره می‌شود و تا وقتی عوضش نکنید روی همه چاپ‌ها اعمال می‌شود
         </Typography>
       </Box>
 

@@ -54,8 +54,10 @@ import {
   type SaleReceiptPrintSettings,
 } from "@/app/lib/saleReceiptPrint";
 import { StationPrinterSettings } from "@/app/admin/print/sale/StationPrinterSettings";
-import { hydrateReceiptPrintSettingsFromDb } from "@/app/lib/receiptPrintDbSync";
+import { ReceiptTemplatePicker } from "@/app/admin/print/sale/ReceiptTemplatePicker";
+import { hydrateReceiptPrintSettingsFromDb, persistSharedReceiptSettings } from "@/app/lib/receiptPrintDbSync";
 import { useShopPermissionGate } from "@/app/lib/shopPermissions";
+import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 
 const settingsCardSx = {
   backgroundColor: "var(--admin-surface)",
@@ -285,6 +287,7 @@ export default function SettingsPage() {
   const [isSavingShopCard, setIsSavingShopCard] = useState(false);
   const [printerOpen, setPrinterOpen] = useState(false);
   const [listPrinterOpen, setListPrinterOpen] = useState(false);
+  const [invoiceTemplateOpen, setInvoiceTemplateOpen] = useState(false);
 
   useEffect(() => {
     const settings = readAdminPosSettings();
@@ -822,6 +825,34 @@ export default function SettingsPage() {
           />
         </CardContent>
       </Card>
+
+      <SettingsSectionCard
+        icon={<DescriptionOutlinedIcon sx={{ fontSize: 18 }} />}
+        title="مدل فاکتور"
+        hint="یک‌بار انتخاب کنید؛ تا عوض کردنش روی همه چاپ‌ها اعمال می‌شود"
+        action={
+          invoiceTemplateOpen ? undefined : (
+            <Button size="small" variant="outlined" onClick={() => setInvoiceTemplateOpen(true)} sx={viewBtnSx}>
+              مشاهده
+            </Button>
+          )
+        }
+      >
+        {invoiceTemplateOpen ? (
+          <Box sx={{ mt: 1 }}>
+            <ReceiptTemplatePicker
+              settings={receiptPrintSettings}
+              onSelect={(templateId) => {
+                const next = writeSaleReceiptPrintSettings({ templateId });
+                setReceiptPrintSettings(next);
+                setListReceiptPrintSettings(writeListReceiptPrintSettings({ templateId }));
+                void persistSharedReceiptSettings(next);
+                toast.success("مدل فاکتور ذخیره شد");
+              }}
+            />
+          </Box>
+        ) : null}
+      </SettingsSectionCard>
 
       <SettingsSectionCard
         icon={<PrintIcon sx={{ fontSize: 18 }} />}
