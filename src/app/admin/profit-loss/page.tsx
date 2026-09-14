@@ -300,13 +300,13 @@ export default function ProfitLossPage() {
                         کل فروش
                       </TableCell>
                       <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)", whiteSpace: "nowrap" }}>
-                         فروش دستی
+                         سند فروش
                       </TableCell>
                       <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)", whiteSpace: "nowrap" }}>
                         کل مبلغ خرید
                       </TableCell>
                       <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)", whiteSpace: "nowrap" }}>
-                         خرید دستی
+                         سند خرید
                       </TableCell>
                       <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)", whiteSpace: "nowrap" }}>
                         سود ناخالص

@@ -15,6 +15,7 @@ import {
   Droplets,
   Gift,
   LogIn,
+  QrCode,
   Share2,
   Sparkles,
   Store,
@@ -39,6 +40,7 @@ const ICONS: Record<ProductIconName, LucideIcon> = {
   video: Video,
   share: Share2,
   store: Store,
+  qrcode: QrCode,
 };
 
 function fadeUp(delay = 0) {

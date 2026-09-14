@@ -42,12 +42,19 @@ import 'react-toastify/dist/ReactToastify.css';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import SmsIcon from '@mui/icons-material/Sms';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import DatePicker from "react-multi-date-picker";
 import persian from "react-date-object/calendars/persian";
 import persian_fa from "react-date-object/locales/persian_fa";
 import "react-multi-date-picker/styles/layouts/mobile.css";
 import BottomSheet from "@/app/coponent/BottomSheet";
 import CloseIcon from '@mui/icons-material/Close';
+import {
+  canRefreshSmsDeliveryStatus,
+  formatSmsDeliveryStatus,
+  getSmsDeliveryStatusColor,
+  SMS_DELIVERY_STATUS_LABELS,
+} from "@/app/lib/shopSms";
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
@@ -86,6 +93,12 @@ interface ShopSmsLog {
   purchase_id?: string;
   credit_amount?: string;
   sms_type: string;
+  batch_id?: string | null;
+  reference_id?: string | null;
+  delivery_status?: string | null;
+  delivery_status_label?: string | null;
+  provider_datetime?: string | null;
+  status_checked_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -124,9 +137,23 @@ const getSmsTypeColor = (type: string) => {
   return SMS_TYPE_COLORS[key] || "#999";
 };
 
+function DeliveryStatusChip({ log }: { log: ShopSmsLog }) {
+  return (
+    <Chip
+      label={formatSmsDeliveryStatus(log.delivery_status, log.delivery_status_label)}
+      size="small"
+      color={getSmsDeliveryStatusColor(log.delivery_status)}
+      variant="outlined"
+      sx={{ fontSize: '12px' }}
+    />
+  );
+}
+
 export default function ShopSmsLogsPage() {
   const [logs, setLogs] = useState<ShopSmsLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshingAll, setRefreshingAll] = useState(false);
+  const [refreshingId, setRefreshingId] = useState<number | null>(null);
   const [openDetailDialog, setOpenDetailDialog] = useState(false);
   const [openFilterSheet, setOpenFilterSheet] = useState(false);
   const [selectedLog, setSelectedLog] = useState<ShopSmsLog | null>(null);
@@ -136,6 +163,7 @@ export default function ShopSmsLogsPage() {
   const [dateRange, setDateRange] = useState<any>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [smsTypeFilter, setSmsTypeFilter] = useState<string>("");
+  const [deliveryStatusFilter, setDeliveryStatusFilter] = useState<string>("");
   const [searchField, setSearchField] = useState<'phone' | 'name' | 'message' | 'purchase_id' | 'all'>('all');
   
   // Pagination states
@@ -149,7 +177,7 @@ export default function ShopSmsLogsPage() {
 
   useEffect(() => {
     fetchLogs();
-  }, [filterMode, dateRange, searchQuery, smsTypeFilter, currentPage, perPage]);
+  }, [filterMode, dateRange, searchQuery, smsTypeFilter, deliveryStatusFilter, currentPage, perPage]);
 
   const buildUrl = () => {
     let url = "/api/shop-sms-logs";
@@ -187,6 +215,10 @@ export default function ShopSmsLogsPage() {
     // Add SMS type filter
     if (smsTypeFilter) {
       params.push(`sms_type=${smsTypeFilter}`);
+    }
+
+    if (deliveryStatusFilter) {
+      params.push(`delivery_status=${encodeURIComponent(deliveryStatusFilter)}`);
     }
 
     // Add search filter
@@ -258,11 +290,78 @@ export default function ShopSmsLogsPage() {
     }
   };
 
+  const applyUpdatedLog = (updated: ShopSmsLog) => {
+    setLogs((prev) => prev.map((item) => (item.id === updated.id ? { ...item, ...updated } : item)));
+    setSelectedLog((prev) => (prev && prev.id === updated.id ? { ...prev, ...updated } : prev));
+  };
+
+  const handleRefreshStatus = async (log: ShopSmsLog) => {
+    if (!canRefreshSmsDeliveryStatus(log)) {
+      toast.info("وضعیت این پیامک قابل به‌روزرسانی نیست");
+      return;
+    }
+    try {
+      setRefreshingId(log.id);
+      const token = tokenCode();
+      const res = await apiRequestError(
+        "Post",
+        {},
+        {},
+        `/api/shop-sms-logs/${log.id}/refresh-status`,
+        true,
+        true,
+        token,
+      );
+      if (res.hasError) {
+        toast.error(res.message || res.errorText || "خطا در به‌روزرسانی وضعیت");
+        return;
+      }
+      const updated = (res.data || res) as ShopSmsLog;
+      if (updated && updated.id) {
+        applyUpdatedLog(updated);
+      }
+      toast.success(res.message || "وضعیت به‌روزرسانی شد");
+    } catch (error) {
+      console.error("Error refreshing SMS status:", error);
+      toast.error("خطا در به‌روزرسانی وضعیت");
+    } finally {
+      setRefreshingId(null);
+    }
+  };
+
+  const handleRefreshPending = async () => {
+    try {
+      setRefreshingAll(true);
+      const token = tokenCode();
+      const res = await apiRequestError(
+        "Post",
+        {},
+        {},
+        `/api/shop-sms-logs/refresh-pending`,
+        true,
+        true,
+        token,
+      );
+      if (res.hasError) {
+        toast.error(res.message || res.errorText || "خطا در به‌روزرسانی وضعیت‌ها");
+        return;
+      }
+      toast.success(res.message || "وضعیت پیامک‌ها بررسی شد");
+      await fetchLogs();
+    } catch (error) {
+      console.error("Error refreshing pending SMS statuses:", error);
+      toast.error("خطا در به‌روزرسانی وضعیت‌ها");
+    } finally {
+      setRefreshingAll(false);
+    }
+  };
+
   const handleClearFilters = () => {
     setFilterMode(null);
     setDateRange([]);
     setSearchQuery("");
     setSmsTypeFilter("");
+    setDeliveryStatusFilter("");
     setSearchField('all');
     setCurrentPage(1);
   };
@@ -282,25 +381,37 @@ export default function ShopSmsLogsPage() {
     }}>
       <Container maxWidth={false} sx={{ paddingX: { xs: '16px', md: '24px' } }}>
         {/* Header */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '12px', flexWrap: 'wrap' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <SmsIcon sx={{ color: 'var(--admin-accent)', fontSize: '32px' }} />
-            {/* <Typography variant="h4" sx={{ color: 'var(--admin-text)', fontWeight: '600' }}>
-              لیست پیامک‌های فروشگاه
-            </Typography> */}
           </Box>
-          <Button
-            variant="contained"
-            startIcon={<FilterListIcon />}
-            onClick={() => setOpenFilterSheet(true)}
-            sx={{
-              backgroundColor: 'var(--admin-accent)',
-              color: 'var(--admin-text)',
-              '&:hover': { backgroundColor: 'var(--admin-accent-hover)' }
-            }}
-          >
-            فیلتر
-          </Button>
+          <Box sx={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <Button
+              variant="outlined"
+              startIcon={refreshingAll ? <CircularProgress size={16} /> : <RefreshIcon />}
+              onClick={handleRefreshPending}
+              disabled={refreshingAll || loading}
+              sx={{
+                borderColor: 'var(--admin-border)',
+                color: 'var(--admin-text)',
+                '&:hover': { borderColor: 'var(--admin-accent)', backgroundColor: 'var(--admin-menu-hover)' },
+              }}
+            >
+              به‌روزرسانی وضعیت‌ها
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<FilterListIcon />}
+              onClick={() => setOpenFilterSheet(true)}
+              sx={{
+                backgroundColor: 'var(--admin-accent)',
+                color: 'var(--admin-text)',
+                '&:hover': { backgroundColor: 'var(--admin-accent-hover)' }
+              }}
+            >
+              فیلتر
+            </Button>
+          </Box>
         </Box>
 
         {/* Summary */}
@@ -360,13 +471,27 @@ export default function ShopSmsLogsPage() {
                           fontSize: '12px'
                         }}
                       />
+                      <Box sx={{ marginTop: '8px' }}>
+                        <DeliveryStatusChip log={log} />
+                      </Box>
                     </Box>
-                    <IconButton 
-                      onClick={() => handleViewDetail(log.id)}
-                      sx={{ color: 'var(--admin-accent)' }}
-                    >
-                      <VisibilityIcon />
-                    </IconButton>
+                    <Box sx={{ display: 'flex', gap: '4px' }}>
+                      {canRefreshSmsDeliveryStatus(log) && (
+                        <IconButton
+                          onClick={() => handleRefreshStatus(log)}
+                          disabled={refreshingId === log.id}
+                          sx={{ color: 'var(--admin-accent)' }}
+                        >
+                          {refreshingId === log.id ? <CircularProgress size={18} /> : <RefreshIcon />}
+                        </IconButton>
+                      )}
+                      <IconButton 
+                        onClick={() => handleViewDetail(log.id)}
+                        sx={{ color: 'var(--admin-accent)' }}
+                      >
+                        <VisibilityIcon />
+                      </IconButton>
+                    </Box>
                   </Box>
                   <Typography 
                     sx={{ 
@@ -417,6 +542,7 @@ export default function ShopSmsLogsPage() {
                     <StyledTableCell align="right">نام</StyledTableCell>
                     <StyledTableCell align="right">شماره تلفن</StyledTableCell>
                     <StyledTableCell align="right">نوع پیامک</StyledTableCell>
+                    <StyledTableCell align="right">وضعیت</StyledTableCell>
                     <StyledTableCell align="right">پیام</StyledTableCell>
                     <StyledTableCell align="right">شناسه خرید</StyledTableCell>
                     <StyledTableCell align="right">مبلغ اعتبار</StyledTableCell>
@@ -440,6 +566,9 @@ export default function ShopSmsLogsPage() {
                           }}
                         />
                       </StyledTableCell>
+                      <StyledTableCell>
+                        <DeliveryStatusChip log={log} />
+                      </StyledTableCell>
                       <StyledTableCell sx={{ maxWidth: '400px' }}>
                         <Typography 
                           sx={{ 
@@ -457,6 +586,16 @@ export default function ShopSmsLogsPage() {
                       </StyledTableCell>
                       <StyledTableCell>{log.created_at}</StyledTableCell>
                       <StyledTableCell align="center">
+                        {canRefreshSmsDeliveryStatus(log) && (
+                          <IconButton
+                            onClick={() => handleRefreshStatus(log)}
+                            disabled={refreshingId === log.id}
+                            sx={{ color: 'var(--admin-accent)' }}
+                            title="به‌روزرسانی وضعیت"
+                          >
+                            {refreshingId === log.id ? <CircularProgress size={18} /> : <RefreshIcon />}
+                          </IconButton>
+                        )}
                         <IconButton 
                           onClick={() => handleViewDetail(log.id)}
                           sx={{ color: 'var(--admin-accent)' }}
@@ -549,6 +688,41 @@ export default function ShopSmsLogsPage() {
                     }}
                   />
                 </Box>
+                <Box>
+                  <Typography sx={{ color: 'var(--admin-text-secondary)', fontSize: '14px', marginBottom: '4px' }}>وضعیت تحویل</Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <DeliveryStatusChip log={selectedLog} />
+                    {canRefreshSmsDeliveryStatus(selectedLog) && (
+                      <Button
+                        size="small"
+                        startIcon={refreshingId === selectedLog.id ? <CircularProgress size={14} /> : <RefreshIcon />}
+                        onClick={() => handleRefreshStatus(selectedLog)}
+                        disabled={refreshingId === selectedLog.id}
+                        sx={{ color: 'var(--admin-accent)' }}
+                      >
+                        استعلام مجدد
+                      </Button>
+                    )}
+                  </Box>
+                </Box>
+                {selectedLog.reference_id && (
+                  <Box>
+                    <Typography sx={{ color: 'var(--admin-text-secondary)', fontSize: '14px', marginBottom: '4px' }}>شناسه پیامک</Typography>
+                    <Typography sx={{ color: 'var(--admin-text)', fontSize: '16px' }} dir="ltr">{selectedLog.reference_id}</Typography>
+                  </Box>
+                )}
+                {selectedLog.batch_id && (
+                  <Box>
+                    <Typography sx={{ color: 'var(--admin-text-secondary)', fontSize: '14px', marginBottom: '4px' }}>شناسه دسته</Typography>
+                    <Typography sx={{ color: 'var(--admin-text)', fontSize: '16px' }} dir="ltr">{selectedLog.batch_id}</Typography>
+                  </Box>
+                )}
+                {selectedLog.status_checked_at && (
+                  <Box>
+                    <Typography sx={{ color: 'var(--admin-text-secondary)', fontSize: '14px', marginBottom: '4px' }}>آخرین بررسی وضعیت</Typography>
+                    <Typography sx={{ color: 'var(--admin-text)', fontSize: '16px' }}>{selectedLog.status_checked_at}</Typography>
+                  </Box>
+                )}
                 <Box>
                   <Typography sx={{ color: 'var(--admin-text-secondary)', fontSize: '14px', marginBottom: '4px' }}>پیام</Typography>
                   <Typography sx={{ color: 'var(--admin-text)', fontSize: '16px', whiteSpace: 'pre-wrap' }}>
@@ -682,6 +856,40 @@ export default function ShopSmsLogsPage() {
                 </Select>
               </FormControl>
             </Box> */}
+
+            <Box>
+              <Typography sx={{ color: 'var(--admin-text)', marginBottom: '8px', fontSize: '14px' }}>
+                وضعیت تحویل
+              </Typography>
+              <FormControl fullWidth>
+                <InputLabel sx={{ color: 'var(--admin-text-secondary)' }}>وضعیت</InputLabel>
+                <Select
+                  value={deliveryStatusFilter}
+                  label="وضعیت"
+                  onChange={(e) => {
+                    setDeliveryStatusFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  sx={{
+                    color: 'var(--admin-text)',
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: 'var(--admin-border)',
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: 'var(--admin-accent)',
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: 'var(--admin-accent)',
+                    },
+                  }}
+                >
+                  <MenuItem value="">همه</MenuItem>
+                  {Object.entries(SMS_DELIVERY_STATUS_LABELS).map(([value, label]) => (
+                    <MenuItem key={value} value={value}>{label}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
 
             {/* Date Filter */}
             <Box>

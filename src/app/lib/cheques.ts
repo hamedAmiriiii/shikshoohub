@@ -29,6 +29,7 @@ export type Cheque = {
   issue_date_jalali?: string | null;
   due_date_jalali?: string | null;
   clear_date_jalali?: string | null;
+  shop_account_id?: number | null;
   created_at?: string;
 };
 

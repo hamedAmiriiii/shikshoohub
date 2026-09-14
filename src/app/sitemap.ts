@@ -19,6 +19,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
     },
     {
+      url: `${SITE_URL}/landing/menu`,
+      lastModified,
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    {
       url: `${SITE_URL}/agency-request`,
       lastModified,
       changeFrequency: "monthly",
@@ -27,7 +33,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   ];
 
   for (const product of LANDING_PRODUCTS) {
-    if (product.slug === "accounting") continue;
+    if (product.slug === "accounting" || product.slug === "menu") continue;
     pages.push({
       url: `${SITE_URL}${product.href}`,
       lastModified,

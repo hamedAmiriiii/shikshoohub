@@ -35,6 +35,7 @@ import FactoryIcon from "@mui/icons-material/Factory";
 import CreditCardIcon from "@mui/icons-material/CreditCard";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import HandshakeIcon from "@mui/icons-material/Handshake";
+import QrCode2Icon from "@mui/icons-material/QrCode2";
 import ShareIcon from "@mui/icons-material/Share";
 import StorefrontIcon from "@mui/icons-material/Storefront";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
@@ -424,6 +425,12 @@ export default function AdminHamburgerSidebar({
         label: "نمایندگی‌ها",
         href: "/admin/agency-requests",
         icon: <HandshakeIcon />,
+      },
+      {
+        id: "consultation-requests",
+        label: "درخواست خرید منو",
+        href: "/admin/consultation-requests",
+        icon: <QrCode2Icon />,
       },
       {
         id: "desktop-licenses",

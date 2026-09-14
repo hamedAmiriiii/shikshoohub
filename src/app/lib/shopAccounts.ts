@@ -98,6 +98,11 @@ export async function fetchShopAccounts(options?: {
 
 export function formatAccountOptionLabel(account: ShopAccount): string {
   const balance = new Intl.NumberFormat("fa-IR").format(account.balance || 0);
-  const kind = isPettyCashAccount(account) ? "تنخواه" : "حساب";
+  const kind =
+    account.type === "till"
+      ? "صندوق"
+      : isPettyCashAccount(account)
+        ? "تنخواه"
+        : "بانک";
   return `${account.name} (${kind} · موجودی ${balance})`;
 }

@@ -23,6 +23,14 @@ export function generateMetadata({ params }: Props): Metadata {
       path: "/landing/shop",
     });
   }
+  if (params.slug === "menu") {
+    return pageMetadata({
+      title: "منوی دیجیتال رستوران و کافی‌شاپ وبینو",
+      description:
+        "منوی دیجیتال وبینو: اسکن QR روی میز، سفارش روی گوشی و پرداخت آنلاین متصل به نرم‌افزار فروش.",
+      path: "/landing/menu",
+    });
+  }
   if (params.slug === "class") {
     return pageMetadata({
       title: "یادینو | کلاس آنلاین وبینو",
@@ -51,6 +59,9 @@ export function generateMetadata({ params }: Props): Metadata {
 export default function ProductPage({ params }: Props) {
   if (params.slug === "accounting") {
     redirect("/landing/shop");
+  }
+  if (params.slug === "menu") {
+    redirect("/landing/menu");
   }
   if (params.slug === "class") {
     redirect("/landing/products/yadino");

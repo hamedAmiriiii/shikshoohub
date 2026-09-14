@@ -33,6 +33,7 @@ import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
 import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
 import { adminButtonStartIconSx, adminPageSx } from "@/app/admin/theme/adminTheme";
 import BottomSheetModal from "@/app/coponent/BottomSheetModal";
+import ShopAccountSelect from "@/app/admin/ShopAccountSelect";
 import ChequeCard from "./ChequeCard";
 import ChequeFormSheet, {
   CHEQUE_DATE_PICKER_Z,
@@ -72,6 +73,7 @@ export default function ChequesPage() {
 
   const [clearTarget, setClearTarget] = useState<Cheque | null>(null);
   const [clearDate, setClearDate] = useState<DateObject | null>(todayJalaliDateObject());
+  const [clearAccountId, setClearAccountId] = useState<number | "">("");
   const [clearing, setClearing] = useState(false);
 
   const [unclearTarget, setUnclearTarget] = useState<Cheque | null>(null);
@@ -165,13 +167,21 @@ export default function ChequesPage() {
   const openClear = (cheque: Cheque) => {
     setClearTarget(cheque);
     setClearDate(todayJalaliDateObject());
+    const existing = Number(cheque.shop_account_id);
+    setClearAccountId(Number.isFinite(existing) && existing > 0 ? existing : "");
   };
 
   const confirmClear = async () => {
     if (!clearTarget?.id) return;
+    if (clearAccountId === "" || !clearAccountId) {
+      toast.error("حساب مقصد/برداشت را انتخاب کنید");
+      return;
+    }
     setClearing(true);
     try {
-      const body: Record<string, unknown> = {};
+      const body: Record<string, unknown> = {
+        shop_account_id: clearAccountId,
+      };
       const payload = dateObjectToPayload(clearDate);
       if (payload) body.clear_date = payload;
 
@@ -185,11 +195,14 @@ export default function ChequesPage() {
         return;
       }
       toast.success(
-        clearTarget.type === "received"
-          ? "چک وصول شد و به درآمد اضافه شد"
-          : "چک وصول شد و به هزینه اضافه شد",
+        typeof res?.message === "string"
+          ? res.message
+          : clearTarget.type === "received"
+            ? "چک وصول شد و به حساب واریز شد"
+            : "چک وصول شد و از حساب کسر شد",
       );
       setClearTarget(null);
+      setClearAccountId("");
       await loadCheques();
     } finally {
       setClearing(false);
@@ -513,9 +526,18 @@ export default function ChequesPage() {
             چک شماره {clearTarget?.cheque_number} به مبلغ{" "}
             {formatNumber(parseAmount(clearTarget?.amount))} تومان وصول شود؟
             {clearTarget?.type === "received"
-              ? " (به درآمد اضافه می‌شود)"
-              : " (به هزینه اضافه می‌شود)"}
+              ? " مبلغ به حساب انتخاب‌شده واریز می‌شود."
+              : " مبلغ از حساب انتخاب‌شده کسر می‌شود."}
           </DialogContentText>
+          <Box sx={{ mb: 2 }}>
+            <ShopAccountSelect
+              value={clearAccountId}
+              onChange={setClearAccountId}
+              required
+              label={clearTarget?.type === "received" ? "حساب مقصد" : "حساب برداشت"}
+              helperText="حساب بانکی، تنخواه یا صندوق"
+            />
+          </Box>
           <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, mb: 0.5 }}>
             تاریخ وصول (اختیاری — پیش‌فرض امروز)
           </Typography>
@@ -542,7 +564,7 @@ export default function ChequesPage() {
           <Button
             variant="contained"
             onClick={confirmClear}
-            disabled={clearing}
+            disabled={clearing || clearAccountId === ""}
             sx={{
               bgcolor: "var(--admin-accent)",
               "&:hover": { bgcolor: "var(--admin-accent-hover)" },

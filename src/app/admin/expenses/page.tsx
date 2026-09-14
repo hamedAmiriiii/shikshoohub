@@ -47,8 +47,8 @@ import tokenCode from "@/app/coponent/tokenCode";
 import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
 import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
 import { formatAmountInput, parseAmountInput } from "@/app/lib/amountInput";
-import ShopAccountSelect from "@/app/admin/ShopAccountSelect";
 import BeneficiarySelect from "@/app/admin/BeneficiarySelect";
+import DocumentPaymentFields from "@/app/admin/DocumentPaymentFields";
 import { DocumentPaymentChips, documentNeedsSettle } from "@/app/admin/DocumentPaymentBadge";
 import DocumentPaymentSettleDialog from "@/app/admin/DocumentPaymentSettleDialog";
 import BottomSheet from "@/app/coponent/BottomSheet";
@@ -547,6 +547,7 @@ export default function ExpensesPage() {
                   <StyledTableCell align="right">عنوان</StyledTableCell>
                   <StyledTableCell align="right">نوع</StyledTableCell>
                   <StyledTableCell align="right">مبلغ</StyledTableCell>
+                  <StyledTableCell align="right">پرداخت</StyledTableCell>
                   <StyledTableCell align="right">تاریخ</StyledTableCell>
                   <StyledTableCell align="right">ذینفع</StyledTableCell>
                   <StyledTableCell align="right">ثبت‌کننده</StyledTableCell>
@@ -629,6 +630,21 @@ export default function ExpensesPage() {
                         </Typography>
                       </StyledTableCell>
                       <StyledTableCell align="right">
+                        {creditSource ? (
+                          <Chip
+                            size="small"
+                            label="نسیه"
+                            sx={{
+                              ...chipSx,
+                              backgroundColor: "rgba(230, 162, 60, 0.18)",
+                              color: "#e6a23c",
+                            }}
+                          />
+                        ) : (
+                          <DocumentPaymentChips doc={expense} />
+                        )}
+                      </StyledTableCell>
+                      <StyledTableCell align="right">
                         <Typography sx={{ color: "var(--admin-text-muted)" }}>{expenseDate(expense)}</Typography>
                       </StyledTableCell>
                       <StyledTableCell align="right">
@@ -655,7 +671,25 @@ export default function ExpensesPage() {
                       </StyledTableCell>
                       <StyledTableCell align="right">
                         {mutable ? (
-                          <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.25 }}>
+                          <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.25, alignItems: "center", flexWrap: "wrap" }}>
+                            {documentNeedsSettle(expense) ? (
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                onClick={() => setSettleExpense(expense)}
+                                sx={{
+                                  color: "var(--admin-accent)",
+                                  borderColor: "var(--admin-accent-border)",
+                                  borderRadius: "6px",
+                                  fontSize: 11,
+                                  py: 0,
+                                  minHeight: 26,
+                                  px: 1,
+                                }}
+                              >
+                                تسویه
+                              </Button>
+                            ) : null}
                             <IconButton size="small" onClick={() => openEdit(expense)} sx={{ color: "var(--admin-accent)" }}>
                               <EditIcon sx={{ fontSize: 16 }} />
                             </IconButton>
@@ -704,7 +738,7 @@ export default function ExpensesPage() {
             setOpenForm(false);
             resetForm();
           }}
-          maxWidth="xs"
+          maxWidth="sm"
           fullWidth
           PaperProps={{
             sx: {
@@ -745,10 +779,10 @@ export default function ExpensesPage() {
                 fullWidth
                 sx={fieldSx}
               />
-              <ShopAccountSelect
-                value={paymentForm.shopAccountId}
-                onChange={(id) => setPaymentForm((prev) => ({ ...prev, shopAccountId: id }))}
-                required
+              <DocumentPaymentFields
+                value={paymentForm}
+                onChange={setPaymentForm}
+                totalAmount={parseAmountInput(amount) || 0}
               />
               <BeneficiarySelect
                 value={beneficiaryId}
@@ -1075,6 +1109,18 @@ export default function ExpensesPage() {
             </Button>
           </DialogActions>
         </Dialog>
+
+        <DocumentPaymentSettleDialog
+          open={!!settleExpense}
+          kind="expense"
+          documentId={settleExpense?.id ?? null}
+          remainingAmount={documentCreditRemaining(settleExpense)}
+          onClose={() => setSettleExpense(null)}
+          onSuccess={() => {
+            setSettleExpense(null);
+            void fetchExpenses();
+          }}
+        />
 
         <ToastContainer autoClose={3000} position="bottom-right" />
       </Container>

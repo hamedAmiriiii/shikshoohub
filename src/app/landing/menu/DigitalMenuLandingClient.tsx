@@ -1,0 +1,475 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { motion } from "framer-motion";
+import {
+  QrCode,
+  Smartphone,
+  CreditCard,
+  Image as ImageIcon,
+  BellRing,
+  Gift,
+  Banknote,
+  Sparkles,
+  Printer,
+  Megaphone,
+  CheckCircle2,
+  Loader2,
+  ChefHat,
+  ScanLine,
+} from "lucide-react";
+import LandingChrome from "../LandingChrome";
+import {
+  fetchCitiesByState,
+  fetchConsultationFormOptions,
+  getConsultationErrorMessage,
+  IRAN_MOBILE_PATTERN,
+  isApiFailure,
+  submitConsultationRequest,
+  toIranMobile,
+  type GeoItem,
+} from "@/app/lib/consultationRequests";
+import { REGISTER_URL, SUPPORT_PHONE, SUPPORT_TEL } from "../catalog";
+
+const fieldClass =
+  "w-full rounded-xl bg-white/[0.04] border border-white/10 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 outline-none transition focus:border-cyan-500/60 focus:bg-white/[0.06] disabled:opacity-50";
+const optionClass = "bg-[#141a29] text-slate-100";
+
+type FormState = {
+  name: string;
+  phone: string;
+  state_id: string;
+  city_id: string;
+  business_name: string;
+};
+
+const EMPTY_FORM: FormState = {
+  name: "",
+  phone: "",
+  state_id: "",
+  city_id: "",
+  business_name: "",
+};
+
+const FEATURES = [
+  { icon: ImageIcon, title: "تصویر، قیمت و تخفیف", desc: "هر آیتم منو با عکس، قیمت و درصد تخفیف دیده می‌شود." },
+  { icon: BellRing, title: "فراخوان گارسون", desc: "درخواست خدمات میز بدون پیجر و بدون معطلی." },
+  { icon: Gift, title: "باشگاه مشتریان", desc: "اتصال هوشمند به اعتبار و باشگاه مشتریان وبینو." },
+  { icon: Banknote, title: "پرداخت نقدی و آنلاین", desc: "مشتری می‌تواند آنلاین بپردازد یا روش دیگر را انتخاب کند." },
+];
+
+const BENEFITS = [
+  { icon: Sparkles, title: "منوی همیشه به‌روز", desc: "بدون چاپ مجدد، قیمت و آیتم‌ها را لحظه‌ای عوض کنید." },
+  { icon: Printer, title: "حذف هزینه چاپ منو", desc: "دیگر هزینه چاپ و نگهداری منوی کاغذی ندارید." },
+  { icon: Megaphone, title: "بدون دستگاه فراخوان", desc: "درخواست خدمات از روی گوشی مشتری ثبت می‌شود." },
+  { icon: CheckCircle2, title: "سفارش ساده‌تر", desc: "از اسکن تا انتخاب و پرداخت، همه در یک مسیر کوتاه." },
+];
+
+function fadeUp(delay = 0) {
+  return {
+    initial: { opacity: 0, y: 22 },
+    whileInView: { opacity: 1, y: 0 },
+    viewport: { once: true, margin: "-50px" },
+    transition: { duration: 0.45, delay },
+  };
+}
+
+export default function DigitalMenuLandingClient() {
+  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
+  const [states, setStates] = useState<GeoItem[]>([]);
+  const [cities, setCities] = useState<GeoItem[]>([]);
+  const [optionsLoading, setOptionsLoading] = useState(true);
+  const [citiesLoading, setCitiesLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+
+  const loadOptions = useCallback(async () => {
+    setOptionsLoading(true);
+    const res = await fetchConsultationFormOptions();
+    if (!isApiFailure(res)) setStates(res.states);
+    setOptionsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    void loadOptions();
+  }, [loadOptions]);
+
+  useEffect(() => {
+    if (!form.state_id) {
+      setCities([]);
+      return;
+    }
+    let active = true;
+    setCitiesLoading(true);
+    fetchCitiesByState(Number(form.state_id)).then((list) => {
+      if (!active) return;
+      setCities(list);
+      setCitiesLoading(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [form.state_id]);
+
+  const setField = (field: keyof FormState, value: string) => {
+    setForm((prev) =>
+      field === "state_id" ? { ...prev, state_id: value, city_id: "" } : { ...prev, [field]: value },
+    );
+    setErrors((prev) => ({ ...prev, [field]: undefined }));
+    setSubmitError("");
+  };
+
+  const validate = () => {
+    const next: Partial<Record<keyof FormState, string>> = {};
+    if (!form.name.trim()) next.name = "نام را وارد کنید";
+    if (!form.business_name.trim()) next.business_name = "نام مجموعه را وارد کنید";
+    if (!form.state_id) next.state_id = "استان را انتخاب کنید";
+    if (!form.city_id) next.city_id = "شهر را انتخاب کنید";
+    const phone = toIranMobile(form.phone);
+    if (!phone) next.phone = "شماره موبایل را وارد کنید";
+    else if (!IRAN_MOBILE_PATTERN.test(phone)) next.phone = "شماره باید ۱۱ رقم و با ۰۹ شروع شود";
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (submitting || !validate()) return;
+    setSubmitting(true);
+    setSubmitError("");
+    const res = await submitConsultationRequest({
+      name: form.name.trim(),
+      phone: toIranMobile(form.phone),
+      state_id: Number(form.state_id),
+      city_id: Number(form.city_id),
+      business_name: form.business_name.trim(),
+      source: "digital_menu",
+    });
+    if (isApiFailure(res)) {
+      setSubmitError(getConsultationErrorMessage(res, "ثبت درخواست ناموفق بود."));
+      setSubmitting(false);
+      return;
+    }
+    setSubmitted(true);
+    setSubmitting(false);
+  };
+
+  const scrollToForm = () => {
+    document.getElementById("consult")?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  return (
+    <LandingChrome
+      onStartFree={scrollToForm}
+      ctaLabel="درخواست مشاوره"
+      hideRegister
+      loginLabel="ورود پنل"
+    >
+      {/* Hero */}
+      <section className="relative overflow-hidden pt-10 pb-16 md:pt-14 md:pb-20">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(34,211,238,0.18),_transparent_55%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(16,185,129,0.12),_transparent_45%)]" />
+        <div className="max-w-6xl mx-auto px-4 relative">
+          <motion.div {...fadeUp()} className="max-w-3xl mx-auto text-center">
+            <p className="text-sm font-semibold tracking-wide text-cyan-300/90 mb-3">وبینو</p>
+            <h1 className="text-3xl md:text-5xl font-black leading-tight text-white mb-4">
+              منوی دیجیتال رستوران و کافی‌شاپ
+            </h1>
+            <p className="text-slate-300 text-base md:text-lg leading-8 mb-8">
+              مشتری با اسکن QR روی میز، منوی شما را روی گوشی می‌بیند، با حوصله سفارش می‌دهد و در صورت نیاز
+              آنلاین پرداخت می‌کند — همه‌چیز متصل به نرم‌افزار فروش وبینو.
+            </p>
+            <div className="flex flex-wrap justify-center gap-3">
+              <button
+                type="button"
+                onClick={scrollToForm}
+                className="px-6 py-3 rounded-xl bg-gradient-to-l from-cyan-500 to-emerald-500 text-white font-bold shadow-lg shadow-cyan-500/20 hover:opacity-95 transition"
+              >
+                درخواست مشاوره و خرید
+              </button>
+              <Link
+                href={REGISTER_URL}
+                className="px-6 py-3 rounded-xl border border-white/15 bg-white/5 text-slate-100 font-semibold hover:border-cyan-400/50 transition"
+              >
+                شروع رایگان پنل فروش
+              </Link>
+            </div>
+          </motion.div>
+
+          <motion.div
+            {...fadeUp(0.12)}
+            className="mt-12 grid sm:grid-cols-3 gap-3 max-w-3xl mx-auto"
+          >
+            {[
+              { icon: ScanLine, label: "اسکن QR میز" },
+              { icon: Smartphone, label: "مشاهده منو روی گوشی" },
+              { icon: CreditCard, label: "پرداخت آنلاین" },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-5 text-center"
+              >
+                <item.icon className="mx-auto mb-2 text-cyan-300" size={28} />
+                <div className="text-sm font-semibold text-slate-200">{item.label}</div>
+              </div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Intro */}
+      <section className="py-14 md:py-16 border-t border-white/5">
+        <div className="max-w-6xl mx-auto px-4 grid lg:grid-cols-2 gap-10 items-center">
+          <motion.div {...fadeUp()}>
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">چرا منوی آنلاین وبینو؟</h2>
+            <p className="text-slate-300 leading-8 mb-4">
+              به‌روز بودن منو و ظاهر حرفه‌ای آن، مستقیم روی فروش رستوران و کافی‌شاپ اثر می‌گذارد. با منوی
+              دیجیتال وبینو، مشتری وارد مجموعه که شد QR روی میز را اسکن می‌کند، منو را با تصویر و توضیحات
+              می‌بیند و سفارش را ثبت می‌کند.
+            </p>
+            <p className="text-slate-400 leading-8">
+              منو به نرم‌افزار فروش وبینو وصل است؛ از ثبت سفارش تا پرداخت، مسیر اتوماتیک جلو می‌رود و شما
+              کنترل کامل قیمت، موجودی و گزارش را دارید.
+            </p>
+          </motion.div>
+          <motion.div
+            {...fadeUp(0.08)}
+            className="rounded-3xl border border-white/10 bg-gradient-to-br from-cyan-500/10 to-emerald-500/5 p-6 md:p-8"
+          >
+            <div className="flex items-start gap-3 mb-5">
+              <QrCode className="text-cyan-300 shrink-0 mt-1" size={28} />
+              <div>
+                <div className="font-bold text-white mb-1">تجربه مشتری در یک نگاه</div>
+                <p className="text-sm text-slate-400 leading-7">
+                  اسکن → مرور منو → انتخاب → پرداخت (در صورت نیاز) → ارسال به آشپزخانه
+                </p>
+              </div>
+            </div>
+            <ul className="space-y-3 text-sm text-slate-300">
+              <li className="flex gap-2"><CheckCircle2 size={18} className="text-emerald-400 shrink-0" /> بدون تماس با منوی کاغذی مشترک</li>
+              <li className="flex gap-2"><CheckCircle2 size={18} className="text-emerald-400 shrink-0" /> زمان کافی برای انتخاب با آرامش</li>
+              <li className="flex gap-2"><CheckCircle2 size={18} className="text-emerald-400 shrink-0" /> کاهش اشتباه در سفارش و انتقال به آشپزخانه</li>
+            </ul>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Payment flow */}
+      <section className="py-14 md:py-16 bg-white/[0.02] border-y border-white/5">
+        <div className="max-w-6xl mx-auto px-4">
+          <motion.div {...fadeUp()} className="text-center max-w-2xl mx-auto mb-10">
+            <ChefHat className="mx-auto text-emerald-300 mb-3" size={36} />
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
+              منوی دیجیتال به‌همراه پرداخت آنلاین
+            </h2>
+            <p className="text-slate-400 leading-8">
+              بعد از اسکن، مشتری منو را با تصاویر و توضیحات می‌بیند. اگر پرداخت آنلاین بخواهد، فاکتور را
+              می‌بیند و پرداخت می‌کند؛ سپس سفارش برای آشپزخانه ارسال می‌شود.
+            </p>
+          </motion.div>
+          <div className="grid md:grid-cols-3 gap-4">
+            {[
+              { step: "۱", title: "اسکن بارکد میز", desc: "مشتری QR اختصاصی میز یا اتاق را با گوشی اسکن می‌کند." },
+              { step: "۲", title: "انتخاب از منو", desc: "غذا و نوشیدنی را با عکس، قیمت و تخفیف انتخاب می‌کند." },
+              { step: "۳", title: "پرداخت و ارسال", desc: "پرداخت آنلاین یا روش دیگر؛ سفارش به آشپزخانه می‌رود." },
+            ].map((item, i) => (
+              <motion.div
+                key={item.step}
+                {...fadeUp(i * 0.06)}
+                className="rounded-2xl border border-white/10 bg-[#0f1422] p-5"
+              >
+                <div className="w-10 h-10 rounded-full bg-cyan-500/15 text-cyan-300 font-black flex items-center justify-center mb-3">
+                  {item.step}
+                </div>
+                <div className="font-bold text-white mb-2">{item.title}</div>
+                <p className="text-sm text-slate-400 leading-7">{item.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className="py-14 md:py-16">
+        <div className="max-w-6xl mx-auto px-4">
+          <motion.h2 {...fadeUp()} className="text-2xl md:text-3xl font-bold text-center text-white mb-10">
+            ویژگی‌های منوی دیجیتال وبینو
+          </motion.h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {FEATURES.map((item, i) => (
+              <motion.div
+                key={item.title}
+                {...fadeUp(i * 0.05)}
+                className="rounded-2xl border border-white/10 bg-white/[0.03] p-5"
+              >
+                <item.icon className="text-cyan-300 mb-3" size={26} />
+                <div className="font-bold text-white mb-2">{item.title}</div>
+                <p className="text-sm text-slate-400 leading-7">{item.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Benefits */}
+      <section className="py-14 md:py-16 bg-white/[0.02] border-y border-white/5">
+        <div className="max-w-6xl mx-auto px-4">
+          <motion.h2 {...fadeUp()} className="text-2xl md:text-3xl font-bold text-center text-white mb-10">
+            مزایای منوی دیجیتال وبینو
+          </motion.h2>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {BENEFITS.map((item, i) => (
+              <motion.div
+                key={item.title}
+                {...fadeUp(i * 0.05)}
+                className="rounded-2xl border border-white/10 bg-[#0f1422] p-5 flex gap-4"
+              >
+                <div className="w-11 h-11 rounded-xl bg-emerald-500/15 flex items-center justify-center shrink-0">
+                  <item.icon className="text-emerald-300" size={22} />
+                </div>
+                <div>
+                  <div className="font-bold text-white mb-1">{item.title}</div>
+                  <p className="text-sm text-slate-400 leading-7">{item.desc}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Consultation form */}
+      <section id="consult" className="py-16 md:py-20">
+        <div className="max-w-xl mx-auto px-4">
+          <motion.div {...fadeUp()} className="text-center mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">درخواست مشاوره و خرید</h2>
+            <p className="text-slate-400 text-sm leading-7">
+              فرم را پر کنید تا همکاران وبینو با شما تماس بگیرند.
+            </p>
+          </motion.div>
+
+          {submitted ? (
+            <motion.div
+              {...fadeUp()}
+              className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-8 text-center"
+            >
+              <CheckCircle2 className="mx-auto text-emerald-400 mb-3" size={40} />
+              <div className="font-bold text-white text-lg mb-2">درخواست ثبت شد</div>
+              <p className="text-slate-300 text-sm leading-7">
+                از انتخاب شما متشکریم. همکاران ما به‌زودی با شما تماس خواهند گرفت.
+              </p>
+            </motion.div>
+          ) : (
+            <motion.form
+              {...fadeUp(0.05)}
+              onSubmit={handleSubmit}
+              className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 md:p-6 space-y-4"
+            >
+              <div>
+                <label className="block text-xs text-slate-400 mb-1.5">نام</label>
+                <input
+                  className={fieldClass}
+                  value={form.name}
+                  onChange={(e) => setField("name", e.target.value)}
+                  placeholder=" "
+                  disabled={submitting}
+                />
+                {errors.name ? <p className="text-rose-400 text-xs mt-1">{errors.name}</p> : null}
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-400 mb-1.5">شماره موبایل</label>
+                <input
+                  className={fieldClass}
+                  value={form.phone}
+                  onChange={(e) => setField("phone", e.target.value.replace(/\D/g, "").slice(0, 11))}
+                  placeholder="09xxxxxxxxx"
+                  dir="ltr"
+                  disabled={submitting}
+                />
+                {errors.phone ? <p className="text-rose-400 text-xs mt-1">{errors.phone}</p> : null}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1.5">استان</label>
+                  <select
+                    className={fieldClass}
+                    value={form.state_id}
+                    onChange={(e) => setField("state_id", e.target.value)}
+                    disabled={submitting || optionsLoading}
+                  >
+                    <option className={optionClass} value="">
+                      انتخاب استان
+                    </option>
+                    {states.map((s) => (
+                      <option className={optionClass} key={s.id} value={String(s.id)}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.state_id ? <p className="text-rose-400 text-xs mt-1">{errors.state_id}</p> : null}
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1.5">شهر</label>
+                  <select
+                    className={fieldClass}
+                    value={form.city_id}
+                    onChange={(e) => setField("city_id", e.target.value)}
+                    disabled={submitting || !form.state_id || citiesLoading}
+                  >
+                    <option className={optionClass} value="">
+                      {citiesLoading ? "در حال بارگذاری…" : "انتخاب شهر"}
+                    </option>
+                    {cities.map((c) => (
+                      <option className={optionClass} key={c.id} value={String(c.id)}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.city_id ? <p className="text-rose-400 text-xs mt-1">{errors.city_id}</p> : null}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-400 mb-1.5">نام مجموعه</label>
+                <input
+                  className={fieldClass}
+                  value={form.business_name}
+                  onChange={(e) => setField("business_name", e.target.value)}
+                  placeholder="نام رستوران یا کافی‌شاپ"
+                  disabled={submitting}
+                />
+                {errors.business_name ? (
+                  <p className="text-rose-400 text-xs mt-1">{errors.business_name}</p>
+                ) : null}
+              </div>
+
+              {submitError ? (
+                <p className="text-rose-400 text-sm text-center">{submitError}</p>
+              ) : null}
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full py-3.5 rounded-xl bg-gradient-to-l from-cyan-500 to-emerald-500 text-white font-bold hover:opacity-95 transition disabled:opacity-60 inline-flex items-center justify-center gap-2"
+              >
+                {submitting ? <Loader2 className="animate-spin" size={18} /> : null}
+                {submitting ? "در حال ثبت…" : "ثبت درخواست"}
+              </button>
+
+              <p className="text-center text-xs text-slate-500">
+                پشتیبانی:{" "}
+                <a href={SUPPORT_TEL} className="text-cyan-400" dir="ltr">
+                  {SUPPORT_PHONE}
+                </a>
+              </p>
+            </motion.form>
+          )}
+        </div>
+      </section>
+    </LandingChrome>
+  );
+}

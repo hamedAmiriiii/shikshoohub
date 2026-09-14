@@ -13,6 +13,7 @@ import {
   Gift,
   Headphones,
   Puzzle,
+  QrCode,
   Share2,
   Smartphone,
   Store,
@@ -38,6 +39,7 @@ const ICONS: Record<ProductIconName, LucideIcon> = {
   video: Video,
   share: Share2,
   store: Store,
+  qrcode: QrCode,
 };
 
 const BENEFITS = [

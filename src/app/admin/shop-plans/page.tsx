@@ -7,6 +7,10 @@ import {
   Card,
   CardContent,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControl,
   FormControlLabel,
   Radio,
@@ -50,6 +54,7 @@ export default function ShopPlansPage() {
   const [shopSubscription, setShopSubscription] = useState<ShopSubscriptionPricing | null>(null);
   const [gateways, setGateways] = useState(DEFAULT_PAYMENT_GATEWAYS);
   const [gateway, setGateway] = useState<PaymentGatewayId>("zarinpal");
+  const [pendingPlan, setPendingPlan] = useState<PaymentsCatalogItem | null>(null);
   const [buyingId, setBuyingId] = useState<number | null>(null);
 
   const loadPlans = useCallback(async () => {
@@ -96,9 +101,15 @@ export default function ShopPlansPage() {
     void loadPlans();
   }, [loadPlans]);
 
-  const handleBuy = async (plan: PaymentsCatalogItem) => {
+  const openPayDialog = (plan: PaymentsCatalogItem) => {
+    setPendingPlan(plan);
+  };
+
+  const confirmPay = async () => {
+    if (!pendingPlan) return;
     const token = tokenCode();
     if (!token) return;
+    const plan = pendingPlan;
     setBuyingId(plan.id);
     try {
       const res = await startGatewayPayment({
@@ -110,72 +121,17 @@ export default function ShopPlansPage() {
       });
       if (isPaymentsError(res)) {
         toast.error(getApiErrorMessage(res, "خطا در اتصال به درگاه"));
+        setBuyingId(null);
+        return;
       }
+      setPendingPlan(null);
     } finally {
       setBuyingId(null);
     }
   };
 
-  const customRenewal = Boolean(shopSubscription?.has_custom_renewal);
-
   return (
     <Box sx={{ ...adminPageSx, p: 2, pb: 12 }}>
-      <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "13px", mb: 1.5 }}>
-        {customRenewal
-          ? "مبلغ تمدید اختصاصی فروشگاه شماست؛ پس از پرداخت، اعتبار با همین قیمت تمدید می‌شود."
-          : "پس از پرداخت موفق، اعتبار فروشگاه خودکار تمدید می‌شود."}
-      </Typography>
-
-      {/* {customRenewal && shopSubscription?.renewal_price_toman ? (
-        <Card sx={{ ...packageCardSx, mb: 2, height: "auto", borderColor: "var(--admin-accent)" }}>
-          <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
-            <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: 14, mb: 0.5 }}>
-              تمدید اختصاصی شما
-            </Typography>
-            <Typography sx={{ color: "var(--admin-accent)", fontWeight: 800, fontSize: 22 }}>
-              {formatToman(shopSubscription.renewal_price_toman)}
-            </Typography>
-            {shopSubscription.renewal_days ? (
-              <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: 13, mt: 0.5 }}>
-                مدت هر تمدید:{" "}
-                {new Intl.NumberFormat("fa-IR").format(shopSubscription.renewal_days)} روز
-              </Typography>
-            ) : null}
-          </CardContent>
-        </Card>
-      ) : null} */}
-
-      <Card sx={{ ...packageCardSx, mb: 2, height: "auto" }}>
-        <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
-          <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: 14, mb: 0.75 }}>
-            انتخاب درگاه پرداخت
-          </Typography>
-          <FormControl>
-            <RadioGroup
-              row
-              value={gateway}
-              onChange={(e) => setGateway(e.target.value as PaymentGatewayId)}
-            >
-              {gateways.map((item) => (
-                <FormControlLabel
-                  key={item.id}
-                  value={item.id}
-                  control={
-                    <Radio
-                      size="small"
-                      sx={{ color: "var(--admin-accent)", "&.Mui-checked": { color: "var(--admin-accent)" } }}
-                    />
-                  }
-                  label={
-                    <Typography sx={{ color: "var(--admin-text)", fontSize: 13 }}>{item.name}</Typography>
-                  }
-                />
-              ))}
-            </RadioGroup>
-          </FormControl>
-        </CardContent>
-      </Card>
-
       {loading ? (
         <Box sx={{ py: 6, display: "flex", justifyContent: "center" }}>
           <CircularProgress sx={{ color: "var(--admin-accent)" }} />
@@ -221,7 +177,7 @@ export default function ShopPlansPage() {
                     variant="contained"
                     fullWidth
                     disabled={buyingId === plan.id}
-                    onClick={() => void handleBuy(plan)}
+                    onClick={() => openPayDialog(plan)}
                     sx={{
                       ...adminButtonStartIconSx,
                       mt: "auto",
@@ -237,6 +193,74 @@ export default function ShopPlansPage() {
           })}
         </Box>
       )}
+
+      <Dialog
+        open={Boolean(pendingPlan)}
+        onClose={() => (buyingId == null ? setPendingPlan(null) : undefined)}
+        PaperProps={{
+          sx: {
+            bgcolor: "var(--admin-surface)",
+            borderRadius: "16px",
+            direction: "rtl",
+            minWidth: { xs: "90%", sm: 360 },
+          },
+        }}
+      >
+        <DialogTitle sx={{ color: "var(--admin-text)", textAlign: "center" }}>
+          انتخاب درگاه پرداخت
+        </DialogTitle>
+        <DialogContent>
+          {pendingPlan ? (
+            <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: 13, textAlign: "center", mb: 1.5 }}>
+              {pendingPlan.name}
+              {pendingPlan.price_toman > 0 ? ` — ${formatToman(pendingPlan.price_toman)}` : ""}
+            </Typography>
+          ) : null}
+          <FormControl fullWidth>
+            <RadioGroup
+              value={gateway}
+              onChange={(e) => setGateway(e.target.value as PaymentGatewayId)}
+            >
+              {gateways.map((item) => (
+                <FormControlLabel
+                  key={item.id}
+                  value={item.id}
+                  control={
+                    <Radio
+                      size="small"
+                      sx={{ color: "var(--admin-accent)", "&.Mui-checked": { color: "var(--admin-accent)" } }}
+                    />
+                  }
+                  label={
+                    <Typography sx={{ color: "var(--admin-text)", fontSize: 14 }}>{item.name}</Typography>
+                  }
+                />
+              ))}
+            </RadioGroup>
+          </FormControl>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: "center", gap: 1, pb: 2 }}>
+          <Button
+            onClick={() => setPendingPlan(null)}
+            disabled={buyingId != null}
+            sx={{ color: "var(--admin-text)" }}
+          >
+            انصراف
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => void confirmPay()}
+            disabled={buyingId != null}
+            sx={{
+              bgcolor: "var(--admin-accent)",
+              "&:hover": { bgcolor: "var(--admin-accent-hover)" },
+            }}
+            startIcon={buyingId != null ? <CircularProgress size={16} color="inherit" /> : undefined}
+          >
+            ادامه پرداخت
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <ToastContainer position="bottom-right" rtl autoClose={3000} style={{ marginBottom: "76px" }} />
     </Box>

@@ -8,6 +8,10 @@ import {
   CardContent,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControl,
   FormControlLabel,
   Grid,
@@ -82,6 +86,7 @@ export default function SmsPackagesPage() {
   const [buyingId, setBuyingId] = useState<number | null>(null);
   const [gateways, setGateways] = useState(DEFAULT_PAYMENT_GATEWAYS);
   const [gateway, setGateway] = useState<PaymentGatewayId>("zarinpal");
+  const [pendingPackage, setPendingPackage] = useState<PaymentsCatalogItem | null>(null);
 
   const loadData = useCallback(async () => {
     const token = tokenCode();
@@ -143,9 +148,15 @@ export default function SmsPackagesPage() {
     void loadData();
   }, [loadData]);
 
-  const handlePurchase = async (pkg: PaymentsCatalogItem) => {
+  const openPayDialog = (pkg: PaymentsCatalogItem) => {
+    setPendingPackage(pkg);
+  };
+
+  const confirmPay = async () => {
+    if (!pendingPackage) return;
     const token = tokenCode();
     if (!token) return;
+    const pkg = pendingPackage;
     setBuyingId(pkg.id);
     try {
       const res = await startGatewayPayment({
@@ -157,7 +168,10 @@ export default function SmsPackagesPage() {
       });
       if (isPaymentsError(res)) {
         toast.error(getApiErrorMessage(res, "خطا در اتصال به درگاه"));
+        setBuyingId(null);
+        return;
       }
+      setPendingPackage(null);
     } finally {
       setBuyingId(null);
     }
@@ -168,37 +182,6 @@ export default function SmsPackagesPage() {
       <Box sx={{ mb: 2 }}>
         <ShopSmsQuotaCard key={quotaKey} />
       </Box>
-
-      <Card sx={{ ...packageCardSx, mb: 2, height: "auto" }}>
-        <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
-          <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: 14, mb: 0.75 }}>
-            انتخاب درگاه پرداخت
-          </Typography>
-          <FormControl>
-            <RadioGroup
-              row
-              value={gateway}
-              onChange={(e) => setGateway(e.target.value as PaymentGatewayId)}
-            >
-              {gateways.map((item) => (
-                <FormControlLabel
-                  key={item.id}
-                  value={item.id}
-                  control={
-                    <Radio
-                      size="small"
-                      sx={{ color: "var(--admin-accent)", "&.Mui-checked": { color: "var(--admin-accent)" } }}
-                    />
-                  }
-                  label={
-                    <Typography sx={{ color: "var(--admin-text)", fontSize: 13 }}>{item.name}</Typography>
-                  }
-                />
-              ))}
-            </RadioGroup>
-          </FormControl>
-        </CardContent>
-      </Card>
 
       {loading ? (
         <Box sx={{ py: 6, display: "flex", justifyContent: "center" }}>
@@ -248,7 +231,7 @@ export default function SmsPackagesPage() {
                     variant="contained"
                     fullWidth
                     disabled={buyingId === pkg.id}
-                    onClick={() => void handlePurchase(pkg)}
+                    onClick={() => openPayDialog(pkg)}
                     sx={{
                       ...adminButtonStartIconSx,
                       mt: "auto",
@@ -314,6 +297,74 @@ export default function SmsPackagesPage() {
           ))}
         </Box>
       )}
+
+      <Dialog
+        open={Boolean(pendingPackage)}
+        onClose={() => (buyingId == null ? setPendingPackage(null) : undefined)}
+        PaperProps={{
+          sx: {
+            bgcolor: "var(--admin-surface)",
+            borderRadius: "16px",
+            direction: "rtl",
+            minWidth: { xs: "90%", sm: 360 },
+          },
+        }}
+      >
+        <DialogTitle sx={{ color: "var(--admin-text)", textAlign: "center" }}>
+          انتخاب درگاه پرداخت
+        </DialogTitle>
+        <DialogContent>
+          {pendingPackage ? (
+            <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: 13, textAlign: "center", mb: 1.5 }}>
+              {pendingPackage.name}
+              {pendingPackage.price_toman > 0 ? ` — ${formatToman(pendingPackage.price_toman)}` : ""}
+            </Typography>
+          ) : null}
+          <FormControl fullWidth>
+            <RadioGroup
+              value={gateway}
+              onChange={(e) => setGateway(e.target.value as PaymentGatewayId)}
+            >
+              {gateways.map((item) => (
+                <FormControlLabel
+                  key={item.id}
+                  value={item.id}
+                  control={
+                    <Radio
+                      size="small"
+                      sx={{ color: "var(--admin-accent)", "&.Mui-checked": { color: "var(--admin-accent)" } }}
+                    />
+                  }
+                  label={
+                    <Typography sx={{ color: "var(--admin-text)", fontSize: 14 }}>{item.name}</Typography>
+                  }
+                />
+              ))}
+            </RadioGroup>
+          </FormControl>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: "center", gap: 1, pb: 2 }}>
+          <Button
+            onClick={() => setPendingPackage(null)}
+            disabled={buyingId != null}
+            sx={{ color: "var(--admin-text)" }}
+          >
+            انصراف
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => void confirmPay()}
+            disabled={buyingId != null}
+            sx={{
+              bgcolor: "var(--admin-accent)",
+              "&:hover": { bgcolor: "var(--admin-accent-hover)" },
+            }}
+            startIcon={buyingId != null ? <CircularProgress size={16} color="inherit" /> : undefined}
+          >
+            ادامه پرداخت
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <ToastContainer position="bottom-right" rtl autoClose={3000} style={{ marginBottom: "76px" }} />
     </Box>

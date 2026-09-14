@@ -15,7 +15,7 @@ export const TRIAL_CTA = "شروع رایگان یک هفته‌ای";
 export const LANDING_FAQS: { q: string; a: string }[] = [
   {
     q: "وبینو چند محصول دارد؟",
-    a: "هشت محصول: حسابداری و فروش، تعویض روغن، باشگاه مشتریان، خرید و فروش طلا، نوبت‌دهی، یادینو (کلاس آنلاین)، شبکه اجتماعی و فروشگاه آنلاین.",
+    a: "محصولات اصلی شامل حسابداری و فروش، منوی دیجیتال رستوران، تعویض روغن، باشگاه مشتریان، طلا، نوبت‌دهی، یادینو، شبکه اجتماعی و فروشگاه آنلاین است.",
   },
   {
     q: "آیا روی موبایل نصب می‌شود؟",
@@ -39,7 +39,8 @@ export type ProductIconName =
   | "calendar"
   | "video"
   | "share"
-  | "store";
+  | "store"
+  | "qrcode";
 
 export type LandingScreenshot = { src: string; title: string };
 
@@ -83,6 +84,21 @@ export const LANDING_PRODUCTS: LandingProduct[] = [
       { src: "/landing/9.png", title: "چاپ فاکتور" },
       { src: "/landing/10.png", title: "داشبورد" },
     ],
+  },
+  {
+    slug: "menu",
+    href: "/landing/menu",
+    title: "منوی دیجیتال",
+    tag: "رستوران",
+    icon: "qrcode",
+    color: "from-cyan-500 to-emerald-500",
+    desc: "منوی دیجیتال رستوران و کافی‌شاپ با QR میز، سفارش روی گوشی و پرداخت آنلاین.",
+    lead: "مشتری QR میز را اسکن می‌کند، منو را روی گوشی می‌بیند، سفارش می‌دهد و در صورت نیاز آنلاین می‌پردازد — متصل به وبینو.",
+    items: ["اسکن QR میز", "منو با تصویر و قیمت", "فراخوان گارسون", "پرداخت آنلاین"],
+    loginUrl: LOGIN_URL,
+    registerUrl: REGISTER_URL,
+    loginLabel: "ورود به پنل فروش",
+    screenshots: [{ src: "/landing/2.png", title: "حالت منو" }],
   },
   {
     slug: "oil",
