@@ -126,7 +126,7 @@ export default function ShopPlansPage() {
           : "پس از پرداخت موفق، اعتبار فروشگاه خودکار تمدید می‌شود."}
       </Typography>
 
-      {customRenewal && shopSubscription?.renewal_price_toman ? (
+      {/* {customRenewal && shopSubscription?.renewal_price_toman ? (
         <Card sx={{ ...packageCardSx, mb: 2, height: "auto", borderColor: "var(--admin-accent)" }}>
           <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
             <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: 14, mb: 0.5 }}>
@@ -143,7 +143,7 @@ export default function ShopPlansPage() {
             ) : null}
           </CardContent>
         </Card>
-      ) : null}
+      ) : null} */}
 
       <Card sx={{ ...packageCardSx, mb: 2, height: "auto" }}>
         <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
