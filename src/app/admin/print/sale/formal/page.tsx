@@ -33,11 +33,13 @@ import {
 
 const fieldSx = {
   "& .MuiOutlinedInput-root": {
-    bgcolor: "var(--admin-surface-alt, #f5f5f5)",
+    bgcolor: "var(--admin-input-bg, var(--admin-surface-alt))",
     color: "var(--admin-text)",
     fontSize: 13,
   },
-  "& .MuiInputLabel-root": { fontSize: 12 },
+  "& .MuiInputBase-input": { color: "var(--admin-text)" },
+  "& .MuiInputLabel-root": { fontSize: 12, color: "var(--admin-text-muted)" },
+  "& .MuiInputLabel-root.Mui-focused": { color: "var(--admin-accent)" },
 };
 
 function PartyFields({
@@ -53,8 +55,8 @@ function PartyFields({
 }) {
   const set = (key: keyof FormalParty, v: string) => onChange({ ...value, [key]: v });
   return (
-    <Box sx={{ display: "grid", gap: 1 }}>
-      <Typography sx={{ fontWeight: 700, fontSize: 13, mb: 0.5 }}>{title}</Typography>
+    <Box sx={{ display: "grid", gap: 1, color: "var(--admin-text)" }}>
+      <Typography sx={{ fontWeight: 700, fontSize: 13, mb: 0.5, color: "var(--admin-text)" }}>{title}</Typography>
       {isSeller ? (
         <>
           <TextField size="small" label="نام / عنوان قانونی" value={value.legal_name || ""} onChange={(e) => set("legal_name", e.target.value)} sx={fieldSx} />
@@ -104,11 +106,11 @@ function PrintPartyBox({
 }) {
   const name = isSeller ? party.legal_name || party.brand_name : party.full_name;
   return (
-    <Box className="fi-box" sx={{ flex: 1, minWidth: 0, border: "1px solid #111", display: "flex", flexDirection: "column" }}>
-      <Box sx={{ bgcolor: "#d9d9d9", borderBottom: "1px solid #111", px: 0.75, py: 0.35, textAlign: "center", fontWeight: 800, fontSize: 11 }}>
+    <Box className="fi-box" sx={{ flex: 1, minWidth: 0, border: "1px solid #111", display: "flex", flexDirection: "column", color: "#111" }}>
+      <Box sx={{ bgcolor: "#d9d9d9", borderBottom: "1px solid #111", px: 0.75, py: 0.35, textAlign: "center", fontWeight: 800, fontSize: 11, color: "#111" }}>
         {title}
       </Box>
-      <Box sx={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", gap: 0, fontSize: 9.5, lineHeight: 1.55, p: 0.6, flex: 1 }}>
+      <Box sx={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", gap: 0, fontSize: 9.5, lineHeight: 1.55, p: 0.6, flex: 1, color: "#111" }}>
         <Box>
           <div>نام شخص حقیقی/حقوقی: {name || "—"}</div>
           <div>استان: {party.province || "—"}</div>
@@ -267,7 +269,7 @@ function FormalInvoiceContent() {
 
   if (loading) {
     return (
-      <Box sx={{ p: 4, textAlign: "center" }}>
+      <Box sx={{ p: 4, textAlign: "center", bgcolor: "var(--admin-surface-alt)", minHeight: "100vh", color: "var(--admin-text)" }}>
         <CircularProgress />
       </Box>
     );
@@ -275,8 +277,8 @@ function FormalInvoiceContent() {
 
   if (!purchase) {
     return (
-      <Box sx={{ p: 3, textAlign: "center", direction: "rtl" }}>
-        <Typography sx={{ mb: 2 }}>فاکتور یافت نشد.</Typography>
+      <Box sx={{ p: 3, textAlign: "center", direction: "rtl", bgcolor: "var(--admin-surface-alt)", minHeight: "100vh", color: "var(--admin-text)" }}>
+        <Typography sx={{ mb: 2, color: "var(--admin-text)" }}>فاکتور یافت نشد.</Typography>
         <Button variant="contained" onClick={() => router.push("/admin/purchas")}>
           بازگشت
         </Button>
@@ -289,7 +291,7 @@ function FormalInvoiceContent() {
       <style>{`
         @page { size: A5 landscape; margin: 6mm; }
         @media print {
-          html, body { background: #fff !important; }
+          html, body { background: #fff !important; color: #111 !important; }
           .no-print { display: none !important; }
           .fi-sheet {
             box-shadow: none !important;
@@ -302,10 +304,17 @@ function FormalInvoiceContent() {
         }
         .fi-sheet {
           direction: rtl;
-          color: #111;
+          color: #111 !important;
           font-family: Tahoma, "Iranian Sans", Arial, sans-serif;
-          background: #fff;
+          background: #fff !important;
         }
+        .fi-sheet,
+        .fi-sheet *:not(svg):not(path) {
+          color: #111 !important;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        .fi-sheet .fi-muted { color: #666 !important; }
         .fi-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         .fi-table th, .fi-table td {
           border: 1px solid #111;
@@ -314,12 +323,22 @@ function FormalInvoiceContent() {
           text-align: center;
           vertical-align: middle;
           word-break: break-word;
+          color: #111 !important;
+          background: #fff;
         }
-        .fi-table th { background: #d9d9d9; font-weight: 800; }
+        .fi-table th { background: #d9d9d9 !important; font-weight: 800; }
         .fi-table td.name { text-align: right; padding-right: 4px; }
       `}</style>
 
-      <Box sx={{ direction: "rtl", bgcolor: "#e8e8e8", minHeight: "100vh", p: 2 }}>
+      <Box
+        sx={{
+          direction: "rtl",
+          bgcolor: "var(--admin-surface-alt)",
+          color: "var(--admin-text)",
+          minHeight: "100vh",
+          p: 2,
+        }}
+      >
         <Box className="no-print" sx={{ maxWidth: 980, mx: "auto", mb: 2, display: "flex", gap: 1, flexWrap: "wrap" }}>
           <Button variant="contained" startIcon={<PrintIcon />} disabled={saving} onClick={() => void handlePrint()}>
             چاپ فاکتور رسمی
@@ -331,7 +350,9 @@ function FormalInvoiceContent() {
             بستن
           </Button>
           {buyerLookupBusy ? (
-            <Typography sx={{ fontSize: 12, alignSelf: "center", color: "#666" }}>در حال خواندن مشخصات خریدار…</Typography>
+            <Typography sx={{ fontSize: 12, alignSelf: "center", color: "var(--admin-text-secondary)" }}>
+              در حال خواندن مشخصات خریدار…
+            </Typography>
           ) : null}
         </Box>
 
@@ -344,14 +365,16 @@ function FormalInvoiceContent() {
             display: "grid",
             gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
             gap: 2,
-            bgcolor: "#fff",
+            bgcolor: "var(--admin-surface)",
+            color: "var(--admin-text)",
             p: 2,
             borderRadius: 2,
+            border: "1px solid var(--admin-border)",
           }}
         >
           <PartyFields title="مشخصات فروشنده (اختیاری — ذخیره می‌شود)" value={seller} onChange={setSeller} isSeller />
           <PartyFields title="مشخصات خریدار (با تلفن برای دفعات بعد)" value={buyer} onChange={setBuyer} />
-          <Box sx={{ gridColumn: "1 / -1" }}>
+          <Box sx={{ gridColumn: "1 / -1", color: "var(--admin-text)" }}>
             <TextField
               fullWidth
               size="small"
@@ -362,10 +385,20 @@ function FormalInvoiceContent() {
               minRows={2}
               sx={fieldSx}
             />
-            <Typography sx={{ fontSize: 12, mt: 1, mb: 0.5 }}>شرایط و نحوه فروش</Typography>
+            <Typography sx={{ fontSize: 12, mt: 1, mb: 0.5, color: "var(--admin-text)" }}>شرایط و نحوه فروش</Typography>
             <RadioGroup row value={saleMode} onChange={(e) => setSaleMode(e.target.value as "cash" | "credit")}>
-              <FormControlLabel value="cash" control={<Radio size="small" />} label="نقدی" />
-              <FormControlLabel value="credit" control={<Radio size="small" />} label="غیرنقدی" />
+              <FormControlLabel
+                value="cash"
+                control={<Radio size="small" />}
+                label="نقدی"
+                sx={{ color: "var(--admin-text)", "& .MuiFormControlLabel-label": { color: "var(--admin-text)" } }}
+              />
+              <FormControlLabel
+                value="credit"
+                control={<Radio size="small" />}
+                label="غیرنقدی"
+                sx={{ color: "var(--admin-text)", "& .MuiFormControlLabel-label": { color: "var(--admin-text)" } }}
+              />
             </RadioGroup>
           </Box>
         </Box>
@@ -378,20 +411,23 @@ function FormalInvoiceContent() {
             border: "1px solid #ccc",
             boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
             p: 1.25,
+            bgcolor: "#fff",
+            color: "#111",
           }}
         >
           <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 1, mb: 1 }}>
-            <Box sx={{ width: 120, fontSize: 11, lineHeight: 1.7 }}>
+            <Box sx={{ width: 120, fontSize: 11, lineHeight: 1.7, color: "#111" }}>
               <div>شماره فاکتور: {formatFaNumber(Number(purchase.id) || 0)}</div>
               <div>تاریخ: {formatFaDate(purchase.created_at)}</div>
             </Box>
             <Box sx={{ textAlign: "center", flex: 1 }}>
-              <Typography sx={{ fontWeight: 900, fontSize: 22, lineHeight: 1.2 }}>فاکتور فروش</Typography>
-              <Typography sx={{ fontSize: 11, mt: 0.25 }}>
+              <Typography sx={{ fontWeight: 900, fontSize: 22, lineHeight: 1.2, color: "#111" }}>فاکتور فروش</Typography>
+              <Typography sx={{ fontSize: 11, mt: 0.25, color: "#111" }}>
                 {seller.brand_name || seller.legal_name || purchase.shop_name || ""}
               </Typography>
             </Box>
             <Box
+              className="fi-muted"
               sx={{
                 width: 90,
                 height: 56,
@@ -414,7 +450,7 @@ function FormalInvoiceContent() {
             <PrintPartyBox title="مشخصات خریدار" party={buyer} />
           </Box>
 
-          <Box sx={{ bgcolor: "#d9d9d9", border: "1px solid #111", borderBottom: 0, textAlign: "center", fontWeight: 800, fontSize: 11, py: 0.35 }}>
+          <Box sx={{ bgcolor: "#d9d9d9", border: "1px solid #111", borderBottom: 0, textAlign: "center", fontWeight: 800, fontSize: 11, py: 0.35, color: "#111" }}>
             مشخصات کالا یا خدمات مورد معامله
           </Box>
           <table className="fi-table">
@@ -460,11 +496,11 @@ function FormalInvoiceContent() {
             </tbody>
           </table>
 
-          <Box sx={{ border: "1px solid #111", borderTop: 0, px: 0.75, py: 0.5, fontSize: 11 }}>
+          <Box sx={{ border: "1px solid #111", borderTop: 0, px: 0.75, py: 0.5, fontSize: 11, color: "#111" }}>
             جمع کل (حروف): {totalWords}
           </Box>
 
-          <Box sx={{ display: "flex", border: "1px solid #111", borderTop: 0, fontSize: 11 }}>
+          <Box sx={{ display: "flex", border: "1px solid #111", borderTop: 0, fontSize: 11, color: "#111" }}>
             <Box sx={{ flex: 1, borderLeft: "1px solid #111", p: 0.75 }}>
               شرایط و نحوه فروش:{" "}
               <Box component="span" sx={{ mx: 1 }}>
@@ -479,7 +515,7 @@ function FormalInvoiceContent() {
             </Box>
           </Box>
 
-          <Box sx={{ display: "flex", border: "1px solid #111", borderTop: 0, minHeight: 72 }}>
+          <Box sx={{ display: "flex", border: "1px solid #111", borderTop: 0, minHeight: 72, color: "#111" }}>
             <Box sx={{ flex: 1, borderLeft: "1px solid #111", p: 0.75, fontSize: 11, textAlign: "center" }}>
               مهر و امضاء فروشنده
             </Box>
