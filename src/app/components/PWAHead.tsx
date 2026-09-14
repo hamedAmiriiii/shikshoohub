@@ -2,11 +2,13 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { isTableReservPath } from "@/app/lib/shopStorefront";
 
 export default function PWAHead() {
   const pathname = usePathname() || "";
   const isAdmin = pathname === "/admin" || pathname.startsWith("/admin/");
   const isOil = pathname === "/oil" || pathname.startsWith("/oil/");
+  const isReserv = isTableReservPath(pathname);
 
   useEffect(() => {
     let manifestLink = document.querySelector('link[rel="manifest"]') as HTMLLinkElement | null;
@@ -70,8 +72,11 @@ export default function PWAHead() {
 
     manifestLink.href = "/manifest.json";
     themeColor.content = "#1f9ad1";
-    appleTitle.content = "وبینو";
-  }, [isAdmin, isOil]);
+    // روی صفحه میز/اتاق عنوان از document.title (نام فروشگاه) می‌آید؛ وبینو را جایگزین نکن
+    if (!isReserv) {
+      appleTitle.content = "وبینو";
+    }
+  }, [isAdmin, isOil, isReserv]);
 
   return null;
 }

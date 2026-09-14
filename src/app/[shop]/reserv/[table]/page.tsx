@@ -877,10 +877,31 @@ function TableReservPageBody() {
 
   useEffect(() => {
     if (!shopTitle || shopTitle === t("shop")) return;
-    const prev = document.title;
+    const prevTitle = document.title;
     document.title = shopTitle;
+
+    let appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]') as HTMLMetaElement | null;
+    if (!appleTitle) {
+      appleTitle = document.createElement("meta");
+      appleTitle.name = "apple-mobile-web-app-title";
+      document.head.appendChild(appleTitle);
+    }
+    const prevApple = appleTitle.content;
+    appleTitle.content = shopTitle;
+
+    let appName = document.querySelector('meta[name="application-name"]') as HTMLMetaElement | null;
+    if (!appName) {
+      appName = document.createElement("meta");
+      appName.name = "application-name";
+      document.head.appendChild(appName);
+    }
+    const prevApp = appName.content;
+    appName.content = shopTitle;
+
     return () => {
-      document.title = prev;
+      document.title = prevTitle;
+      appleTitle!.content = prevApple;
+      appName!.content = prevApp;
     };
   }, [shopTitle, t]);
 

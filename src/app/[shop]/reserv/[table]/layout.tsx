@@ -10,12 +10,11 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const shopCode = params.shop?.trim() || "";
   const table = params.table?.trim() || "";
-  const shopName = (await fetchPublicShopName(shopCode)) || shopCode || "فروشگاه";
-  const title = shopName;
+  const shopName = (await fetchPublicShopName(shopCode)) || "فروشگاه";
   const description = `منوی دیجیتال ${shopName} — سفارش از میز ${table}`;
 
   return pageMetadata({
-    title,
+    title: shopName,
     description,
     path: shopPath(shopCode, `/reserv/${table}`),
     siteName: shopName,

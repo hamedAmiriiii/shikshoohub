@@ -405,16 +405,7 @@ export function tableQrImageUrl(url: string, size = 220): string {
 const GOLD = "#d4af37";
 const GOLD_LIGHT = "#f0d77a";
 const GOLD_DARK = "#8a6d1f";
-const INK = "#14110c";
 const BG = "#161616";
-
-function escapeXml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
 
 function svgDataUrl(markup: string): string {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(markup)}`;
@@ -443,75 +434,38 @@ async function fetchQrSvgMarkup(link: string, size = 512): Promise<string> {
   return text;
 }
 
-function composeSimpleQrSvg(
-  qr: { content: string; size: number },
-  tableTitle: string,
-  restaurantName: string,
-): string {
-  const cardW = 340;
-  const cardH = 400;
-  const shop = restaurantName.trim() || "فروشگاه";
-  const table = tableTitle.trim() || "میز";
-  const qrBox = 240;
-  const qrX = (cardW - qrBox) / 2;
-  const qrY = 72;
-  const scale = qrBox / qr.size;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${cardW} ${cardH}" width="${cardW}" height="${cardH}">
-  <rect width="${cardW}" height="${cardH}" fill="#ffffff"/>
-  <text x="${cardW / 2}" y="36" fill="#14110c" font-size="18" font-weight="700" text-anchor="middle" font-family="Vazirmatn, IRANSans, Tahoma, sans-serif">${escapeXml(shop)}</text>
-  <text x="${cardW / 2}" y="58" fill="#5a554c" font-size="13" font-weight="600" text-anchor="middle" font-family="Vazirmatn, IRANSans, Tahoma, sans-serif">${escapeXml(table)}</text>
-  <g transform="translate(${qrX} ${qrY}) scale(${scale})">${qr.content}</g>
-  <text x="${cardW / 2}" y="${qrY + qrBox + 28}" fill="#5a554c" font-size="12" text-anchor="middle" font-family="Vazirmatn, IRANSans, Tahoma, sans-serif">اسکن کنید و سفارش ثبت کنید</text>
+function composeSimpleQrSvg(qr: { content: string; size: number }): string {
+  const card = 340;
+  const scale = card / qr.size;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${card} ${card}" width="${card}" height="${card}">
+  <rect width="${card}" height="${card}" fill="#ffffff"/>
+  <g transform="scale(${scale})">${qr.content}</g>
 </svg>`;
 }
 
-function composeLuxuryQrSvg(
-  qr: { content: string; size: number },
-  tableTitle: string,
-  restaurantName: string,
-): string {
+function composeLuxuryQrSvg(qr: { content: string; size: number }): string {
   const cardW = 340;
   const cardH = 340;
-  const shop = restaurantName.trim() || "فروشگاه";
-  const table = tableTitle.trim() || "میز";
-  const gid = `g${Math.abs(hashCode(`${shop}|${table}|${qr.size}`)).toString(36)}`;
-  const plaqueW = cardW - 48;
-  const plaqueH = 40;
-  const plaqueX = 24;
-  const plaqueY = 18;
-  const qrBox = 208;
+  const gid = `g${Math.abs(hashCode(`qr|${qr.size}`)).toString(36)}`;
+  const qrBox = 260;
   const qrX = (cardW - qrBox) / 2;
-  const qrY = plaqueY + plaqueH + 10;
-  const inner = 10;
+  const qrY = (cardH - qrBox) / 2;
+  const inner = 12;
   const qrFit = qrBox - inner * 2;
   const qrScale = qrFit / qr.size;
-  const footerY = qrY + qrBox + 22;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${cardW} ${cardH}" width="${cardW}" height="${cardH}">
   <defs>
-    <linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="${gid}" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="${GOLD_LIGHT}"/>
-      <stop offset="0.45" stop-color="${GOLD}"/>
+      <stop offset="0.5" stop-color="${GOLD}"/>
       <stop offset="1" stop-color="${GOLD_DARK}"/>
     </linearGradient>
-    <style type="text/css"><![CDATA[
-      .qr-fa { font-family: Vazirmatn, IRANSans, Tahoma, sans-serif; }
-      .qr-fancy { font-family: Lalezar, Vazirmatn, Tahoma, sans-serif; }
-    ]]></style>
   </defs>
   <rect width="${cardW}" height="${cardH}" rx="22" fill="${BG}"/>
-  <rect x="7" y="7" width="${cardW - 14}" height="${cardH - 14}" rx="16" fill="none" stroke="${GOLD}" stroke-width="1.6"/>
-  <rect x="${plaqueX}" y="${plaqueY}" width="${plaqueW}" height="${plaqueH}" rx="8" fill="url(#${gid})"/>
-  <text class="qr-fa" x="${plaqueX + 14}" y="${plaqueY + plaqueH / 2 + 4}" fill="${INK}" font-size="12" font-weight="600">${escapeXml(table)}</text>
-  <text class="qr-fa" x="${plaqueX + plaqueW - 14}" y="${plaqueY + plaqueH / 2 + 4}" fill="${INK}" font-size="13" font-weight="700" text-anchor="end">${escapeXml(shop)}</text>
-  <path d="M${qrX - 10} ${qrY + 12} C${qrX - 28} ${qrY + 40}, ${qrX - 16} ${qrY + 100}, ${qrX - 26} ${qrY + 162}" fill="none" stroke="rgba(212,175,55,0.32)" stroke-width="1"/>
-  <path d="M${qrX + qrBox + 10} ${qrY + 12} C${qrX + qrBox + 28} ${qrY + 40}, ${qrX + qrBox + 16} ${qrY + 100}, ${qrX + qrBox + 26} ${qrY + 162}" fill="none" stroke="rgba(212,175,55,0.32)" stroke-width="1"/>
-  <rect x="${qrX}" y="${qrY}" width="${qrBox}" height="${qrBox}" rx="10" fill="#ffffff" stroke="${GOLD}" stroke-width="1.25"/>
+  <rect x="7" y="7" width="${cardW - 14}" height="${cardH - 14}" rx="16" fill="none" stroke="url(#${gid})" stroke-width="1.6"/>
+  <rect x="${qrX}" y="${qrY}" width="${qrBox}" height="${qrBox}" rx="12" fill="#ffffff"/>
   <g transform="translate(${qrX + inner} ${qrY + inner}) scale(${qrScale})">${qr.content}</g>
-  <text class="qr-fancy" x="${cardW / 2}" y="${footerY}" fill="${GOLD_LIGHT}" font-size="13" text-anchor="middle">اسکن کنید و سفارش ثبت کنید</text>
-  <line x1="${cardW / 2 - 52}" y1="${footerY + 14}" x2="${cardW / 2 - 8}" y2="${footerY + 14}" stroke="${GOLD_DARK}" stroke-width="1"/>
-  <line x1="${cardW / 2 + 8}" y1="${footerY + 14}" x2="${cardW / 2 + 52}" y2="${footerY + 14}" stroke="${GOLD_DARK}" stroke-width="1"/>
-  <polygon points="${cardW / 2},${footerY + 10} ${cardW / 2 + 5},${footerY + 14} ${cardW / 2},${footerY + 18} ${cardW / 2 - 5},${footerY + 14}" fill="${GOLD}"/>
 </svg>`;
 }
 
@@ -526,16 +480,13 @@ function hashCode(value: string): number {
 
 export async function composeTableQrPoster(
   link: string,
-  tableTitle: string,
-  restaurantName = "",
+  _tableTitle = "",
+  _restaurantName = "",
   qrSize = 220,
   theme: TableQrPosterTheme = "luxury",
 ): Promise<string> {
   const qr = parseQrSvg(await fetchQrSvgMarkup(link, Math.max(qrSize, 400)));
-  const markup =
-    theme === "simple"
-      ? composeSimpleQrSvg(qr, tableTitle, restaurantName)
-      : composeLuxuryQrSvg(qr, tableTitle, restaurantName);
+  const markup = theme === "simple" ? composeSimpleQrSvg(qr) : composeLuxuryQrSvg(qr);
   return svgDataUrl(markup);
 }
 

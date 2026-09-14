@@ -129,7 +129,7 @@ export function pageMetadata({
   const brand = (siteName || "").trim() || SITE_NAME;
 
   return {
-    title,
+    title: { absolute: title },
     description,
     keywords: keywords?.length ? [...DEFAULT_KEYWORDS, ...keywords] : DEFAULT_KEYWORDS,
     applicationName: brand,
@@ -142,6 +142,11 @@ export function pageMetadata({
       languages: { "fa-IR": url },
     },
     robots: noIndex ? NOINDEX_ROBOTS : INDEX_ROBOTS,
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "default",
+      title: brand,
+    },
     openGraph: {
       title,
       description,

@@ -34,8 +34,6 @@ import { adminButtonStartIconSx, adminPageSx } from "@/app/admin/theme/adminThem
 import {
   extractShopTables,
   getAdminShopCode,
-  getAdminRestaurantName,
-  fetchAdminRestaurantName,
   shopPlaceNoun,
   shopTableDisplayName,
   tableQrImageUrl,
@@ -65,7 +63,6 @@ export default function ShopTablesPage() {
   const [qrPoster, setQrPoster] = useState("");
   const [qrPosterLoading, setQrPosterLoading] = useState(false);
   const [qrTheme, setQrTheme] = useState<TableQrPosterTheme>(() => readTableQrPosterTheme());
-  const [restaurantName, setRestaurantName] = useState(() => getAdminRestaurantName());
 
   const loadTables = useCallback(async () => {
     const token = tokenCode();
@@ -87,12 +84,8 @@ export default function ShopTablesPage() {
   }, []);
 
   useEffect(() => {
-    const code = getAdminShopCode() || "";
-    setShopCode(code);
+    setShopCode(getAdminShopCode() || "");
     loadTables();
-    void fetchAdminRestaurantName(code).then((name) => {
-      if (name) setRestaurantName(name);
-    });
   }, [loadTables]);
 
   const openCreate = () => {
@@ -195,30 +188,20 @@ export default function ShopTablesPage() {
     setQrPosterLoading(true);
     const title = shopTableDisplayName(qrTable);
     const url = tableReservAbsoluteUrl(shopCode.trim(), qrTable.number, qrTable.kind || "table");
-    void (async () => {
-      const name = (restaurantName || (await fetchAdminRestaurantName(shopCode.trim()))).trim();
-      try {
-        const dataUrl = await composeTableQrPoster(
-          url,
-          title,
-          name || shopCode.trim(),
-          240,
-          qrTheme,
-        );
-        if (!cancelled) {
-          setQrPoster(dataUrl);
-          if (name && name !== restaurantName) setRestaurantName(name);
-        }
-      } catch {
+    void composeTableQrPoster(url, title, "", 240, qrTheme)
+      .then((dataUrl) => {
+        if (!cancelled) setQrPoster(dataUrl);
+      })
+      .catch(() => {
         if (!cancelled) setQrPoster("");
-      } finally {
+      })
+      .finally(() => {
         if (!cancelled) setQrPosterLoading(false);
-      }
-    })();
+      });
     return () => {
       cancelled = true;
     };
-  }, [qrTable, shopCode, qrTheme, restaurantName]);
+  }, [qrTable, shopCode, qrTheme]);
 
   const downloadQr = () => {
     if (!qrTable || !qrPoster) {
@@ -434,15 +417,6 @@ export default function ShopTablesPage() {
                   }}
                 />
               )}
-              <Typography sx={{ mt: 1.5, fontWeight: 800, fontSize: 15 }}>
-                {restaurantName || shopCode.trim() || "فروشگاه"}
-              </Typography>
-              <Typography sx={{ mt: 0.5, fontSize: 12, color: "var(--admin-text-secondary)" }}>
-                {qrTable ? shopTableDisplayName(qrTable) : ""}
-              </Typography>
-              <Typography sx={{ mt: 1, fontSize: 11, direction: "ltr", color: "var(--admin-text-secondary)", wordBreak: "break-all" }}>
-                {tableReservAbsoluteUrl(shopCode.trim(), qrTable.number, qrTable.kind || "table")}
-              </Typography>
               <Typography sx={{ mt: 2, mb: 1, fontSize: 12, color: "var(--admin-text-secondary)" }}>
                 تم
               </Typography>
