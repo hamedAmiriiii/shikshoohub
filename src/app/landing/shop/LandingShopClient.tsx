@@ -26,8 +26,8 @@ import {
   Gift,
 } from "lucide-react";
 import WebinoChatbot from "@/app/coponent/WebinoChatbot";
+import ConsultationRequestForm from "../ConsultationRequestForm";
 
-const REGISTER_URL = "/admin/register-shop";
 const LOGIN_URL = "/admin/login";
 const AGENCY_REQUEST_URL = "/agency-request";
 const SUPPORT_PHONE = "09399166196";
@@ -122,8 +122,6 @@ const GALLERY = Array.from({ length: 10 }, (_, i) => ({
 const PLANS = [
   {
     name: "پلن اولیه",
-    price: "6,3۰۰,۰۰۰",
-    unit: "تومان / سال",
     description: "همه امکانات اصلی فروش و حسابداری",
     popular: false,
     features: [
@@ -137,8 +135,6 @@ const PLANS = [
   },
   {
     name: "پلن باشگاه مشتریان",
-    price: "10,5۰۰,۰۰۰",
-    unit: "تومان / سال",
     description: "پلن اولیه + باشگاه مشتریان و امکانات وفاداری",
     popular: true,
     features: [
@@ -150,12 +146,25 @@ const PLANS = [
       "پشتیبانی اولویت‌دار",
     ],
   },
+  {
+    name: "پلن سازمانی",
+    description: "برای فروشگاه‌های بزرگ و چندشعبه‌ای",
+    popular: false,
+    features: [
+      "تمام امکانات پلن باشگاه مشتریان",
+      "پشتیبانی ویژه و آموزش اختصاصی",
+      "اولویت در راه‌اندازی",
+      "مشاوره اختصاصی فروشگاه",
+      "گزارش‌های سفارشی",
+      "همراهی در توسعه امکانات",
+    ],
+  },
 ];
 
 const STEPS = [
-  { n: "۱", title: "ثبت‌نام رایگان", desc: "شماره موبایل و نام فروشگاه" },
-  { n: "۲", title: "ثبت کالا و اولین فروش", desc: "بارکد، قیمت و موجودی" },
-  { n: "۳", title: "مدیریت فروشگاه", desc: "سود، فروش و گزارش‌ها" },
+  { n: "۱", title: "درخواست مشاوره", desc: "فرم تماس را تکمیل کنید" },
+  { n: "۲", title: "هماهنگی با تیم وبینو", desc: "انتخاب پکیج مناسب فروشگاه" },
+  { n: "۳", title: "راه‌اندازی فروشگاه", desc: "شروع فروش، انبار و گزارش‌ها" },
 ];
 
 const FAQS = [
@@ -172,12 +181,12 @@ const FAQS = [
     a: "بله. فروش اقساطی، مدیریت اقساط و اعتبار مشتری پشتیبانی می‌شود.",
   },
   {
-    q: "تفاوت دو پلن چیست؟",
-    a: "پلن اولیه شامل فروش و حسابداری کامل است. پلن باشگاه مشتریان علاوه بر آن، باشگاه مشتریان، اعتبار/امتیاز و فروشگاه آنلاین را هم دارد.",
+    q: "تفاوت سه پکیج چیست؟",
+    a: "پلن اولیه فروش و حسابداری کامل است. پلن باشگاه مشتریان امکانات وفاداری و فروشگاه آنلاین را هم دارد. پلن سازمانی برای مجموعه‌های بزرگ‌تر با پشتیبانی و مشاوره اختصاصی است.",
   },
   {
-    q: "آیا نسخه آزمایشی رایگان دارد؟",
-    a: "یک هفته استفاده رایگان به‌همراه ۲۰ پیامک هدیه برای شروع.",
+    q: "چطور پکیج بگیرم؟",
+    a: "فرم درخواست مشاوره را پر کنید؛ همکاران وبینو با شما تماس می‌گیرند و مناسب‌ترین پکیج را پیشنهاد می‌دهند.",
   },
 ];
 
@@ -195,8 +204,7 @@ export default function LandingShopClient() {
   const [slide, setSlide] = useState(0);
   const [lightbox, setLightbox] = useState<number | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
-  const [phone, setPhone] = useState("");
-  const [shopName, setShopName] = useState("");
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
 
   const nextSlide = useCallback(() => {
     setSlide((s) => (s + 1) % GALLERY.length);
@@ -205,12 +213,9 @@ export default function LandingShopClient() {
     setSlide((s) => (s - 1 + GALLERY.length) % GALLERY.length);
   }, []);
 
-  const startFree = () => {
-    if (typeof window !== "undefined") {
-      if (phone.trim()) sessionStorage.setItem("landing_register_phone", phone.trim());
-      if (shopName.trim()) sessionStorage.setItem("landing_register_shop", shopName.trim());
-    }
-    window.location.href = REGISTER_URL;
+  const scrollToConsult = (planName?: string) => {
+    if (planName) setSelectedPlan(planName);
+    document.getElementById("consult")?.scrollIntoView({ behavior: "smooth" });
   };
 
   return (
@@ -225,7 +230,8 @@ export default function LandingShopClient() {
             <Link href="/" className="hover:text-cyan-400 transition">همه محصولات</Link>
             <a href="#features" className="hover:text-cyan-400 transition">امکانات</a>
             <a href="#screenshots" className="hover:text-cyan-400 transition">گالری</a>
-            <a href="#pricing" className="hover:text-cyan-400 transition">تعرفه</a>
+            <a href="#pricing" className="hover:text-cyan-400 transition">پکیج‌ها</a>
+            <a href="#consult" className="hover:text-cyan-400 transition">تماس</a>
             <a href="#faq" className="hover:text-cyan-400 transition">سوالات</a>
             <Link
               href={AGENCY_REQUEST_URL}
@@ -236,12 +242,13 @@ export default function LandingShopClient() {
               درخواست نمایندگی
             </Link>
             <Link href={LOGIN_URL} className="hover:text-cyan-400 transition">ورود</Link>
-            <Link
-              href={REGISTER_URL}
+            <button
+              type="button"
+              onClick={() => scrollToConsult()}
               className="bg-gradient-to-l from-violet-600 to-fuchsia-600 text-white px-5 py-2 rounded-xl hover:opacity-90 transition font-medium shadow-lg shadow-fuchsia-900/30"
             >
-              شروع رایگان
-            </Link>
+              درخواست مشاوره
+            </button>
           </nav>
           <button
             type="button"
@@ -257,7 +264,8 @@ export default function LandingShopClient() {
             <Link href="/" onClick={() => setNavOpen(false)}>همه محصولات</Link>
             <a href="#features" onClick={() => setNavOpen(false)}>امکانات</a>
             <a href="#screenshots" onClick={() => setNavOpen(false)}>گالری</a>
-            <a href="#pricing" onClick={() => setNavOpen(false)}>تعرفه</a>
+            <a href="#pricing" onClick={() => setNavOpen(false)}>پکیج‌ها</a>
+            <a href="#consult" onClick={() => setNavOpen(false)}>تماس</a>
             <a href="#faq" onClick={() => setNavOpen(false)}>سوالات</a>
             <Link
               href={AGENCY_REQUEST_URL}
@@ -268,7 +276,16 @@ export default function LandingShopClient() {
               درخواست نمایندگی
             </Link>
             <Link href={LOGIN_URL}>ورود</Link>
-            <Link href={REGISTER_URL} className="text-fuchsia-400 font-semibold">شروع رایگان</Link>
+            <button
+              type="button"
+              className="text-fuchsia-400 font-semibold text-right"
+              onClick={() => {
+                setNavOpen(false);
+                scrollToConsult();
+              }}
+            >
+              درخواست مشاوره
+            </button>
           </div>
         )}
       </header>
@@ -283,7 +300,7 @@ export default function LandingShopClient() {
         <div className="max-w-6xl mx-auto px-4 grid lg:grid-cols-2 gap-12 items-center relative">
           <motion.div {...fadeUp(0)} className="text-center lg:text-right">
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-cyan-300 text-xs font-medium mb-4">
-              <Sparkles size={14} /> یک هفته تست رایگان — فروش، حسابداری، فروشگاه آنلاین
+              <Sparkles size={14} /> فروش، حسابداری، فروشگاه آنلاین — مشاوره رایگان
             </span>
             <h1 className="text-3xl sm:text-4xl lg:text-[1.8rem] font-bold leading-tight">
               <span className="bg-gradient-to-l from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">
@@ -303,10 +320,10 @@ export default function LandingShopClient() {
             <div className="flex flex-col sm:flex-row gap-3 mt-8 justify-center lg:justify-start">
               <button
                 type="button"
-                onClick={startFree}
+                onClick={() => scrollToConsult()}
                 className="px-8 py-3.5 rounded-xl bg-gradient-to-l from-violet-600 via-fuchsia-600 to-pink-600 text-white font-semibold hover:opacity-90 transition shadow-xl shadow-fuchsia-900/40"
               >
-                شروع رایگان یک هفته‌ای
+                درخواست مشاوره و خرید
               </button>
               <Link
                 href={LOGIN_URL}
@@ -548,19 +565,19 @@ export default function LandingShopClient() {
         </div>
       )}
 
-      {/* Pricing */}
+      {/* Packages */}
       <section id="pricing" className="py-16 md:py-24 border-y border-white/5 bg-white/[0.02]">
-        <div className="max-w-4xl mx-auto px-4">
+        <div className="max-w-6xl mx-auto px-4">
           <motion.div {...fadeUp()} className="text-center mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold">تعرفه اشتراک سالانه</h2>
-            <p className="text-slate-400 mt-2">پلن مناسب فروشگاه خود را انتخاب کنید</p>
+            <h2 className="text-2xl md:text-3xl font-bold">پکیج‌های وبینو حسابداری</h2>
+            <p className="text-slate-400 mt-2">پکیج مناسب فروشگاه خود را انتخاب کنید؛ قیمت و جزئیات با مشاوره اعلام می‌شود</p>
           </motion.div>
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-3 gap-6">
             {PLANS.map((plan, i) => (
               <motion.div
                 key={plan.name}
                 {...fadeUp(i * 0.1)}
-                className={`relative rounded-2xl p-7 border transition hover:scale-[1.02] ${
+                className={`relative rounded-2xl p-7 border transition hover:scale-[1.02] flex flex-col ${
                   plan.popular
                     ? "border-fuchsia-500/50 bg-gradient-to-b from-fuchsia-950/40 to-violet-950/20 shadow-xl shadow-fuchsia-900/20"
                     : "border-white/10 bg-white/[0.03]"
@@ -573,13 +590,7 @@ export default function LandingShopClient() {
                 )}
                 <h3 className="text-xl font-bold text-white">{plan.name}</h3>
                 <p className="text-slate-400 text-sm mt-1">{plan.description}</p>
-                <div className="mt-5 mb-6">
-                  <span className="text-3xl md:text-4xl font-bold bg-gradient-to-l from-cyan-400 to-fuchsia-400 bg-clip-text text-transparent">
-                    {plan.price}
-                  </span>
-                  <span className="text-slate-400 text-sm mr-2">{plan.unit}</span>
-                </div>
-                <ul className="space-y-2.5 mb-8">
+                <ul className="space-y-2.5 my-8 flex-1">
                   {plan.features.map((f) => (
                     <li key={f} className="flex items-center gap-2 text-sm text-slate-300">
                       <CheckCircle2 size={15} className="text-cyan-400 shrink-0" />
@@ -587,21 +598,22 @@ export default function LandingShopClient() {
                     </li>
                   ))}
                 </ul>
-                <Link
-                  href={REGISTER_URL}
-                  className={`block text-center py-3.5 rounded-xl font-semibold transition ${
+                <button
+                  type="button"
+                  onClick={() => scrollToConsult(plan.name)}
+                  className={`block w-full text-center py-3.5 rounded-xl font-semibold transition ${
                     plan.popular
                       ? "bg-gradient-to-l from-violet-600 to-fuchsia-600 text-white hover:opacity-90 shadow-lg shadow-fuchsia-900/30"
                       : "bg-white/10 text-white hover:bg-white/15 border border-white/10"
                   }`}
                 >
-                  شروع کنید
-                </Link>
+                  درخواست مشاوره
+                </button>
               </motion.div>
             ))}
           </div>
           <p className="text-center text-slate-500 text-sm mt-8">
-            یک هفته تست رایگان · ۲۰ پیامک هدیه · بدون نیاز به نصب پیچیده
+            پشتیبانی راه‌اندازی · انتخاب پکیج با مشاوره · بدون پیچیدگی نصب
           </p>
         </div>
       </section>
@@ -615,54 +627,32 @@ export default function LandingShopClient() {
           >
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.15),_transparent_60%)]" />
             <div className="relative">
-              <h2 className="text-2xl md:text-3xl font-bold">پیشنهاد ویژه شروع</h2>
+              <h2 className="text-2xl md:text-3xl font-bold">برای شروع با ما در تماس باشید</h2>
               <ul className="mt-6 space-y-2 text-violet-100 text-base md:text-lg">
-                <li>یک هفته استفاده رایگان</li>
-                <li>۲۰ پیامک هدیه</li>
-                <li>پشتیبانی رایگان راه‌اندازی</li>
+                <li>مشاوره انتخاب پکیج</li>
+                <li>راه‌اندازی فروشگاه</li>
+                <li>پشتیبانی رایگان شروع کار</li>
               </ul>
               <button
                 type="button"
-                onClick={startFree}
+                onClick={() => scrollToConsult()}
                 className="mt-8 px-10 py-4 rounded-xl bg-white text-violet-800 font-bold hover:bg-violet-50 transition shadow-lg"
               >
-                همین حالا رایگان شروع کن
+                ثبت درخواست تماس
               </button>
             </div>
           </motion.div>
         </div>
       </section>
 
-      {/* Short signup */}
-      <section id="signup" className="py-16 border-y border-white/5 bg-white/[0.02]">
-        <div className="max-w-md mx-auto px-4">
-          <h2 className="text-xl font-bold text-center mb-6 text-white">ثبت‌نام سریع</h2>
-          <div className="space-y-3">
-            <input
-              type="text"
-              placeholder="نام فروشگاه"
-              value={shopName}
-              onChange={(e) => setShopName(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder:text-slate-500 focus:border-fuchsia-500 focus:ring-2 focus:ring-fuchsia-500/20 outline-none"
-            />
-            <input
-              type="tel"
-              placeholder="شماره موبایل (۰۹...)"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 11))}
-              dir="ltr"
-              className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder:text-slate-500 focus:border-fuchsia-500 focus:ring-2 focus:ring-fuchsia-500/20 outline-none text-left"
-            />
-            <button
-              type="button"
-              onClick={startFree}
-              className="w-full py-3.5 rounded-xl bg-gradient-to-l from-violet-600 to-fuchsia-600 text-white font-semibold hover:opacity-90 transition"
-            >
-              شروع رایگان یک هفته‌ای
-            </button>
-          </div>
-        </div>
-      </section>
+      <ConsultationRequestForm
+        source="accounting"
+        title="درخواست مشاوره و خرید"
+        subtitle="فرم را پر کنید تا همکاران وبینو برای انتخاب پکیج مناسب با شما تماس بگیرند."
+        businessPlaceholder="نام فروشگاه"
+        selectedPlan={selectedPlan}
+        submitGradientClass="from-violet-600 to-fuchsia-600"
+      />
 
       {/* FAQ */}
       <section id="faq" className="py-16 md:py-20">
@@ -738,7 +728,7 @@ export default function LandingShopClient() {
             <div className="text-white font-medium mb-3">دسترسی سریع</div>
             <ul className="space-y-2">
               <li><Link href="/" className="hover:text-cyan-400">همه محصولات</Link></li>
-              <li><Link href={REGISTER_URL} className="hover:text-cyan-400">ثبت‌نام رایگان</Link></li>
+              <li><a href="#consult" className="hover:text-cyan-400">درخواست مشاوره</a></li>
               <li><Link href={LOGIN_URL} className="hover:text-cyan-400">ورود</Link></li>
               <li>
                 <Link
@@ -750,7 +740,7 @@ export default function LandingShopClient() {
                   درخواست نمایندگی
                 </Link>
               </li>
-              <li><a href="#pricing" className="hover:text-cyan-400">تعرفه</a></li>
+              <li><a href="#pricing" className="hover:text-cyan-400">پکیج‌ها</a></li>
             </ul>
           </div>
           <div>
@@ -774,10 +764,10 @@ export default function LandingShopClient() {
       <div className="md:hidden fixed bottom-0 inset-x-0 z-40 p-3 bg-[#0b0f1a]/95 backdrop-blur border-t border-white/10">
         <button
           type="button"
-          onClick={startFree}
+          onClick={() => scrollToConsult()}
           className="w-full py-3.5 rounded-xl bg-gradient-to-l from-violet-600 to-fuchsia-600 text-white font-semibold shadow-lg"
         >
-          شروع رایگان یک هفته‌ای
+          درخواست مشاوره
         </button>
       </div>
       <div className="h-20 md:hidden" aria-hidden />
