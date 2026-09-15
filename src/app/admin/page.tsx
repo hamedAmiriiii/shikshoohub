@@ -79,6 +79,12 @@ import type { AdminMenuModeCartPanelProps } from '@/app/admin/AdminMenuModeCartP
 import { ADMIN_SIDEBAR_WIDTH } from '@/app/admin/AdminHamburgerSidebar';
 import CartQuantityControl from '@/app/admin/CartQuantityControl';
 import MultiCartToolbar, { MAX_MULTI_CARTS } from '@/app/admin/MultiCartToolbar';
+import PosSegmentButtons from '@/app/admin/PosSegmentButtons';
+import {
+  PosFullscreenExitHint,
+  PosFullscreenToggleButton,
+  usePosFullscreen,
+} from '@/app/admin/PosFullscreenControls';
 import { getPriceUnitLabel, getDefaultCartQuantity, getQuantityIncrement, normalizeQuantityValue } from '@/app/lib/productUnits';
 import { createEmptyCartSlot, type CartSlotSnapshot } from '@/app/admin/multiCartState';
 import { publishAdminSaleCartSnapshot } from '@/app/admin/onboarding/adminSaleCartCheck';
@@ -188,6 +194,14 @@ export default function ShoppingPage() {
   const [credit, setCredit] = useState(0);
   const [discounttype, setDiscounttype] = useState(0);
   const [discountDisplay, setDiscountDisplay] = useState('');
+  const [discountPercentDisplay, setDiscountPercentDisplay] = useState('');
+  const {
+    isFullscreen,
+    showExitHint,
+    setShowExitHint,
+    exitFullscreen,
+    toggleFullscreen,
+  } = usePosFullscreen();
   const [discountError, setDiscountError] = useState('');
   const [isDiscountFocused, setIsDiscountFocused] = useState(false);
   const [useCreditAmount, setUseCreditAmount] = useState(0);
@@ -461,6 +475,13 @@ export default function ShoppingPage() {
     setUseCreditAmount(slot.useCreditAmount ?? 0);
     setDiscounttype(slot.discounttype ?? 0);
     setDiscountDisplay(slot.discountDisplay ?? "");
+    {
+      const amt = slot.discounttype ?? 0;
+      const tot = slot.total ?? 0;
+      setDiscountPercentDisplay(
+        amt > 0 && tot > 0 ? String(Math.round((amt / tot) * 10000) / 100) : "",
+      );
+    }
     setDiscountError(slot.discountError ?? "");
     setBackPrice(slot.backPrice ?? 0);
     setPaymentType(slot.paymentType ?? "cash");
@@ -1768,9 +1789,14 @@ export default function ShoppingPage() {
         setDiscountError(`مبلغ تخفیف نمی‌تواند بیشتر از ${formatNumber(maxDiscount)} تومان (15% مبلغ کل) باشد`);
         setDiscounttype(0);
         setDiscountDisplay('');
+        setDiscountPercentDisplay('');
       } else if (discountError) {
         // اگر قبلاً خطا بود و حالا درست شد، خطا را پاک کن
         setDiscountError('');
+      } else if (discounttype > 0) {
+        setDiscountPercentDisplay(String(Math.round((discounttype / total) * 10000) / 100));
+      } else {
+        setDiscountPercentDisplay('');
       }
     }
   }, [total, discounttype, discountError, formatNumber]);
@@ -2187,6 +2213,97 @@ export default function ShoppingPage() {
     });
   }, [parseAmountInput]);
 
+  const applyDiscountFromAmount = useCallback(
+    (raw: string) => {
+      const formatted = formatAmountInput(raw);
+      const numValue = formatted === "" ? 0 : parseAmountInput(formatted);
+      const maxDiscount = Math.floor(total * 0.15);
+      if (numValue > maxDiscount) {
+        setDiscountError(
+          `مبلغ تخفیف نمی‌تواند بیشتر از ${formatNumber(maxDiscount)} تومان (15% مبلغ کل) باشد`,
+        );
+        setDiscounttype(0);
+        setDiscountDisplay("");
+        setDiscountPercentDisplay("");
+        return;
+      }
+      setDiscountError("");
+      setDiscounttype(numValue);
+      setDiscountDisplay(formatted);
+      setDiscountPercentDisplay(
+        numValue > 0 && total > 0 ? String(Math.round((numValue / total) * 10000) / 100) : "",
+      );
+    },
+    [total, formatNumber, parseAmountInput],
+  );
+
+  const applyDiscountFromPercent = useCallback(
+    (raw: string) => {
+      const cleaned = raw.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1");
+      if (cleaned === "" || cleaned === ".") {
+        setDiscountPercentDisplay(cleaned);
+        setDiscounttype(0);
+        setDiscountDisplay("");
+        setDiscountError("");
+        return;
+      }
+      const pct = Number(cleaned);
+      if (!Number.isFinite(pct)) return;
+      if (pct > 15) {
+        setDiscountError("تخفیف درصدی نمی‌تواند بیشتر از ۱۵٪ باشد");
+        setDiscountPercentDisplay("");
+        setDiscounttype(0);
+        setDiscountDisplay("");
+        return;
+      }
+      const amount = Math.floor((total * pct) / 100);
+      setDiscountError("");
+      setDiscountPercentDisplay(cleaned);
+      setDiscounttype(amount);
+      setDiscountDisplay(amount > 0 ? formatAmountInput(String(amount)) : "");
+    },
+    [total],
+  );
+
+  const handlePaymentTypeChange = useCallback((next: PaymentType) => {
+    setPaymentType(next);
+    if (next === "cash") {
+      setInstallmentCount(2);
+      setInstallmentCalculation(null);
+      installmentCalculationRef.current = null;
+      setInstallmentCreditError("");
+      setSelectedChequeId(null);
+    } else if (next === "installment") {
+      setDiscounttype(0);
+      setDiscountDisplay("");
+      setDiscountPercentDisplay("");
+      setDiscountError("");
+      setSelectedChequeId(null);
+    } else if (next === "cheque") {
+      setSelectedChequeId(null);
+      setSettlementMode("cash_all");
+      setPaymentSplitError("");
+    } else if (next === "mixed") {
+      setSelectedChequeId(null);
+      setCardAmountInput("");
+      setCashAmountInput("");
+      setPaymentSplitError("");
+    } else if (next === "debt") {
+      setSelectedChequeId(null);
+    }
+  }, []);
+
+  const handleSettlementModeChange = useCallback(
+    (mode: SettlementMode) => {
+      setSettlementMode(mode);
+      setPaymentSplitError("");
+      if (mode === "split") {
+        setCardAmountInput(moneyField(settlementTarget));
+        setCashAmountInput(moneyField(0));
+      }
+    },
+    [settlementTarget],
+  );
 
 
   const posCartPanel = useMemo((): AdminMenuModeCartPanelProps => ({
@@ -2210,72 +2327,46 @@ export default function ShoppingPage() {
     useCreditAmount,
     discounttype,
     discountDisplay,
+    discountPercentDisplay,
     discountError,
     isDiscountFocused,
     onDiscountFocus: () => setIsDiscountFocused(true),
     onDiscountChange: (value: string) => {
-      const formatted = formatAmountInput(value);
-      const numValue = formatted === "" ? 0 : parseAmountInput(formatted);
-      const maxDiscount = Math.floor(total * 0.15);
-      if (numValue > maxDiscount) {
-        setDiscountError(`حداکثر ${formatNumber(maxDiscount)} تومان`);
-        setDiscounttype(0);
-        setDiscountDisplay("");
-      } else {
-        setDiscountError("");
-        setDiscounttype(numValue);
-        setDiscountDisplay(formatted);
-      }
+      applyDiscountFromAmount(value);
     },
     onDiscountBlur: (value: string) => {
       setIsDiscountFocused(false);
       const numValue = parseAmountInput(value);
       if (numValue <= 0) {
         setDiscountDisplay("");
+        setDiscountPercentDisplay("");
         setDiscounttype(0);
         setDiscountError("");
       } else {
         setDiscountDisplay(formatAmountInput(value));
       }
     },
-    paymentType,
-    onPaymentTypeChange: (type) => {
-      setPaymentType(type);
-      if (type === "cash") {
-        setInstallmentCount(2);
-        setInstallmentCalculation(null);
-        installmentCalculationRef.current = null;
-        setInstallmentCreditError("");
-        setSelectedChequeId(null);
-      } else if (type === "installment") {
+    onDiscountPercentChange: (value: string) => {
+      applyDiscountFromPercent(value);
+    },
+    onDiscountPercentBlur: (value: string) => {
+      const cleaned = value.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1");
+      if (cleaned === "" || cleaned === "." || Number(cleaned) <= 0) {
+        setDiscountPercentDisplay("");
         setDiscounttype(0);
         setDiscountDisplay("");
         setDiscountError("");
-        setSelectedChequeId(null);
-      } else if (type === "cheque") {
-        setSelectedChequeId(null);
-        setSettlementMode("cash_all");
-      } else if (type === "mixed") {
-        setSelectedChequeId(null);
-        setCardAmountInput("");
-        setCashAmountInput("");
-        setPaymentSplitError("");
-      } else if (type === "debt") {
-        setSelectedChequeId(null);
+        return;
       }
+      applyDiscountFromPercent(cleaned);
     },
+    paymentType,
+    onPaymentTypeChange: handlePaymentTypeChange,
     installmentCount,
     onInstallmentCountChange: setInstallmentCount,
     payableNow,
     settlementMode,
-    onSettlementModeChange: (mode) => {
-      setSettlementMode(mode);
-      setPaymentSplitError("");
-      if (mode === "split") {
-        setCardAmountInput(moneyField(settlementTarget));
-        setCashAmountInput(moneyField(0));
-      }
-    },
+    onSettlementModeChange: handleSettlementModeChange,
     cardAmountInput,
     cashAmountInput,
     onCardAmountChange: handleCardAmountChange,
@@ -2306,6 +2397,8 @@ export default function ShoppingPage() {
     saleDateEditEnabled,
     saleDate,
     onSaleDateChange: (d) => setSaleDate(d ?? todayJalaliDateObject()),
+    isFullscreen,
+    onToggleFullscreen: toggleFullscreen,
     submitLabel: editingPurchaseId ? "جایگزینی فاکتور" : undefined,
     cartTitle: editingPurchaseId ? `ویرایش #${editingPurchaseId}` : undefined,
     clearLabel: editingPurchaseId ? "لغو ویرایش" : undefined,
@@ -2328,8 +2421,15 @@ export default function ShoppingPage() {
     useCreditAmount,
     discounttype,
     discountDisplay,
+    discountPercentDisplay,
     discountError,
     isDiscountFocused,
+    applyDiscountFromAmount,
+    applyDiscountFromPercent,
+    handlePaymentTypeChange,
+    handleSettlementModeChange,
+    isFullscreen,
+    toggleFullscreen,
     paymentType,
     installmentCount,
     payableNow,
@@ -3155,13 +3255,21 @@ export default function ShoppingPage() {
                   }
                 }}>
                   <CardContent sx={{ padding: { xs: "12px", md: "20px" }, display: "flex", flexDirection: "column", gap: 1.5 }}>
-                    <MultiCartToolbar
-                      cartCount={cartCount}
-                      activeIndex={activeCartIndex}
-                      onSwitch={switchCart}
-                      onAdd={addCartSlot}
-                      onClearOrRemove={clearMenuCart}
-                    />
+                    <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <MultiCartToolbar
+                          cartCount={cartCount}
+                          activeIndex={activeCartIndex}
+                          onSwitch={switchCart}
+                          onAdd={addCartSlot}
+                          onClearOrRemove={clearMenuCart}
+                        />
+                      </Box>
+                      <PosFullscreenToggleButton
+                        isFullscreen={isFullscreen}
+                        onToggle={toggleFullscreen}
+                      />
+                    </Box>
                     <PhoneNumberInput
                       key={`phone-${activeCartIndex}`}
                       name="phone"
@@ -3190,6 +3298,30 @@ export default function ShoppingPage() {
                         },
                       }}
                     />
+                    {saleDateEditEnabled && (
+                      <Box>
+                        <Box
+                          sx={{
+                            ...chequeDatePickerBoxSx,
+                            "& .rmdp-portal": { zIndex: `${CHEQUE_DATE_PICKER_Z} !important` },
+                          }}
+                        >
+                          <DatePicker
+                            value={saleDate}
+                            onChange={(d) =>
+                              setSaleDate(d && !Array.isArray(d) ? (d as DateObject) : todayJalaliDateObject())
+                            }
+                            calendar={persian}
+                            locale={persian_fa}
+                            calendarPosition="bottom-right"
+                            format="YYYY/MM/DD"
+                            containerStyle={{ width: "100%" }}
+                            inputClass="rmdp-input"
+                            placeholder="تاریخ فروش"
+                          />
+                        </Box>
+                      </Box>
+                    )}
                     {checkingCredit && (
                       <Typography sx={{ 
                         color: "var(--admin-text-muted)", 
@@ -3217,91 +3349,123 @@ export default function ShoppingPage() {
                   </CardContent>
                   {paymentType !== 'installment' && (
                     <CardContent sx={{ padding: { xs: "12px", md: "20px" }, paddingTop: 0 }}>
-                      <Box sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: { xs: 1, md: 2 },
-                        flexWrap: { xs: "wrap", sm: "nowrap" },
-                      }}>
-                      <Typography sx={{ 
-                        color: "var(--admin-text)", 
-                        fontSize: { xs: "13px", md: "14px" },
-                        fontWeight: "500",
-                        flexShrink: 0,
-                      }}>
-                        تخفیف (تومان):
-                      </Typography>
-                      <TextField
-                      value={discountDisplay}
-                      onChange={(e) => {
-                        const formatted = formatAmountInput(e.target.value);
-                        const numValue = formatted === "" ? 0 : parseAmountInput(formatted);
-                        const maxDiscount = Math.floor(total * 0.15);
-                        if (numValue > maxDiscount) {
-                          setDiscountError(`مبلغ تخفیف نمی‌تواند بیشتر از ${formatNumber(maxDiscount)} تومان (15% مبلغ کل) باشد`);
-                          setDiscounttype(0);
-                          setDiscountDisplay("");
-                        } else {
-                          setDiscountError("");
-                          setDiscounttype(numValue);
-                          setDiscountDisplay(formatted);
-                        }
-                      }}
-                      onFocus={() => {
-                        setIsDiscountFocused(true);
-                      }}
-                      onBlur={(e) => {
-                        setIsDiscountFocused(false);
-                        const numValue = parseAmountInput(e.target.value);
-                        if (numValue <= 0) {
-                          setDiscountDisplay("");
-                          setDiscounttype(0);
-                          setDiscountError("");
-                        } else {
-                          setDiscountDisplay(formatAmountInput(e.target.value));
-                        }
-                      }}
-                      placeholder="مقدار تخفیف را وارد کنید"
-                      type="text"
-                      size="small"
-                      error={!!discountError}
-                      helperText={discountError || undefined}
-                      sx={{
-                        flex: 1,
-                        minWidth: { xs: "100%", sm: 160 },
-                        maxWidth: { sm: 220 },
-                        "& .MuiOutlinedInput-root": {
-                          backgroundColor: "var(--admin-surface-alt)",
-                          color: "var(--admin-text)",
-                          "& fieldset": {
-                            borderColor: discountError ? "var(--admin-error)" : "var(--admin-border)",
-                          },
-                          "&:hover fieldset": {
-                            borderColor: discountError ? "var(--admin-error)" : "var(--admin-accent)",
-                          },
-                          "&.Mui-focused fieldset": {
-                            borderColor: discountError ? "var(--admin-error)" : "var(--admin-accent)",
-                          },
-                        },
-                        "& .MuiInputBase-input": {
-                          color: "var(--admin-text)",
-                          fontSize: { xs: "13px", md: "14px" },
-                          padding: { xs: "10px 12px", md: "12px 14px" },
-                          textAlign: "right",
-                          direction: "ltr"
-                        },
-                        "& .MuiInputBase-input::placeholder": {
-                          color: "var(--admin-text-secondary)",
-                          opacity: 1
-                        },
-                        "& .MuiFormHelperText-root": {
-                          color: "var(--admin-error)",
-                          fontSize: { xs: "11px", md: "12px" },
-                          marginTop: "4px"
-                        }
-                      }}
-                    />
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: { xs: 1, md: 1.25 },
+                          flexWrap: "nowrap",
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            color: "var(--admin-text)",
+                            fontSize: { xs: "13px", md: "14px" },
+                            fontWeight: 600,
+                            flexShrink: 0,
+                          }}
+                        >
+                          تخفیف
+                        </Typography>
+                        <TextField
+                          value={discountPercentDisplay}
+                          onChange={(e) => applyDiscountFromPercent(e.target.value)}
+                          onBlur={(e) => {
+                            const cleaned = e.target.value.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1");
+                            if (cleaned === "" || cleaned === "." || Number(cleaned) <= 0) {
+                              setDiscountPercentDisplay("");
+                              setDiscounttype(0);
+                              setDiscountDisplay("");
+                              setDiscountError("");
+                            } else {
+                              applyDiscountFromPercent(cleaned);
+                            }
+                          }}
+                          placeholder="درصد"
+                          type="text"
+                          size="small"
+                          inputMode="decimal"
+                          error={!!discountError}
+                          sx={{
+                            flex: "0 0 88px",
+                            width: 88,
+                            "& .MuiOutlinedInput-root": {
+                              backgroundColor: "var(--admin-surface-alt)",
+                              color: "var(--admin-text)",
+                              "& fieldset": {
+                                borderColor: discountError ? "var(--admin-error)" : "var(--admin-border)",
+                              },
+                            },
+                            "& .MuiInputBase-input": {
+                              color: "var(--admin-text)",
+                              fontSize: { xs: "13px", md: "14px" },
+                              padding: { xs: "10px 12px", md: "12px 14px" },
+                              textAlign: "center",
+                              direction: "ltr",
+                            },
+                            "& .MuiInputBase-input::placeholder": {
+                              color: "var(--admin-text-secondary)",
+                              opacity: 1,
+                            },
+                          }}
+                        />
+                        <TextField
+                          value={discountDisplay}
+                          onChange={(e) => applyDiscountFromAmount(e.target.value)}
+                          onFocus={() => {
+                            setIsDiscountFocused(true);
+                          }}
+                          onBlur={(e) => {
+                            setIsDiscountFocused(false);
+                            const numValue = parseAmountInput(e.target.value);
+                            if (numValue <= 0) {
+                              setDiscountDisplay("");
+                              setDiscountPercentDisplay("");
+                              setDiscounttype(0);
+                              setDiscountError("");
+                            } else {
+                              setDiscountDisplay(formatAmountInput(e.target.value));
+                            }
+                          }}
+                          placeholder="مبلغ"
+                          type="text"
+                          size="small"
+                          error={!!discountError}
+                          helperText={discountError || undefined}
+                          sx={{
+                            flex: 1,
+                            minWidth: 0,
+                            "& .MuiOutlinedInput-root": {
+                              backgroundColor: "var(--admin-surface-alt)",
+                              color: "var(--admin-text)",
+                              "& fieldset": {
+                                borderColor: discountError ? "var(--admin-error)" : "var(--admin-border)",
+                              },
+                              "&:hover fieldset": {
+                                borderColor: discountError ? "var(--admin-error)" : "var(--admin-accent)",
+                              },
+                              "&.Mui-focused fieldset": {
+                                borderColor: discountError ? "var(--admin-error)" : "var(--admin-accent)",
+                              },
+                            },
+                            "& .MuiInputBase-input": {
+                              color: "var(--admin-text)",
+                              fontSize: { xs: "13px", md: "14px" },
+                              padding: { xs: "10px 12px", md: "12px 14px" },
+                              textAlign: "right",
+                              direction: "ltr"
+                            },
+                            "& .MuiInputBase-input::placeholder": {
+                              color: "var(--admin-text-secondary)",
+                              opacity: 1
+                            },
+                            "& .MuiFormHelperText-root": {
+                              color: "var(--admin-error)",
+                              fontSize: { xs: "11px", md: "12px" },
+                              marginTop: "4px"
+                            }
+                          }}
+                        />
                       </Box>
                     </CardContent>
                   )}
@@ -3316,180 +3480,18 @@ export default function ShoppingPage() {
                     }}>
                       نوع پرداخت
                     </Typography>
-                    <FormControl component="fieldset" sx={{ width: "100%" }}>
-                      <RadioGroup
-                        value={paymentType}
-                        onChange={(e) => {
-                          const next = e.target.value as PaymentType;
-                          setPaymentType(next);
-                          if (next === 'cash') {
-                            setInstallmentCount(2);
-                            setInstallmentCalculation(null);
-                            installmentCalculationRef.current = null;
-                            setInstallmentCreditError('');
-                            setSelectedChequeId(null);
-                          } else if (next === 'installment') {
-                            setDiscounttype(0);
-                            setDiscountDisplay('');
-                            setDiscountError('');
-                            setSelectedChequeId(null);
-                          } else if (next === 'cheque') {
-                            setSelectedChequeId(null);
-                            setSettlementMode("cash_all");
-                            setPaymentSplitError("");
-                          } else if (next === 'mixed') {
-                            setSelectedChequeId(null);
-                            setCardAmountInput("");
-                            setCashAmountInput("");
-                            setPaymentSplitError("");
-                          } else if (next === 'debt') {
-                            setSelectedChequeId(null);
-                          }
-                        }}
-                        sx={{
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: 0.25,
-                          "& .MuiFormControlLabel-root": { mr: 0, ml: 0, alignItems: "center" },
-                        }}
-                      >
-                        <FormControlLabel
-                          value="cash"
-                          control={
-                            <Radio
-                              size="small"
-                              sx={{
-                                color: "var(--admin-text-secondary)",
-                                "&.Mui-checked": {
-                                  color: "var(--admin-accent)"
-                                }
-                              }}
-                            />
-                          }
-                          label={
-                            <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "14px" } }}>
-                              نقدی
-                            </Typography>
-                          }
-                        />
-                        {debtPaymentEnabled && (
-                        <FormControlLabel
-                          value="debt"
-                          control={
-                            <Radio
-                              size="small"
-                              sx={{
-                                color: "var(--admin-text-secondary)",
-                                "&.Mui-checked": {
-                                  color: "var(--admin-accent)"
-                                }
-                              }}
-                            />
-                          }
-                          label={
-                            <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "14px" } }}>
-                              نسیه
-                            </Typography>
-                          }
-                        />
-                        )}
-                        {installmentPaymentEnabled && (
-                        <FormControlLabel
-                          value="installment"
-                          control={
-                            <Radio
-                              size="small"
-                              sx={{
-                                color: "var(--admin-text-secondary)",
-                                "&.Mui-checked": {
-                                  color: "var(--admin-accent)"
-                                }
-                              }}
-                            />
-                          }
-                          label={
-                            <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "14px" } }}>
-                              قسطی
-                            </Typography>
-                          }
-                        />
-                        )}
-                        {chequePaymentEnabled && (
-                        <FormControlLabel
-                          value="cheque"
-                          control={
-                            <Radio
-                              size="small"
-                              sx={{
-                                color: "var(--admin-text-secondary)",
-                                "&.Mui-checked": {
-                                  color: "var(--admin-accent)"
-                                }
-                              }}
-                            />
-                          }
-                          label={
-                            <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "14px" } }}>
-                              چک
-                            </Typography>
-                          }
-                        />
-                        )}
-                        <FormControlLabel
-                          value="mixed"
-                          control={
-                            <Radio
-                              size="small"
-                              sx={{
-                                color: "var(--admin-text-secondary)",
-                                "&.Mui-checked": {
-                                  color: "var(--admin-accent)"
-                                }
-                              }}
-                            />
-                          }
-                          label={
-                            <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "14px" } }}>
-                              ترکیبی
-                            </Typography>
-                          }
-                        />
-                      </RadioGroup>
-                    </FormControl>
+                    <PosSegmentButtons
+                      value={paymentType}
+                      onChange={handlePaymentTypeChange}
+                      options={[
+                        { value: "cash", label: "نقدی" },
+                        { value: "debt", label: "نسیه", show: debtPaymentEnabled },
+                        { value: "installment", label: "قسطی", show: installmentPaymentEnabled },
+                        { value: "cheque", label: "چک", show: chequePaymentEnabled },
+                        { value: "mixed", label: "ترکیبی" },
+                      ]}
+                    />
                     </Box>
-                    {saleDateEditEnabled && (
-                      <Box>
-                        <Typography
-                          sx={{
-                            color: "var(--admin-text)",
-                            fontSize: { xs: "12px", md: "14px" },
-                            fontWeight: 500,
-                            mb: 0.75,
-                          }}
-                        >
-                          تاریخ فروش:
-                        </Typography>
-                        <Box
-                          sx={{
-                            ...chequeDatePickerBoxSx,
-                            "& .rmdp-portal": { zIndex: `${CHEQUE_DATE_PICKER_Z} !important` },
-                          }}
-                        >
-                          <DatePicker
-                            value={saleDate}
-                            onChange={(d) =>
-                              setSaleDate(d && !Array.isArray(d) ? (d as DateObject) : todayJalaliDateObject())
-                            }
-                            calendar={persian}
-                            locale={persian_fa}
-                            calendarPosition="bottom-right"
-                            format="YYYY/MM/DD"
-                            containerStyle={{ width: "100%" }}
-                            inputClass="rmdp-input"
-                          />
-                        </Box>
-                      </Box>
-                    )}
                     {paymentType === 'debt' && (
                       <Box sx={{ p: { xs: "8px", md: "12px" }, bgcolor: "var(--admin-surface-alt)", borderRadius: "8px" }}>
                         <Typography sx={{ color: "var(--admin-warning)", fontSize: { xs: "11px", md: "13px" } }}>
@@ -3675,76 +3677,15 @@ export default function ShoppingPage() {
                             >
                               روش پرداخت باقی‌مانده ({formatNumber(chequeRemainder)} تومان)
                             </Typography>
-                            <RadioGroup
+                            <PosSegmentButtons
                               value={settlementMode}
-                              onChange={(e) => {
-                                const mode = e.target.value as SettlementMode;
-                                setSettlementMode(mode);
-                                setPaymentSplitError("");
-                                if (mode === "split") {
-                                  setCardAmountInput(moneyField(chequeRemainder));
-                                  setCashAmountInput(moneyField(0));
-                                }
-                              }}
-                              sx={{
-                                display: "flex",
-                                flexDirection: "column",
-                                gap: 0.25,
-                                "& .MuiFormControlLabel-root": { mr: 0, ml: 0 },
-                              }}
-                            >
-                              <FormControlLabel
-                                value="card_all"
-                                control={
-                                  <Radio
-                                    size="small"
-                                    sx={{
-                                      color: "var(--admin-text-secondary)",
-                                      "&.Mui-checked": { color: "var(--admin-accent)" },
-                                    }}
-                                  />
-                                }
-                                label={
-                                  <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "13px" } }}>
-                                    کارتخوان
-                                  </Typography>
-                                }
-                              />
-                              <FormControlLabel
-                                value="cash_all"
-                                control={
-                                  <Radio
-                                    size="small"
-                                    sx={{
-                                      color: "var(--admin-text-secondary)",
-                                      "&.Mui-checked": { color: "var(--admin-accent)" },
-                                    }}
-                                  />
-                                }
-                                label={
-                                  <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "13px" } }}>
-                                    پول نقد
-                                  </Typography>
-                                }
-                              />
-                              <FormControlLabel
-                                value="split"
-                                control={
-                                  <Radio
-                                    size="small"
-                                    sx={{
-                                      color: "var(--admin-text-secondary)",
-                                      "&.Mui-checked": { color: "var(--admin-accent)" },
-                                    }}
-                                  />
-                                }
-                                label={
-                                  <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "13px" } }}>
-                                    ترکیب کارتخوان و نقد
-                                  </Typography>
-                                }
-                              />
-                            </RadioGroup>
+                              onChange={handleSettlementModeChange}
+                              options={[
+                                { value: "card_all", label: "کارتخوان" },
+                                { value: "cash_all", label: "پول نقد" },
+                                { value: "split", label: "ترکیب" },
+                              ]}
+                            />
                             {settlementMode === "split" && (
                               <Box sx={{ mt: 1, display: "flex", flexDirection: "column", gap: 1 }}>
                                 <TextField
@@ -3931,78 +3872,15 @@ export default function ShoppingPage() {
                         >
                           روش پرداخت
                         </Typography>
-                        <FormControl component="fieldset" sx={{ width: "100%" }}>
-                          <RadioGroup
-                            value={settlementMode}
-                            onChange={(e) => {
-                              const mode = e.target.value as SettlementMode;
-                              setSettlementMode(mode);
-                              setPaymentSplitError("");
-                              if (mode === "split") {
-                                setCardAmountInput(moneyField(settlementTarget));
-                                setCashAmountInput(moneyField(0));
-                              }
-                            }}
-                            sx={{
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: 0.25,
-                              "& .MuiFormControlLabel-root": { mr: 0, ml: 0 },
-                            }}
-                          >
-                            <FormControlLabel
-                              value="card_all"
-                              control={
-                                <Radio
-                                  size="small"
-                                  sx={{
-                                    color: "var(--admin-text-secondary)",
-                                    "&.Mui-checked": { color: "var(--admin-accent)" },
-                                  }}
-                                />
-                              }
-                              label={
-                                <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "13px" } }}>
-                                  کارتخوان
-                                </Typography>
-                              }
-                            />
-                            <FormControlLabel
-                              value="cash_all"
-                              control={
-                                <Radio
-                                  size="small"
-                                  sx={{
-                                    color: "var(--admin-text-secondary)",
-                                    "&.Mui-checked": { color: "var(--admin-accent)" },
-                                  }}
-                                />
-                              }
-                              label={
-                                <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "13px" } }}>
-                                  پول نقد
-                                </Typography>
-                              }
-                            />
-                            <FormControlLabel
-                              value="split"
-                              control={
-                                <Radio
-                                  size="small"
-                                  sx={{
-                                    color: "var(--admin-text-secondary)",
-                                    "&.Mui-checked": { color: "var(--admin-accent)" },
-                                  }}
-                                />
-                              }
-                              label={
-                                <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "13px" } }}>
-                                  ترکیب کارتخوان و نقد
-                                </Typography>
-                              }
-                            />
-                          </RadioGroup>
-                        </FormControl>
+                        <PosSegmentButtons
+                          value={settlementMode}
+                          onChange={handleSettlementModeChange}
+                          options={[
+                            { value: "card_all", label: "کارتخوان" },
+                            { value: "cash_all", label: "پول نقد" },
+                            { value: "split", label: "ترکیب" },
+                          ]}
+                        />
                         {settlementMode === "split" && (
                           <Box sx={{ marginTop: { xs: "8px", md: "10px" }, display: "flex", flexDirection: "column", gap: { xs: "8px", md: "10px" } }}>
                             <TextField
@@ -4589,6 +4467,12 @@ export default function ShoppingPage() {
         </DialogActions>
       </Dialog>
 
+      <PosFullscreenExitHint
+        visible={isFullscreen}
+        showExitHint={showExitHint}
+        setShowExitHint={setShowExitHint}
+        onExit={exitFullscreen}
+      />
       <ToastContainer autoClose={3000} style={{ marginBottom: '76px', borderRadius: "15px" }} position={"bottom-right"} />
     </Box>
   );

@@ -1,0 +1,24 @@
+html.admin-pos-fullscreen .admin-shell-header,
+html.admin-pos-fullscreen .admin-shell-bottom-nav {
+  display: none !important;
+}
+
+html.admin-pos-fullscreen .admin-shell-main {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  padding-bottom: 0 !important;
+  min-height: 100vh !important;
+  min-height: 100dvh !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  overflow: hidden !important;
+}
+
+html.admin-pos-fullscreen body {
+  overflow: hidden;
+}
+
+/* چت‌بات و toast در حالت تمام‌صفحه POS مزاحم فروش نیست */
+html.admin-pos-fullscreen .admin-webino-chatbot {
+  display: none !important;
+}

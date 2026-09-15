@@ -7,6 +7,7 @@ import AdminOnboardingProvider from './onboarding/AdminOnboardingProvider';
 import TableOrdersPendingProvider from './table-orders/TableOrdersPendingProvider';
 import ServiceRequestsPendingProvider from './shop-services/ServiceRequestsPendingProvider';
 import './theme/admin-theme.css';
+import './theme/admin-pos-fullscreen.css';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
@@ -186,13 +187,16 @@ export default function ShikshooLayout({
           <>
             {!isPublicAdminPage && <ShopAccessWatcher />}
             {!isPrintPage && !isPublicAdminPage && (
-              <Header
-                title={pageTitle}
-                showBack={showBack}
-                backUrl={getFirstAllowedAdminPath()}
-              />
+              <Box className="admin-shell-header">
+                <Header
+                  title={pageTitle}
+                  showBack={showBack}
+                  backUrl={getFirstAllowedAdminPath()}
+                />
+              </Box>
             )}
             <Box
+              className="admin-shell-main"
               sx={{
                 pl: !isPrintPage && !isPublicAdminPage
                   ? `var(${ADMIN_MENU_CART_WIDTH_VAR}, 0px)`
@@ -203,8 +207,16 @@ export default function ShikshooLayout({
             >
               {children}
             </Box>
-            {!isPrintPage && !isPublicAdminPage && <SimpleBottomNavigationAtelier />}
-            {!isPrintPage && !isPublicAdminPage && <WebinoChatbot audience="admin" hideLauncher />}
+            {!isPrintPage && !isPublicAdminPage && (
+              <Box className="admin-shell-bottom-nav">
+                <SimpleBottomNavigationAtelier />
+              </Box>
+            )}
+            {!isPrintPage && !isPublicAdminPage && (
+              <Box className="admin-webino-chatbot">
+                <WebinoChatbot audience="admin" hideLauncher />
+              </Box>
+            )}
           </>
         )}
         </Box>

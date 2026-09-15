@@ -20,6 +20,8 @@ import AddIcon from "@mui/icons-material/Add";
 import PhoneNumberInput from "@/app/coponent/PhoneNumberInput/PhoneNumberInput";
 import type { PaymentType } from "@/app/lib/paymentTypes";
 import MultiCartToolbar from "@/app/admin/MultiCartToolbar";
+import { PosFullscreenToggleButton } from "@/app/admin/PosFullscreenControls";
+import PosSegmentButtons from "@/app/admin/PosSegmentButtons";
 import CartQuantityControl from "@/app/admin/CartQuantityControl";
 import { getPriceUnitLabel } from "@/app/lib/productUnits";
 import { formatAmountInput } from "@/app/lib/amountInput";
@@ -106,11 +108,14 @@ export default function AdminClassicPosView({
     useCreditAmount,
     discounttype,
     discountDisplay,
+    discountPercentDisplay = "",
     discountError,
     isDiscountFocused,
     onDiscountFocus,
     onDiscountChange,
     onDiscountBlur,
+    onDiscountPercentChange,
+    onDiscountPercentBlur,
     paymentType,
     onPaymentTypeChange,
     installmentCount,
@@ -148,6 +153,8 @@ export default function AdminClassicPosView({
     saleDateEditEnabled = false,
     saleDate,
     onSaleDateChange,
+    isFullscreen = false,
+    onToggleFullscreen,
   } = cartPanel;
 
   const finalTotal = Math.max(0, total - useCreditAmount - discounttype - backPrice);
@@ -293,15 +300,24 @@ export default function AdminClassicPosView({
           direction: "rtl",
         }}
       >
-        <MultiCartToolbar
-          compact
-          fullWidth={false}
-          cartCount={cartCount}
-          activeIndex={activeCartIndex}
-          onSwitch={onSwitchCart}
-          onAdd={onAddCart}
-          onClearOrRemove={onClearCart}
-        />
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+          <MultiCartToolbar
+            compact
+            fullWidth={false}
+            cartCount={cartCount}
+            activeIndex={activeCartIndex}
+            onSwitch={onSwitchCart}
+            onAdd={onAddCart}
+            onClearOrRemove={onClearCart}
+          />
+          {onToggleFullscreen ? (
+            <PosFullscreenToggleButton
+              dense
+              isFullscreen={isFullscreen}
+              onToggle={onToggleFullscreen}
+            />
+          ) : null}
+        </Box>
 
         <Box
           sx={{
@@ -343,7 +359,7 @@ export default function AdminClassicPosView({
             </Button>
           ) : null}
 
-          <Box sx={{ flex: "1 1 160px", minWidth: 140, maxWidth: 220 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, flex: "1 1 160px", minWidth: 140, maxWidth: 220 }}>
             <PhoneNumberInput
               key={phoneInputKey ?? `classic-phone-${activeCartIndex}`}
               name="classic-phone"
@@ -353,6 +369,35 @@ export default function AdminClassicPosView({
               compact
               sx={{ width: "100%", ...compactFieldSx }}
             />
+            {saleDateEditEnabled && onSaleDateChange && (
+              <Box
+                sx={{
+                  ...chequeDatePickerBoxSx,
+                  "& .rmdp-input": {
+                    ...chequeDatePickerBoxSx["& .rmdp-input"],
+                    height: "28px",
+                    fontSize: "11px",
+                  },
+                  "& .rmdp-portal": { zIndex: `${CHEQUE_DATE_PICKER_Z} !important` },
+                }}
+              >
+                <DatePicker
+                  value={saleDate ?? todayJalaliDateObject()}
+                  onChange={(d) =>
+                    onSaleDateChange(
+                      d && !Array.isArray(d) ? (d as DateObject) : todayJalaliDateObject(),
+                    )
+                  }
+                  calendar={persian}
+                  locale={persian_fa}
+                  calendarPosition="bottom-right"
+                  format="YYYY/MM/DD"
+                  containerStyle={{ width: "100%" }}
+                  inputClass="rmdp-input"
+                  placeholder="تاریخ فروش"
+                />
+              </Box>
+            )}
           </Box>
 
           {checkingCredit ? (
@@ -366,18 +411,31 @@ export default function AdminClassicPosView({
           ) : null}
 
           {(!installmentPaymentEnabled || paymentType !== "installment") && (
-            <TextField
-              size="small"
-              placeholder="تخفیف (تومان)"
-              value={discountDisplay}
-              onFocus={onDiscountFocus}
-              onChange={(e) => onDiscountChange(e.target.value)}
-              onBlur={(e) => onDiscountBlur(e.target.value)}
-              error={!!discountError}
-              helperText={discountError || undefined}
-              sx={{ ...compactFieldSx, width: 130 }}
-              inputMode="numeric"
-            />
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+              <Typography sx={{ fontSize: "11px", fontWeight: 700, flexShrink: 0 }}>تخفیف</Typography>
+              <TextField
+                size="small"
+                placeholder="درصد"
+                value={discountPercentDisplay}
+                onChange={(e) => onDiscountPercentChange?.(e.target.value)}
+                onBlur={(e) => onDiscountPercentBlur?.(e.target.value)}
+                error={!!discountError}
+                sx={{ ...compactFieldSx, width: 64 }}
+                inputMode="decimal"
+              />
+              <TextField
+                size="small"
+                placeholder="مبلغ"
+                value={discountDisplay}
+                onFocus={onDiscountFocus}
+                onChange={(e) => onDiscountChange(e.target.value)}
+                onBlur={(e) => onDiscountBlur(e.target.value)}
+                error={!!discountError}
+                helperText={discountError || undefined}
+                sx={{ ...compactFieldSx, width: 110 }}
+                inputMode="numeric"
+              />
+            </Box>
           )}
         </Box>
       </Box>
@@ -646,40 +704,6 @@ export default function AdminClassicPosView({
               ))}
           </Box>
 
-          {saleDateEditEnabled && onSaleDateChange && (
-            <Box sx={{ mt: 0.25 }}>
-              <Typography sx={{ fontSize: "10px", color: "var(--admin-text-muted)", mb: 0.35 }}>
-                تاریخ فروش
-              </Typography>
-              <Box
-                sx={{
-                  ...chequeDatePickerBoxSx,
-                  "& .rmdp-input": {
-                    ...chequeDatePickerBoxSx["& .rmdp-input"],
-                    height: "32px",
-                    fontSize: "12px",
-                  },
-                  "& .rmdp-portal": { zIndex: `${CHEQUE_DATE_PICKER_Z} !important` },
-                }}
-              >
-                <DatePicker
-                  value={saleDate ?? todayJalaliDateObject()}
-                  onChange={(d) =>
-                    onSaleDateChange(
-                      d && !Array.isArray(d) ? (d as DateObject) : todayJalaliDateObject(),
-                    )
-                  }
-                  calendar={persian}
-                  locale={persian_fa}
-                  calendarPosition="bottom-right"
-                  format="YYYY/MM/DD"
-                  containerStyle={{ width: "100%" }}
-                  inputClass="rmdp-input"
-                />
-              </Box>
-            </Box>
-          )}
-
           {paymentType === "cash" && settlementMode === "split" && payableNow > 0 && (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, mt: 0.25 }}>
               <Typography sx={{ fontSize: "10px", color: "var(--admin-text-muted)" }}>
@@ -882,32 +906,16 @@ export default function AdminClassicPosView({
                   <Typography sx={{ fontSize: "10px", fontWeight: 600, color: "var(--admin-accent)" }}>
                     باقی‌مانده را با نقد یا کارت بپردازید: {formatNumber(chequeRemainder)}
                   </Typography>
-                  <Box sx={{ display: "flex", gap: 0.5 }}>
-                    <Button
-                      size="small"
-                      variant={settlementMode === "card_all" ? "contained" : "outlined"}
-                      onClick={() => onSettlementModeChange("card_all")}
-                      sx={{ flex: 1, minWidth: 0, fontSize: "10px", py: 0.3 }}
-                    >
-                      کارت
-                    </Button>
-                    <Button
-                      size="small"
-                      variant={settlementMode === "cash_all" ? "contained" : "outlined"}
-                      onClick={() => onSettlementModeChange("cash_all")}
-                      sx={{ flex: 1, minWidth: 0, fontSize: "10px", py: 0.3 }}
-                    >
-                      نقد
-                    </Button>
-                    <Button
-                      size="small"
-                      variant={settlementMode === "split" ? "contained" : "outlined"}
-                      onClick={() => onSettlementModeChange("split")}
-                      sx={{ flex: 1, minWidth: 0, fontSize: "10px", py: 0.3 }}
-                    >
-                      نقد+کارت
-                    </Button>
-                  </Box>
+                  <PosSegmentButtons
+                    dense
+                    value={settlementMode}
+                    onChange={onSettlementModeChange}
+                    options={[
+                      { value: "card_all", label: "کارتخوان" },
+                      { value: "cash_all", label: "پول نقد" },
+                      { value: "split", label: "ترکیب" },
+                    ]}
+                  />
                 </>
               )}
             </Box>

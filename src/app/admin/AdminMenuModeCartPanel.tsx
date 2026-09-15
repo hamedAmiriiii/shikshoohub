@@ -9,10 +9,6 @@ import {
   TextField,
   Divider,
   CircularProgress,
-  FormControl,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
 } from "@mui/material";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import AddIcon from "@mui/icons-material/Add";
@@ -20,6 +16,8 @@ import PhoneNumberInput from "@/app/coponent/PhoneNumberInput/PhoneNumberInput";
 import type { PaymentType } from "@/app/lib/paymentTypes";
 import MultiCartToolbar from "@/app/admin/MultiCartToolbar";
 import CartQuantityControl from "@/app/admin/CartQuantityControl";
+import PosSegmentButtons from "@/app/admin/PosSegmentButtons";
+import { PosFullscreenToggleButton } from "@/app/admin/PosFullscreenControls";
 import { getPriceUnitLabel } from "@/app/lib/productUnits";
 import { formatAmountInput } from "@/app/lib/amountInput";
 import { catalogItemKey } from "@/app/lib/catalogItems";
@@ -91,11 +89,14 @@ export type AdminMenuModeCartPanelProps = {
   useCreditAmount: number;
   discounttype: number;
   discountDisplay: string;
+  discountPercentDisplay?: string;
   discountError: string;
   isDiscountFocused: boolean;
   onDiscountFocus: () => void;
   onDiscountChange: (value: string) => void;
   onDiscountBlur: (value: string) => void;
+  onDiscountPercentChange?: (value: string) => void;
+  onDiscountPercentBlur?: (value: string) => void;
   paymentType: PaymentType;
   onPaymentTypeChange: (type: PaymentType) => void;
   installmentCount: number;
@@ -140,6 +141,8 @@ export type AdminMenuModeCartPanelProps = {
   saleDateEditEnabled?: boolean;
   saleDate?: DateObject | null;
   onSaleDateChange?: (value: DateObject | null) => void;
+  isFullscreen?: boolean;
+  onToggleFullscreen?: () => void;
   submitLabel?: string;
   cartTitle?: string;
   clearLabel?: string;
@@ -166,11 +169,14 @@ export default function AdminMenuModeCartPanel({
   useCreditAmount,
   discounttype,
   discountDisplay,
+  discountPercentDisplay = "",
   discountError,
   isDiscountFocused,
   onDiscountFocus,
   onDiscountChange,
   onDiscountBlur,
+  onDiscountPercentChange,
+  onDiscountPercentBlur,
   paymentType,
   onPaymentTypeChange,
   installmentCount,
@@ -208,6 +214,8 @@ export default function AdminMenuModeCartPanel({
   saleDateEditEnabled = false,
   saleDate,
   onSaleDateChange,
+  isFullscreen = false,
+  onToggleFullscreen,
   submitLabel,
   cartTitle,
   clearLabel,
@@ -275,11 +283,22 @@ export default function AdminMenuModeCartPanel({
           borderBottom: "1px solid var(--admin-border)",
           bgcolor: "var(--admin-surface-alt)",
           flexShrink: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 0.5,
         }}
       >
-        <Typography sx={{ fontSize: "10px", fontWeight: 600, color: "var(--admin-text-muted)" }}>
+        <Typography sx={{ fontSize: "10px", fontWeight: 600, color: "var(--admin-text-muted)", minWidth: 0 }}>
           سبد {activeCartIndex + 1} · {cart.length} کالا{cartTitle ? ` · ${cartTitle}` : ""}
         </Typography>
+        {onToggleFullscreen ? (
+          <PosFullscreenToggleButton
+            dense
+            isFullscreen={isFullscreen}
+            onToggle={onToggleFullscreen}
+          />
+        ) : null}
       </Box>
 
       <Box sx={{ flex: 1, overflowY: "auto", px: 0.75, py: 0.5 }}>
@@ -395,6 +414,36 @@ export default function AdminMenuModeCartPanel({
             ...tinyFieldSx,
           }}
         />
+        {saleDateEditEnabled && onSaleDateChange && (
+          <Box
+            sx={{
+              ...chequeDatePickerBoxSx,
+              "& .rmdp-input": {
+                ...chequeDatePickerBoxSx["& .rmdp-input"],
+                height: "28px",
+                fontSize: "10px",
+                borderRadius: "6px",
+              },
+              "& .rmdp-portal": { zIndex: `${CHEQUE_DATE_PICKER_Z} !important` },
+            }}
+          >
+            <DatePicker
+              value={saleDate ?? todayJalaliDateObject()}
+              onChange={(d) =>
+                onSaleDateChange(
+                  d && !Array.isArray(d) ? (d as DateObject) : todayJalaliDateObject(),
+                )
+              }
+              calendar={persian}
+              locale={persian_fa}
+              calendarPosition="bottom-right"
+              format="YYYY/MM/DD"
+              containerStyle={{ width: "100%" }}
+              inputClass="rmdp-input"
+              placeholder="تاریخ فروش"
+            />
+          </Box>
+        )}
         {checkingCredit && (
           <Typography sx={{ fontSize: "9px", color: "var(--admin-text-muted)" }}>
             بررسی اعتبار...
@@ -407,30 +456,61 @@ export default function AdminMenuModeCartPanel({
         )}
 
         {(!installmentPaymentEnabled || paymentType !== "installment") && (
-          <TextField
-            size="small"
-            placeholder="تخفیف"
-            value={discountDisplay}
-            onFocus={onDiscountFocus}
-            onChange={(e) => onDiscountChange(e.target.value)}
-            onBlur={(e) => onDiscountBlur(e.target.value)}
-            error={!!discountError}
-            helperText={discountError || undefined}
-            sx={{
-              ...tinyFieldSx,
-              "& .MuiOutlinedInput-root": {
-                ...tinyFieldSx["& .MuiOutlinedInput-root"],
-                fontSize: "11px",
-                minHeight: 30,
-              },
-              "& .MuiInputBase-input": {
-                ...tinyFieldSx["& .MuiInputBase-input"],
-                fontSize: "11px",
-                py: 0.6,
-              },
-            }}
-            inputMode="numeric"
-          />
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+            <Typography sx={{ fontSize: "9px", fontWeight: 700, color: "var(--admin-text)", flexShrink: 0 }}>
+              تخفیف
+            </Typography>
+            <TextField
+              size="small"
+              placeholder="درصد"
+              value={discountPercentDisplay}
+              onChange={(e) => onDiscountPercentChange?.(e.target.value)}
+              onBlur={(e) => onDiscountPercentBlur?.(e.target.value)}
+              error={!!discountError}
+              sx={{
+                ...tinyFieldSx,
+                width: 56,
+                flex: "0 0 56px",
+                "& .MuiOutlinedInput-root": {
+                  ...tinyFieldSx["& .MuiOutlinedInput-root"],
+                  fontSize: "11px",
+                  minHeight: 30,
+                },
+                "& .MuiInputBase-input": {
+                  ...tinyFieldSx["& .MuiInputBase-input"],
+                  fontSize: "11px",
+                  py: 0.6,
+                  textAlign: "center",
+                },
+              }}
+              inputMode="decimal"
+            />
+            <TextField
+              size="small"
+              placeholder="مبلغ"
+              value={discountDisplay}
+              onFocus={onDiscountFocus}
+              onChange={(e) => onDiscountChange(e.target.value)}
+              onBlur={(e) => onDiscountBlur(e.target.value)}
+              error={!!discountError}
+              helperText={discountError || undefined}
+              sx={{
+                ...tinyFieldSx,
+                flex: 1,
+                "& .MuiOutlinedInput-root": {
+                  ...tinyFieldSx["& .MuiOutlinedInput-root"],
+                  fontSize: "11px",
+                  minHeight: 30,
+                },
+                "& .MuiInputBase-input": {
+                  ...tinyFieldSx["& .MuiInputBase-input"],
+                  fontSize: "11px",
+                  py: 0.6,
+                },
+              }}
+              inputMode="numeric"
+            />
+          </Box>
         )}
 
         {showPaymentTypeSelector && (
@@ -438,85 +518,18 @@ export default function AdminMenuModeCartPanel({
             <Typography sx={{ fontSize: "9px", fontWeight: 700, color: "var(--admin-text)" }}>
               نوع پرداخت
             </Typography>
-            <FormControl component="fieldset" sx={{ minWidth: 0 }}>
-              <RadioGroup
-                value={paymentType}
-                onChange={(e) => onPaymentTypeChange(e.target.value as PaymentType)}
-                sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 0.1,
-                  "& .MuiFormControlLabel-root": { mr: 0, ml: 0, height: 22 },
-                }}
-              >
-                <FormControlLabel
-                  value="cash"
-                  control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 15 } }} />}
-                  label={<Typography sx={{ fontSize: "10px", fontWeight: 600 }}>نقد</Typography>}
-                />
-                {debtPaymentEnabled && (
-                  <FormControlLabel
-                    value="debt"
-                    control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 15 } }} />}
-                    label={<Typography sx={{ fontSize: "10px", fontWeight: 600 }}>نسیه</Typography>}
-                  />
-                )}
-                {installmentPaymentEnabled && (
-                  <FormControlLabel
-                    value="installment"
-                    control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 15 } }} />}
-                    label={<Typography sx={{ fontSize: "10px", fontWeight: 600 }}>قسط</Typography>}
-                  />
-                )}
-                {chequePaymentEnabled && (
-                  <FormControlLabel
-                    value="cheque"
-                    control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 15 } }} />}
-                    label={<Typography sx={{ fontSize: "10px", fontWeight: 600 }}>چک</Typography>}
-                  />
-                )}
-                <FormControlLabel
-                  value="mixed"
-                  control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 15 } }} />}
-                  label={<Typography sx={{ fontSize: "10px", fontWeight: 600 }}>ترکیبی</Typography>}
-                />
-              </RadioGroup>
-            </FormControl>
-          </Box>
-        )}
-
-        {saleDateEditEnabled && onSaleDateChange && (
-          <Box>
-            <Typography sx={{ fontSize: "8px", color: "var(--admin-text-muted)", mb: 0.25 }}>
-              تاریخ فروش
-            </Typography>
-            <Box
-              sx={{
-                ...chequeDatePickerBoxSx,
-                "& .rmdp-input": {
-                  ...chequeDatePickerBoxSx["& .rmdp-input"],
-                  height: "28px",
-                  fontSize: "10px",
-                  borderRadius: "6px",
-                },
-                "& .rmdp-portal": { zIndex: `${CHEQUE_DATE_PICKER_Z} !important` },
-              }}
-            >
-              <DatePicker
-                value={saleDate ?? todayJalaliDateObject()}
-                onChange={(d) =>
-                  onSaleDateChange(
-                    d && !Array.isArray(d) ? (d as DateObject) : todayJalaliDateObject(),
-                  )
-                }
-                calendar={persian}
-                locale={persian_fa}
-                calendarPosition="bottom-right"
-                format="YYYY/MM/DD"
-                containerStyle={{ width: "100%" }}
-                inputClass="rmdp-input"
-              />
-            </Box>
+            <PosSegmentButtons
+              dense
+              value={paymentType}
+              onChange={onPaymentTypeChange}
+              options={[
+                { value: "cash", label: "نقد" },
+                { value: "debt", label: "نسیه", show: debtPaymentEnabled },
+                { value: "installment", label: "قسط", show: installmentPaymentEnabled },
+                { value: "cheque", label: "چک", show: chequePaymentEnabled },
+                { value: "mixed", label: "ترکیبی" },
+              ]}
+            />
           </Box>
         )}
 
@@ -693,34 +706,16 @@ export default function AdminMenuModeCartPanel({
                 ? `روش پرداخت باقی‌مانده (${formatNumber(chequeRemainder)})`
                 : "روش پرداخت"}
             </Typography>
-            <FormControl component="fieldset" sx={{ minWidth: 0 }}>
-              <RadioGroup
-                value={settlementMode}
-                onChange={(e) => onSettlementModeChange(e.target.value as SettlementMode)}
-                sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 0.1,
-                  "& .MuiFormControlLabel-root": { mr: 0, ml: 0, height: 22 },
-                }}
-              >
-                <FormControlLabel
-                  value="card_all"
-                  control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 15 } }} />}
-                  label={<Typography sx={{ fontSize: "9px", fontWeight: 600 }}>کارتخوان</Typography>}
-                />
-                <FormControlLabel
-                  value="cash_all"
-                  control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 15 } }} />}
-                  label={<Typography sx={{ fontSize: "9px", fontWeight: 600 }}>پول نقد</Typography>}
-                />
-                <FormControlLabel
-                  value="split"
-                  control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 15 } }} />}
-                  label={<Typography sx={{ fontSize: "9px", fontWeight: 600 }}>ترکیب کارتخوان و نقد</Typography>}
-                />
-              </RadioGroup>
-            </FormControl>
+            <PosSegmentButtons
+              dense
+              value={settlementMode}
+              onChange={onSettlementModeChange}
+              options={[
+                { value: "card_all", label: "کارتخوان" },
+                { value: "cash_all", label: "پول نقد" },
+                { value: "split", label: "ترکیب" },
+              ]}
+            />
           </Box>
         ) : null}
 
