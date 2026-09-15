@@ -49,7 +49,7 @@ export type SaleReceiptData = {
   backPrice: number;
   finalTotal: number;
   payableNow: number;
-  paymentType?: "cash" | "installment" | "debt" | "cheque" | "online";
+  paymentType?: "cash" | "installment" | "debt" | "cheque" | "mixed" | "online";
   settlementMode?: "split" | "card_all" | "cash_all";
   cardAmount?: number;
   cashAmount?: number;
@@ -665,6 +665,19 @@ export function getPaymentTypeLabel(receipt: SaleReceiptData): string {
     if (receipt.cashAmount) parts.push("نقد");
     if (receipt.cardAmount) parts.push("کارت");
     return parts.join(" + ");
+  }
+  if (receipt.paymentType === "mixed") {
+    const parts: string[] = [];
+    if (receipt.cashAmount) parts.push("نقد");
+    if (receipt.cardAmount) parts.push("کارت");
+    if (receipt.chequeId || receipt.chequeNumber) {
+      parts.push(receipt.chequeNumber ? `چک (${receipt.chequeNumber})` : "چک");
+    }
+    const paid =
+      (Number(receipt.cashAmount) || 0) +
+      (Number(receipt.cardAmount) || 0);
+    if (receipt.finalTotal > paid) parts.push("نسیه");
+    return parts.length ? `ترکیبی (${parts.join(" + ")})` : "ترکیبی";
   }
   if (receipt.paymentType === "online") return "آنلاین";
   if (receipt.settlementMode === "card_all") return "کارت";

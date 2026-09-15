@@ -25,6 +25,12 @@ import { getPriceUnitLabel } from "@/app/lib/productUnits";
 import { formatAmountInput } from "@/app/lib/amountInput";
 import type { AdminMenuModeCartPanelProps } from "@/app/admin/AdminMenuModeCartPanel";
 import { catalogItemKey } from "@/app/lib/catalogItems";
+import DatePicker from "react-multi-date-picker";
+import DateObject from "react-date-object";
+import persian from "react-date-object/calendars/persian";
+import persian_fa from "react-date-object/locales/persian_fa";
+import { CHEQUE_DATE_PICKER_Z, chequeDatePickerBoxSx } from "@/app/admin/cheques/ChequeFormSheet";
+import { todayJalaliDateObject } from "@/app/lib/cheques";
 
 type SettlementMode = "split" | "card_all" | "cash_all";
 
@@ -134,9 +140,14 @@ export default function AdminClassicPosView({
     backPrice = 0,
     chequeRemainder = 0,
     selectedChequeAmount = 0,
+    mixedDebtResidual = 0,
+    mixedPaymentInvalid = false,
     onOpenCreateCheque,
     salePriceEditEnabled = false,
     onSalePriceChange,
+    saleDateEditEnabled = false,
+    saleDate,
+    onSaleDateChange,
   } = cartPanel;
 
   const finalTotal = Math.max(0, total - useCreditAmount - discounttype - backPrice);
@@ -146,9 +157,11 @@ export default function AdminClassicPosView({
     isSubmitting ||
     (paymentType !== "debt" &&
       paymentType !== "cheque" &&
+      paymentType !== "mixed" &&
       payableNow > 0 &&
       !paymentFieldsValid) ||
     (paymentType === "debt" && (!phone || phone.trim() === "")) ||
+    (paymentType === "mixed" && mixedPaymentInvalid) ||
     (installmentPaymentEnabled &&
       paymentType === "installment" &&
       (!phone ||
@@ -197,10 +210,17 @@ export default function AdminClassicPosView({
       show: true,
     },
     {
-      key: "split",
-      label: "ترکیبی",
+      key: "cash_card",
+      label: "نقد+کارت",
       onClick: () => selectCashSettlement("split"),
       active: paymentButtonActive(paymentType, settlementMode, "split"),
+      show: true,
+    },
+    {
+      key: "mixed",
+      label: "ترکیبی",
+      onClick: () => onPaymentTypeChange("mixed"),
+      active: paymentButtonActive(paymentType, settlementMode, "mixed"),
       show: true,
     },
     {
@@ -219,7 +239,7 @@ export default function AdminClassicPosView({
     },
     {
       key: "cheque",
-      label: "چک+نقد",
+      label: "چک",
       onClick: () => onPaymentTypeChange("cheque"),
       active: paymentButtonActive(paymentType, settlementMode, "cheque"),
       show: chequePaymentEnabled,
@@ -626,6 +646,40 @@ export default function AdminClassicPosView({
               ))}
           </Box>
 
+          {saleDateEditEnabled && onSaleDateChange && (
+            <Box sx={{ mt: 0.25 }}>
+              <Typography sx={{ fontSize: "10px", color: "var(--admin-text-muted)", mb: 0.35 }}>
+                تاریخ فروش
+              </Typography>
+              <Box
+                sx={{
+                  ...chequeDatePickerBoxSx,
+                  "& .rmdp-input": {
+                    ...chequeDatePickerBoxSx["& .rmdp-input"],
+                    height: "32px",
+                    fontSize: "12px",
+                  },
+                  "& .rmdp-portal": { zIndex: `${CHEQUE_DATE_PICKER_Z} !important` },
+                }}
+              >
+                <DatePicker
+                  value={saleDate ?? todayJalaliDateObject()}
+                  onChange={(d) =>
+                    onSaleDateChange(
+                      d && !Array.isArray(d) ? (d as DateObject) : todayJalaliDateObject(),
+                    )
+                  }
+                  calendar={persian}
+                  locale={persian_fa}
+                  calendarPosition="bottom-right"
+                  format="YYYY/MM/DD"
+                  containerStyle={{ width: "100%" }}
+                  inputClass="rmdp-input"
+                />
+              </Box>
+            </Box>
+          )}
+
           {paymentType === "cash" && settlementMode === "split" && payableNow > 0 && (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, mt: 0.25 }}>
               <Typography sx={{ fontSize: "10px", color: "var(--admin-text-muted)" }}>
@@ -654,6 +708,81 @@ export default function AdminClassicPosView({
                   {paymentSplitError}
                 </Typography>
               ) : null}
+            </Box>
+          )}
+
+          {paymentType === "mixed" && (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, mt: 0.25 }}>
+              <Typography sx={{ fontSize: "10px", color: "var(--admin-text-muted)" }}>
+                نقد / کارت / چک / نسیه
+              </Typography>
+              <Box sx={{ display: "flex", gap: 0.5 }}>
+                <TextField
+                  size="small"
+                  label="نقد"
+                  value={cashAmountInput}
+                  onChange={(e) => onCashAmountChange(e.target.value)}
+                  sx={{ ...compactFieldSx, flex: 1 }}
+                />
+                <TextField
+                  size="small"
+                  label="کارت"
+                  value={cardAmountInput}
+                  onChange={(e) => onCardAmountChange(e.target.value)}
+                  sx={{ ...compactFieldSx, flex: 1 }}
+                />
+              </Box>
+              {chequePaymentEnabled && (
+                <Box sx={{ display: "flex", gap: 0.5, alignItems: "center" }}>
+                  <TextField
+                    select
+                    size="small"
+                    value={selectedChequeId ?? ""}
+                    onChange={(e) =>
+                      onSelectedChequeChange(e.target.value ? Number(e.target.value) : null)
+                    }
+                    SelectProps={{ native: true }}
+                    disabled={loadingAvailableCheques}
+                    sx={{ ...compactFieldSx, flex: 1 }}
+                  >
+                    <option value="">{loadingAvailableCheques ? "بارگذاری…" : "چک (اختیاری)"}</option>
+                    {matchingCheques.map((cheque) => (
+                      <option key={cheque.id} value={cheque.id}>
+                        {[
+                          cheque.cheque_number ? `چک ${cheque.cheque_number}` : `#${cheque.id}`,
+                          cheque.bank_name,
+                          cheque.amount != null ? formatNumber(Number(cheque.amount)) : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" — ")}
+                      </option>
+                    ))}
+                  </TextField>
+                  {onOpenCreateCheque && (
+                    <IconButton
+                      size="small"
+                      onClick={onOpenCreateCheque}
+                      aria-label="ثبت چک جدید"
+                      sx={{
+                        p: 0.4,
+                        border: "1px solid var(--admin-border)",
+                        borderRadius: "6px",
+                        color: "var(--admin-accent)",
+                      }}
+                    >
+                      <AddIcon sx={{ fontSize: 18 }} />
+                    </IconButton>
+                  )}
+                </Box>
+              )}
+              <Typography sx={{ fontSize: "11px", fontWeight: 700, color: "var(--admin-accent)" }}>
+                مانده نسیه: {formatNumber(mixedDebtResidual)}
+              </Typography>
+              {mixedDebtResidual > 0 && (
+                <Typography sx={{ fontSize: "10px", color: "var(--admin-warning)" }}>
+                  برای مانده نسیه، شماره تلفن الزامی است
+                </Typography>
+              )}
             </Box>
           )}
         </Box>
@@ -689,7 +818,7 @@ export default function AdminClassicPosView({
           {paymentType === "cheque" && chequePaymentEnabled && (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
               <Typography sx={{ fontSize: "11px", fontWeight: 700, color: "var(--admin-text)" }}>
-                فروش ترکیبی چک + نقد/کارت
+                فروش چکی (+ نقد/کارت باقی‌مانده)
               </Typography>
               <Typography sx={{ fontSize: "10px", color: "var(--admin-text-muted)" }}>
                 فاکتور: {formatNumber(salePayableAmount)}
@@ -814,7 +943,8 @@ export default function AdminClassicPosView({
           )}
 
           {paymentSplitError &&
-            !(paymentType === "cash" && settlementMode === "split" && payableNow > 0) && (
+            !(paymentType === "cash" && settlementMode === "split" && payableNow > 0) &&
+            paymentType !== "mixed" && (
             <Typography sx={{ fontSize: "10px", color: "var(--admin-error-soft)" }}>
               {paymentSplitError}
             </Typography>

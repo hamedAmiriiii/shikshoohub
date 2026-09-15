@@ -269,6 +269,7 @@ export default function SettingsPage() {
   const [chequePaymentEnabled, setChequePaymentEnabled] = useState(false);
   const [kgSalesEnabled, setKgSalesEnabled] = useState(false);
   const [salePriceEditEnabled, setSalePriceEditEnabled] = useState(false);
+  const [saleDateEditEnabled, setSaleDateEditEnabled] = useState(false);
   const [classicPosMode, setClassicPosMode] = useState(false);
   const [askCustomerName, setAskCustomerName] = useState(false);
   const [showDailyTicketNumber, setShowDailyTicketNumber] = useState(false);
@@ -299,6 +300,7 @@ export default function SettingsPage() {
     setChequePaymentEnabled(settings.chequePaymentEnabled);
     setKgSalesEnabled(settings.kgSalesEnabled);
     setSalePriceEditEnabled(settings.salePriceEditEnabled);
+    setSaleDateEditEnabled(Boolean(settings.saleDateEditEnabled));
     setClassicPosMode(settings.classicPosMode);
     setAskCustomerName(settings.askCustomerName);
     setShowDailyTicketNumber(Boolean(settings.showDailyTicketNumber));
@@ -414,6 +416,17 @@ export default function SettingsPage() {
       enabled
         ? "تغییر قیمت هنگام خرید فعال شد"
         : "تغییر قیمت هنگام خرید غیرفعال شد",
+    );
+  };
+
+  const handleToggleSaleDateEdit = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setSaleDateEditEnabled(enabled);
+    writeAdminPosSettings({ saleDateEditEnabled: enabled });
+    toast.success(
+      enabled
+        ? "ویرایش تاریخ فروش فعال شد"
+        : "ویرایش تاریخ فروش غیرفعال شد",
     );
   };
 
@@ -807,6 +820,13 @@ export default function SettingsPage() {
             hint="ویرایش قیمت فروش در سبد"
             checked={salePriceEditEnabled}
             onChange={handleToggleSalePriceEdit}
+          />
+          <SettingsToggleRow
+            icon={<ReceiptLongIcon sx={{ fontSize: 18 }} />}
+            title="ویرایش تاریخ فروش"
+            hint="انتخاب تاریخ فاکتور در صفحه فروش — پیش‌فرض امروز"
+            checked={saleDateEditEnabled}
+            onChange={handleToggleSaleDateEdit}
           />
           <SettingsToggleRow
             icon={<PersonIcon sx={{ fontSize: 18 }} />}

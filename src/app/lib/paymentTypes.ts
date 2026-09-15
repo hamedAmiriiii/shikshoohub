@@ -1,4 +1,4 @@
-export type PaymentType = "cash" | "installment" | "debt" | "cheque";
+export type PaymentType = "cash" | "installment" | "debt" | "cheque" | "mixed";
 
 export const PAYMENT_TYPE_LABELS: Record<string, string> = {
   cash: "نقدی",

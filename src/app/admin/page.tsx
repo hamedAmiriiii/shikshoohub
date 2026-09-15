@@ -103,16 +103,26 @@ import {
   filterChequesForSale,
   formatChequeOptionLabel,
   parseAmount,
+  todayJalaliDateObject,
   type Cheque,
 } from '@/app/lib/cheques';
-
-const ChequeFormSheet = dynamic(() => import('@/app/admin/cheques/ChequeFormSheet'), {
-  ssr: false,
-});
+import { gregorianApiDateFromDateObject } from '@/app/lib/shopAccess';
+import DatePicker from 'react-multi-date-picker';
+import DateObject from 'react-date-object';
+import persian from 'react-date-object/calendars/persian';
+import persian_fa from 'react-date-object/locales/persian_fa';
+import {
+  CHEQUE_DATE_PICKER_Z,
+  chequeDatePickerBoxSx,
+} from '@/app/admin/cheques/ChequeFormSheet';
 import {
   buildPurchaseEditPayload,
   consumeStashedPurchaseForEdit,
 } from '@/app/lib/purchaseEdit';
+
+const ChequeFormSheet = dynamic(() => import('@/app/admin/cheques/ChequeFormSheet'), {
+  ssr: false,
+});
 
 
 
@@ -217,6 +227,8 @@ export default function ShoppingPage() {
   const [chequeCreateOpen, setChequeCreateOpen] = useState(false);
   const [kgSalesEnabled, setKgSalesEnabled] = useState(false);
   const [salePriceEditEnabled, setSalePriceEditEnabled] = useState(false);
+  const [saleDateEditEnabled, setSaleDateEditEnabled] = useState(false);
+  const [saleDate, setSaleDate] = useState<DateObject>(() => todayJalaliDateObject());
   const [saleSuccessOpen, setSaleSuccessOpen] = useState(false);
   const [lastSaleReceipt, setLastSaleReceipt] = useState<SaleReceiptData | null>(null);
   const [skipPrintPreview, setSkipPrintPreview] = useState(false);
@@ -266,7 +278,7 @@ export default function ShoppingPage() {
   }, []);
 
   const payableNow = useMemo(() => {
-    if (paymentType === "debt" || paymentType === "cheque") return 0;
+    if (paymentType === "debt" || paymentType === "cheque" || paymentType === "mixed") return 0;
     if (paymentType === "installment") {
       const calc = installmentCalculation;
       const first = calc?.installment_details?.[0];
@@ -294,6 +306,47 @@ export default function ShoppingPage() {
   );
 
   const selectedChequeAmount = selectedCheque ? parseAmount(selectedCheque.amount) : 0;
+  const mixedChequeAmount =
+    paymentType === "mixed" && selectedCheque ? selectedChequeAmount : 0;
+  const mixedDebtResidual = useMemo(() => {
+    if (paymentType !== "mixed") return 0;
+    const cash = parseAmountInput(cashAmountInput);
+    const card = parseAmountInput(cardAmountInput);
+    return Math.max(0, salePayableAmount - cash - card - mixedChequeAmount);
+  }, [
+    paymentType,
+    salePayableAmount,
+    cashAmountInput,
+    cardAmountInput,
+    mixedChequeAmount,
+    parseAmountInput,
+  ]);
+  const mixedPaymentInvalid = useMemo(() => {
+    if (paymentType !== "mixed") return false;
+    if (salePayableAmount <= 0) return false;
+    const cash = parseAmountInput(cashAmountInput);
+    const card = parseAmountInput(cardAmountInput);
+    const chequeAmt = mixedChequeAmount;
+    return (
+      cash + card + chequeAmt > salePayableAmount ||
+      (mixedDebtResidual > 0 && (!phone || phone.trim() === "")) ||
+      (cash <= 0 && card <= 0 && chequeAmt <= 0 && mixedDebtResidual <= 0) ||
+      (chequePaymentEnabled && !!selectedChequeId && (loadingAvailableCheques || !selectedCheque))
+    );
+  }, [
+    paymentType,
+    cashAmountInput,
+    cardAmountInput,
+    mixedChequeAmount,
+    salePayableAmount,
+    mixedDebtResidual,
+    phone,
+    chequePaymentEnabled,
+    selectedChequeId,
+    loadingAvailableCheques,
+    selectedCheque,
+    parseAmountInput,
+  ]);
   const chequeRemainder =
     paymentType === "cheque" && selectedCheque
       ? Math.max(0, salePayableAmount - selectedChequeAmount)
@@ -309,6 +362,14 @@ export default function ShoppingPage() {
     (value: string) => {
       const sanitized = sanitizeAmountInput(value);
       setPaymentSplitError("");
+      if (paymentType === "mixed") {
+        if (sanitized === "") {
+          setCardAmountInput("");
+          return;
+        }
+        setCardAmountInput(moneyField(parseAmountInput(sanitized)));
+        return;
+      }
       if (sanitized === "") {
         setCardAmountInput("");
         setCashAmountInput(moneyField(settlementTarget));
@@ -318,13 +379,21 @@ export default function ShoppingPage() {
       setCardAmountInput(moneyField(card));
       setCashAmountInput(moneyField(Math.max(0, settlementTarget - card)));
     },
-    [sanitizeAmountInput, parseAmountInput, settlementTarget],
+    [sanitizeAmountInput, parseAmountInput, settlementTarget, paymentType],
   );
 
   const handleCashAmountChange = useCallback(
     (value: string) => {
       const sanitized = sanitizeAmountInput(value);
       setPaymentSplitError("");
+      if (paymentType === "mixed") {
+        if (sanitized === "") {
+          setCashAmountInput("");
+          return;
+        }
+        setCashAmountInput(moneyField(parseAmountInput(sanitized)));
+        return;
+      }
       if (sanitized === "") {
         setCashAmountInput("");
         setCardAmountInput(moneyField(settlementTarget));
@@ -334,7 +403,7 @@ export default function ShoppingPage() {
       setCashAmountInput(moneyField(cash));
       setCardAmountInput(moneyField(Math.max(0, settlementTarget - cash)));
     },
-    [sanitizeAmountInput, parseAmountInput, settlementTarget],
+    [sanitizeAmountInput, parseAmountInput, settlementTarget, paymentType],
   );
 
   const resetPaymentSettlement = useCallback(() => {
@@ -447,6 +516,7 @@ export default function ShoppingPage() {
         setCartCount(1);
         setActiveCartIndex(0);
         applyCartSlot(empty);
+        setSaleDate(todayJalaliDateObject());
         if (options?.clearScanned) setScannedCode("");
         return;
       }
@@ -456,6 +526,7 @@ export default function ShoppingPage() {
       setCartCount(slots.length);
       setActiveCartIndex(nextIndex);
       applyCartSlot(slots[nextIndex] ?? createEmptyCartSlot());
+      setSaleDate(todayJalaliDateObject());
       if (options?.clearScanned) setScannedCode("");
     },
     [activeCartIndex, applyCartSlot],
@@ -470,6 +541,9 @@ export default function ShoppingPage() {
   }, [settlementTarget, settlementMode, cardAmountInput, cashAmountInput, parseAmountInput]);
 
   useEffect(() => {
+    if (paymentType === "mixed") {
+      return;
+    }
     if (settlementTarget <= 0) {
       setCardAmountInput(paymentType === "cheque" ? moneyField(0) : "");
       setCashAmountInput(paymentType === "cheque" ? moneyField(0) : "");
@@ -920,6 +994,7 @@ export default function ShoppingPage() {
       setChequePaymentEnabled(settings.chequePaymentEnabled);
       setKgSalesEnabled(settings.kgSalesEnabled);
       setSalePriceEditEnabled(settings.salePriceEditEnabled);
+      setSaleDateEditEnabled(Boolean(settings.saleDateEditEnabled));
       void savePosSettingsCache(settings);
     };
     applyPosSettings();
@@ -948,10 +1023,16 @@ export default function ShoppingPage() {
       setPaymentType("cash");
       setSelectedChequeId(null);
     }
+    if (!chequePaymentEnabled && paymentType === "mixed") {
+      setSelectedChequeId(null);
+    }
   }, [chequePaymentEnabled, paymentType]);
 
   useEffect(() => {
-    if (paymentType !== "cheque" || !chequePaymentEnabled) {
+    if (
+      (paymentType !== "cheque" && paymentType !== "mixed") ||
+      !chequePaymentEnabled
+    ) {
       return;
     }
     if (
@@ -986,8 +1067,13 @@ export default function ShoppingPage() {
   }, []);
 
   useEffect(() => {
-    if (paymentType !== "cheque" || !chequePaymentEnabled) {
-      setAvailableCheques([]);
+    if (
+      (paymentType !== "cheque" && paymentType !== "mixed") ||
+      !chequePaymentEnabled
+    ) {
+      if (paymentType !== "cheque" && paymentType !== "mixed") {
+        setAvailableCheques([]);
+      }
       return;
     }
 
@@ -1190,8 +1276,14 @@ export default function ShoppingPage() {
         cashAmount: parseAmountInput(cashAmountInput),
         installmentCount: paymentType === "installment" ? installmentCount : undefined,
         installmentAmount: calc?.installment_amount,
-        chequeId: paymentType === "cheque" ? selectedChequeId ?? undefined : undefined,
-        chequeNumber: paymentType === "cheque" ? selectedCheque?.cheque_number ?? undefined : undefined,
+        chequeId:
+          paymentType === "cheque" || paymentType === "mixed"
+            ? selectedChequeId ?? undefined
+            : undefined,
+        chequeNumber:
+          paymentType === "cheque" || paymentType === "mixed"
+            ? selectedCheque?.cheque_number ?? undefined
+            : undefined,
       };
     },
     [
@@ -1365,6 +1457,46 @@ export default function ShoppingPage() {
       return;
     }
 
+    // اعتبارسنجی: فروش ترکیبی (نقد/کارت/چک/نسیه)
+    if (paymentType === 'mixed') {
+      const cash = parseAmountInput(cashAmountInput);
+      const card = parseAmountInput(cardAmountInput);
+      const chequeAmt = selectedChequeId ? selectedChequeAmount : 0;
+      if (cash + card + chequeAmt > salePayableAmount) {
+        toast.error("جمع نقد، کارت و چک نمی‌تواند بیشتر از مبلغ قابل پرداخت باشد");
+        setIsSubmitting(false);
+        return;
+      }
+      const residual = Math.max(0, salePayableAmount - cash - card - chequeAmt);
+      if (cash <= 0 && card <= 0 && chequeAmt <= 0 && residual <= 0) {
+        toast.error("حداقل یکی از روش‌های نقد، کارت، چک یا نسیه را مشخص کنید");
+        setIsSubmitting(false);
+        return;
+      }
+      if (residual > 0 && (!phone || phone.trim() === "")) {
+        toast.error("برای مانده نسیه باید شماره تلفن مشتری را وارد کنید");
+        setIsSubmitting(false);
+        return;
+      }
+      if (selectedChequeId) {
+        if (!effectiveOnline) {
+          toast.error("فروش با چک فقط در حالت آنلاین امکان‌پذیر است");
+          setIsSubmitting(false);
+          return;
+        }
+        if (loadingAvailableCheques) {
+          toast.error("در حال بارگذاری چک‌های قابل انتخاب، لطفاً صبر کنید");
+          setIsSubmitting(false);
+          return;
+        }
+        if (!selectedCheque || chequeAmt <= 0) {
+          toast.error("چک دریافتی را انتخاب کنید");
+          setIsSubmitting(false);
+          return;
+        }
+      }
+    }
+
     // اعتبارسنجی: فروش چکی
     if (paymentType === 'cheque') {
       if (!effectiveOnline) {
@@ -1424,6 +1556,12 @@ export default function ShoppingPage() {
 
     // افزودن اطلاعات پرداخت اقساطی
     loadData.payment_type = paymentType;
+    if (saleDateEditEnabled) {
+      const ymd = gregorianApiDateFromDateObject(saleDate);
+      if (ymd) {
+        loadData.sale_date = ymd;
+      }
+    }
     if (paymentType === 'installment') {
       loadData.installment_count = installmentCount;
       // installment_amount در response برمی‌گردد و نیازی به ارسال نیست
@@ -1461,7 +1599,23 @@ export default function ShoppingPage() {
       setPaymentSplitError("");
     }
 
-    if (paymentType !== 'debt' && paymentType !== 'cheque' && payableNow > 0) {
+    if (paymentType === 'mixed') {
+      const cash = parseAmountInput(cashAmountInput);
+      const card = parseAmountInput(cardAmountInput);
+      loadData.cash_amount = cash;
+      loadData.card_amount = card;
+      if (selectedChequeId) {
+        loadData.cheque_id = selectedChequeId;
+      }
+      setPaymentSplitError("");
+    }
+
+    if (
+      paymentType !== 'debt' &&
+      paymentType !== 'cheque' &&
+      paymentType !== 'mixed' &&
+      payableNow > 0
+    ) {
       if (!paymentFieldsValid) {
         const msg =
           settlementMode === "split"
@@ -1580,6 +1734,11 @@ export default function ShoppingPage() {
             : res?.is_cheque_settled
               ? "فروش چکی ثبت و تسویه شد"
               : "فروش چکی ثبت شد — پس از وصول چک، درآمد ثبت می‌شود";
+      } else if (paymentType === "mixed") {
+        successMessage =
+          mixedDebtResidual > 0
+            ? "فروش ترکیبی ثبت شد (بخشی نسیه)"
+            : "فروش ترکیبی ثبت شد";
       }
       finalizeSuccessfulSale(res, successMessage);
     }).catch((error) => {
@@ -1599,7 +1758,7 @@ export default function ShoppingPage() {
         "warn",
       );
     });
-  }, [cart, phone, useCreditAmount, effectiveOnline, discounttype, total, formatNumber, paymentType, installmentCount, payableNow, paymentFieldsValid, settlementMode, appendPaymentSettlement, resetPaymentSettlement, installmentCalculation, calculatingInstallments, installmentCreditError, finalizeSuccessfulSale, queueCurrentPurchase, withTimeout, selectedChequeId, selectedCheque, selectedChequeAmount, chequeRemainder, salePayableAmount, loadingAvailableCheques, buildPurchaseProductLine, parseAmountInput, cardAmountInput, cashAmountInput, editingPurchaseId, editReuseCredit]);
+  }, [cart, phone, useCreditAmount, effectiveOnline, discounttype, total, formatNumber, paymentType, installmentCount, payableNow, paymentFieldsValid, settlementMode, appendPaymentSettlement, resetPaymentSettlement, installmentCalculation, calculatingInstallments, installmentCreditError, finalizeSuccessfulSale, queueCurrentPurchase, withTimeout, selectedChequeId, selectedCheque, selectedChequeAmount, chequeRemainder, salePayableAmount, loadingAvailableCheques, buildPurchaseProductLine, parseAmountInput, cardAmountInput, cashAmountInput, editingPurchaseId, editReuseCredit, saleDateEditEnabled, saleDate, mixedDebtResidual]);
 
   // بررسی اعتبارسنجی تخفیف هنگام تغییر total
   useEffect(() => {
@@ -2096,6 +2255,13 @@ export default function ShoppingPage() {
       } else if (type === "cheque") {
         setSelectedChequeId(null);
         setSettlementMode("cash_all");
+      } else if (type === "mixed") {
+        setSelectedChequeId(null);
+        setCardAmountInput("");
+        setCashAmountInput("");
+        setPaymentSplitError("");
+      } else if (type === "debt") {
+        setSelectedChequeId(null);
       }
     },
     installmentCount,
@@ -2132,9 +2298,14 @@ export default function ShoppingPage() {
     backPrice,
     chequeRemainder,
     selectedChequeAmount,
+    mixedDebtResidual,
+    mixedPaymentInvalid,
     onOpenCreateCheque: () => setChequeCreateOpen(true),
     salePriceEditEnabled,
     onSalePriceChange: setCartItemSalePrice,
+    saleDateEditEnabled,
+    saleDate,
+    onSaleDateChange: (d) => setSaleDate(d ?? todayJalaliDateObject()),
     submitLabel: editingPurchaseId ? "جایگزینی فاکتور" : undefined,
     cartTitle: editingPurchaseId ? `ویرایش #${editingPurchaseId}` : undefined,
     clearLabel: editingPurchaseId ? "لغو ویرایش" : undefined,
@@ -2184,10 +2355,15 @@ export default function ShoppingPage() {
     backPrice,
     chequeRemainder,
     selectedChequeAmount,
+    mixedDebtResidual,
+    mixedPaymentInvalid,
     salePriceEditEnabled,
     setCartItemSalePrice,
+    saleDateEditEnabled,
+    saleDate,
     formatNumber,
     editingPurchaseId,
+    settlementTarget,
   ]);
 
 
@@ -3130,7 +3306,6 @@ export default function ShoppingPage() {
                     </CardContent>
                   )}
                   <CardContent sx={{ padding: { xs: "12px", md: "20px" }, paddingTop: 0 }}>
-                    {(installmentPaymentEnabled || debtPaymentEnabled || chequePaymentEnabled) && (
                     <Box sx={{
                       display: "flex",
                       alignItems: "center",
@@ -3167,6 +3342,13 @@ export default function ShoppingPage() {
                           } else if (next === 'cheque') {
                             setSelectedChequeId(null);
                             setSettlementMode("cash_all");
+                          } else if (next === 'mixed') {
+                            setSelectedChequeId(null);
+                            setCardAmountInput("");
+                            setCashAmountInput("");
+                            setPaymentSplitError("");
+                          } else if (next === 'debt') {
+                            setSelectedChequeId(null);
                           }
                         }}
                         sx={{
@@ -3192,6 +3374,26 @@ export default function ShoppingPage() {
                           label={
                             <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "14px" } }}>
                               نقدی
+                            </Typography>
+                          }
+                          sx={{ mr: 0, ml: 0 }}
+                        />
+                        <FormControlLabel
+                          value="mixed"
+                          control={
+                            <Radio
+                              size="small"
+                              sx={{
+                                color: "var(--admin-text-secondary)",
+                                "&.Mui-checked": {
+                                  color: "var(--admin-accent)"
+                                }
+                              }}
+                            />
+                          }
+                          label={
+                            <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "14px" } }}>
+                              ترکیبی
                             </Typography>
                           }
                           sx={{ mr: 0, ml: 0 }}
@@ -3256,7 +3458,7 @@ export default function ShoppingPage() {
                           }
                           label={
                             <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "14px" } }}>
-                              چک + نقد/کارت
+                              چک
                             </Typography>
                           }
                           sx={{ mr: 0, ml: 0 }}
@@ -3265,6 +3467,38 @@ export default function ShoppingPage() {
                       </RadioGroup>
                     </FormControl>
                     </Box>
+                    {saleDateEditEnabled && (
+                      <Box sx={{ mt: { xs: "8px", md: "12px" } }}>
+                        <Typography
+                          sx={{
+                            color: "var(--admin-text)",
+                            fontSize: { xs: "12px", md: "14px" },
+                            fontWeight: 500,
+                            mb: 0.75,
+                          }}
+                        >
+                          تاریخ فروش:
+                        </Typography>
+                        <Box
+                          sx={{
+                            ...chequeDatePickerBoxSx,
+                            "& .rmdp-portal": { zIndex: `${CHEQUE_DATE_PICKER_Z} !important` },
+                          }}
+                        >
+                          <DatePicker
+                            value={saleDate}
+                            onChange={(d) =>
+                              setSaleDate(d && !Array.isArray(d) ? (d as DateObject) : todayJalaliDateObject())
+                            }
+                            calendar={persian}
+                            locale={persian_fa}
+                            calendarPosition="bottom-right"
+                            format="YYYY/MM/DD"
+                            containerStyle={{ width: "100%" }}
+                            inputClass="rmdp-input"
+                          />
+                        </Box>
+                      </Box>
                     )}
                     {paymentType === 'debt' && (
                       <Box sx={{ mt: { xs: "8px", md: "12px" }, p: { xs: "8px", md: "12px" }, bgcolor: "var(--admin-surface-alt)", borderRadius: "8px" }}>
@@ -3274,6 +3508,94 @@ export default function ShoppingPage() {
                         {(!phone || phone.trim() === '') && (
                           <Typography sx={{ color: "var(--admin-error-soft)", fontSize: { xs: "11px", md: "12px" }, mt: 0.5 }}>
                             شماره تلفن مشتری الزامی است
+                          </Typography>
+                        )}
+                      </Box>
+                    )}
+                    {paymentType === 'mixed' && (
+                      <Box sx={{ mt: { xs: "8px", md: "12px" }, p: { xs: "8px", md: "12px" }, bgcolor: "var(--admin-surface-alt)", borderRadius: "8px", border: "1px solid rgba(120, 181, 104, 0.25)" }}>
+                        <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "14px" }, fontWeight: 600, mb: 1 }}>
+                          پرداخت ترکیبی — نقد / کارت / چک / نسیه
+                        </Typography>
+                        <Typography sx={{ color: "var(--admin-text-muted)", fontSize: { xs: "11px", md: "13px" }, mb: 1 }}>
+                          مبلغ فاکتور: {formatNumber(salePayableAmount)} تومان
+                        </Typography>
+                        <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                          <TextField
+                            label="نقد"
+                            value={cashAmountInput}
+                            onChange={(e) => handleCashAmountChange(e.target.value)}
+                            size="small"
+                            fullWidth
+                            InputLabelProps={{ sx: { color: "var(--admin-text-muted)" } }}
+                            sx={posFieldSx}
+                          />
+                          <TextField
+                            label="کارت"
+                            value={cardAmountInput}
+                            onChange={(e) => handleCardAmountChange(e.target.value)}
+                            size="small"
+                            fullWidth
+                            InputLabelProps={{ sx: { color: "var(--admin-text-muted)" } }}
+                            sx={posFieldSx}
+                          />
+                        </Box>
+                        {chequePaymentEnabled && (
+                          <Box sx={{ mt: 1.5 }}>
+                            <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "11px", md: "13px" }, fontWeight: 600, mb: 0.75 }}>
+                              چک (اختیاری)
+                            </Typography>
+                            <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                              <FormControl fullWidth size="small" sx={posFieldSx} disabled={loadingAvailableCheques}>
+                                <InputLabel sx={{ color: "var(--admin-text-muted)" }}>انتخاب چک</InputLabel>
+                                <Select
+                                  value={selectedChequeId ?? ""}
+                                  label="انتخاب چک"
+                                  onChange={(e) =>
+                                    setSelectedChequeId(e.target.value ? Number(e.target.value) : null)
+                                  }
+                                  sx={{
+                                    color: "var(--admin-text)",
+                                    "& .MuiOutlinedInput-notchedOutline": { borderColor: "var(--admin-border)" },
+                                  }}
+                                >
+                                  <MenuItem value="">
+                                    <em>بدون چک</em>
+                                  </MenuItem>
+                                  {matchingCheques.map((cheque) => (
+                                    <MenuItem key={cheque.id} value={cheque.id}>
+                                      {formatChequeOptionLabel(cheque)}
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                              </FormControl>
+                              <IconButton
+                                onClick={() => setChequeCreateOpen(true)}
+                                aria-label="ثبت چک جدید"
+                                sx={{
+                                  bgcolor: "var(--admin-icon-bg)",
+                                  border: "1px solid var(--admin-border)",
+                                  borderRadius: "10px",
+                                  color: "var(--admin-accent)",
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <AddIcon />
+                              </IconButton>
+                            </Box>
+                          </Box>
+                        )}
+                        <Typography sx={{ color: "var(--admin-accent)", fontSize: { xs: "11px", md: "13px" }, fontWeight: 600, mt: 1.5 }}>
+                          مانده نسیه: {formatNumber(mixedDebtResidual)} تومان
+                        </Typography>
+                        {mixedDebtResidual > 0 && (!phone || phone.trim() === "") && (
+                          <Typography sx={{ color: "var(--admin-error-soft)", fontSize: { xs: "11px", md: "12px" }, mt: 0.5 }}>
+                            برای مانده نسیه، شماره تلفن مشتری الزامی است
+                          </Typography>
+                        )}
+                        {paymentSplitError && (
+                          <Typography sx={{ color: "var(--admin-error)", fontSize: { xs: "11px", md: "12px" }, mt: 1 }}>
+                            {paymentSplitError}
                           </Typography>
                         )}
                       </Box>
@@ -3922,7 +4244,7 @@ export default function ShoppingPage() {
                   disabled={
                     !total || 
                     isSubmitting || 
-                    (paymentType !== 'debt' && paymentType !== 'cheque' && payableNow > 0 && !paymentFieldsValid) ||
+                    (paymentType !== 'debt' && paymentType !== 'cheque' && paymentType !== 'mixed' && payableNow > 0 && !paymentFieldsValid) ||
                     (installmentPaymentEnabled && paymentType === 'installment' && (
                       !phone || 
                       phone.trim() === '' || 
@@ -3932,6 +4254,7 @@ export default function ShoppingPage() {
                       calculatingInstallments
                     )) ||
                     (paymentType === 'debt' && (!phone || phone.trim() === '')) ||
+                    (paymentType === 'mixed' && mixedPaymentInvalid) ||
                     (chequePaymentEnabled && paymentType === 'cheque' && (
                       loadingAvailableCheques ||
                       !selectedChequeId ||

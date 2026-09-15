@@ -27,6 +27,12 @@ import {
   ADMIN_MENU_CART_WIDTH,
   ADMIN_MENU_CART_WIDTH_VAR,
 } from "@/app/admin/adminMenuCartLayout";
+import DatePicker from "react-multi-date-picker";
+import DateObject from "react-date-object";
+import persian from "react-date-object/calendars/persian";
+import persian_fa from "react-date-object/locales/persian_fa";
+import { CHEQUE_DATE_PICKER_Z, chequeDatePickerBoxSx } from "@/app/admin/cheques/ChequeFormSheet";
+import { todayJalaliDateObject } from "@/app/lib/cheques";
 
 export { ADMIN_MENU_CART_WIDTH, ADMIN_MENU_CART_WIDTH_VAR } from "@/app/admin/adminMenuCartLayout";
 
@@ -126,9 +132,14 @@ export type AdminMenuModeCartPanelProps = {
   backPrice?: number;
   chequeRemainder?: number;
   selectedChequeAmount?: number;
+  mixedDebtResidual?: number;
+  mixedPaymentInvalid?: boolean;
   onOpenCreateCheque?: () => void;
   salePriceEditEnabled?: boolean;
   onSalePriceChange?: (itemId: number | string, value: string) => void;
+  saleDateEditEnabled?: boolean;
+  saleDate?: DateObject | null;
+  onSaleDateChange?: (value: DateObject | null) => void;
   submitLabel?: string;
   cartTitle?: string;
   clearLabel?: string;
@@ -189,16 +200,20 @@ export default function AdminMenuModeCartPanel({
   backPrice = 0,
   chequeRemainder = 0,
   selectedChequeAmount = 0,
+  mixedDebtResidual = 0,
+  mixedPaymentInvalid = false,
   onOpenCreateCheque,
   salePriceEditEnabled = false,
   onSalePriceChange,
+  saleDateEditEnabled = false,
+  saleDate,
+  onSaleDateChange,
   submitLabel,
   cartTitle,
   clearLabel,
 }: AdminMenuModeCartPanelProps) {
   const finalTotal = Math.max(0, total - useCreditAmount - discounttype - backPrice);
-  const showPaymentTypeSelector =
-    installmentPaymentEnabled || debtPaymentEnabled || chequePaymentEnabled;
+  const showPaymentTypeSelector = true;
 
   useEffect(() => {
     const root = document.documentElement;
@@ -211,8 +226,13 @@ export default function AdminMenuModeCartPanel({
   const submitDisabled =
     !total ||
     isSubmitting ||
-    (paymentType !== "debt" && paymentType !== "cheque" && payableNow > 0 && !paymentFieldsValid) ||
+    (paymentType !== "debt" &&
+      paymentType !== "cheque" &&
+      paymentType !== "mixed" &&
+      payableNow > 0 &&
+      !paymentFieldsValid) ||
     (paymentType === "debt" && (!phone || phone.trim() === "")) ||
+    (paymentType === "mixed" && mixedPaymentInvalid) ||
     (installmentPaymentEnabled &&
       paymentType === "installment" &&
       (!phone ||
@@ -430,6 +450,11 @@ export default function AdminMenuModeCartPanel({
                 control={<Radio size="small" sx={{ p: 0.3, "& .MuiSvgIcon-root": { fontSize: 16 } }} />}
                 label={<Typography sx={{ fontSize: "10px", fontWeight: 600 }}>نقد</Typography>}
               />
+              <FormControlLabel
+                value="mixed"
+                control={<Radio size="small" sx={{ p: 0.3, "& .MuiSvgIcon-root": { fontSize: 16 } }} />}
+                label={<Typography sx={{ fontSize: "10px", fontWeight: 600 }}>ترکیبی</Typography>}
+              />
               {installmentPaymentEnabled && (
                 <FormControlLabel
                   value="installment"
@@ -448,17 +473,125 @@ export default function AdminMenuModeCartPanel({
                 <FormControlLabel
                   value="cheque"
                   control={<Radio size="small" sx={{ p: 0.3, "& .MuiSvgIcon-root": { fontSize: 16 } }} />}
-                  label={<Typography sx={{ fontSize: "10px", fontWeight: 600 }}>چک+نقد</Typography>}
+                  label={<Typography sx={{ fontSize: "10px", fontWeight: 600 }}>چک</Typography>}
                 />
               )}
             </RadioGroup>
           </FormControl>
         )}
 
+        {saleDateEditEnabled && onSaleDateChange && (
+          <Box>
+            <Typography sx={{ fontSize: "8px", color: "var(--admin-text-muted)", mb: 0.25 }}>
+              تاریخ فروش
+            </Typography>
+            <Box
+              sx={{
+                ...chequeDatePickerBoxSx,
+                "& .rmdp-input": {
+                  ...chequeDatePickerBoxSx["& .rmdp-input"],
+                  height: "28px",
+                  fontSize: "10px",
+                  borderRadius: "6px",
+                },
+                "& .rmdp-portal": { zIndex: `${CHEQUE_DATE_PICKER_Z} !important` },
+              }}
+            >
+              <DatePicker
+                value={saleDate ?? todayJalaliDateObject()}
+                onChange={(d) =>
+                  onSaleDateChange(
+                    d && !Array.isArray(d) ? (d as DateObject) : todayJalaliDateObject(),
+                  )
+                }
+                calendar={persian}
+                locale={persian_fa}
+                calendarPosition="bottom-right"
+                format="YYYY/MM/DD"
+                containerStyle={{ width: "100%" }}
+                inputClass="rmdp-input"
+              />
+            </Box>
+          </Box>
+        )}
+
         {paymentType === "debt" && (
           <Typography sx={{ fontSize: "8px", color: "var(--admin-warning)", lineHeight: 1.3 }}>
             ثبت قرضی — مبلغ به بدهی مشتری اضافه می‌شود
           </Typography>
+        )}
+
+        {paymentType === "mixed" && (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.35 }}>
+            <Typography sx={{ fontSize: "8px", fontWeight: 700, color: "var(--admin-text)" }}>
+              ترکیبی — نقد / کارت / چک / نسیه
+            </Typography>
+            <TextField
+              size="small"
+              placeholder="نقد"
+              value={cashAmountInput}
+              onChange={(e) => onCashAmountChange(e.target.value)}
+              sx={tinyFieldSx}
+            />
+            <TextField
+              size="small"
+              placeholder="کارت"
+              value={cardAmountInput}
+              onChange={(e) => onCardAmountChange(e.target.value)}
+              sx={tinyFieldSx}
+            />
+            {chequePaymentEnabled && (
+              <Box sx={{ display: "flex", gap: 0.35, alignItems: "center" }}>
+                <TextField
+                  select
+                  size="small"
+                  value={selectedChequeId ?? ""}
+                  onChange={(e) =>
+                    onSelectedChequeChange(e.target.value ? Number(e.target.value) : null)
+                  }
+                  SelectProps={{ native: true }}
+                  disabled={loadingAvailableCheques}
+                  sx={{ ...tinyFieldSx, flex: 1 }}
+                >
+                  <option value="">{loadingAvailableCheques ? "بارگذاری..." : "چک (اختیاری)"}</option>
+                  {matchingCheques.map((cheque) => (
+                    <option key={cheque.id} value={cheque.id}>
+                      {[
+                        cheque.cheque_number ? `چک ${cheque.cheque_number}` : `#${cheque.id}`,
+                        cheque.bank_name,
+                        cheque.amount != null ? formatNumber(Number(cheque.amount)) : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" — ")}
+                    </option>
+                  ))}
+                </TextField>
+                {onOpenCreateCheque && (
+                  <IconButton
+                    size="small"
+                    onClick={onOpenCreateCheque}
+                    aria-label="ثبت چک جدید"
+                    sx={{
+                      p: 0.35,
+                      border: "1px solid var(--admin-border)",
+                      borderRadius: "6px",
+                      color: "var(--admin-accent)",
+                    }}
+                  >
+                    <AddIcon sx={{ fontSize: 16 }} />
+                  </IconButton>
+                )}
+              </Box>
+            )}
+            <Typography sx={{ fontSize: "9px", fontWeight: 700, color: "var(--admin-accent)" }}>
+              مانده نسیه: {formatNumber(mixedDebtResidual)}
+            </Typography>
+            {mixedDebtResidual > 0 && (
+              <Typography sx={{ fontSize: "8px", color: "var(--admin-warning)", lineHeight: 1.3 }}>
+                برای مانده نسیه، شماره تلفن الزامی است
+              </Typography>
+            )}
+          </Box>
         )}
 
         {chequePaymentEnabled && paymentType === "cheque" && (

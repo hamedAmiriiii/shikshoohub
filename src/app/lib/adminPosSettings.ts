@@ -22,6 +22,8 @@ export type AdminPosSettings = {
   menuTableOrdersPopupEnabled: boolean;
   /** امکان تغییر قیمت فروش هنگام ثبت خرید */
   salePriceEditEnabled: boolean;
+  /** امکان انتخاب/تغییر تاریخ فروش هنگام ثبت */
+  saleDateEditEnabled: boolean;
   /** ظاهر کلاسیک فاکتور در صفحه فروش */
   classicPosMode: boolean;
   /** در ثبت مشتری، فیلد نام هم گرفته شود */
@@ -45,6 +47,7 @@ const DEFAULT_SETTINGS: AdminPosSettings = {
   roomServicesEnabled: false,
   menuTableOrdersPopupEnabled: false,
   salePriceEditEnabled: false,
+  saleDateEditEnabled: false,
   classicPosMode: false,
   askCustomerName: false,
   showDailyTicketNumber: false,
