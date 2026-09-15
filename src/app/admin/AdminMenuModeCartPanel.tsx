@@ -434,50 +434,55 @@ export default function AdminMenuModeCartPanel({
         )}
 
         {showPaymentTypeSelector && (
-          <FormControl component="fieldset" sx={{ minWidth: 0 }}>
-            <RadioGroup
-              row
-              value={paymentType}
-              onChange={(e) => onPaymentTypeChange(e.target.value as PaymentType)}
-              sx={{
-                gap: 0.15,
-                flexWrap: "wrap",
-                "& .MuiFormControlLabel-root": { mr: 0.15, ml: 0, height: 24 },
-              }}
-            >
-              <FormControlLabel
-                value="cash"
-                control={<Radio size="small" sx={{ p: 0.3, "& .MuiSvgIcon-root": { fontSize: 16 } }} />}
-                label={<Typography sx={{ fontSize: "10px", fontWeight: 600 }}>نقد</Typography>}
-              />
-              <FormControlLabel
-                value="mixed"
-                control={<Radio size="small" sx={{ p: 0.3, "& .MuiSvgIcon-root": { fontSize: 16 } }} />}
-                label={<Typography sx={{ fontSize: "10px", fontWeight: 600 }}>ترکیبی</Typography>}
-              />
-              {installmentPaymentEnabled && (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
+            <Typography sx={{ fontSize: "9px", fontWeight: 700, color: "var(--admin-text)" }}>
+              نوع پرداخت
+            </Typography>
+            <FormControl component="fieldset" sx={{ minWidth: 0 }}>
+              <RadioGroup
+                value={paymentType}
+                onChange={(e) => onPaymentTypeChange(e.target.value as PaymentType)}
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 0.1,
+                  "& .MuiFormControlLabel-root": { mr: 0, ml: 0, height: 22 },
+                }}
+              >
                 <FormControlLabel
-                  value="installment"
-                  control={<Radio size="small" sx={{ p: 0.3, "& .MuiSvgIcon-root": { fontSize: 16 } }} />}
-                  label={<Typography sx={{ fontSize: "10px", fontWeight: 600 }}>قسط</Typography>}
+                  value="cash"
+                  control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 15 } }} />}
+                  label={<Typography sx={{ fontSize: "10px", fontWeight: 600 }}>نقد</Typography>}
                 />
-              )}
-              {debtPaymentEnabled && (
+                {debtPaymentEnabled && (
+                  <FormControlLabel
+                    value="debt"
+                    control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 15 } }} />}
+                    label={<Typography sx={{ fontSize: "10px", fontWeight: 600 }}>نسیه</Typography>}
+                  />
+                )}
+                {installmentPaymentEnabled && (
+                  <FormControlLabel
+                    value="installment"
+                    control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 15 } }} />}
+                    label={<Typography sx={{ fontSize: "10px", fontWeight: 600 }}>قسط</Typography>}
+                  />
+                )}
+                {chequePaymentEnabled && (
+                  <FormControlLabel
+                    value="cheque"
+                    control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 15 } }} />}
+                    label={<Typography sx={{ fontSize: "10px", fontWeight: 600 }}>چک</Typography>}
+                  />
+                )}
                 <FormControlLabel
-                  value="debt"
-                  control={<Radio size="small" sx={{ p: 0.3, "& .MuiSvgIcon-root": { fontSize: 16 } }} />}
-                  label={<Typography sx={{ fontSize: "10px", fontWeight: 600 }}>نسیه</Typography>}
+                  value="mixed"
+                  control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 15 } }} />}
+                  label={<Typography sx={{ fontSize: "10px", fontWeight: 600 }}>ترکیبی</Typography>}
                 />
-              )}
-              {chequePaymentEnabled && (
-                <FormControlLabel
-                  value="cheque"
-                  control={<Radio size="small" sx={{ p: 0.3, "& .MuiSvgIcon-root": { fontSize: 16 } }} />}
-                  label={<Typography sx={{ fontSize: "10px", fontWeight: 600 }}>چک</Typography>}
-                />
-              )}
-            </RadioGroup>
-          </FormControl>
+              </RadioGroup>
+            </FormControl>
+          </Box>
         )}
 
         {saleDateEditEnabled && onSaleDateChange && (
@@ -597,7 +602,7 @@ export default function AdminMenuModeCartPanel({
         {chequePaymentEnabled && paymentType === "cheque" && (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 0.35 }}>
             <Typography sx={{ fontSize: "8px", fontWeight: 700, color: "var(--admin-text)" }}>
-              چک + نقد/کارت
+              پرداخت با چک
             </Typography>
             <Typography sx={{ fontSize: "8px", color: "var(--admin-text-muted)" }}>
               فاکتور: {formatNumber(salePayableAmount)}
@@ -682,39 +687,41 @@ export default function AdminMenuModeCartPanel({
 
         {(paymentType === "cash" && payableNow > 0) ||
         (paymentType === "cheque" && !!selectedChequeId && chequeRemainder > 0) ? (
-          <FormControl component="fieldset" sx={{ minWidth: 0 }}>
-            {paymentType === "cheque" && (
-              <Typography sx={{ fontSize: "8px", color: "var(--admin-text-muted)", mb: 0.15 }}>
-                تسویه باقی‌مانده ({formatNumber(chequeRemainder)})
-              </Typography>
-            )}
-            <RadioGroup
-              row
-              value={settlementMode}
-              onChange={(e) => onSettlementModeChange(e.target.value as SettlementMode)}
-              sx={{
-                flexWrap: "wrap",
-                gap: 0.15,
-                "& .MuiFormControlLabel-root": { mr: 0.15, ml: 0, height: 22 },
-              }}
-            >
-              <FormControlLabel
-                value="card_all"
-                control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 15 } }} />}
-                label={<Typography sx={{ fontSize: "9px", fontWeight: 600 }}>کارت</Typography>}
-              />
-              <FormControlLabel
-                value="cash_all"
-                control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 15 } }} />}
-                label={<Typography sx={{ fontSize: "9px", fontWeight: 600 }}>نقد</Typography>}
-              />
-              <FormControlLabel
-                value="split"
-                control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 15 } }} />}
-                label={<Typography sx={{ fontSize: "9px", fontWeight: 600 }}>نقد+کارت</Typography>}
-              />
-            </RadioGroup>
-          </FormControl>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
+            <Typography sx={{ fontSize: "9px", fontWeight: 700, color: "var(--admin-text)" }}>
+              {paymentType === "cheque"
+                ? `روش پرداخت باقی‌مانده (${formatNumber(chequeRemainder)})`
+                : "روش پرداخت"}
+            </Typography>
+            <FormControl component="fieldset" sx={{ minWidth: 0 }}>
+              <RadioGroup
+                value={settlementMode}
+                onChange={(e) => onSettlementModeChange(e.target.value as SettlementMode)}
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 0.1,
+                  "& .MuiFormControlLabel-root": { mr: 0, ml: 0, height: 22 },
+                }}
+              >
+                <FormControlLabel
+                  value="card_all"
+                  control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 15 } }} />}
+                  label={<Typography sx={{ fontSize: "9px", fontWeight: 600 }}>کارتخوان</Typography>}
+                />
+                <FormControlLabel
+                  value="cash_all"
+                  control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 15 } }} />}
+                  label={<Typography sx={{ fontSize: "9px", fontWeight: 600 }}>پول نقد</Typography>}
+                />
+                <FormControlLabel
+                  value="split"
+                  control={<Radio size="small" sx={{ p: 0.25, "& .MuiSvgIcon-root": { fontSize: 15 } }} />}
+                  label={<Typography sx={{ fontSize: "9px", fontWeight: 600 }}>ترکیب کارتخوان و نقد</Typography>}
+                />
+              </RadioGroup>
+            </FormControl>
+          </Box>
         ) : null}
 
         {((paymentType === "cash" && settlementMode === "split" && payableNow > 0) ||

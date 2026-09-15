@@ -3306,24 +3306,18 @@ export default function ShoppingPage() {
                     </CardContent>
                   )}
                   <CardContent sx={{ padding: { xs: "12px", md: "20px" }, paddingTop: 0 }}>
-                    <Box sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: { xs: 1, md: 2 },
-                      flexWrap: { xs: "wrap", sm: "nowrap" },
-                    }}>
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 1.25, md: 1.5 } }}>
+                    <Box>
                     <Typography sx={{ 
                       color: "var(--admin-text)", 
                       fontSize: { xs: "13px", md: "14px" },
-                      fontWeight: "500",
-                      flexShrink: 0,
+                      fontWeight: 600,
+                      mb: 0.75,
                     }}>
-                      نوع پرداخت:
+                      نوع پرداخت
                     </Typography>
-                    <FormControl component="fieldset" sx={{ flex: 1, minWidth: 0 }}>
+                    <FormControl component="fieldset" sx={{ width: "100%" }}>
                       <RadioGroup
-                        row
                         value={paymentType}
                         onChange={(e) => {
                           const next = e.target.value as PaymentType;
@@ -3342,6 +3336,7 @@ export default function ShoppingPage() {
                           } else if (next === 'cheque') {
                             setSelectedChequeId(null);
                             setSettlementMode("cash_all");
+                            setPaymentSplitError("");
                           } else if (next === 'mixed') {
                             setSelectedChequeId(null);
                             setCardAmountInput("");
@@ -3353,9 +3348,9 @@ export default function ShoppingPage() {
                         }}
                         sx={{
                           display: "flex",
-                          gap: { xs: "4px", md: "12px" },
-                          justifyContent: { xs: "flex-start", sm: "flex-end" },
-                          flexWrap: "wrap",
+                          flexDirection: "column",
+                          gap: 0.25,
+                          "& .MuiFormControlLabel-root": { mr: 0, ml: 0, alignItems: "center" },
                         }}
                       >
                         <FormControlLabel
@@ -3376,50 +3371,7 @@ export default function ShoppingPage() {
                               نقدی
                             </Typography>
                           }
-                          sx={{ mr: 0, ml: 0 }}
                         />
-                        <FormControlLabel
-                          value="mixed"
-                          control={
-                            <Radio
-                              size="small"
-                              sx={{
-                                color: "var(--admin-text-secondary)",
-                                "&.Mui-checked": {
-                                  color: "var(--admin-accent)"
-                                }
-                              }}
-                            />
-                          }
-                          label={
-                            <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "14px" } }}>
-                              ترکیبی
-                            </Typography>
-                          }
-                          sx={{ mr: 0, ml: 0 }}
-                        />
-                        {installmentPaymentEnabled && (
-                        <FormControlLabel
-                          value="installment"
-                          control={
-                            <Radio
-                              size="small"
-                              sx={{
-                                color: "var(--admin-text-secondary)",
-                                "&.Mui-checked": {
-                                  color: "var(--admin-accent)"
-                                }
-                              }}
-                            />
-                          }
-                          label={
-                            <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "14px" } }}>
-                              اقساطی
-                            </Typography>
-                          }
-                          sx={{ mr: 0, ml: 0 }}
-                        />
-                        )}
                         {debtPaymentEnabled && (
                         <FormControlLabel
                           value="debt"
@@ -3439,7 +3391,27 @@ export default function ShoppingPage() {
                               نسیه
                             </Typography>
                           }
-                          sx={{ mr: 0, ml: 0 }}
+                        />
+                        )}
+                        {installmentPaymentEnabled && (
+                        <FormControlLabel
+                          value="installment"
+                          control={
+                            <Radio
+                              size="small"
+                              sx={{
+                                color: "var(--admin-text-secondary)",
+                                "&.Mui-checked": {
+                                  color: "var(--admin-accent)"
+                                }
+                              }}
+                            />
+                          }
+                          label={
+                            <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "14px" } }}>
+                              قسطی
+                            </Typography>
+                          }
                         />
                         )}
                         {chequePaymentEnabled && (
@@ -3461,14 +3433,32 @@ export default function ShoppingPage() {
                               چک
                             </Typography>
                           }
-                          sx={{ mr: 0, ml: 0 }}
                         />
                         )}
+                        <FormControlLabel
+                          value="mixed"
+                          control={
+                            <Radio
+                              size="small"
+                              sx={{
+                                color: "var(--admin-text-secondary)",
+                                "&.Mui-checked": {
+                                  color: "var(--admin-accent)"
+                                }
+                              }}
+                            />
+                          }
+                          label={
+                            <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "14px" } }}>
+                              ترکیبی
+                            </Typography>
+                          }
+                        />
                       </RadioGroup>
                     </FormControl>
                     </Box>
                     {saleDateEditEnabled && (
-                      <Box sx={{ mt: { xs: "8px", md: "12px" } }}>
+                      <Box>
                         <Typography
                           sx={{
                             color: "var(--admin-text)",
@@ -3501,7 +3491,7 @@ export default function ShoppingPage() {
                       </Box>
                     )}
                     {paymentType === 'debt' && (
-                      <Box sx={{ mt: { xs: "8px", md: "12px" }, p: { xs: "8px", md: "12px" }, bgcolor: "var(--admin-surface-alt)", borderRadius: "8px" }}>
+                      <Box sx={{ p: { xs: "8px", md: "12px" }, bgcolor: "var(--admin-surface-alt)", borderRadius: "8px" }}>
                         <Typography sx={{ color: "var(--admin-warning)", fontSize: { xs: "11px", md: "13px" } }}>
                           فاکتور نسیه — مبلغ به بدهی مشتری اضافه می‌شود و پرداخت نقد/کارت ثبت نمی‌شود.
                         </Typography>
@@ -3513,7 +3503,7 @@ export default function ShoppingPage() {
                       </Box>
                     )}
                     {paymentType === 'mixed' && (
-                      <Box sx={{ mt: { xs: "8px", md: "12px" }, p: { xs: "8px", md: "12px" }, bgcolor: "var(--admin-surface-alt)", borderRadius: "8px", border: "1px solid rgba(120, 181, 104, 0.25)" }}>
+                      <Box sx={{ p: { xs: "8px", md: "12px" }, bgcolor: "var(--admin-surface-alt)", borderRadius: "8px", border: "1px solid rgba(120, 181, 104, 0.25)" }}>
                         <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "14px" }, fontWeight: 600, mb: 1 }}>
                           پرداخت ترکیبی — نقد / کارت / چک / نسیه
                         </Typography>
@@ -3600,32 +3590,37 @@ export default function ShoppingPage() {
                         )}
                       </Box>
                     )}
-                    {chequePaymentEnabled && paymentType === 'cheque' && (
-                      <Box sx={{ mt: { xs: "8px", md: "12px" } }}>
-                        <Typography sx={{
-                          color: "var(--admin-text)",
-                          fontSize: { xs: "12px", md: "14px" },
-                          fontWeight: 600,
-                          mb: 0.5,
-                        }}>
-                          فروش ترکیبی: چک + نقد/کارت
+                    {chequePaymentEnabled && paymentType === "cheque" && (
+                      <Box
+                        sx={{
+                          p: { xs: "8px", md: "12px" },
+                          bgcolor: "var(--admin-surface-alt)",
+                          borderRadius: "8px",
+                          border: "1px solid rgba(120, 181, 104, 0.25)",
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            color: "var(--admin-text)",
+                            fontSize: { xs: "12px", md: "14px" },
+                            fontWeight: 600,
+                            mb: 1,
+                          }}
+                        >
+                          پرداخت با چک
                         </Typography>
-                        <Typography sx={{
-                          color: "var(--admin-text-muted)",
-                          fontSize: { xs: "11px", md: "13px" },
-                          mb: 1,
-                        }}>
+                        <Typography sx={{ color: "var(--admin-text-muted)", fontSize: { xs: "11px", md: "13px" }, mb: 1 }}>
                           مبلغ فاکتور: {formatNumber(salePayableAmount)} تومان
-                          {selectedCheque
-                            ? ` — چک: ${formatNumber(selectedChequeAmount)} — باقی‌مانده نقد/کارت: ${formatNumber(chequeRemainder)}`
-                            : " — چک را انتخاب کنید؛ باقی‌مانده با نقد یا کارت تسویه می‌شود"}
+                          {selectedChequeId
+                            ? ` — چک: ${formatNumber(selectedChequeAmount)} — باقی‌مانده: ${formatNumber(chequeRemainder)}`
+                            : ""}
                         </Typography>
                         <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
                           <FormControl fullWidth size="small" sx={posFieldSx} disabled={loadingAvailableCheques}>
-                            <InputLabel sx={{ color: "var(--admin-text-muted)" }}>انتخاب چک دریافتی</InputLabel>
+                            <InputLabel sx={{ color: "var(--admin-text-muted)" }}>انتخاب چک</InputLabel>
                             <Select
                               value={selectedChequeId ?? ""}
-                              label="انتخاب چک دریافتی"
+                              label="انتخاب چک"
                               onChange={(e) =>
                                 setSelectedChequeId(e.target.value ? Number(e.target.value) : null)
                               }
@@ -3635,7 +3630,7 @@ export default function ShoppingPage() {
                               }}
                             >
                               <MenuItem value="">
-                                <em>انتخاب کنید</em>
+                                <em>{loadingAvailableCheques ? "بارگذاری..." : "انتخاب چک"}</em>
                               </MenuItem>
                               {matchingCheques.map((cheque) => (
                                 <MenuItem key={cheque.id} value={cheque.id}>
@@ -3658,129 +3653,126 @@ export default function ShoppingPage() {
                             <AddIcon />
                           </IconButton>
                         </Box>
-                        {loadingAvailableCheques ? (
-                          <Box sx={{ display: "flex", alignItems: "center", gap: 1, py: 1 }}>
-                            <CircularProgress size={18} sx={{ color: "var(--admin-accent)" }} />
-                            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: { xs: "11px", md: "13px" } }}>
-                              در حال بارگذاری چک‌های قابل انتخاب...
+                        {!loadingAvailableCheques && matchingCheques.length === 0 && (
+                          <Typography sx={{ color: "var(--admin-warning)", fontSize: { xs: "11px", md: "12px" }, mt: 1 }}>
+                            چک مناسبی نیست — با + چک جدید ثبت کنید
+                          </Typography>
+                        )}
+                        {selectedCheque && chequeRemainder === 0 && (
+                          <Typography sx={{ color: "var(--admin-online)", fontSize: { xs: "11px", md: "12px" }, mt: 1 }}>
+                            چک کل مبلغ را پوشش می‌دهد
+                          </Typography>
+                        )}
+                        {selectedCheque && chequeRemainder > 0 && (
+                          <Box sx={{ mt: 1.5 }}>
+                            <Typography
+                              sx={{
+                                color: "var(--admin-text)",
+                                fontSize: { xs: "12px", md: "13px" },
+                                fontWeight: 600,
+                                mb: 0.75,
+                              }}
+                            >
+                              روش پرداخت باقی‌مانده ({formatNumber(chequeRemainder)} تومان)
                             </Typography>
+                            <RadioGroup
+                              value={settlementMode}
+                              onChange={(e) => {
+                                const mode = e.target.value as SettlementMode;
+                                setSettlementMode(mode);
+                                setPaymentSplitError("");
+                                if (mode === "split") {
+                                  setCardAmountInput(moneyField(chequeRemainder));
+                                  setCashAmountInput(moneyField(0));
+                                }
+                              }}
+                              sx={{
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: 0.25,
+                                "& .MuiFormControlLabel-root": { mr: 0, ml: 0 },
+                              }}
+                            >
+                              <FormControlLabel
+                                value="card_all"
+                                control={
+                                  <Radio
+                                    size="small"
+                                    sx={{
+                                      color: "var(--admin-text-secondary)",
+                                      "&.Mui-checked": { color: "var(--admin-accent)" },
+                                    }}
+                                  />
+                                }
+                                label={
+                                  <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "13px" } }}>
+                                    کارتخوان
+                                  </Typography>
+                                }
+                              />
+                              <FormControlLabel
+                                value="cash_all"
+                                control={
+                                  <Radio
+                                    size="small"
+                                    sx={{
+                                      color: "var(--admin-text-secondary)",
+                                      "&.Mui-checked": { color: "var(--admin-accent)" },
+                                    }}
+                                  />
+                                }
+                                label={
+                                  <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "13px" } }}>
+                                    پول نقد
+                                  </Typography>
+                                }
+                              />
+                              <FormControlLabel
+                                value="split"
+                                control={
+                                  <Radio
+                                    size="small"
+                                    sx={{
+                                      color: "var(--admin-text-secondary)",
+                                      "&.Mui-checked": { color: "var(--admin-accent)" },
+                                    }}
+                                  />
+                                }
+                                label={
+                                  <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "13px" } }}>
+                                    ترکیب کارتخوان و نقد
+                                  </Typography>
+                                }
+                              />
+                            </RadioGroup>
+                            {settlementMode === "split" && (
+                              <Box sx={{ mt: 1, display: "flex", flexDirection: "column", gap: 1 }}>
+                                <TextField
+                                  label="کارت خوان"
+                                  value={cardAmountInput}
+                                  onChange={(e) => handleCardAmountChange(e.target.value)}
+                                  size="small"
+                                  fullWidth
+                                  InputLabelProps={{ sx: { color: "var(--admin-text-muted)" } }}
+                                  sx={posFieldSx}
+                                />
+                                <TextField
+                                  label="نقدی"
+                                  value={cashAmountInput}
+                                  onChange={(e) => handleCashAmountChange(e.target.value)}
+                                  size="small"
+                                  fullWidth
+                                  InputLabelProps={{ sx: { color: "var(--admin-text-muted)" } }}
+                                  sx={posFieldSx}
+                                />
+                              </Box>
+                            )}
                           </Box>
-                        ) : matchingCheques.length === 0 ? (
-                          <Typography sx={{ color: "var(--admin-error-soft)", fontSize: { xs: "11px", md: "13px" }, mt: 1 }}>
-                            چک مناسب یافت نشد — با + چک دریافتی ثبت کنید (مبلغ می‌تواند کمتر از فاکتور باشد).
-                          </Typography>
-                        ) : null}
-
-                        <Box
-                          sx={{
-                            mt: 1.5,
-                            p: { xs: "8px", md: "12px" },
-                            bgcolor: "var(--admin-surface-alt)",
-                            borderRadius: "8px",
-                            border: "1px solid rgba(33, 150, 243, 0.25)",
-                            opacity: selectedCheque ? 1 : 0.7,
-                          }}
-                        >
-                          <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "11px", md: "13px" }, fontWeight: 600, mb: 1 }}>
-                            {chequeRemainder > 0
-                              ? `باقی‌مانده را با نقد یا کارت بپردازید: ${formatNumber(chequeRemainder)} تومان`
-                              : selectedCheque
-                                ? "چک کل مبلغ را پوشش می‌دهد — نقد/کارت صفر ارسال می‌شود"
-                                : "پس از انتخاب چک، باقی‌مانده نقد/کارت اینجا مشخص می‌شود"}
-                          </Typography>
-                          <RadioGroup
-                            row
-                            value={settlementMode}
-                            onChange={(e) => {
-                              const mode = e.target.value as SettlementMode;
-                              setSettlementMode(mode);
-                              setPaymentSplitError("");
-                              if (mode === "split") {
-                                setCardAmountInput(moneyField(Math.max(0, chequeRemainder)));
-                                setCashAmountInput(moneyField(0));
-                              }
-                            }}
-                            sx={{
-                              display: "flex",
-                              gap: { xs: 0, md: 0.5 },
-                              "& .MuiFormControlLabel-root": { mr: 0, ml: 0 },
-                            }}
-                          >
-                            <FormControlLabel
-                              value="card_all"
-                              disabled={!selectedCheque || chequeRemainder <= 0}
-                              control={<Radio size="small" sx={{ color: "var(--admin-text-secondary)", "&.Mui-checked": { color: "var(--admin-accent)" } }} />}
-                              label={<Typography sx={{ fontSize: { xs: "11px", md: "13px" } }}>کارت</Typography>}
-                            />
-                            <FormControlLabel
-                              value="cash_all"
-                              disabled={!selectedCheque || chequeRemainder <= 0}
-                              control={<Radio size="small" sx={{ color: "var(--admin-text-secondary)", "&.Mui-checked": { color: "var(--admin-accent)" } }} />}
-                              label={<Typography sx={{ fontSize: { xs: "11px", md: "13px" } }}>نقد</Typography>}
-                            />
-                            <FormControlLabel
-                              value="split"
-                              disabled={!selectedCheque || chequeRemainder <= 0}
-                              control={<Radio size="small" sx={{ color: "var(--admin-text-secondary)", "&.Mui-checked": { color: "var(--admin-accent)" } }} />}
-                              label={<Typography sx={{ fontSize: { xs: "11px", md: "13px" } }}>نقد + کارت</Typography>}
-                            />
-                          </RadioGroup>
-                          {selectedCheque && chequeRemainder > 0 && settlementMode === "split" && (
-                            <Box sx={{ mt: 1, display: "flex", flexDirection: "column", gap: 1 }}>
-                              <TextField
-                                label="کارت خوان"
-                                value={cardAmountInput}
-                                onChange={(e) => handleCardAmountChange(e.target.value)}
-                                size="small"
-                                fullWidth
-                                InputLabelProps={{ sx: { color: "var(--admin-text-muted)" } }}
-                                sx={posFieldSx}
-                              />
-                              <TextField
-                                label="نقدی"
-                                value={cashAmountInput}
-                                onChange={(e) => handleCashAmountChange(e.target.value)}
-                                size="small"
-                                fullWidth
-                                InputLabelProps={{ sx: { color: "var(--admin-text-muted)" } }}
-                                sx={posFieldSx}
-                              />
-                            </Box>
-                          )}
-                          {selectedCheque && (
-                            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: { xs: "10px", md: "12px" }, mt: 1 }}>
-                              ارسال: چک {formatNumber(selectedChequeAmount)}
-                              {" + "}نقد {formatNumber(
-                                chequeRemainder <= 0
-                                  ? 0
-                                  : settlementMode === "cash_all"
-                                    ? chequeRemainder
-                                    : settlementMode === "split"
-                                      ? parseAmountInput(cashAmountInput)
-                                      : 0,
-                              )}
-                              {" + "}کارت {formatNumber(
-                                chequeRemainder <= 0
-                                  ? 0
-                                  : settlementMode === "card_all"
-                                    ? chequeRemainder
-                                    : settlementMode === "split"
-                                      ? parseAmountInput(cardAmountInput)
-                                      : 0,
-                              )}
-                              {" = "}{formatNumber(salePayableAmount)}
-                            </Typography>
-                          )}
-                          {paymentSplitError && (
-                            <Typography sx={{ color: "var(--admin-error)", fontSize: { xs: "11px", md: "12px" }, mt: 1 }}>
-                              {paymentSplitError}
-                            </Typography>
-                          )}
-                        </Box>
+                        )}
                       </Box>
                     )}
                     {installmentPaymentEnabled && paymentType === 'installment' && (
-                      <Box sx={{ marginTop: { xs: "12px", md: "16px" } }}>
+                      <Box>
                         <Typography sx={{ 
                           color: "var(--admin-text)", 
                           fontSize: { xs: "13px", md: "14px" },
@@ -3923,106 +3915,94 @@ export default function ShoppingPage() {
                     {paymentType === 'cash' && payableNow > 0 && (
                       <Box
                         sx={{
-                          marginTop: { xs: "12px", md: "16px" },
                           padding: { xs: "10px", md: "14px" },
                           backgroundColor: "var(--admin-surface-alt)",
                           borderRadius: { xs: "8px", md: "10px" },
                           border: "1px solid rgba(120, 181, 104, 0.25)",
                         }}
                       >
-                        <Box sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          gap: { xs: 0.5, md: 1 },
-                          flexWrap: { xs: "wrap", md: "nowrap" },
-                        }}>
-                          <Typography
+                        <Typography
+                          sx={{
+                            color: "var(--admin-text)",
+                            fontSize: { xs: "12px", md: "14px" },
+                            fontWeight: 600,
+                            mb: 0.75,
+                          }}
+                        >
+                          روش پرداخت
+                        </Typography>
+                        <FormControl component="fieldset" sx={{ width: "100%" }}>
+                          <RadioGroup
+                            value={settlementMode}
+                            onChange={(e) => {
+                              const mode = e.target.value as SettlementMode;
+                              setSettlementMode(mode);
+                              setPaymentSplitError("");
+                              if (mode === "split") {
+                                setCardAmountInput(moneyField(settlementTarget));
+                                setCashAmountInput(moneyField(0));
+                              }
+                            }}
                             sx={{
-                              color: "var(--admin-text)",
-                              fontSize: { xs: "12px", md: "14px" },
-                              fontWeight: "600",
-                              flexShrink: 0,
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 0.25,
+                              "& .MuiFormControlLabel-root": { mr: 0, ml: 0 },
                             }}
                           >
-                            نوع پرداخت:
-                          </Typography>
-                          <FormControl component="fieldset" sx={{ flex: 1, minWidth: 0 }}>
-                            <RadioGroup
-                              row
-                              value={settlementMode}
-                              onChange={(e) => {
-                                const mode = e.target.value as SettlementMode;
-                                setSettlementMode(mode);
-                                setPaymentSplitError("");
-                                if (mode === "split") {
-                                  setCardAmountInput(moneyField(settlementTarget));
-                                  setCashAmountInput(moneyField(0));
-                                }
-                              }}
-                              sx={{
-                                display: "flex",
-                                flexDirection: "row",
-                                justifyContent: { xs: "flex-start", md: "flex-end" },
-                                flexWrap: "nowrap",
-                                gap: { xs: 0, md: 0.5 },
-                                "& .MuiFormControlLabel-root": { mr: 0, ml: 0 },
-                              }}
-                            >
-                              <FormControlLabel
-                                value="card_all"
-                                control={
-                                  <Radio
-                                    size="small"
-                                    sx={{
-                                      color: "var(--admin-text-secondary)",
-                                      "&.Mui-checked": { color: "var(--admin-accent)" },
-                                    }}
-                                  />
-                                }
-                                label={
-                                  <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "11px", md: "13px" }, whiteSpace: "nowrap" }}>
-                                    کارتخوان
-                                  </Typography>
-                                }
-                              />
-                              <FormControlLabel
-                                value="cash_all"
-                                control={
-                                  <Radio
-                                    size="small"
-                                    sx={{
-                                      color: "var(--admin-text-secondary)",
-                                      "&.Mui-checked": { color: "var(--admin-accent)" },
-                                    }}
-                                  />
-                                }
-                                label={
-                                  <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "11px", md: "13px" }, whiteSpace: "nowrap" }}>
-                                    نقد
-                                  </Typography>
-                                }
-                              />
-                              <FormControlLabel
-                                value="split"
-                                control={
-                                  <Radio
-                                    size="small"
-                                    sx={{
-                                      color: "var(--admin-text-secondary)",
-                                      "&.Mui-checked": { color: "var(--admin-accent)" },
-                                    }}
-                                  />
-                                }
-                                label={
-                                  <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "11px", md: "13px" }, whiteSpace: "nowrap" }}>
-                                    کارت + نقد
-                                  </Typography>
-                                }
-                              />
-                            </RadioGroup>
-                          </FormControl>
-                        </Box>
+                            <FormControlLabel
+                              value="card_all"
+                              control={
+                                <Radio
+                                  size="small"
+                                  sx={{
+                                    color: "var(--admin-text-secondary)",
+                                    "&.Mui-checked": { color: "var(--admin-accent)" },
+                                  }}
+                                />
+                              }
+                              label={
+                                <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "13px" } }}>
+                                  کارتخوان
+                                </Typography>
+                              }
+                            />
+                            <FormControlLabel
+                              value="cash_all"
+                              control={
+                                <Radio
+                                  size="small"
+                                  sx={{
+                                    color: "var(--admin-text-secondary)",
+                                    "&.Mui-checked": { color: "var(--admin-accent)" },
+                                  }}
+                                />
+                              }
+                              label={
+                                <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "13px" } }}>
+                                  پول نقد
+                                </Typography>
+                              }
+                            />
+                            <FormControlLabel
+                              value="split"
+                              control={
+                                <Radio
+                                  size="small"
+                                  sx={{
+                                    color: "var(--admin-text-secondary)",
+                                    "&.Mui-checked": { color: "var(--admin-accent)" },
+                                  }}
+                                />
+                              }
+                              label={
+                                <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "13px" } }}>
+                                  ترکیب کارتخوان و نقد
+                                </Typography>
+                              }
+                            />
+                          </RadioGroup>
+                        </FormControl>
                         {settlementMode === "split" && (
                           <Box sx={{ marginTop: { xs: "8px", md: "10px" }, display: "flex", flexDirection: "column", gap: { xs: "8px", md: "10px" } }}>
                             <TextField
@@ -4061,6 +4041,7 @@ export default function ShoppingPage() {
                         )}
                       </Box>
                     )}
+                    </Box>
                   </CardContent>
                 </Card>
 
