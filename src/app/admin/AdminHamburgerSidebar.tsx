@@ -126,6 +126,7 @@ export default function AdminHamburgerSidebar({
   const [roomServicesEnabled, setRoomServicesEnabled] = useState(false);
   const [producedGoodsMenuEnabled, setProducedGoodsMenuEnabled] = useState(false);
   const [accountingEnabled, setAccountingEnabled] = useState(false);
+  const [customerClubEnabled, setCustomerClubEnabled] = useState(false);
 
   useEffect(() => {
     const sync = () => {
@@ -134,6 +135,7 @@ export default function AdminHamburgerSidebar({
       setRoomServicesEnabled(features.room_services_enabled);
       setProducedGoodsMenuEnabled(features.produced_goods_enabled);
       setAccountingEnabled(features.accounting_enabled);
+      setCustomerClubEnabled(features.customer_club_enabled);
     };
     sync();
     window.addEventListener(SHOP_FEATURES_CHANGED_EVENT, sync);
@@ -349,51 +351,59 @@ export default function AdminHamburgerSidebar({
   );
 
   const smsChildren: NavLeaf[] = useMemo(
-    () => [
-      {
-        id: "customer-club",
-        label: "داشبورد باشگاه",
-        href: "/admin/customer-club",
-        icon: <GroupsIcon />,
-        permission: ["customers", "shop_sms"],
-      },
-      {
-        id: "customers",
-        label: "خریداران",
-        href: "/admin/customers",
-        icon: <PeopleIcon />,
-        permission: "customers",
-      },
-      { id: "referral", label: "پنل معرفی", href: "/admin/referral", icon: <ShareIcon />, permission: "referral" },
-      {
-        id: "sms-logs",
-        label: "پیامک‌های فروشگاه",
-        href: "/admin/shop-sms-logs",
-        icon: <SmsIcon />,
-        permission: "shop_sms",
-      },
-      {
-        id: "broadcast",
-        label: "ارسال پیامک",
-        href: "/admin/broadcast-sms",
-        icon: <SmsIcon />,
-        permission: "shop_sms",
-      },
-      {
-        id: "sms-packages",
-        label: "خرید بسته پیامک",
-        href: "/admin/sms-packages",
-        icon: <ShoppingCartCheckoutIcon />,
-        permission: "shop_sms",
-      },
-      {
-        id: "shop-plans",
-        label: "تمدید اشتراک",
-        href: "/admin/shop-plans",
-        icon: <CardMembershipIcon />,
-      },
-    ],
-    [],
+    () => {
+      const clubItems: NavLeaf[] = customerClubEnabled
+        ? [
+            {
+              id: "customer-club",
+              label: "داشبورد باشگاه",
+              href: "/admin/customer-club",
+              icon: <GroupsIcon />,
+              permission: ["customers", "shop_sms"],
+            },
+            {
+              id: "customers",
+              label: "خریداران",
+              href: "/admin/customers",
+              icon: <PeopleIcon />,
+              permission: "customers",
+            },
+            {
+              id: "broadcast",
+              label: "ارسال پیامک",
+              href: "/admin/broadcast-sms",
+              icon: <SmsIcon />,
+              permission: "shop_sms",
+            },
+          ]
+        : [];
+
+      return [
+        ...clubItems,
+        { id: "referral", label: "پنل معرفی", href: "/admin/referral", icon: <ShareIcon />, permission: "referral" },
+        {
+          id: "sms-logs",
+          label: "پیامک‌های فروشگاه",
+          href: "/admin/shop-sms-logs",
+          icon: <SmsIcon />,
+          permission: "shop_sms",
+        },
+        {
+          id: "sms-packages",
+          label: "خرید بسته پیامک",
+          href: "/admin/sms-packages",
+          icon: <ShoppingCartCheckoutIcon />,
+          permission: "shop_sms",
+        },
+        {
+          id: "shop-plans",
+          label: "تمدید اشتراک",
+          href: "/admin/shop-plans",
+          icon: <CardMembershipIcon />,
+        },
+      ];
+    },
+    [customerClubEnabled],
   );
 
   const adminChildren: NavLeaf[] = useMemo(
@@ -552,8 +562,8 @@ export default function AdminHamburgerSidebar({
       },
       {
         id: "sms",
-        label: "باشگاه مشتریان",
-        icon: <GroupsIcon />,
+        label: customerClubEnabled ? "باشگاه مشتریان" : "پیامک",
+        icon: customerClubEnabled ? <GroupsIcon /> : <SmsIcon />,
         children: smsChildren.filter((child) => can(child.permission)),
       },
     ].filter((group) => group.children.length > 0);
@@ -566,7 +576,7 @@ export default function AdminHamburgerSidebar({
       });
     }
     return base;
-  }, [accountingChildren, accountingEnabled, adminChildren, can, financialChildren, isSuperAdmin, payrollChildren, productChildren, smsChildren]);
+  }, [accountingChildren, accountingEnabled, adminChildren, can, customerClubEnabled, financialChildren, isSuperAdmin, payrollChildren, productChildren, smsChildren]);
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
 

@@ -36,6 +36,7 @@ const FEATURE_SWITCHES: { key: FeatureKey; label: string }[] = [
   { key: "room_services_enabled", label: "خدمات اتاق" },
   { key: "produced_goods_enabled", label: "کالای تولیدی" },
   { key: "accounting_enabled", label: "حسابداری" },
+  { key: "customer_club_enabled", label: "باشگاه مشتریان" },
 ];
 
 function extractRows(res: unknown): ShopRow[] {
@@ -120,6 +121,7 @@ export default function ShopServiceAccessPage() {
                 room_services_enabled: Boolean(res.room_services_enabled),
                 produced_goods_enabled: Boolean(res.produced_goods_enabled),
                 accounting_enabled: Boolean(res.accounting_enabled),
+                customer_club_enabled: Boolean(res.customer_club_enabled),
                 [feature]: saved,
               }
             : item,
@@ -150,7 +152,8 @@ export default function ShopServiceAccessPage() {
         <Typography sx={{ fontWeight: 800, fontSize: 18 }}>دسترسی فروشگاه</Typography>
       </Box>
       <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: 13, mb: 2 }}>
-        همه خاموش‌اند تا ادمین سامانه روشن کند. بعد از ورود بعدی، فروشگاه همان بخش‌ها را در منو می‌بیند.
+        بیشتر بخش‌ها خاموش‌اند تا ادمین سامانه روشن کند. باشگاه مشتریان برای فروشگاه‌های ۱، ۵، ۱۳ و ۱۷ به‌صورت پیش‌فرض روشن است.
+        بعد از ورود بعدی، فروشگاه همان بخش‌ها را در منو می‌بیند.
       </Typography>
       <TextField
         size="small"
@@ -191,7 +194,7 @@ export default function ShopServiceAccessPage() {
               <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: 12, mb: 1 }}>
                 {row.shop_code ? `/${row.shop_code}` : ""} {row.phone ? `· ${row.phone}` : ""}
               </Typography>
-              <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(4, minmax(0, 1fr))" }, gap: 0.75 }}>
+              <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(3, minmax(0, 1fr))", md: "repeat(5, minmax(0, 1fr))" }, gap: 0.75 }}>
                 {FEATURE_SWITCHES.map((item) => {
                   const enabled = Boolean(row[item.key]);
                   const busy = saving === `${row.atelier_id}:${item.key}`;

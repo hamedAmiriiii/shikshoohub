@@ -39,6 +39,8 @@ import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
 import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
 import ShopSmsQuotaCard from "@/app/coponent/ShopSmsQuotaCard";
 import { adminButtonStartIconSx, adminPageSx } from "@/app/admin/theme/adminTheme";
+import { BROADCAST_PRESELECT_STORAGE_KEY } from "@/app/lib/broadcastPreselect";
+import { useSearchParams } from "next/navigation";
 
 interface Customer {
   phone: string;
@@ -313,6 +315,7 @@ const VirtualCustomerList = memo(function VirtualCustomerList({
 });
 
 export default function BroadcastSMSPage() {
+  const searchParams = useSearchParams();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPhones, setSelectedPhones] = useState<string[]>([]);
@@ -328,6 +331,7 @@ export default function BroadcastSMSPage() {
   const [newGroupName, setNewGroupName] = useState("");
   const [savingGroup, setSavingGroup] = useState(false);
   const [quotaEstimateMessage, setQuotaEstimateMessage] = useState("");
+  const preselectApplied = useRef(false);
 
   const deferredSearch = useDeferredValue(phoneSearch);
   const selectedSet = useMemo(() => new Set(selectedPhones), [selectedPhones]);
@@ -381,6 +385,33 @@ export default function BroadcastSMSPage() {
     void fetchCustomers();
     void loadGroups();
   }, [loadGroups]);
+
+  useEffect(() => {
+    if (loading || preselectApplied.current) return;
+    if (searchParams.get("preselect") !== "1") return;
+    preselectApplied.current = true;
+    try {
+      const raw = sessionStorage.getItem(BROADCAST_PRESELECT_STORAGE_KEY);
+      sessionStorage.removeItem(BROADCAST_PRESELECT_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as unknown;
+      if (!Array.isArray(parsed)) return;
+      const phones = parsed
+        .map((p) => String(p || "").trim())
+        .filter((p) => /^09\d{9}$/.test(p));
+      if (phones.length === 0) return;
+      const unique = Array.from(new Set(phones));
+      const known = new Set(customers.map((c) => c.phone).filter(Boolean));
+      const extraManual = unique.filter((p) => !known.has(p));
+      setSelectedPhones(unique);
+      if (extraManual.length > 0) {
+        setManualPhones((prev) => Array.from(new Set([...prev, ...extraManual])));
+      }
+      toast.success(`${unique.length} نفر برای ارسال انتخاب شدند`);
+    } catch {
+      /* ignore */
+    }
+  }, [loading, customers, searchParams]);
 
   const applyGroupSelection = (groupId: number | "") => {
     setSelectedGroupId(groupId);

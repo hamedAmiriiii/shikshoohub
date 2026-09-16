@@ -51,6 +51,7 @@ import {
   ADMIN_POS_SETTINGS_CHANGED_EVENT,
   readAdminPosSettings,
 } from "@/app/lib/adminPosSettings";
+import { readShopFeatures, SHOP_FEATURES_CHANGED_EVENT } from "@/app/lib/shopFeatures";
 import AdminMenuModeCartPanel, {
   type AdminMenuModeCartPanelProps,
 } from "@/app/admin/AdminMenuModeCartPanel";
@@ -284,6 +285,7 @@ export default function AdminMenuModeView({
   const [menuProduct, setMenuProduct] = useState<CachedProduct | null>(null);
   const [editDialog, setEditDialog] = useState<MenuEditDialogState | null>(null);
   const [menuBusy, setMenuBusy] = useState(false);
+  const [customerClubEnabled, setCustomerClubEnabled] = useState(false);
   const suppressClickRef = useRef(false);
   const longPressRef = useRef<number | null>(null);
 
@@ -294,6 +296,17 @@ export default function AdminMenuModeView({
     apply();
     window.addEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, apply);
     return () => window.removeEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, apply);
+  }, []);
+
+  useEffect(() => {
+    const sync = () => setCustomerClubEnabled(readShopFeatures().customer_club_enabled);
+    sync();
+    window.addEventListener(SHOP_FEATURES_CHANGED_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(SHOP_FEATURES_CHANGED_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
   }, []);
 
   const clearLongPress = () => {
@@ -422,7 +435,10 @@ export default function AdminMenuModeView({
           </ListItemIcon>
           <ListItemText primary="تغییر قیمت" />
         </MenuItem>
-        {menuProduct && isCatalogItemOutOfStock(menuProduct) && !isProducedGoodItem(menuProduct) ? (
+        {customerClubEnabled &&
+        menuProduct &&
+        isCatalogItemOutOfStock(menuProduct) &&
+        !isProducedGoodItem(menuProduct) ? (
           <MenuItem onClick={openNotifyDialog} disabled={menuBusy} sx={{ fontSize: 13 }}>
             <ListItemIcon sx={{ minWidth: 32 }}>
               <NotificationsActiveOutlinedIcon fontSize="small" sx={{ color: "var(--admin-accent)" }} />

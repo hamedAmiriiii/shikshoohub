@@ -5,6 +5,7 @@ export type ShopFeatures = {
   room_services_enabled: boolean;
   produced_goods_enabled: boolean;
   accounting_enabled: boolean;
+  customer_club_enabled: boolean;
 };
 
 const FEATURE_KEYS = [
@@ -12,6 +13,7 @@ const FEATURE_KEYS = [
   "room_services_enabled",
   "produced_goods_enabled",
   "accounting_enabled",
+  "customer_club_enabled",
 ] as const;
 
 const DEFAULT_FEATURES: ShopFeatures = {
@@ -19,6 +21,7 @@ const DEFAULT_FEATURES: ShopFeatures = {
   room_services_enabled: false,
   produced_goods_enabled: false,
   accounting_enabled: false,
+  customer_club_enabled: false,
 };
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -60,6 +63,7 @@ export function normalizeShopFeatures(raw: unknown): ShopFeatures {
     room_services_enabled: asBool(source.room_services_enabled),
     produced_goods_enabled: asBool(source.produced_goods_enabled),
     accounting_enabled: asBool(source.accounting_enabled),
+    customer_club_enabled: asBool(source.customer_club_enabled),
   };
 }
 
@@ -141,6 +145,16 @@ export function shopFeatureAllowsPath(
   }
   if (pathname === "/admin/shop-tables" || pathname.startsWith("/admin/shop-tables/")) {
     return features.restaurant_cafe_enabled || features.room_services_enabled;
+  }
+  if (
+    pathname === "/admin/customer-club" ||
+    pathname.startsWith("/admin/customer-club/") ||
+    pathname === "/admin/customers" ||
+    pathname.startsWith("/admin/customers/") ||
+    pathname === "/admin/broadcast-sms" ||
+    pathname.startsWith("/admin/broadcast-sms/")
+  ) {
+    return features.customer_club_enabled;
   }
   return true;
 }
