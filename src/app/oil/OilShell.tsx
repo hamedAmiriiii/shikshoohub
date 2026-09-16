@@ -79,6 +79,7 @@ export default function OilShell({ children }: { children: React.ReactNode }) {
   else if (pathname?.startsWith("/oil/settings")) title = "تنظیمات";
   else if (pathname?.startsWith("/oil/qr")) title = "QR مشتری";
   else if (pathname?.startsWith("/oil/sms/packages")) title = "خرید بسته پیامک";
+  else if (pathname?.startsWith("/oil/sms/broadcast")) title = "ارسال پیامک";
   else if (pathname?.startsWith("/oil/plans")) title = "تمدید اشتراک";
   else if (pathname === "/oil/sms" || pathname?.startsWith("/oil/sms/")) {
     title = "پیامک‌ها";

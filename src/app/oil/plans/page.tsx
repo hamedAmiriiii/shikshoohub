@@ -14,6 +14,7 @@ import {
   formatPlanDuration,
   formatToman,
   isPaymentsError,
+  planPayableToman,
   startGatewayPayment,
   type PaymentGatewayId,
   type PaymentsCatalogItem,
@@ -126,16 +127,38 @@ export default function OilPlansPage() {
       ) : (
         plans.map((plan) => {
           const duration = formatPlanDuration(plan);
+          const list = plan.price_toman || 0;
+          const payable = planPayableToman(plan);
+          const hasDiscount =
+            plan.discount_price_toman != null &&
+            plan.discount_price_toman > 0 &&
+            plan.discount_price_toman < list;
           return (
             <article key={plan.id} className="oil-card">
               <div className="oil-card-meta" style={{ marginTop: 0 }}>
                 <span className="oil-km">{plan.name}</span>
                 {duration ? <span>{duration}</span> : null}
               </div>
-              {plan.price_toman > 0 && (
-                <p className="oil-km" style={{ margin: "8px 0 0", fontSize: 20 }}>
-                  {formatToman(plan.price_toman)}
-                </p>
+              {(payable > 0 || list > 0) && (
+                <div style={{ margin: "8px 0 0" }}>
+                  {hasDiscount ? (
+                    <>
+                      <p
+                        className="oil-muted"
+                        style={{ margin: 0, textDecoration: "line-through", fontSize: 14 }}
+                      >
+                        {formatToman(list)}
+                      </p>
+                      <p className="oil-km" style={{ margin: "2px 0 0", fontSize: 20 }}>
+                        {formatToman(payable)}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="oil-km" style={{ margin: 0, fontSize: 20 }}>
+                      {formatToman(payable || list)}
+                    </p>
+                  )}
+                </div>
               )}
               {plan.description ? (
                 <p className="oil-muted" style={{ margin: "8px 0 0" }}>

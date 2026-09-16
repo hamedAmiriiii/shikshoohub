@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Search, Send } from "lucide-react";
+import Link from "next/link";
+import { MessageSquarePlus, Search, Send } from "lucide-react";
 import { toast } from "react-toastify";
 import { isOilApiError, oilListSmsLogs } from "@/app/lib/oil/api";
 import { runOilRemindersForToday } from "@/app/lib/oil/reminders";
@@ -98,6 +99,17 @@ export default function OilSmsPage() {
       <p className="oil-muted" style={{ marginTop: 16, marginBottom: 12 }}>
         همه پیامک‌های ارسال‌شده این فروشگاه اینجا می‌آید. با باز شدن اپ، نوبت‌های نزدیک هم خودکار بررسی می‌شود.
       </p>
+
+      <Link
+        href="/oil/sms/broadcast"
+        className="oil-btn oil-btn-primary"
+        style={{ textDecoration: "none", marginBottom: 10 }}
+      >
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+          <MessageSquarePlus size={18} />
+          ارسال پیامک
+        </span>
+      </Link>
 
       <button
         type="button"

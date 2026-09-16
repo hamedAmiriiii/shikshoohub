@@ -32,6 +32,7 @@ import {
   formatPlanDuration,
   formatToman,
   isPaymentsError,
+  planPayableToman,
   startGatewayPayment,
   type PaymentGatewayId,
   type PaymentsCatalogItem,
@@ -149,6 +150,12 @@ export default function ShopPlansPage() {
         <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" } }}>
           {plans.map((plan) => {
             const duration = formatPlanDuration(plan);
+            const list = plan.price_toman || 0;
+            const payable = planPayableToman(plan);
+            const hasDiscount =
+              plan.discount_price_toman != null &&
+              plan.discount_price_toman > 0 &&
+              plan.discount_price_toman < list;
             return (
               <Card key={`${plan.id}-${plan.name}`} sx={packageCardSx}>
                 <CardContent sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 1.5 }}>
@@ -163,10 +170,29 @@ export default function ShopPlansPage() {
                       مدت: {duration}
                     </Typography>
                   ) : null}
-                  {plan.price_toman > 0 && (
-                    <Typography sx={{ color: "var(--admin-accent)", fontWeight: 800, fontSize: "24px" }}>
-                      {formatToman(plan.price_toman)}
-                    </Typography>
+                  {(payable > 0 || list > 0) && (
+                    <Box>
+                      {hasDiscount ? (
+                        <>
+                          <Typography
+                            sx={{
+                              color: "var(--admin-text-muted)",
+                              fontSize: "14px",
+                              textDecoration: "line-through",
+                            }}
+                          >
+                            {formatToman(list)}
+                          </Typography>
+                          <Typography sx={{ color: "var(--admin-accent)", fontWeight: 800, fontSize: "24px" }}>
+                            {formatToman(payable)}
+                          </Typography>
+                        </>
+                      ) : (
+                        <Typography sx={{ color: "var(--admin-accent)", fontWeight: 800, fontSize: "24px" }}>
+                          {formatToman(payable || list)}
+                        </Typography>
+                      )}
+                    </Box>
                   )}
                   {plan.description && (
                     <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "13px", flex: 1 }}>
@@ -213,7 +239,9 @@ export default function ShopPlansPage() {
           {pendingPlan ? (
             <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: 13, textAlign: "center", mb: 1.5 }}>
               {pendingPlan.name}
-              {pendingPlan.price_toman > 0 ? ` — ${formatToman(pendingPlan.price_toman)}` : ""}
+              {planPayableToman(pendingPlan) > 0
+                ? ` — ${formatToman(planPayableToman(pendingPlan))}`
+                : ""}
             </Typography>
           ) : null}
           <FormControl fullWidth>

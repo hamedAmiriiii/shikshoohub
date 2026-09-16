@@ -498,6 +498,30 @@ export async function oilListSmsLogs(q?: string, page = 1, perPage = 30) {
   });
 }
 
+export type OilBroadcastCustomer = {
+  phone: string;
+  name?: string | null;
+  total_purchases: number;
+  total_spent: number;
+};
+
+export async function oilListBroadcastCustomers() {
+  return oilFetch<{ customers: OilBroadcastCustomer[] }>(
+    "GET",
+    "/api/oil/customer-broadcast/list",
+  );
+}
+
+export async function oilBroadcastMessage(message: string, phones: string[]) {
+  return oilFetch<{
+    message?: string;
+    success_count?: number;
+    failed_count?: number;
+  }>("POST", "/api/oil/customer-broadcast/message", {
+    body: { message, phones },
+  });
+}
+
 export async function oilGetSmsQuota() {
   return oilFetch<OilSmsQuota>("GET", "/api/oil/sms-quota");
 }

@@ -11,6 +11,11 @@ export type PaymentsCatalogItem = {
   description?: string | null;
   price_toman: number;
   price_rial?: number;
+  discount_price_toman?: number | null;
+  discount_price_rial?: number | null;
+  payable_price_toman?: number;
+  payable_price_rial?: number;
+  project_type?: "shop" | "oil" | string;
   sms_count?: number;
   duration_days?: number;
   duration_months?: number;
@@ -112,6 +117,18 @@ function priceToman(row: Record<string, unknown>): number {
   return price;
 }
 
+function discountPriceToman(row: Record<string, unknown>): number | null {
+  if (row.discount_price_toman != null && row.discount_price_toman !== "") {
+    const n = asNumber(row.discount_price_toman);
+    return n > 0 ? n : null;
+  }
+  if (row.discount_price_rial != null && row.discount_price_rial !== "") {
+    const n = Math.round(asNumber(row.discount_price_rial) / 10);
+    return n > 0 ? n : null;
+  }
+  return null;
+}
+
 export function parseCatalogItem(value: unknown): PaymentsCatalogItem | null {
   const row = asRecord(value);
   if (!row || row.id === undefined || row.id === null) return null;
@@ -122,18 +139,51 @@ export function parseCatalogItem(value: unknown): PaymentsCatalogItem | null {
   const durationMonths = asNumber(row.duration_months ?? row.months);
   const smsCount = asNumber(row.sms_count ?? row.message_count);
   const priceRial = asNumber(row.price_rial ?? row.amount_rial);
+  const listToman = priceToman(row);
+  const discountToman = discountPriceToman(row);
+  const payableToman =
+    row.payable_price_toman != null && row.payable_price_toman !== ""
+      ? asNumber(row.payable_price_toman)
+      : discountToman && discountToman > 0
+        ? discountToman
+        : listToman;
+  const projectType =
+    row.project_type === "oil" || row.project_type === "shop"
+      ? row.project_type
+      : undefined;
   return {
     id,
     name: String(row.name ?? row.title ?? "آیتم"),
     description: typeof row.description === "string" ? row.description : null,
-    price_toman: priceToman(row),
+    price_toman: listToman,
     price_rial: priceRial > 0 ? priceRial : undefined,
+    discount_price_toman: discountToman,
+    discount_price_rial:
+      row.discount_price_rial != null && row.discount_price_rial !== ""
+        ? asNumber(row.discount_price_rial)
+        : undefined,
+    payable_price_toman: payableToman,
+    payable_price_rial:
+      row.payable_price_rial != null && row.payable_price_rial !== ""
+        ? asNumber(row.payable_price_rial)
+        : payableToman * 10,
+    project_type: projectType,
     sms_count: smsCount > 0 ? smsCount : undefined,
     duration_days: durationDays > 0 ? durationDays : undefined,
     duration_months: durationMonths > 0 ? durationMonths : undefined,
     is_active: row.is_active !== false && row.active !== false,
     is_shop_custom_price: Boolean(row.is_shop_custom_price),
   };
+}
+
+export function planPayableToman(plan: PaymentsCatalogItem): number {
+  if (plan.payable_price_toman != null && plan.payable_price_toman > 0) {
+    return plan.payable_price_toman;
+  }
+  if (plan.discount_price_toman != null && plan.discount_price_toman > 0) {
+    return plan.discount_price_toman;
+  }
+  return plan.price_toman || 0;
 }
 
 function parseShopSubscription(value: unknown): ShopSubscriptionPricing | null {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Box,
   Button,
@@ -11,7 +11,10 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  MenuItem,
   Switch,
+  Tab,
+  Tabs,
   TextField,
   Typography,
 } from "@mui/material";
@@ -29,6 +32,7 @@ import {
   formatPlanDuration,
   formatToman,
   parseAdminShopPlans,
+  planPayableToman,
   type PaymentsCatalogItem,
 } from "@/app/lib/atelierZarinpal";
 
@@ -43,27 +47,38 @@ const fieldSx = {
   "& .MuiInputLabel-root": { color: "var(--admin-text-muted)" },
 } as const;
 
+type ProjectTypeFilter = "shop" | "oil";
+
 type PlanForm = {
   name: string;
+  project_type: ProjectTypeFilter;
   price_toman: string;
+  discount_price_toman: string;
   duration_days: string;
   description: string;
   is_active: boolean;
 };
 
-const emptyForm: PlanForm = {
+const emptyForm = (projectType: ProjectTypeFilter): PlanForm => ({
   name: "",
+  project_type: projectType,
   price_toman: "",
+  discount_price_toman: "",
   duration_days: "",
   description: "",
   is_active: true,
-};
+});
 
-function toForm(plan: PaymentsCatalogItem | null): PlanForm {
-  if (!plan) return emptyForm;
+function toForm(plan: PaymentsCatalogItem | null, fallbackType: ProjectTypeFilter): PlanForm {
+  if (!plan) return emptyForm(fallbackType);
   return {
     name: plan.name,
+    project_type: plan.project_type === "oil" ? "oil" : "shop",
     price_toman: plan.price_toman ? String(plan.price_toman) : "",
+    discount_price_toman:
+      plan.discount_price_toman != null && plan.discount_price_toman > 0
+        ? String(plan.discount_price_toman)
+        : "",
     duration_days: plan.duration_days
       ? String(plan.duration_days)
       : plan.duration_months
@@ -74,14 +89,52 @@ function toForm(plan: PaymentsCatalogItem | null): PlanForm {
   };
 }
 
+function PlanPriceBlock({ plan }: { plan: PaymentsCatalogItem }) {
+  const list = plan.price_toman || 0;
+  const payable = planPayableToman(plan);
+  const hasDiscount = plan.discount_price_toman != null && plan.discount_price_toman > 0 && plan.discount_price_toman < list;
+  return (
+    <Box sx={{ mt: 0.25 }}>
+      {hasDiscount ? (
+        <>
+          <Typography
+            component="span"
+            sx={{
+              color: "var(--admin-text-muted)",
+              fontSize: "13px",
+              textDecoration: "line-through",
+              mr: 1,
+            }}
+          >
+            {formatToman(list)}
+          </Typography>
+          <Typography component="span" sx={{ color: "var(--admin-accent)", fontWeight: 700 }}>
+            {formatToman(payable)}
+          </Typography>
+        </>
+      ) : (
+        <Typography sx={{ color: "var(--admin-accent)", fontWeight: 700 }}>
+          {formatToman(payable || list)}
+        </Typography>
+      )}
+      {formatPlanDuration(plan) ? (
+        <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "12px" }}>
+          {formatPlanDuration(plan)}
+        </Typography>
+      ) : null}
+    </Box>
+  );
+}
+
 export default function AdminShopPlansManagePage() {
   const router = useRouter();
   const [allowed, setAllowed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [plans, setPlans] = useState<PaymentsCatalogItem[]>([]);
+  const [tab, setTab] = useState<ProjectTypeFilter>("shop");
   const [editing, setEditing] = useState<PaymentsCatalogItem | null>(null);
   const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState<PlanForm>(emptyForm);
+  const [form, setForm] = useState<PlanForm>(emptyForm("shop"));
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -101,7 +154,9 @@ export default function AdminShopPlansManagePage() {
     }
     setLoading(true);
     try {
-      const res = await FetchWithJwtClient("GET", "/api/admin/shop-plans", token);
+      const res = await FetchWithJwtClient("GET", "/api/admin/shop-plans", token, {
+        include_inactive: 1,
+      });
       if (res?.hasError) {
         toast.error(getApiErrorMessage(res, "خطا در دریافت پلن‌ها"));
         return;
@@ -117,16 +172,21 @@ export default function AdminShopPlansManagePage() {
     void loadPlans();
   }, [allowed, loadPlans]);
 
+  const filteredPlans = useMemo(
+    () => plans.filter((p) => (p.project_type === "oil" ? "oil" : "shop") === tab),
+    [plans, tab],
+  );
+
   const openCreate = () => {
     setEditing(null);
-    setForm(emptyForm);
+    setForm(emptyForm(tab));
     setCreating(true);
   };
 
   const openEdit = (plan: PaymentsCatalogItem) => {
     setCreating(false);
     setEditing(plan);
-    setForm(toForm(plan));
+    setForm(toForm(plan, tab));
   };
 
   const closeDialog = () => {
@@ -140,41 +200,48 @@ export default function AdminShopPlansManagePage() {
     if (!token) return;
     const name = form.name.trim();
     const price = Number(form.price_toman.replace(/,/g, ""));
+    const discountRaw = form.discount_price_toman.replace(/,/g, "");
+    const discount = discountRaw === "" ? null : Number(discountRaw);
     const days = Number(form.duration_days.replace(/,/g, ""));
     if (!name) {
       toast.error("نام پلن را وارد کنید");
       return;
     }
     if (!Number.isFinite(price) || price < 0) {
-      toast.error("قیمت معتبر نیست");
+      toast.error("مبلغ فروش معتبر نیست");
+      return;
+    }
+    if (discount != null && (!Number.isFinite(discount) || discount < 0)) {
+      toast.error("مبلغ با تخفیف معتبر نیست");
+      return;
+    }
+    if (discount != null && discount > price) {
+      toast.error("مبلغ با تخفیف نباید از مبلغ فروش بیشتر باشد");
+      return;
+    }
+    if (!Number.isFinite(days) || days < 1) {
+      toast.error("مدت روز را وارد کنید");
       return;
     }
     setSaving(true);
     const body = {
       name,
       title: name,
-      price,
+      project_type: form.project_type,
       price_toman: price,
-      duration_days: Number.isFinite(days) && days > 0 ? days : undefined,
-      description: form.description.trim() || undefined,
+      discount_price_toman: discount,
+      duration_days: days,
+      description: form.description.trim() || null,
       is_active: form.is_active,
     };
     try {
       const res = editing
-        ? await FetchWithJwtClient(
-            "PUT",
-            `/api/admin/shop-plans/${editing.id}`,
-            token,
-            {},
-            { body: JSON.stringify(body) },
-          )
-        : await FetchWithJwtClient(
-            "POST",
-            "/api/admin/shop-plans",
-            token,
-            {},
-            { body: JSON.stringify(body) },
-          );
+        ? await FetchWithJwtClient("PUT", `/api/admin/shop-plans/${editing.id}`, token, {}, {
+            body: JSON.stringify(body),
+          })
+        : await FetchWithJwtClient("POST", "/api/admin/shop-plans", token, {}, {
+            body: JSON.stringify(body),
+          });
       if (res?.hasError) {
         toast.error(getApiErrorMessage(res, "ذخیره پلن انجام نشد"));
         return;
@@ -194,9 +261,9 @@ export default function AdminShopPlansManagePage() {
 
   return (
     <Box sx={{ ...adminPageSx, p: 2, pb: 12 }}>
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1, mb: 2 }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1, mb: 1 }}>
         <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "13px" }}>
-          قیمت پلن‌های اکانت فروشگاه را اینجا عوض کنید.
+          تعرفه فروشگاه و تعویض روغن جداست. مبلغ فروش و مبلغ با تخفیف را اینجا تنظیم کنید.
         </Typography>
         <Button
           variant="contained"
@@ -213,20 +280,37 @@ export default function AdminShopPlansManagePage() {
         </Button>
       </Box>
 
+      <Tabs
+        value={tab}
+        onChange={(_, v: ProjectTypeFilter) => setTab(v)}
+        sx={{
+          mb: 2,
+          minHeight: 40,
+          "& .MuiTab-root": { color: "var(--admin-text-muted)", minHeight: 40 },
+          "& .Mui-selected": { color: "var(--admin-accent) !important" },
+          "& .MuiTabs-indicator": { backgroundColor: "var(--admin-accent)" },
+        }}
+      >
+        <Tab value="shop" label="فروشگاه" />
+        <Tab value="oil" label="تعویض روغن" />
+      </Tabs>
+
       {loading ? (
         <Box sx={{ py: 6, display: "flex", justifyContent: "center" }}>
           <CircularProgress sx={{ color: "var(--admin-accent)" }} />
         </Box>
-      ) : plans.length === 0 ? (
+      ) : filteredPlans.length === 0 ? (
         <Card sx={{ backgroundColor: "var(--admin-surface)", border: "1px solid var(--admin-border)" }}>
           <CardContent sx={{ py: 4, textAlign: "center" }}>
             <CardMembershipIcon sx={{ fontSize: 40, color: "var(--admin-text-muted)", mb: 1 }} />
-            <Typography sx={{ color: "var(--admin-text-secondary)" }}>پلنی ثبت نشده است</Typography>
+            <Typography sx={{ color: "var(--admin-text-secondary)" }}>
+              پلنی برای این بخش ثبت نشده است
+            </Typography>
           </CardContent>
         </Card>
       ) : (
         <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
-          {plans.map((plan) => (
+          {filteredPlans.map((plan) => (
             <Card
               key={plan.id}
               sx={{
@@ -242,10 +326,7 @@ export default function AdminShopPlansManagePage() {
                       {plan.name}
                       {plan.is_active === false ? " — غیرفعال" : ""}
                     </Typography>
-                    <Typography sx={{ color: "var(--admin-accent)", fontWeight: 700, mt: 0.25 }}>
-                      {formatToman(plan.price_toman)}
-                      {formatPlanDuration(plan) ? ` · ${formatPlanDuration(plan)}` : ""}
-                    </Typography>
+                    <PlanPriceBlock plan={plan} />
                     {plan.description ? (
                       <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "12px", mt: 0.5 }}>
                         {plan.description}
@@ -268,6 +349,20 @@ export default function AdminShopPlansManagePage() {
         </DialogTitle>
         <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 1.5, pt: 1 }}>
           <TextField
+            select
+            label="نوع"
+            value={form.project_type}
+            onChange={(e) =>
+              setForm((prev) => ({ ...prev, project_type: e.target.value as ProjectTypeFilter }))
+            }
+            sx={fieldSx}
+            fullWidth
+            disabled={Boolean(editing)}
+          >
+            <MenuItem value="shop">فروشگاه</MenuItem>
+            <MenuItem value="oil">تعویض روغن</MenuItem>
+          </TextField>
+          <TextField
             label="نام"
             value={form.name}
             onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
@@ -275,17 +370,35 @@ export default function AdminShopPlansManagePage() {
             fullWidth
           />
           <TextField
-            label="قیمت (تومان)"
+            label="مبلغ فروش (تومان)"
             value={form.price_toman}
-            onChange={(e) => setForm((prev) => ({ ...prev, price_toman: e.target.value.replace(/[^\d]/g, "") }))}
+            onChange={(e) =>
+              setForm((prev) => ({ ...prev, price_toman: e.target.value.replace(/[^\d]/g, "") }))
+            }
             sx={fieldSx}
             fullWidth
             inputMode="numeric"
           />
           <TextField
+            label="مبلغ با تخفیف (تومان)"
+            value={form.discount_price_toman}
+            onChange={(e) =>
+              setForm((prev) => ({
+                ...prev,
+                discount_price_toman: e.target.value.replace(/[^\d]/g, ""),
+              }))
+            }
+            sx={fieldSx}
+            fullWidth
+            inputMode="numeric"
+            helperText="خالی بگذارید اگر تخفیف ندارید. پرداخت روی این مبلغ می‌رود."
+          />
+          <TextField
             label="مدت (روز)"
             value={form.duration_days}
-            onChange={(e) => setForm((prev) => ({ ...prev, duration_days: e.target.value.replace(/[^\d]/g, "") }))}
+            onChange={(e) =>
+              setForm((prev) => ({ ...prev, duration_days: e.target.value.replace(/[^\d]/g, "") }))
+            }
             sx={fieldSx}
             fullWidth
             inputMode="numeric"
