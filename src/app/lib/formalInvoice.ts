@@ -26,6 +26,15 @@ export type FormalInvoiceLine = {
   grand: number;
 };
 
+/** قیمت‌های برنامه تومان است؛ فاکتور رسمی باید ریال باشد. */
+export const TOMAN_TO_RIAL = 10;
+
+export function tomanToRial(toman: number): number {
+  const n = Number(toman);
+  if (!Number.isFinite(n)) return 0;
+  return Math.round(n * TOMAN_TO_RIAL);
+}
+
 const ONES = ["", "یک", "دو", "سه", "چهار", "پنج", "شش", "هفت", "هشت", "نه"];
 const TEENS = [
   "ده",
@@ -140,7 +149,8 @@ export function mapPurchaseLines(purchase: any): FormalInvoiceLine[] {
 
   return products.map((line: any) => {
     const quantity = Number(line.quantity) || 0;
-    const unitPrice = Number(line.sale_price) || Number(line.product?.sale_price) || 0;
+    const unitPriceToman = Number(line.sale_price) || Number(line.product?.sale_price) || 0;
+    const unitPrice = tomanToRial(unitPriceToman);
     const lineTotal = unitPrice * quantity;
     const name =
       line.item_name ||

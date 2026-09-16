@@ -28,6 +28,7 @@ import {
   formatFaNumber,
   mapPurchaseLines,
   numberToPersianWords,
+  tomanToRial,
   type FormalParty,
 } from "@/app/lib/formalInvoice";
 
@@ -146,7 +147,7 @@ function FormalInvoiceContent() {
   const [buyerLookupBusy, setBuyerLookupBusy] = useState(false);
 
   const lines = useMemo(() => mapPurchaseLines(purchase), [purchase]);
-  const invoiceDiscount = Number(purchase?.discount_amount) || 0;
+  const invoiceDiscount = tomanToRial(Number(purchase?.discount_amount) || 0);
   const linesSum = lines.reduce((s, l) => s + l.lineTotal, 0);
   const payable = Math.max(0, linesSum - invoiceDiscount);
   const totalWords = `${numberToPersianWords(payable)} ریال`;
@@ -451,7 +452,7 @@ function FormalInvoiceContent() {
           </Box>
 
           <Box sx={{ bgcolor: "#d9d9d9", border: "1px solid #111", borderBottom: 0, textAlign: "center", fontWeight: 800, fontSize: 11, py: 0.35, color: "#111" }}>
-            مشخصات کالا یا خدمات مورد معامله
+            مشخصات کالا یا خدمات مورد معامله (مبالغ به ریال)
           </Box>
           <table className="fi-table">
             <thead>
