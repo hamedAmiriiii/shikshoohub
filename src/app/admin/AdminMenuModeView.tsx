@@ -27,6 +27,7 @@ import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import BlockIcon from "@mui/icons-material/Block";
 import AddBoxOutlinedIcon from "@mui/icons-material/AddBoxOutlined";
 import SellOutlinedIcon from "@mui/icons-material/SellOutlined";
+import NotificationsActiveOutlinedIcon from "@mui/icons-material/NotificationsActiveOutlined";
 import { toast } from "react-toastify";
 import {
   getCachedProductDiscount,
@@ -36,7 +37,10 @@ import {
 import { catalogItemKey, isProducedGoodItem } from "@/app/lib/catalogItems";
 import { formatAmountInput, parseAmountInput } from "@/app/lib/amountInput";
 import { isKgProduct } from "@/app/lib/productUnits";
-import { updateMenuProductFields } from "@/app/lib/menuModeProductUpdate";
+import { menuProductNumericId, updateMenuProductFields } from "@/app/lib/menuModeProductUpdate";
+import tokenCode from "@/app/coponent/tokenCode";
+import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
+import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
 import {
   MENU_ALL_CATEGORY_ID,
   buildMenuCategories,
@@ -72,7 +76,7 @@ type AdminMenuModeViewProps = {
   classicPosMode?: boolean;
 };
 
-type MenuDialogMode = "stock" | "price";
+type MenuDialogMode = "stock" | "price" | "notify";
 
 export default function AdminMenuModeView({
   products,
@@ -173,8 +177,57 @@ export default function AdminMenuModeView({
     closeContextMenu();
   };
 
+  const openNotifyDialog = () => {
+    if (!menuProduct) return;
+    setDialogProduct(menuProduct);
+    setDialogValue("");
+    setDialogMode("notify");
+    closeContextMenu();
+  };
+
+  const submitNotifyDialog = async () => {
+    if (!dialogProduct) return;
+    const phone = dialogValue.trim();
+    if (!/^09\d{9}$/.test(phone)) {
+      toast.error("شماره باید با ۰۹ شروع شود و ۱۱ رقم باشد");
+      return;
+    }
+    const productId = menuProductNumericId(dialogProduct);
+    if (!productId) {
+      toast.error("این کالا از اینجا قابل ثبت اعلان نیست");
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await FetchWithJwtClient("POST", "/api/product-stock-notify", {
+        product_id: productId,
+        phone,
+      });
+      if (!res || res.hasError) {
+        toast.error(getApiErrorMessage(res, "ثبت اعلان ناموفق بود"));
+        return;
+      }
+      toast.success(
+        typeof (res as { message?: string }).message === "string"
+          ? (res as { message: string }).message
+          : "درخواست ثبت شد",
+      );
+      setDialogMode(null);
+      setDialogProduct(null);
+      setMenuProduct(null);
+    } catch {
+      toast.error("خطا در ثبت اعلان");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const submitDialog = async () => {
     if (!dialogProduct || !dialogMode) return;
+    if (dialogMode === "notify") {
+      await submitNotifyDialog();
+      return;
+    }
     if (dialogMode === "stock") {
       const qty = parseAmountInput(dialogValue);
       if (!Number.isFinite(qty) || qty < 0) {
@@ -251,6 +304,14 @@ export default function AdminMenuModeView({
           </ListItemIcon>
           <ListItemText primary="تغییر قیمت" />
         </MenuItem>
+        {menuProduct && isCatalogItemOutOfStock(menuProduct) && !isProducedGoodItem(menuProduct) ? (
+          <MenuItem onClick={openNotifyDialog} disabled={saving} sx={{ fontSize: 13 }}>
+            <ListItemIcon sx={{ minWidth: 32 }}>
+              <NotificationsActiveOutlinedIcon fontSize="small" sx={{ color: "var(--admin-accent)" }} />
+            </ListItemIcon>
+            <ListItemText primary="موجود شد اطلاع بده" />
+          </MenuItem>
+        ) : null}
       </Menu>
       <Dialog
         disableScrollLock
@@ -272,7 +333,11 @@ export default function AdminMenuModeView({
         }}
       >
         <DialogTitle sx={{ fontSize: 16 }}>
-          {dialogMode === "price" ? "تغییر قیمت" : "افزایش موجودی"}
+          {dialogMode === "price"
+            ? "تغییر قیمت"
+            : dialogMode === "notify"
+              ? "موجود شد اطلاع بده"
+              : "افزایش موجودی"}
         </DialogTitle>
         <DialogContent>
           <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, mb: 1.5 }}>
@@ -281,7 +346,13 @@ export default function AdminMenuModeView({
           <TextField
             autoFocus
             fullWidth
-            label={dialogMode === "price" ? "قیمت فروش جدید (تومان)" : "موجودی جدید"}
+            label={
+              dialogMode === "price"
+                ? "قیمت فروش جدید (تومان)"
+                : dialogMode === "notify"
+                  ? "شماره موبایل مشتری"
+                  : "موجودی جدید"
+            }
             value={dialogValue}
             onChange={(e) =>
               setDialogValue(
@@ -296,7 +367,12 @@ export default function AdminMenuModeView({
                 void submitDialog();
               }
             }}
-            inputMode="decimal"
+            inputMode={dialogMode === "notify" ? "tel" : "decimal"}
+            inputProps={
+              dialogMode === "notify"
+                ? { style: { direction: "ltr", textAlign: "left" }, placeholder: "09xxxxxxxxx" }
+                : undefined
+            }
             InputLabelProps={{ sx: { color: "var(--admin-text-muted)" } }}
             sx={{
               mt: 0.5,
@@ -326,7 +402,7 @@ export default function AdminMenuModeView({
             disabled={saving}
             startIcon={saving ? <CircularProgress size={16} color="inherit" /> : undefined}
           >
-            ذخیره
+            {dialogMode === "notify" ? "ثبت اعلان" : "ذخیره"}
           </Button>
         </DialogActions>
       </Dialog>

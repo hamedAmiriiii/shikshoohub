@@ -350,6 +350,20 @@ export default function AdminHamburgerSidebar({
 
   const smsChildren: NavLeaf[] = useMemo(
     () => [
+      {
+        id: "customer-club",
+        label: "داشبورد باشگاه",
+        href: "/admin/customer-club",
+        icon: <GroupsIcon />,
+        permission: ["customers", "shop_sms"],
+      },
+      {
+        id: "customers",
+        label: "خریداران",
+        href: "/admin/customers",
+        icon: <PeopleIcon />,
+        permission: "customers",
+      },
       { id: "referral", label: "پنل معرفی", href: "/admin/referral", icon: <ShareIcon />, permission: "referral" },
       {
         id: "sms-logs",
@@ -472,7 +486,6 @@ export default function AdminHamburgerSidebar({
         icon: <Inventory2Icon />,
         permission: "products",
       },
-      { id: "customers", label: "خریداران", href: "/admin/customers", icon: <PeopleIcon />, permission: "customers" },
       {
         id: "orders",
         label: "سفارشات اینترنتی",
@@ -539,8 +552,8 @@ export default function AdminHamburgerSidebar({
       },
       {
         id: "sms",
-        label: "پیامک",
-        icon: <SmsIcon />,
+        label: "باشگاه مشتریان",
+        icon: <GroupsIcon />,
         children: smsChildren.filter((child) => can(child.permission)),
       },
     ].filter((group) => group.children.length > 0);

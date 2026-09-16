@@ -31,6 +31,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/inventory': 'موجودی انبار',
     '/admin/reports': 'گزارشات',
     '/admin/customers': 'خریداران',
+    '/admin/customer-club': 'باشگاه مشتریان',
     '/admin/returned-products': 'برگشت خرید',
     '/admin/expenses-statistics': 'گزارش هزینه‌ها',
     '/admin/bulk-discount': 'تخفیف دسته جمعی',

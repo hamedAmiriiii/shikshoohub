@@ -21,6 +21,7 @@ import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import SearchIcon from "@mui/icons-material/Search";
 import SendIcon from "@mui/icons-material/Send";
+import GroupAddIcon from "@mui/icons-material/GroupAdd";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import tokenCode from "@/app/coponent/tokenCode";
@@ -35,6 +36,13 @@ interface Customer {
   total_purchases: number;
   total_spent: number;
 }
+
+type CustomerGroup = {
+  id: number;
+  name: string;
+  member_count: number;
+  phones: string[];
+};
 
 type CustomerSort =
   | "count_desc"
@@ -214,6 +222,33 @@ export default function BroadcastSMSPage() {
   const [minPurchases, setMinPurchases] = useState(0);
   const [customerSort, setCustomerSort] = useState<CustomerSort>("amount_desc");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [groups, setGroups] = useState<CustomerGroup[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<number | "">("");
+  const [newGroupName, setNewGroupName] = useState("");
+  const [savingGroup, setSavingGroup] = useState(false);
+
+  const loadGroups = async () => {
+    try {
+      const token = tokenCode();
+      const res = await FetchWithJwtClient("GET", "/api/shop-customer-groups", token);
+      if (!res || res.hasError) return;
+      const raw = (res as { groups?: CustomerGroup[] }).groups;
+      if (!Array.isArray(raw)) {
+        setGroups([]);
+        return;
+      }
+      setGroups(
+        raw.map((g) => ({
+          id: Number(g.id),
+          name: String(g.name || ""),
+          member_count: Number(g.member_count) || 0,
+          phones: Array.isArray(g.phones) ? g.phones.map(String) : [],
+        })),
+      );
+    } catch {
+      /* ignore */
+    }
+  };
 
   useEffect(() => {
     const fetchCustomers = async () => {
@@ -234,7 +269,66 @@ export default function BroadcastSMSPage() {
       }
     };
     fetchCustomers();
+    void loadGroups();
   }, []);
+
+  const applyGroupSelection = (groupId: number | "") => {
+    setSelectedGroupId(groupId);
+    if (groupId === "") return;
+    const group = groups.find((g) => g.id === groupId);
+    if (!group) return;
+    setSelectedPhones(group.phones.filter(Boolean));
+    toast.info(`گروه «${group.name}» انتخاب شد (${group.phones.length} نفر)`);
+  };
+
+  const handleCreateGroup = async () => {
+    const name = newGroupName.trim();
+    if (!name) {
+      toast.error("نام گروه را وارد کنید");
+      return;
+    }
+    if (selectedPhones.length === 0) {
+      toast.error("حداقل یک نفر را تیک بزنید");
+      return;
+    }
+    setSavingGroup(true);
+    try {
+      const res = await FetchWithJwtClient("POST", "/api/shop-customer-groups", {
+        name,
+        phones: selectedPhones,
+      });
+      if (!res || res.hasError) {
+        toast.error(getApiErrorMessage(res, "ایجاد گروه ناموفق بود"));
+        return;
+      }
+      toast.success("گروه ایجاد شد");
+      setNewGroupName("");
+      await loadGroups();
+      const created = (res as { group?: CustomerGroup }).group;
+      if (created?.id) {
+        setSelectedGroupId(Number(created.id));
+      }
+    } catch {
+      toast.error("خطا در ایجاد گروه");
+    } finally {
+      setSavingGroup(false);
+    }
+  };
+
+  const handleDeleteGroup = async (groupId: number) => {
+    try {
+      const res = await FetchWithJwtClient("DELETE", `/api/shop-customer-groups/${groupId}`, {});
+      if (!res || res.hasError) {
+        toast.error(getApiErrorMessage(res, "حذف گروه ناموفق بود"));
+        return;
+      }
+      toast.success("گروه حذف شد");
+      if (selectedGroupId === groupId) setSelectedGroupId("");
+      await loadGroups();
+    } catch {
+      toast.error("خطا در حذف گروه");
+    }
+  };
 
   const searchNorm = phoneSearch.trim().toLowerCase().replace(/\s/g, "");
 
@@ -372,6 +466,63 @@ export default function BroadcastSMSPage() {
         }}
       >
         <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+          <Box sx={{ display: "flex", gap: 1, mb: 1.5, flexWrap: "wrap" }}>
+            <TextField
+              size="small"
+              select
+              label="گروه خریداران"
+              value={selectedGroupId === "" ? "" : String(selectedGroupId)}
+              onChange={(e) => {
+                const v = e.target.value;
+                applyGroupSelection(v === "" ? "" : Number(v));
+              }}
+              sx={{ ...fieldSx, minWidth: 180, flex: 1 }}
+              InputLabelProps={{ sx: { color: "var(--admin-text-muted)", fontSize: "13px" } }}
+            >
+              <MenuItem value="">همه / بدون گروه</MenuItem>
+              {groups.map((g) => (
+                <MenuItem key={g.id} value={String(g.id)}>
+                  {g.name} ({g.member_count})
+                </MenuItem>
+              ))}
+            </TextField>
+            {selectedGroupId !== "" ? (
+              <Button
+                size="small"
+                color="error"
+                variant="outlined"
+                onClick={() => void handleDeleteGroup(Number(selectedGroupId))}
+                sx={{ minWidth: 88 }}
+              >
+                حذف گروه
+              </Button>
+            ) : null}
+          </Box>
+          <Box sx={{ display: "flex", gap: 1, mb: 1.5 }}>
+            <TextField
+              size="small"
+              fullWidth
+              value={newGroupName}
+              onChange={(e) => setNewGroupName(e.target.value)}
+              placeholder="نام گروه جدید از افراد تیک‌خورده"
+              sx={fieldSx}
+            />
+            <Button
+              size="small"
+              variant="outlined"
+              disabled={savingGroup || selectedPhones.length === 0}
+              onClick={() => void handleCreateGroup()}
+              startIcon={<GroupAddIcon />}
+              sx={{
+                ...adminButtonStartIconSx,
+                minWidth: 120,
+                borderColor: "var(--admin-border)",
+                color: "var(--admin-text)",
+              }}
+            >
+              ایجاد گروه
+            </Button>
+          </Box>
           <TextField
             fullWidth
             multiline
