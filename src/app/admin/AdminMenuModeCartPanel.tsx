@@ -17,7 +17,6 @@ import type { PaymentType } from "@/app/lib/paymentTypes";
 import MultiCartToolbar from "@/app/admin/MultiCartToolbar";
 import CartQuantityControl from "@/app/admin/CartQuantityControl";
 import PosSegmentButtons from "@/app/admin/PosSegmentButtons";
-import { PosFullscreenToggleButton } from "@/app/admin/PosFullscreenControls";
 import { getPriceUnitLabel } from "@/app/lib/productUnits";
 import { formatAmountInput } from "@/app/lib/amountInput";
 import { catalogItemKey } from "@/app/lib/catalogItems";
@@ -141,8 +140,6 @@ export type AdminMenuModeCartPanelProps = {
   saleDateEditEnabled?: boolean;
   saleDate?: DateObject | null;
   onSaleDateChange?: (value: DateObject | null) => void;
-  isFullscreen?: boolean;
-  onToggleFullscreen?: () => void;
   submitLabel?: string;
   cartTitle?: string;
   clearLabel?: string;
@@ -214,8 +211,6 @@ export default function AdminMenuModeCartPanel({
   saleDateEditEnabled = false,
   saleDate,
   onSaleDateChange,
-  isFullscreen = false,
-  onToggleFullscreen,
   submitLabel,
   cartTitle,
   clearLabel,
@@ -283,22 +278,11 @@ export default function AdminMenuModeCartPanel({
           borderBottom: "1px solid var(--admin-border)",
           bgcolor: "var(--admin-surface-alt)",
           flexShrink: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 0.5,
         }}
       >
-        <Typography sx={{ fontSize: "10px", fontWeight: 600, color: "var(--admin-text-muted)", minWidth: 0 }}>
+        <Typography sx={{ fontSize: "10px", fontWeight: 600, color: "var(--admin-text-muted)" }}>
           سبد {activeCartIndex + 1} · {cart.length} کالا{cartTitle ? ` · ${cartTitle}` : ""}
         </Typography>
-        {onToggleFullscreen ? (
-          <PosFullscreenToggleButton
-            dense
-            isFullscreen={isFullscreen}
-            onToggle={onToggleFullscreen}
-          />
-        ) : null}
       </Box>
 
       <Box sx={{ flex: 1, overflowY: "auto", px: 0.75, py: 0.5 }}>

@@ -15,6 +15,8 @@ type Props<T extends string> = {
   onChange: (value: T) => void;
   dense?: boolean;
   columns?: number;
+  /** عنوان و دکمه‌ها در یک ردیف افقی */
+  inlineLabel?: ReactNode;
 };
 
 export default function PosSegmentButtons<T extends string>({
@@ -23,16 +25,27 @@ export default function PosSegmentButtons<T extends string>({
   onChange,
   dense,
   columns = 3,
+  inlineLabel,
 }: Props<T>) {
   const visible = options.filter((o) => o.show !== false);
 
-  return (
+  const buttons = (
     <Box
       sx={{
-        display: "grid",
-        gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-        gap: dense ? 0.5 : 0.75,
-        width: "100%",
+        display: inlineLabel ? "flex" : "grid",
+        ...(inlineLabel
+          ? {
+              flex: "1 1 auto",
+              flexWrap: "nowrap",
+              gap: dense ? 0.4 : 0.5,
+              minWidth: 0,
+              overflowX: "auto",
+            }
+          : {
+              gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+              gap: dense ? 0.5 : 0.75,
+              width: "100%",
+            }),
       }}
     >
       {visible.map((opt) => {
@@ -43,14 +56,19 @@ export default function PosSegmentButtons<T extends string>({
             type="button"
             onClick={() => onChange(opt.value)}
             sx={{
-              minWidth: 0,
-              px: dense ? 0.4 : 0.75,
-              py: dense ? 0.55 : 0.85,
-              fontSize: dense ? "10px" : { xs: "11px", md: "13px" },
+              flex: inlineLabel ? "1 1 0" : undefined,
+              minWidth: inlineLabel ? (dense ? 44 : 52) : 0,
+              px: dense ? 0.35 : inlineLabel ? 0.5 : 0.75,
+              py: dense ? 0.45 : inlineLabel ? 0.55 : 0.85,
+              fontSize: dense
+                ? "9px"
+                : inlineLabel
+                  ? { xs: "10px", md: "11px" }
+                  : { xs: "11px", md: "13px" },
               fontWeight: 700,
-              lineHeight: 1.2,
+              lineHeight: 1.15,
               whiteSpace: "nowrap",
-              borderRadius: "10px",
+              borderRadius: dense || inlineLabel ? "8px" : "10px",
               border: selected
                 ? "1px solid var(--admin-accent)"
                 : "1px solid var(--admin-border)",
@@ -67,6 +85,35 @@ export default function PosSegmentButtons<T extends string>({
           </Button>
         );
       })}
+    </Box>
+  );
+
+  if (!inlineLabel) return buttons;
+
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "row",
+        alignItems: "center",
+        gap: dense ? 0.5 : 0.75,
+        width: "100%",
+        minWidth: 0,
+      }}
+    >
+      <Box
+        component="span"
+        sx={{
+          flexShrink: 0,
+          color: "var(--admin-text)",
+          fontSize: dense ? "9px" : { xs: "11px", md: "12px" },
+          fontWeight: 600,
+          whiteSpace: "nowrap",
+        }}
+      >
+        {inlineLabel}
+      </Box>
+      {buttons}
     </Box>
   );
 }

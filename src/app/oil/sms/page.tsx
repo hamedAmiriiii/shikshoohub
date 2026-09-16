@@ -3,18 +3,30 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Search, Send } from "lucide-react";
 import { toast } from "react-toastify";
-import { isOilApiError, oilListReminders } from "@/app/lib/oil/api";
+import { isOilApiError, oilListSmsLogs } from "@/app/lib/oil/api";
 import { runOilRemindersForToday } from "@/app/lib/oil/reminders";
-import { formatKm } from "@/app/lib/oil/plate";
-import type { OilReminderSms } from "@/app/lib/oil/types";
+import type { OilShopSmsLog } from "@/app/lib/oil/types";
 import { useOilAuth } from "../OilAuth";
 import OilSmsQuotaCard from "../OilSmsQuotaCard";
+
+const SMS_TYPE_LABELS: Record<string, string> = {
+  oil_welcome: "خوش‌آمد",
+  oil_reminder: "یادآوری",
+  oil_history_link: "لینک سابقه",
+  purchase: "خرید",
+  credit: "اعتبار",
+  broadcast: "گروهی",
+};
+
+function smsTypeLabel(type: string) {
+  return SMS_TYPE_LABELS[type] || type || "پیامک";
+}
 
 export default function OilSmsPage() {
   const { session, ready } = useOilAuth();
   const [q, setQ] = useState("");
   const [debounced, setDebounced] = useState("");
-  const [items, setItems] = useState<OilReminderSms[]>([]);
+  const [items, setItems] = useState<OilShopSmsLog[]>([]);
   const [page, setPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -28,7 +40,7 @@ export default function OilSmsPage() {
   const load = useCallback(async (nextPage: number, replace: boolean) => {
     setLoading(true);
     try {
-      const res = await oilListReminders(debounced || undefined, nextPage, 30);
+      const res = await oilListSmsLogs(debounced || undefined, nextPage, 30);
       if (isOilApiError(res)) {
         toast.error(res.message);
         return;
@@ -57,7 +69,7 @@ export default function OilSmsPage() {
   const emptyText = useMemo(() => {
     if (loading && items.length === 0) return "در حال بارگذاری…";
     if (debounced) return "پیامکی با این جستجو پیدا نشد.";
-    return "هنوز نوبت نزدیکی نبوده؛ وقتی نزدیک شود پیامک خودکار می‌رود.";
+    return "هنوز پیامکی ارسال نشده است.";
   }, [debounced, items.length, loading]);
 
   const handleRun = async () => {
@@ -84,7 +96,7 @@ export default function OilSmsPage() {
       <OilSmsQuotaCard />
 
       <p className="oil-muted" style={{ marginTop: 16, marginBottom: 12 }}>
-        با باز شدن اپ در هر روز، نوبت‌های ۱۰ روز آینده خودش پیامک می‌شود. این دکمه برای ارسال دستی است.
+        همه پیامک‌های ارسال‌شده این فروشگاه اینجا می‌آید. با باز شدن اپ، نوبت‌های نزدیک هم خودکار بررسی می‌شود.
       </p>
 
       <button
@@ -112,7 +124,7 @@ export default function OilSmsPage() {
         />
         <input
           className="oil-search"
-          placeholder="جستجو پلاک، موبایل یا متن"
+          placeholder="جستجو موبایل یا متن پیامک"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           style={{ paddingLeft: 36 }}
@@ -125,28 +137,17 @@ export default function OilSmsPage() {
         items.map((row) => (
           <article key={row.id} className="oil-card">
             <div className="oil-card-meta" style={{ marginTop: 0 }}>
-              <span className="oil-km">{row.plate_display}</span>
+              <span className="oil-km">{smsTypeLabel(row.sms_type)}</span>
               <span dir="ltr">{row.phone}</span>
-            </div>
-            <div className="oil-card-meta">
-              <span>
-                نوبت {row.estimated_due_on_jalali}
-                {row.days_until_due != null ? ` — ${row.days_until_due} روز` : ""}
-              </span>
-              <span>کیلومتر {formatKm(row.next_km)}</span>
             </div>
             <p className="oil-muted" style={{ margin: "8px 0 0", whiteSpace: "pre-line" }}>
               {row.message}
             </p>
             <div className="oil-card-meta">
-              <span>{row.created_at_jalali}</span>
-              {row.sms_sent ? (
-                <span style={{ color: "#8ee0b2" }}>ارسال شد</span>
-              ) : (
-                <span style={{ color: "#ffb4b4" }}>
-                  {row.sms_error || "ارسال نشد"}
-                </span>
-              )}
+              <span>{row.created_at || "—"}</span>
+              {row.delivery_status_label ? (
+                <span>{row.delivery_status_label}</span>
+              ) : null}
             </div>
           </article>
         ))

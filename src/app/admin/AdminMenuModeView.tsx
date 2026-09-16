@@ -683,10 +683,13 @@ export default function AdminMenuModeView({
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: { xs: "1fr", md: "2fr 1fr" },
-            gap: 1,
-            height: { xs: "auto", md: "calc(100vh - 140px)" },
-            minHeight: { xs: "calc(100vh - 180px)", md: "calc(100vh - 140px)" },
+            gridTemplateColumns: {
+              xs: "1fr",
+              md: "minmax(0, 1fr) minmax(310px, calc(33.333% + 30px))",
+            },
+            gap: 0.75,
+            height: { xs: "auto", md: "calc(100vh - 120px)" },
+            minHeight: { xs: "calc(100vh - 160px)", md: "calc(100vh - 120px)" },
             alignItems: "stretch",
           }}
         >

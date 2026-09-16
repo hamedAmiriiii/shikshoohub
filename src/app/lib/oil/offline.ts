@@ -41,6 +41,7 @@ export type OilVisitQueueBody = {
   oil_filter_product_id?: number;
   gearbox_oil_product_id?: number;
   gear_oil_product_id?: number;
+  accessory_product_id?: number;
 };
 
 export type OilOutboxItem = {

@@ -29,6 +29,11 @@ import { useRouter, usePathname } from "next/navigation";
 import { isSuperAdminUser, getUserPhoneFromRecord } from "@/app/lib/superAdmin";
 import { WEBINO_CHATBOT_TOGGLE_EVENT } from "@/app/coponent/WebinoChatbot";
 import {
+  PosFullscreenExitHint,
+  PosFullscreenToggleButton,
+  usePosFullscreen,
+} from "@/app/admin/PosFullscreenControls";
+import {
   getShopAccessFromUser,
   getAccessMenuSummary,
   readStoredShopAccessExpired,
@@ -75,6 +80,9 @@ export default function Header({
   const router = useRouter();
   const pathname = usePathname();
   const { mode, setMode } = useAdminTheme();
+  const { isFullscreen, showExitHint, setShowExitHint, exitFullscreen, toggleFullscreen } =
+    usePosFullscreen();
+  const showPosFullscreenToggle = pathname === "/admin";
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileMenuAnchor, setProfileMenuAnchor] = useState<null | HTMLElement>(null);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
@@ -307,14 +315,22 @@ export default function Header({
         top: 0,
         zIndex: (theme) => theme.zIndex.drawer + 2,
         backgroundColor: "var(--admin-header-bg)",
-        paddingTop: { xs: "8px", md: "16px" },
-        paddingBottom: { xs: "8px", md: "16px" },
-        marginBottom: { xs: "8px", md: "16px" },
+        paddingTop: { xs: "6px", md: pathname === "/admin" ? "6px" : "16px" },
+        paddingBottom: { xs: "6px", md: pathname === "/admin" ? "6px" : "16px" },
+        marginBottom: { xs: "6px", md: pathname === "/admin" ? "4px" : "16px" },
         minWidth: 0,
         pl: `var(${ADMIN_MENU_CART_WIDTH_VAR}, 0px)`,
         pr: { md: `${ADMIN_SIDEBAR_WIDTH}px` },
       }}
     >
+      {showPosFullscreenToggle ? (
+        <PosFullscreenExitHint
+          visible={isFullscreen}
+          showExitHint={showExitHint}
+          setShowExitHint={setShowExitHint}
+          onExit={exitFullscreen}
+        />
+      ) : null}
       {/* Desktop: fixed right sidebar */}
       <Drawer
         variant="permanent"
@@ -693,6 +709,14 @@ export default function Header({
                 >
                   <ChatBubbleOutlineIcon sx={{ fontSize: { xs: "18px", md: "24px" } }} />
                 </IconButton>
+                {showPosFullscreenToggle ? (
+                  <Box sx={{ display: { xs: "none", md: "inline-flex" }, flexShrink: 0 }}>
+                    <PosFullscreenToggleButton
+                      isFullscreen={isFullscreen}
+                      onToggle={toggleFullscreen}
+                    />
+                  </Box>
+                ) : null}
                 <IconButton
                   onClick={() => setMode(mode === "light" ? "dark" : "light")}
                   aria-label={mode === "light" ? "حالت تیره" : "حالت روشن"}

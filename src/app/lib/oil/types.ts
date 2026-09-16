@@ -10,6 +10,7 @@ export const OIL_PRODUCT_KINDS = [
   { kind: "gearbox_oil", kind_label: "روغن گیربکس" },
   { kind: "air_filter", kind_label: "فیلتر هوا" },
   { kind: "oil_filter", kind_label: "فیلتر روغن" },
+  { kind: "accessory", kind_label: "جانبی" },
 ] as const;
 
 export type OilProductKind = (typeof OIL_PRODUCT_KINDS)[number]["kind"];
@@ -180,7 +181,32 @@ export type OilPublicCar = {
 
 export type OilPublicHistoryResponse = {
   phone: string;
+  shop?: { code: string; name: string };
   cars: OilPublicCar[];
+};
+
+export type OilPublicShop = {
+  code: string;
+  name: string;
+  landing_url?: string;
+};
+
+export type OilShopSmsLog = {
+  id: number;
+  phone: string;
+  message: string;
+  sms_type: string;
+  delivery_status?: string | null;
+  delivery_status_label?: string | null;
+  created_at?: string | null;
+};
+
+export type OilShopSmsLogListResponse = {
+  data: OilShopSmsLog[];
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  total: number;
 };
 
 export type OilReminderSms = {

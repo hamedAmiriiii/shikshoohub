@@ -4,6 +4,7 @@ import type {
   OilCustomerListResponse,
   OilLookupResponse,
   OilPublicHistoryResponse,
+  OilPublicShop,
   OilPlateParts,
   OilProduct,
   OilProductCatalogResponse,
@@ -14,6 +15,7 @@ import type {
   OilReportsResponse,
   OilReportPeriod,
   OilSession,
+  OilShopSmsLogListResponse,
   OilSmsPackage,
   OilSmsPackageOrder,
   OilSmsQuota,
@@ -215,14 +217,36 @@ export function oilPublicBaseUrl() {
   ).replace(/\/$/, "");
 }
 
-export function oilPublicHistoryUrl(phone: string) {
+export function oilShopLandingUrl(shopCode: string) {
+  return `${oilPublicBaseUrl()}/oilservice/shop/${encodeURIComponent(shopCode)}`;
+}
+
+export function oilPublicHistoryUrl(phone: string, shopCode?: string | null) {
+  if (shopCode) {
+    return `${oilShopLandingUrl(shopCode)}/${encodeURIComponent(phone)}`;
+  }
   return `${oilPublicBaseUrl()}/oilservice/${phone}`;
 }
 
-export function oilPublicHistory(phone: string) {
+export function oilPublicHistory(phone: string, shopCode?: string | null) {
+  if (shopCode) {
+    return oilFetch<OilPublicHistoryResponse>(
+      "GET",
+      `/api/oil/public/shop/${encodeURIComponent(shopCode)}/history/${encodeURIComponent(phone)}`,
+      { auth: false, redirectOn401: false },
+    );
+  }
   return oilFetch<OilPublicHistoryResponse>(
     "GET",
     `/api/oil/public/history/${encodeURIComponent(phone)}`,
+    { auth: false, redirectOn401: false },
+  );
+}
+
+export function oilPublicShop(shopCode: string) {
+  return oilFetch<OilPublicShop>(
+    "GET",
+    `/api/oil/public/shop/${encodeURIComponent(shopCode)}`,
     { auth: false, redirectOn401: false },
   );
 }
@@ -233,8 +257,13 @@ export function normalizeOilPublicHistory(
 ) {
   return {
     phone: res.phone || phone,
+    shop: res.shop,
     cars: Array.isArray(res.cars) ? res.cars : [],
   };
+}
+
+export function oilQrImageUrl(url: string, size = 280) {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=8&format=svg&data=${encodeURIComponent(url)}`;
 }
 
 export async function oilRefreshAuth() {
@@ -459,6 +488,16 @@ export async function oilListReminders(q?: string, page = 1, perPage = 30) {
   });
 }
 
+export async function oilListSmsLogs(q?: string, page = 1, perPage = 30) {
+  return oilFetch<OilShopSmsLogListResponse>("GET", "/api/oil/sms-logs", {
+    params: {
+      page,
+      per_page: perPage,
+      searchFilterModel: q ? JSON.stringify(q) : undefined,
+    },
+  });
+}
+
 export async function oilGetSmsQuota() {
   return oilFetch<OilSmsQuota>("GET", "/api/oil/sms-quota");
 }
@@ -653,6 +692,7 @@ export function idsFromOilVisitItems(items?: OilVisitItem[] | null) {
     air_filter_product_id: "" as number | "",
     oil_filter_product_id: "" as number | "",
     gearbox_oil_product_id: "" as number | "",
+    accessory_product_id: "" as number | "",
   };
   for (const item of items || []) {
     const id = oilVisitItemProductId(item);
@@ -662,6 +702,7 @@ export function idsFromOilVisitItems(items?: OilVisitItem[] | null) {
     if (kind === "gearbox_oil") next.gearbox_oil_product_id = id;
     if (kind === "air_filter") next.air_filter_product_id = id;
     if (kind === "oil_filter") next.oil_filter_product_id = id;
+    if (kind === "accessory") next.accessory_product_id = id;
   }
   return next;
 }

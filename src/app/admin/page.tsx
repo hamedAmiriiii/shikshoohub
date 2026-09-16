@@ -80,12 +80,7 @@ import { ADMIN_SIDEBAR_WIDTH } from '@/app/admin/AdminHamburgerSidebar';
 import CartQuantityControl from '@/app/admin/CartQuantityControl';
 import MultiCartToolbar, { MAX_MULTI_CARTS } from '@/app/admin/MultiCartToolbar';
 import PosSegmentButtons from '@/app/admin/PosSegmentButtons';
-import {
-  PosFullscreenExitHint,
-  PosFullscreenToggleButton,
-  usePosFullscreen,
-} from '@/app/admin/PosFullscreenControls';
-import { getPriceUnitLabel, getDefaultCartQuantity, getQuantityIncrement, normalizeQuantityValue } from '@/app/lib/productUnits';
+import { getPriceUnitLabel, getDefaultCartQuantity, getQuantityIncrement, normalizeQuantityValue, isKgProduct } from '@/app/lib/productUnits';
 import { createEmptyCartSlot, type CartSlotSnapshot } from '@/app/admin/multiCartState';
 import { publishAdminSaleCartSnapshot } from '@/app/admin/onboarding/adminSaleCartCheck';
 import CategoryIcon from '@mui/icons-material/Category';
@@ -195,13 +190,6 @@ export default function ShoppingPage() {
   const [discounttype, setDiscounttype] = useState(0);
   const [discountDisplay, setDiscountDisplay] = useState('');
   const [discountPercentDisplay, setDiscountPercentDisplay] = useState('');
-  const {
-    isFullscreen,
-    showExitHint,
-    setShowExitHint,
-    exitFullscreen,
-    toggleFullscreen,
-  } = usePosFullscreen();
   const [discountError, setDiscountError] = useState('');
   const [isDiscountFocused, setIsDiscountFocused] = useState(false);
   const [useCreditAmount, setUseCreditAmount] = useState(0);
@@ -2397,8 +2385,6 @@ export default function ShoppingPage() {
     saleDateEditEnabled,
     saleDate,
     onSaleDateChange: (d) => setSaleDate(d ?? todayJalaliDateObject()),
-    isFullscreen,
-    onToggleFullscreen: toggleFullscreen,
     submitLabel: editingPurchaseId ? "جایگزینی فاکتور" : undefined,
     cartTitle: editingPurchaseId ? `ویرایش #${editingPurchaseId}` : undefined,
     clearLabel: editingPurchaseId ? "لغو ویرایش" : undefined,
@@ -2428,8 +2414,6 @@ export default function ShoppingPage() {
     applyDiscountFromPercent,
     handlePaymentTypeChange,
     handleSettlementModeChange,
-    isFullscreen,
-    toggleFullscreen,
     paymentType,
     installmentCount,
     payableNow,
@@ -2470,7 +2454,7 @@ export default function ShoppingPage() {
 
   return (
     <Box sx={{ position: 'relative', minHeight: '100vh', direction: "rtl", background: "var(--admin-bg-gradient)" }}>
-      <Container maxWidth="xl" sx={{ padding: { xs: '12px', md: '24px' }, paddingBottom: { xs: '140px', md: '56px' } }}>
+      <Container maxWidth="xl" sx={{ padding: { xs: '6px 10px', md: '4px 24px 24px' }, paddingBottom: { xs: '140px', md: '56px' } }}>
 
         {editingPurchaseId ? (
           <Box
@@ -2640,7 +2624,7 @@ export default function ShoppingPage() {
             onOpenScanner={handleOpenModal}
           />
         ) : (
-        <Grid container spacing={3} sx={{ maxWidth: { md: "1400px" }, margin: { md: "0 auto" } }}>
+        <Grid container spacing={2} sx={{ maxWidth: { md: "1400px" }, margin: { md: "0 auto" } }}>
           {/* Cart Items */}
           <Grid item xs={12} md={(cart.length > 0 || cartCount > 1) ? 8 : 12}>
             {cart.length > 0 ? (
@@ -2724,7 +2708,7 @@ export default function ShoppingPage() {
                                 پیش‌فرض: {formatNumber(Number(item.default_sale_price))}
                               </Typography>
                             )}
-                            {kgSalesEnabled && (
+                            {kgSalesEnabled && isKgProduct(item) && (
                               <Typography sx={{ fontSize: "10px", color: "var(--admin-text-muted)" }}>
                                 {getPriceUnitLabel(item)}
                               </Typography>
@@ -2738,11 +2722,6 @@ export default function ShoppingPage() {
                             <Box sx={{ display: "flex", alignItems: "center", gap: "6px" }}>
                               <Typography sx={{ color: "var(--admin-accent)", fontSize: { xs: "12px", md: "16px" }, fontWeight: "600" }}>
                                 {formatNumber(Number(item.sale_price))} تومان
-                                {kgSalesEnabled && (
-                                  <Typography component="span" sx={{ fontSize: "10px", color: "var(--admin-text-muted)", mr: 0.5 }}>
-                                    {" "}({getPriceUnitLabel(item)})
-                                  </Typography>
-                                )}
                               </Typography>
                               <Typography sx={{ 
                                 color: "var(--admin-warning-strong)", 
@@ -2759,11 +2738,6 @@ export default function ShoppingPage() {
                         ) : (
                           <Typography sx={{ color: "var(--admin-accent)", fontWeight: "600", fontSize: { xs: "14px", md: "19px" } }}>
                             {formatNumber(Number(item.sale_price))} تومان
-                            {kgSalesEnabled && (
-                              <Typography component="span" sx={{ fontSize: "10px", color: "var(--admin-text-muted)", mr: 0.5 }}>
-                                {" "}({getPriceUnitLabel(item)})
-                              </Typography>
-                            )}
                           </Typography>
                         )}
                       </StyledTableCell>
@@ -3241,35 +3215,27 @@ export default function ShoppingPage() {
           {/* Total and Submit - Desktop Sidebar */}
           {(cart.length > 0 || cartCount > 1) && (
             <Grid item xs={12} md={4}>
-              <Box sx={{ position: { md: "sticky" }, top: { md: "24px" }, pb: { xs: 3, md: 2 } }}>
+              <Box sx={{ position: { md: "sticky" }, top: { md: "4px" }, pb: { xs: 2, md: 1.5 } }}>
                 {/* Phone Number Input */}
                 <Card sx={{ 
                   backgroundColor: "var(--admin-surface)", 
-                  borderRadius: { xs: "16px", md: "20px" },
-                  marginBottom: { xs: "16px", md: "24px" },
+                  borderRadius: { xs: "12px", md: "14px" },
+                  marginBottom: { xs: "10px", md: "12px" },
                   border: "1px solid var(--admin-border)",
                   transition: "all 0.3s ease",
                   "&:hover": {
                     border: "1px solid var(--admin-accent-border)",
-                    transform: "translateY(-2px)",
+                    transform: "translateY(-1px)",
                   }
                 }}>
-                  <CardContent sx={{ padding: { xs: "12px", md: "20px" }, display: "flex", flexDirection: "column", gap: 1.5 }}>
-                    <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <MultiCartToolbar
-                          cartCount={cartCount}
-                          activeIndex={activeCartIndex}
-                          onSwitch={switchCart}
-                          onAdd={addCartSlot}
-                          onClearOrRemove={clearMenuCart}
-                        />
-                      </Box>
-                      <PosFullscreenToggleButton
-                        isFullscreen={isFullscreen}
-                        onToggle={toggleFullscreen}
-                      />
-                    </Box>
+                  <CardContent sx={{ padding: { xs: "8px 8px 4px", md: "10px 12px 5px" }, display: "flex", flexDirection: "column", gap: 0.5 }}>
+                    <MultiCartToolbar
+                      cartCount={cartCount}
+                      activeIndex={activeCartIndex}
+                      onSwitch={switchCart}
+                      onAdd={addCartSlot}
+                      onClearOrRemove={clearMenuCart}
+                    />
                     <PhoneNumberInput
                       key={`phone-${activeCartIndex}`}
                       name="phone"
@@ -3293,8 +3259,8 @@ export default function ShoppingPage() {
                         },
                         "& .MuiInputBase-input": {
                           color: "var(--admin-text)",
-                          fontSize: { xs: "13px", md: "14px" },
-                          padding: { xs: "10px 12px", md: "12px 14px" },
+                          fontSize: { xs: "12px", md: "13px" },
+                          padding: { xs: "8px 10px", md: "10px 12px" },
                         },
                       }}
                     />
@@ -3325,22 +3291,20 @@ export default function ShoppingPage() {
                     {checkingCredit && (
                       <Typography sx={{ 
                         color: "var(--admin-text-muted)", 
-                        fontSize: { xs: "11px", md: "14px" }, 
-                        marginTop: { xs: "6px", md: "10px" } 
+                        fontSize: { xs: "10px", md: "12px" }, 
                       }}>
                         در حال بررسی اعتبار...
                       </Typography>
                     )}
                     {!checkingCredit && credit > 0 && (
                       <Box sx={{ 
-                        marginTop: { xs: "8px", md: "12px" }, 
-                        padding: { xs: "8px", md: "12px" }, 
+                        padding: { xs: "6px", md: "8px" }, 
                         backgroundColor: "var(--admin-surface-alt)", 
                         borderRadius: { xs: "6px", md: "8px" } 
                       }}>
                         <Typography sx={{ 
                           color: "var(--admin-accent)", 
-                          fontSize: { xs: "12px", md: "15px" }
+                          fontSize: { xs: "11px", md: "13px" }
                         }}>
                           اعتبار موجود: {formatNumber(credit)} تومان
                         </Typography>
@@ -3348,19 +3312,19 @@ export default function ShoppingPage() {
                     )}
                   </CardContent>
                   {paymentType !== 'installment' && (
-                    <CardContent sx={{ padding: { xs: "12px", md: "20px" }, paddingTop: 0 }}>
+                    <CardContent sx={{ padding: { xs: "4px 8px", md: "5px 12px" } }}>
                       <Box
                         sx={{
                           display: "flex",
                           alignItems: "center",
-                          gap: { xs: 1, md: 1.25 },
+                          gap: { xs: 0.75, md: 1 },
                           flexWrap: "nowrap",
                         }}
                       >
                         <Typography
                           sx={{
                             color: "var(--admin-text)",
-                            fontSize: { xs: "13px", md: "14px" },
+                            fontSize: { xs: "12px", md: "13px" },
                             fontWeight: 600,
                             flexShrink: 0,
                           }}
@@ -3387,8 +3351,8 @@ export default function ShoppingPage() {
                           inputMode="decimal"
                           error={!!discountError}
                           sx={{
-                            flex: "0 0 88px",
-                            width: 88,
+                            flex: "0 0 72px",
+                            width: 72,
                             "& .MuiOutlinedInput-root": {
                               backgroundColor: "var(--admin-surface-alt)",
                               color: "var(--admin-text)",
@@ -3398,8 +3362,8 @@ export default function ShoppingPage() {
                             },
                             "& .MuiInputBase-input": {
                               color: "var(--admin-text)",
-                              fontSize: { xs: "13px", md: "14px" },
-                              padding: { xs: "10px 12px", md: "12px 14px" },
+                              fontSize: { xs: "12px", md: "13px" },
+                              padding: { xs: "8px 10px", md: "10px 12px" },
                               textAlign: "center",
                               direction: "ltr",
                             },
@@ -3450,8 +3414,8 @@ export default function ShoppingPage() {
                             },
                             "& .MuiInputBase-input": {
                               color: "var(--admin-text)",
-                              fontSize: { xs: "13px", md: "14px" },
-                              padding: { xs: "10px 12px", md: "12px 14px" },
+                              fontSize: { xs: "12px", md: "13px" },
+                              padding: { xs: "8px 10px", md: "10px 12px" },
                               textAlign: "right",
                               direction: "ltr"
                             },
@@ -3461,28 +3425,20 @@ export default function ShoppingPage() {
                             },
                             "& .MuiFormHelperText-root": {
                               color: "var(--admin-error)",
-                              fontSize: { xs: "11px", md: "12px" },
-                              marginTop: "4px"
+                              fontSize: { xs: "10px", md: "11px" },
+                              marginTop: "2px"
                             }
                           }}
                         />
                       </Box>
                     </CardContent>
                   )}
-                  <CardContent sx={{ padding: { xs: "12px", md: "20px" }, paddingTop: 0 }}>
-                    <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 1.25, md: 1.5 } }}>
-                    <Box>
-                    <Typography sx={{ 
-                      color: "var(--admin-text)", 
-                      fontSize: { xs: "13px", md: "14px" },
-                      fontWeight: 600,
-                      mb: 0.75,
-                    }}>
-                      نوع پرداخت
-                    </Typography>
+                  <CardContent sx={{ padding: { xs: "4px 8px 8px", md: "5px 12px 10px" } }}>
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 0.65, md: 0.75 } }}>
                     <PosSegmentButtons
                       value={paymentType}
                       onChange={handlePaymentTypeChange}
+                      inlineLabel="نوع پرداخت"
                       options={[
                         { value: "cash", label: "نقدی" },
                         { value: "debt", label: "نسیه", show: debtPaymentEnabled },
@@ -3491,7 +3447,6 @@ export default function ShoppingPage() {
                         { value: "mixed", label: "ترکیبی" },
                       ]}
                     />
-                    </Box>
                     {paymentType === 'debt' && (
                       <Box sx={{ p: { xs: "8px", md: "12px" }, bgcolor: "var(--admin-surface-alt)", borderRadius: "8px" }}>
                         <Typography sx={{ color: "var(--admin-warning)", fontSize: { xs: "11px", md: "13px" } }}>
@@ -3506,30 +3461,26 @@ export default function ShoppingPage() {
                     )}
                     {paymentType === 'mixed' && (
                       <Box sx={{ p: { xs: "8px", md: "12px" }, bgcolor: "var(--admin-surface-alt)", borderRadius: "8px", border: "1px solid rgba(120, 181, 104, 0.25)" }}>
-                        <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "14px" }, fontWeight: 600, mb: 1 }}>
+                        {/* <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "12px", md: "14px" }, fontWeight: 600, mb: 1 }}>
                           پرداخت ترکیبی — نقد / کارت / چک / نسیه
-                        </Typography>
+                        </Typography> */}
                         <Typography sx={{ color: "var(--admin-text-muted)", fontSize: { xs: "11px", md: "13px" }, mb: 1 }}>
                           مبلغ فاکتور: {formatNumber(salePayableAmount)} تومان
                         </Typography>
-                        <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                        <Box sx={{ display: "flex", flexDirection: "row", gap: 1 }}>
                           <TextField
-                            label="نقد"
+                            placeholder="نقد"
                             value={cashAmountInput}
                             onChange={(e) => handleCashAmountChange(e.target.value)}
                             size="small"
-                            fullWidth
-                            InputLabelProps={{ sx: { color: "var(--admin-text-muted)" } }}
-                            sx={posFieldSx}
+                            sx={{ ...posFieldSx, flex: 1, minWidth: 0 }}
                           />
                           <TextField
-                            label="کارت"
+                            placeholder="کارت"
                             value={cardAmountInput}
                             onChange={(e) => handleCardAmountChange(e.target.value)}
                             size="small"
-                            fullWidth
-                            InputLabelProps={{ sx: { color: "var(--admin-text-muted)" } }}
-                            sx={posFieldSx}
+                            sx={{ ...posFieldSx, flex: 1, minWidth: 0 }}
                           />
                         </Box>
                         {chequePaymentEnabled && (
@@ -3666,20 +3617,11 @@ export default function ShoppingPage() {
                           </Typography>
                         )}
                         {selectedCheque && chequeRemainder > 0 && (
-                          <Box sx={{ mt: 1.5 }}>
-                            <Typography
-                              sx={{
-                                color: "var(--admin-text)",
-                                fontSize: { xs: "12px", md: "13px" },
-                                fontWeight: 600,
-                                mb: 0.75,
-                              }}
-                            >
-                              روش پرداخت باقی‌مانده ({formatNumber(chequeRemainder)} تومان)
-                            </Typography>
+                          <Box sx={{ mt: 1 }}>
                             <PosSegmentButtons
                               value={settlementMode}
                               onChange={handleSettlementModeChange}
+                              inlineLabel={`باقی‌مانده (${formatNumber(chequeRemainder)})`}
                               options={[
                                 { value: "card_all", label: "کارتخوان" },
                                 { value: "cash_all", label: "پول نقد" },
@@ -3687,24 +3629,20 @@ export default function ShoppingPage() {
                               ]}
                             />
                             {settlementMode === "split" && (
-                              <Box sx={{ mt: 1, display: "flex", flexDirection: "column", gap: 1 }}>
+                              <Box sx={{ mt: 0.75, display: "flex", flexDirection: "row", gap: 0.75 }}>
                                 <TextField
-                                  label="کارت خوان"
+                                  placeholder="کارت"
                                   value={cardAmountInput}
                                   onChange={(e) => handleCardAmountChange(e.target.value)}
                                   size="small"
-                                  fullWidth
-                                  InputLabelProps={{ sx: { color: "var(--admin-text-muted)" } }}
-                                  sx={posFieldSx}
+                                  sx={{ ...posFieldSx, flex: 1, minWidth: 0 }}
                                 />
                                 <TextField
-                                  label="نقدی"
+                                  placeholder="نقد"
                                   value={cashAmountInput}
                                   onChange={(e) => handleCashAmountChange(e.target.value)}
                                   size="small"
-                                  fullWidth
-                                  InputLabelProps={{ sx: { color: "var(--admin-text-muted)" } }}
-                                  sx={posFieldSx}
+                                  sx={{ ...posFieldSx, flex: 1, minWidth: 0 }}
                                 />
                               </Box>
                             )}
@@ -3856,25 +3794,16 @@ export default function ShoppingPage() {
                     {paymentType === 'cash' && payableNow > 0 && (
                       <Box
                         sx={{
-                          padding: { xs: "10px", md: "14px" },
+                          padding: { xs: "8px", md: "10px" },
                           backgroundColor: "var(--admin-surface-alt)",
                           borderRadius: { xs: "8px", md: "10px" },
                           border: "1px solid rgba(120, 181, 104, 0.25)",
                         }}
                       >
-                        <Typography
-                          sx={{
-                            color: "var(--admin-text)",
-                            fontSize: { xs: "12px", md: "14px" },
-                            fontWeight: 600,
-                            mb: 0.75,
-                          }}
-                        >
-                          روش پرداخت
-                        </Typography>
                         <PosSegmentButtons
                           value={settlementMode}
                           onChange={handleSettlementModeChange}
+                          inlineLabel="روش پرداخت"
                           options={[
                             { value: "card_all", label: "کارتخوان" },
                             { value: "cash_all", label: "پول نقد" },
@@ -3882,26 +3811,20 @@ export default function ShoppingPage() {
                           ]}
                         />
                         {settlementMode === "split" && (
-                          <Box sx={{ marginTop: { xs: "8px", md: "10px" }, display: "flex", flexDirection: "column", gap: { xs: "8px", md: "10px" } }}>
+                          <Box sx={{ marginTop: { xs: "6px", md: "8px" }, display: "flex", flexDirection: "row", gap: { xs: "6px", md: "8px" } }}>
                             <TextField
-                              label="کارت خوان"
-                              placeholder="کارت خوان"
+                              placeholder="کارت"
                               value={cardAmountInput}
                               onChange={(e) => handleCardAmountChange(e.target.value)}
                               size="small"
-                              fullWidth
-                              InputLabelProps={{ sx: { color: "var(--admin-text-muted)" } }}
-                              sx={posFieldSx}
+                              sx={{ ...posFieldSx, flex: 1, minWidth: 0 }}
                             />
                             <TextField
-                              label="نقدی"
-                              placeholder="نقدی"
+                              placeholder="نقد"
                               value={cashAmountInput}
                               onChange={(e) => handleCashAmountChange(e.target.value)}
                               size="small"
-                              fullWidth
-                              InputLabelProps={{ sx: { color: "var(--admin-text-muted)" } }}
-                              sx={posFieldSx}
+                              sx={{ ...posFieldSx, flex: 1, minWidth: 0 }}
                             />
                             {!paymentFieldsValid && (
                               <Typography sx={{ color: "var(--admin-error)", fontSize: { xs: "11px", md: "12px" } }}>
@@ -3925,32 +3848,33 @@ export default function ShoppingPage() {
 
                 <Card sx={{ 
                   background: "var(--admin-title-gradient)",
-                  borderRadius: { xs: "16px", md: "20px" },
-                  marginBottom: { xs: "16px", md: "24px" },
+                  borderRadius: { xs: "12px", md: "14px" },
+                  marginBottom: { xs: "10px", md: "12px" },
                   border: "1px solid var(--admin-accent-border)",
-                  transition: "all 0.3s ease",
-                  "&:hover": {
-                   transform: "translateY(-2px)",
-                  }
                 }}>
-                  <CardContent sx={{ padding: { xs: "12px", md: "20px" } }}>
+                  <CardContent sx={{ padding: { xs: "8px 10px", md: "10px 12px" }, "&:last-child": { pb: { xs: "8px", md: "10px" } } }}>
                     <Box sx={{ 
                       display: "flex", 
                       justifyContent: "space-between", 
                       alignItems: "center",
-                      gap: "12px",
-                      marginBottom: useCreditAmount > 0 ? { xs: "8px", md: "12px" } : 0
+                      gap: "8px",
+                      height: 30,
+                      minHeight: 30,
+                      maxHeight: 30,
+                      marginBottom: (useCreditAmount > 0 || backPrice > 0 || discounttype > 0) ? { xs: "6px", md: "8px" } : 0
                     }}>
                       <Typography sx={{ 
                         color: "var(--admin-stat-on-gradient)", 
-                        fontSize: { xs: "13px", md: "16px" }
+                        fontSize: { xs: "12px", md: "14px" },
+                        lineHeight: 1,
                       }}>
                         مجموع خرید:
                       </Typography>
                       <Typography sx={{ 
                         color: "var(--admin-stat-on-gradient)", 
-                        fontSize: { xs: "18px", md: "21px" }, 
-                        fontWeight: "700" 
+                        fontSize: { xs: "15px", md: "17px" }, 
+                        fontWeight: "700",
+                        lineHeight: 1,
                       }}>
                         {formatNumber(total)} تومان
                       </Typography>
@@ -4136,14 +4060,14 @@ export default function ShoppingPage() {
                   }
                   sx={{
                     color: "var(--admin-on-accent)",
-                    height: { xs: "48px", md: "60px" },
-                    borderRadius: { xs: "16px", md: "20px" },
-                    marginBottom: { xs: "24px", md: "12px" },
+                    height: { xs: "42px", md: "48px" },
+                    borderRadius: { xs: "12px", md: "14px" },
+                    marginBottom: { xs: "16px", md: "8px" },
                     background: total && !isSubmitting 
                       ? "linear-gradient(135deg, var(--admin-accent) 0%, var(--admin-accent-hover) 100%)" 
                       : "rgba(120, 181, 104, 0.2)",
                     fontWeight: "700",
-                    fontSize: { xs: "15px", md: "19px" },
+                    fontSize: { xs: "14px", md: "16px" },
                     transition: "all 0.3s ease",
                     "&:hover": {
                       color: "var(--admin-on-accent)",
@@ -4467,12 +4391,6 @@ export default function ShoppingPage() {
         </DialogActions>
       </Dialog>
 
-      <PosFullscreenExitHint
-        visible={isFullscreen}
-        showExitHint={showExitHint}
-        setShowExitHint={setShowExitHint}
-        onExit={exitFullscreen}
-      />
       <ToastContainer autoClose={3000} style={{ marginBottom: '76px', borderRadius: "15px" }} position={"bottom-right"} />
     </Box>
   );

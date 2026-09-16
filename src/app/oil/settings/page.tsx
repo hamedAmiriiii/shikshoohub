@@ -4,7 +4,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "react-toastify";
-import { isOilApiError, oilLogout, oilPatchShop } from "@/app/lib/oil/api";
+import {
+  isOilApiError,
+  oilLogout,
+  oilPatchShop,
+  oilQrImageUrl,
+  oilShopLandingUrl,
+} from "@/app/lib/oil/api";
 import { formatKm, toEnglishDigits } from "@/app/lib/oil/plate";
 import { useOilAuth } from "../OilAuth";
 import OilSmsQuotaCard from "../OilSmsQuotaCard";
@@ -17,9 +23,13 @@ export default function OilSettingsPage() {
     String(session?.shop?.oil_interval_km || 5000),
   );
   const [saving, setSaving] = useState(false);
+  const [copying, setCopying] = useState(false);
 
   const days = session?.shop_access?.shop_access_days_remaining;
   const active = session?.shop_access?.shop_access_active !== false;
+  const shopCode = session?.shop?.code || "";
+  const qrUrl = shopCode ? oilShopLandingUrl(shopCode) : "";
+  const qrImage = qrUrl ? oilQrImageUrl(qrUrl, 280) : "";
 
   useEffect(() => {
     if (!session) return;
@@ -54,6 +64,31 @@ export default function OilSettingsPage() {
     }
   };
 
+  const handleCopyLink = async () => {
+    if (!qrUrl) return;
+    setCopying(true);
+    try {
+      await navigator.clipboard.writeText(qrUrl);
+      toast.success("لینک کپی شد");
+    } catch {
+      toast.error("کپی لینک ممکن نشد");
+    } finally {
+      setCopying(false);
+    }
+  };
+
+  const handleDownloadQr = () => {
+    if (!qrImage || !shopCode) return;
+    const a = document.createElement("a");
+    a.href = qrImage;
+    a.download = `oil-qr-${shopCode}.svg`;
+    a.rel = "noopener";
+    a.target = "_blank";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
   const handleLogout = async () => {
     await oilLogout();
     logoutLocal();
@@ -72,6 +107,44 @@ export default function OilSettingsPage() {
       </Link>
 
       <OilSmsQuotaCard />
+
+      {shopCode ? (
+        <section className="oil-card" style={{ marginTop: 16 }}>
+          <h3 style={{ margin: "0 0 8px", fontSize: 16 }}>QR مشتری</h3>
+          <p className="oil-muted" style={{ marginTop: 0 }}>
+            این کد را چاپ کنید و در مغازه بزنید. مشتری با اسکن، شماره می‌دهد و سوابق تعویض را می‌بیند.
+          </p>
+          <div style={{ display: "flex", justifyContent: "center", margin: "12px 0" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={qrImage}
+              alt="QR سوابق مشتری"
+              width={220}
+              height={220}
+              style={{ background: "#fff", borderRadius: 12, padding: 10 }}
+            />
+          </div>
+          <p className="oil-muted" dir="ltr" style={{ wordBreak: "break-all", marginBottom: 12 }}>
+            {qrUrl}
+          </p>
+          <button
+            type="button"
+            className="oil-btn oil-btn-primary"
+            disabled={copying}
+            onClick={() => void handleCopyLink()}
+          >
+            {copying ? "در حال کپی…" : "کپی لینک"}
+          </button>
+          <button
+            type="button"
+            className="oil-btn oil-btn-ghost"
+            style={{ marginTop: 8 }}
+            onClick={handleDownloadQr}
+          >
+            دانلود QR
+          </button>
+        </section>
+      ) : null}
 
       <div className="oil-field">
         <label>نام مغازه</label>

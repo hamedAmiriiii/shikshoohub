@@ -151,25 +151,22 @@ export default function MultiCartToolbar({
               variant="outlined"
               onClick={onAdd}
               disabled={!canAdd}
-              startIcon={<AddIcon sx={{ fontSize: compact ? 14 : 16 }} />}
               aria-label="سبد جدید"
               sx={{
                 flexShrink: 0,
+                minWidth: tabHeight,
+                width: tabHeight,
                 minHeight: tabHeight,
-                px: compact ? 0.9 : 1.1,
+                px: 0,
                 borderRadius: "6px",
-                fontSize: compact ? "10px" : "11px",
+                fontSize: compact ? "14px" : "16px",
                 fontWeight: 700,
+                lineHeight: 1,
                 textTransform: "none",
-                whiteSpace: "nowrap",
                 borderColor: canAdd ? "var(--admin-accent)" : "var(--admin-border)",
                 color: canAdd ? "var(--admin-accent)" : "var(--admin-text-muted)",
                 bgcolor: "var(--admin-surface)",
                 boxShadow: "none",
-                "& .MuiButton-startIcon": {
-                  marginInlineEnd: 0.35,
-                  marginInlineStart: 0,
-                },
                 "&:hover": {
                   borderColor: "var(--admin-accent)",
                   bgcolor: "rgba(120, 181, 104, 0.1)",
@@ -181,7 +178,7 @@ export default function MultiCartToolbar({
                 },
               }}
             >
-              سبد جدید
+              +
             </Button>
             )}
           </span>

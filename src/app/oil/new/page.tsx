@@ -113,6 +113,7 @@ export default function OilNewVisitPage() {
   const [gearOilProductId, setGearOilProductId] = useState<number | "">("");
   const [airFilterProductId, setAirFilterProductId] = useState<number | "">("");
   const [oilFilterProductId, setOilFilterProductId] = useState<number | "">("");
+  const [accessoryProductId, setAccessoryProductId] = useState<number | "">("");
   const [lastItems, setLastItems] = useState<OilVisitItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [smsWarn, setSmsWarn] = useState<string | null>(null);
@@ -143,15 +144,22 @@ export default function OilNewVisitPage() {
     () => comboOptions(catalog, "oil_filter", lastItems),
     [catalog, lastItems],
   );
+  const accessoryOptions = useMemo(
+    () => comboOptions(catalog, "accessory", lastItems),
+    [catalog, lastItems],
+  );
 
   const saleTotal = useMemo(() => {
     return (
       productSaleAmount(findProduct(oilOptions, oilProductId)) +
       productSaleAmount(findProduct(gearOilOptions, gearOilProductId)) +
       productSaleAmount(findProduct(airFilterOptions, airFilterProductId)) +
-      productSaleAmount(findProduct(oilFilterOptions, oilFilterProductId))
+      productSaleAmount(findProduct(oilFilterOptions, oilFilterProductId)) +
+      productSaleAmount(findProduct(accessoryOptions, accessoryProductId))
     );
   }, [
+    accessoryOptions,
+    accessoryProductId,
     airFilterOptions,
     airFilterProductId,
     gearOilOptions,
@@ -204,6 +212,7 @@ export default function OilNewVisitPage() {
         setGearOilProductId("");
         setAirFilterProductId("");
         setOilFilterProductId("");
+        setAccessoryProductId("");
         setLastItems([]);
         return;
       }
@@ -223,6 +232,7 @@ export default function OilNewVisitPage() {
       setGearOilProductId(ids.gearbox_oil_product_id);
       setAirFilterProductId(ids.air_filter_product_id);
       setOilFilterProductId(ids.oil_filter_product_id);
+      setAccessoryProductId(ids.accessory_product_id);
     });
   }, [parts, plateOk]);
 
@@ -258,6 +268,7 @@ export default function OilNewVisitPage() {
         air_filter_product_id?: number;
         oil_filter_product_id?: number;
         gearbox_oil_product_id?: number;
+        accessory_product_id?: number;
       } = {
         ...partsPayload(parts),
         phone,
@@ -271,6 +282,7 @@ export default function OilNewVisitPage() {
       if (gearOilProductId !== "") body.gearbox_oil_product_id = gearOilProductId;
       if (airFilterProductId !== "") body.air_filter_product_id = airFilterProductId;
       if (oilFilterProductId !== "") body.oil_filter_product_id = oilFilterProductId;
+      if (accessoryProductId !== "") body.accessory_product_id = accessoryProductId;
       const submitted = await oilSubmitVisit(body);
       if (submitted.queued) {
         toast.info("تعویض در صف ماند؛ بعد از وصل شدن همان درخواست دوباره ارسال می‌شود.");
@@ -426,6 +438,22 @@ export default function OilNewVisitPage() {
         >
           <option value="">بدون محصول</option>
           {oilFilterOptions.map((product) => (
+            <option key={product.id} value={product.id}>
+              {productOptionLabel(product)}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="oil-field oil-field-row">
+        <label>جانبی</label>
+        <select
+          value={accessoryProductId}
+          onChange={(e) =>
+            setAccessoryProductId(e.target.value ? Number(e.target.value) : "")
+          }
+        >
+          <option value="">بدون محصول</option>
+          {accessoryOptions.map((product) => (
             <option key={product.id} value={product.id}>
               {productOptionLabel(product)}
             </option>

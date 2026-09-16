@@ -40,6 +40,7 @@ function productPlaceholder(kind: OilProductKind) {
   if (kind === "oil") return "مثلاً بهران ۱۰W۴۰";
   if (kind === "gearbox_oil") return "مثلاً بهران ATF";
   if (kind === "air_filter") return "مثلاً سرکان";
+  if (kind === "accessory") return "مثلاً شیشه شور";
   return "مثلاً فولکس";
 }
 

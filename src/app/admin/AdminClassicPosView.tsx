@@ -20,7 +20,6 @@ import AddIcon from "@mui/icons-material/Add";
 import PhoneNumberInput from "@/app/coponent/PhoneNumberInput/PhoneNumberInput";
 import type { PaymentType } from "@/app/lib/paymentTypes";
 import MultiCartToolbar from "@/app/admin/MultiCartToolbar";
-import { PosFullscreenToggleButton } from "@/app/admin/PosFullscreenControls";
 import PosSegmentButtons from "@/app/admin/PosSegmentButtons";
 import CartQuantityControl from "@/app/admin/CartQuantityControl";
 import { getPriceUnitLabel } from "@/app/lib/productUnits";
@@ -153,8 +152,6 @@ export default function AdminClassicPosView({
     saleDateEditEnabled = false,
     saleDate,
     onSaleDateChange,
-    isFullscreen = false,
-    onToggleFullscreen,
   } = cartPanel;
 
   const finalTotal = Math.max(0, total - useCreditAmount - discounttype - backPrice);
@@ -256,18 +253,18 @@ export default function AdminClassicPosView({
   const headCellSx = {
     color: "var(--admin-on-accent)",
     fontWeight: 700,
-    fontSize: "11px",
-    py: 0.6,
-    px: 0.75,
+    fontSize: "10px",
+    py: 0.4,
+    px: 0.5,
     borderBottom: "none",
     whiteSpace: "nowrap" as const,
   };
 
   const bodyCellSx = {
     color: "var(--admin-text)",
-    fontSize: "12px",
-    py: 0.45,
-    px: 0.75,
+    fontSize: "11px",
+    py: 0.3,
+    px: 0.5,
     borderBottom: panelBorder,
     verticalAlign: "middle" as const,
   };
@@ -293,38 +290,29 @@ export default function AdminClassicPosView({
           flexWrap: "wrap",
           alignItems: "center",
           justifyContent: "space-between",
-          gap: 1,
-          p: 1,
+          gap: 0.75,
+          p: 0.75,
           borderBottom: panelBorder,
           bgcolor: "var(--admin-surface-alt)",
           direction: "rtl",
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-          <MultiCartToolbar
-            compact
-            fullWidth={false}
-            cartCount={cartCount}
-            activeIndex={activeCartIndex}
-            onSwitch={onSwitchCart}
-            onAdd={onAddCart}
-            onClearOrRemove={onClearCart}
-          />
-          {onToggleFullscreen ? (
-            <PosFullscreenToggleButton
-              dense
-              isFullscreen={isFullscreen}
-              onToggle={onToggleFullscreen}
-            />
-          ) : null}
-        </Box>
+        <MultiCartToolbar
+          compact
+          fullWidth={false}
+          cartCount={cartCount}
+          activeIndex={activeCartIndex}
+          onSwitch={onSwitchCart}
+          onAdd={onAddCart}
+          onClearOrRemove={onClearCart}
+        />
 
         <Box
           sx={{
             display: "flex",
             flexWrap: "wrap",
             alignItems: "center",
-            gap: 1,
+            gap: 0.75,
             minWidth: 0,
           }}
         >
@@ -570,55 +558,55 @@ export default function AdminClassicPosView({
       >
         <Box
           sx={{
-            p: compact ? 0.75 : 1,
+            p: compact ? 0.5 : 0.75,
             borderLeft: compact ? "none" : { md: panelBorder },
             display: "flex",
             flexDirection: "column",
-            gap: 0.5,
+            gap: 0.35,
           }}
         >
           <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1, alignItems: "baseline" }}>
-            <Typography sx={{ fontSize: "13px", color: "var(--admin-text-muted)" }}>
+            <Typography sx={{ fontSize: "12px", color: "var(--admin-text-muted)" }}>
               جمع فاکتور
             </Typography>
-            <Typography sx={{ fontSize: "15px", fontWeight: 700, lineHeight: 1.2 }}>
+            <Typography sx={{ fontSize: "13px", fontWeight: 700, lineHeight: 1.2 }}>
               {formatNumber(total)}
             </Typography>
           </Box>
           {useCreditAmount > 0 && (
             <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1, alignItems: "baseline" }}>
-              <Typography sx={{ fontSize: "13px", color: "var(--admin-accent)" }}>
+              <Typography sx={{ fontSize: "12px", color: "var(--admin-accent)" }}>
                 اعتبار مصرفی
               </Typography>
-              <Typography sx={{ fontSize: "15px", fontWeight: 700, color: "var(--admin-accent)", lineHeight: 1.2 }}>
+              <Typography sx={{ fontSize: "13px", fontWeight: 700, color: "var(--admin-accent)", lineHeight: 1.2 }}>
                 {formatNumber(useCreditAmount)}
               </Typography>
             </Box>
           )}
           {backPrice > 0 && (
             <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1, alignItems: "baseline" }}>
-              <Typography sx={{ fontSize: "13px", color: "var(--admin-text-muted)" }}>
+              <Typography sx={{ fontSize: "12px", color: "var(--admin-text-muted)" }}>
                 مبلغ برگشتی
               </Typography>
-              <Typography sx={{ fontSize: "15px", fontWeight: 700, color: "var(--admin-error-soft)", lineHeight: 1.2 }}>
+              <Typography sx={{ fontSize: "13px", fontWeight: 700, color: "var(--admin-error-soft)", lineHeight: 1.2 }}>
                 -{formatNumber(backPrice)}
               </Typography>
             </Box>
           )}
           {discounttype > 0 && (
             <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1, alignItems: "baseline" }}>
-              <Typography sx={{ fontSize: "13px", color: "var(--admin-text-muted)" }}>
+              <Typography sx={{ fontSize: "12px", color: "var(--admin-text-muted)" }}>
                 تخفیف
               </Typography>
-              <Typography sx={{ fontSize: "15px", fontWeight: 700, lineHeight: 1.2 }}>
+              <Typography sx={{ fontSize: "13px", fontWeight: 700, lineHeight: 1.2 }}>
                 {formatNumber(discounttype)}
               </Typography>
             </Box>
           )}
           <Box
             sx={{
-              mt: 0.5,
-              pt: 0.5,
+              mt: 0.35,
+              pt: 0.35,
               borderTop: panelBorder,
               display: "flex",
               justifyContent: "space-between",
@@ -626,12 +614,12 @@ export default function AdminClassicPosView({
               gap: 1,
             }}
           >
-            <Typography sx={{ fontSize: "14px", fontWeight: 800 }}>
+            <Typography sx={{ fontSize: "12px", fontWeight: 800 }}>
               مبلغ نهایی
             </Typography>
             <Typography
               sx={{
-                fontSize: { xs: "22px", md: "24px" },
+                fontSize: { xs: "18px", md: "20px" },
                 fontWeight: 800,
                 color: "var(--admin-accent)",
                 lineHeight: 1.1,
@@ -642,10 +630,10 @@ export default function AdminClassicPosView({
           </Box>
           {payableNow > 0 && paymentType === "cash" && (
             <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1 }}>
-              <Typography sx={{ fontSize: "11px", color: "var(--admin-text-muted)" }}>
+              <Typography sx={{ fontSize: "10px", color: "var(--admin-text-muted)" }}>
                 پرداخت الان
               </Typography>
-              <Typography sx={{ fontSize: "12px", fontWeight: 600 }}>
+              <Typography sx={{ fontSize: "11px", fontWeight: 600 }}>
                 {formatNumber(payableNow)}
               </Typography>
             </Box>
@@ -654,22 +642,22 @@ export default function AdminClassicPosView({
 
         <Box
           sx={{
-            p: compact ? 0.75 : 1,
+            p: compact ? 0.5 : 0.75,
             borderTop: compact ? panelBorder : { xs: panelBorder, md: "none" },
             borderLeft: compact ? "none" : { md: panelBorder },
             display: "flex",
             flexDirection: "column",
-            gap: 0.75,
+            gap: 0.5,
           }}
         >
-          <Typography sx={{ fontSize: "11px", fontWeight: 700, color: "var(--admin-text-muted)" }}>
+          <Typography sx={{ fontSize: "10px", fontWeight: 700, color: "var(--admin-text-muted)" }}>
             نوع پرداخت
           </Typography>
           <Box
             sx={{
               display: "grid",
               gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-              gap: 0.5,
+              gap: 0.35,
             }}
           >
             {paymentButtons
@@ -680,9 +668,10 @@ export default function AdminClassicPosView({
                   size="small"
                   onClick={btn.onClick}
                   sx={{
-                    fontSize: "11px",
+                    fontSize: "10px",
                     fontWeight: 700,
-                    py: 0.75,
+                    py: 0.5,
+                    minHeight: 28,
                     borderRadius: "4px",
                     border: btn.active
                       ? "1px solid var(--admin-accent)"
