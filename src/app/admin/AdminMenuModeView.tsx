@@ -78,6 +78,197 @@ type AdminMenuModeViewProps = {
 
 type MenuDialogMode = "stock" | "price" | "notify";
 
+type MenuEditDialogState = {
+  mode: MenuDialogMode;
+  product: CachedProduct;
+  initialValue: string;
+};
+
+function MenuModeEditDialog({
+  state,
+  onClose,
+  onProductUpdated,
+}: {
+  state: MenuEditDialogState | null;
+  onClose: () => void;
+  onProductUpdated?: (product: CachedProduct) => void;
+}) {
+  const [value, setValue] = useState("");
+  const [saving, setSaving] = useState(false);
+  const open = Boolean(state);
+  const mode = state?.mode ?? null;
+  const product = state?.product ?? null;
+
+  useEffect(() => {
+    if (state) setValue(state.initialValue);
+    else setValue("");
+  }, [state]);
+
+  const submitNotify = async () => {
+    if (!product) return;
+    const phone = value.trim();
+    if (!/^09\d{9}$/.test(phone)) {
+      toast.error("شماره باید با ۰۹ شروع شود و ۱۱ رقم باشد");
+      return;
+    }
+    const productId = menuProductNumericId(product);
+    if (!productId) {
+      toast.error("این کالا از اینجا قابل ثبت اعلان نیست");
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await FetchWithJwtClient("POST", "/api/product-stock-notify", {
+        product_id: productId,
+        phone,
+      });
+      if (!res || res.hasError) {
+        toast.error(getApiErrorMessage(res, "ثبت اعلان ناموفق بود"));
+        return;
+      }
+      toast.success(
+        typeof (res as { message?: string }).message === "string"
+          ? (res as { message: string }).message
+          : "درخواست ثبت شد",
+      );
+      onClose();
+    } catch {
+      toast.error("خطا در ثبت اعلان");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const submit = async () => {
+    if (!product || !mode) return;
+    if (mode === "notify") {
+      await submitNotify();
+      return;
+    }
+    setSaving(true);
+    try {
+      if (mode === "stock") {
+        const qty = parseAmountInput(value);
+        if (!Number.isFinite(qty) || qty < 0) {
+          toast.error("موجودی معتبر نیست");
+          return;
+        }
+        const nextQty = isKgProduct(product) ? qty : Math.floor(qty);
+        const res = await updateMenuProductFields(product, { quantity: nextQty });
+        if (res.ok === false) {
+          toast.error(res.message);
+          return;
+        }
+        onProductUpdated?.(res.product);
+        toast.success("موجودی به‌روز شد");
+        onClose();
+        return;
+      }
+      const price = Math.floor(parseAmountInput(value));
+      if (!Number.isFinite(price) || price < 0) {
+        toast.error("قیمت معتبر نیست");
+        return;
+      }
+      const res = await updateMenuProductFields(product, { sale_price: price });
+      if (res.ok === false) {
+        toast.error(res.message);
+        return;
+      }
+      onProductUpdated?.(res.product);
+      toast.success("قیمت به‌روز شد");
+      onClose();
+    } catch {
+      toast.error("خطا در ویرایش کالا");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog
+      disableScrollLock
+      open={open}
+      onClose={() => {
+        if (saving) return;
+        onClose();
+      }}
+      fullWidth
+      maxWidth="xs"
+      PaperProps={{
+        sx: {
+          bgcolor: "var(--admin-surface)",
+          color: "var(--admin-text)",
+          borderRadius: "16px",
+          direction: "rtl",
+        },
+      }}
+    >
+      <DialogTitle sx={{ fontSize: 16 }}>
+        {mode === "price"
+          ? "تغییر قیمت"
+          : mode === "notify"
+            ? "موجود شد اطلاع بده"
+            : "افزایش موجودی"}
+      </DialogTitle>
+      <DialogContent>
+        <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, mb: 1.5 }}>
+          {product?.name || ""}
+        </Typography>
+        <TextField
+          autoFocus
+          fullWidth
+          label={
+            mode === "price"
+              ? "قیمت فروش جدید (تومان)"
+              : mode === "notify"
+                ? "شماره موبایل مشتری"
+                : "موجودی جدید"
+          }
+          value={value}
+          onChange={(e) =>
+            setValue(mode === "price" ? formatAmountInput(e.target.value) : e.target.value)
+          }
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              void submit();
+            }
+          }}
+          inputMode={mode === "notify" ? "tel" : "decimal"}
+          inputProps={
+            mode === "notify"
+              ? { style: { direction: "ltr", textAlign: "left" }, placeholder: "09xxxxxxxxx" }
+              : undefined
+          }
+          InputLabelProps={{ sx: { color: "var(--admin-text-muted)" } }}
+          sx={{
+            mt: 0.5,
+            "& .MuiOutlinedInput-root": {
+              color: "var(--admin-text)",
+              "& fieldset": { borderColor: "var(--admin-border)" },
+              "&:hover fieldset": { borderColor: "var(--admin-accent)" },
+              "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
+            },
+          }}
+        />
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button onClick={onClose} disabled={saving} sx={{ color: "var(--admin-text)" }}>
+          انصراف
+        </Button>
+        <Button
+          variant="contained"
+          onClick={() => void submit()}
+          disabled={saving}
+          startIcon={saving ? <CircularProgress size={16} color="inherit" /> : undefined}
+        >
+          {mode === "notify" ? "ثبت اعلان" : "ذخیره"}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
 export default function AdminMenuModeView({
   products,
   onAddProduct,
@@ -91,10 +282,8 @@ export default function AdminMenuModeView({
   const [showProductImages, setShowProductImages] = useState(true);
   const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
   const [menuProduct, setMenuProduct] = useState<CachedProduct | null>(null);
-  const [dialogMode, setDialogMode] = useState<MenuDialogMode | null>(null);
-  const [dialogProduct, setDialogProduct] = useState<CachedProduct | null>(null);
-  const [dialogValue, setDialogValue] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [editDialog, setEditDialog] = useState<MenuEditDialogState | null>(null);
+  const [menuBusy, setMenuBusy] = useState(false);
   const suppressClickRef = useRef(false);
   const longPressRef = useRef<number | null>(null);
 
@@ -135,7 +324,7 @@ export default function AdminMenuModeView({
     patch: { quantity?: number; sale_price?: number },
     successMessage: string,
   ) => {
-    setSaving(true);
+    setMenuBusy(true);
     try {
       const res = await updateMenuProductFields(product, patch);
       if (res.ok === false) {
@@ -149,7 +338,7 @@ export default function AdminMenuModeView({
       toast.error("خطا در ویرایش کالا");
       return false;
     } finally {
-      setSaving(false);
+      setMenuBusy(false);
     }
   };
 
@@ -162,104 +351,33 @@ export default function AdminMenuModeView({
 
   const openStockDialog = () => {
     if (!menuProduct) return;
-    setDialogProduct(menuProduct);
-    setDialogValue(String(Number(menuProduct.quantity) || 0));
-    setDialogMode("stock");
+    setEditDialog({
+      mode: "stock",
+      product: menuProduct,
+      initialValue: String(Number(menuProduct.quantity) || 0),
+    });
     closeContextMenu();
   };
 
   const openPriceDialog = () => {
     if (!menuProduct) return;
     const { salePrice } = getCachedProductDiscount(menuProduct);
-    setDialogProduct(menuProduct);
-    setDialogValue(formatAmountInput(String(salePrice)));
-    setDialogMode("price");
+    setEditDialog({
+      mode: "price",
+      product: menuProduct,
+      initialValue: formatAmountInput(String(salePrice)),
+    });
     closeContextMenu();
   };
 
   const openNotifyDialog = () => {
     if (!menuProduct) return;
-    setDialogProduct(menuProduct);
-    setDialogValue("");
-    setDialogMode("notify");
+    setEditDialog({
+      mode: "notify",
+      product: menuProduct,
+      initialValue: "",
+    });
     closeContextMenu();
-  };
-
-  const submitNotifyDialog = async () => {
-    if (!dialogProduct) return;
-    const phone = dialogValue.trim();
-    if (!/^09\d{9}$/.test(phone)) {
-      toast.error("شماره باید با ۰۹ شروع شود و ۱۱ رقم باشد");
-      return;
-    }
-    const productId = menuProductNumericId(dialogProduct);
-    if (!productId) {
-      toast.error("این کالا از اینجا قابل ثبت اعلان نیست");
-      return;
-    }
-    setSaving(true);
-    try {
-      const res = await FetchWithJwtClient("POST", "/api/product-stock-notify", {
-        product_id: productId,
-        phone,
-      });
-      if (!res || res.hasError) {
-        toast.error(getApiErrorMessage(res, "ثبت اعلان ناموفق بود"));
-        return;
-      }
-      toast.success(
-        typeof (res as { message?: string }).message === "string"
-          ? (res as { message: string }).message
-          : "درخواست ثبت شد",
-      );
-      setDialogMode(null);
-      setDialogProduct(null);
-      setMenuProduct(null);
-    } catch {
-      toast.error("خطا در ثبت اعلان");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const submitDialog = async () => {
-    if (!dialogProduct || !dialogMode) return;
-    if (dialogMode === "notify") {
-      await submitNotifyDialog();
-      return;
-    }
-    if (dialogMode === "stock") {
-      const qty = parseAmountInput(dialogValue);
-      if (!Number.isFinite(qty) || qty < 0) {
-        toast.error("موجودی معتبر نیست");
-        return;
-      }
-      const nextQty = isKgProduct(dialogProduct) ? qty : Math.floor(qty);
-      const ok = await applyProductUpdate(
-        dialogProduct,
-        { quantity: nextQty },
-        "موجودی به‌روز شد",
-      );
-      if (ok) {
-        setDialogMode(null);
-        setDialogProduct(null);
-      }
-      return;
-    }
-    const price = Math.floor(parseAmountInput(dialogValue));
-    if (!Number.isFinite(price) || price < 0) {
-      toast.error("قیمت معتبر نیست");
-      return;
-    }
-    const ok = await applyProductUpdate(
-      dialogProduct,
-      { sale_price: price },
-      "قیمت به‌روز شد",
-    );
-    if (ok) {
-      setDialogMode(null);
-      setDialogProduct(null);
-    }
   };
 
   const contextUi = (
@@ -286,26 +404,26 @@ export default function AdminMenuModeView({
           },
         }}
       >
-        <MenuItem onClick={() => void handleOutOfStock()} disabled={saving} sx={{ fontSize: 13 }}>
+        <MenuItem onClick={() => void handleOutOfStock()} disabled={menuBusy} sx={{ fontSize: 13 }}>
           <ListItemIcon sx={{ minWidth: 32 }}>
             <BlockIcon fontSize="small" sx={{ color: "var(--admin-error-soft)" }} />
           </ListItemIcon>
           <ListItemText primary="اتمام موجودی" />
         </MenuItem>
-        <MenuItem onClick={openStockDialog} disabled={saving} sx={{ fontSize: 13 }}>
+        <MenuItem onClick={openStockDialog} disabled={menuBusy} sx={{ fontSize: 13 }}>
           <ListItemIcon sx={{ minWidth: 32 }}>
             <AddBoxOutlinedIcon fontSize="small" sx={{ color: "var(--admin-accent)" }} />
           </ListItemIcon>
           <ListItemText primary="افزایش موجودی" />
         </MenuItem>
-        <MenuItem onClick={openPriceDialog} disabled={saving} sx={{ fontSize: 13 }}>
+        <MenuItem onClick={openPriceDialog} disabled={menuBusy} sx={{ fontSize: 13 }}>
           <ListItemIcon sx={{ minWidth: 32 }}>
             <SellOutlinedIcon fontSize="small" sx={{ color: "var(--admin-accent)" }} />
           </ListItemIcon>
           <ListItemText primary="تغییر قیمت" />
         </MenuItem>
         {menuProduct && isCatalogItemOutOfStock(menuProduct) && !isProducedGoodItem(menuProduct) ? (
-          <MenuItem onClick={openNotifyDialog} disabled={saving} sx={{ fontSize: 13 }}>
+          <MenuItem onClick={openNotifyDialog} disabled={menuBusy} sx={{ fontSize: 13 }}>
             <ListItemIcon sx={{ minWidth: 32 }}>
               <NotificationsActiveOutlinedIcon fontSize="small" sx={{ color: "var(--admin-accent)" }} />
             </ListItemIcon>
@@ -313,99 +431,14 @@ export default function AdminMenuModeView({
           </MenuItem>
         ) : null}
       </Menu>
-      <Dialog
-        disableScrollLock
-        open={Boolean(dialogMode)}
+      <MenuModeEditDialog
+        state={editDialog}
         onClose={() => {
-          if (saving) return;
-          setDialogMode(null);
-          setDialogProduct(null);
+          setEditDialog(null);
+          setMenuProduct(null);
         }}
-        fullWidth
-        maxWidth="xs"
-        PaperProps={{
-          sx: {
-            bgcolor: "var(--admin-surface)",
-            color: "var(--admin-text)",
-            borderRadius: "16px",
-            direction: "rtl",
-          },
-        }}
-      >
-        <DialogTitle sx={{ fontSize: 16 }}>
-          {dialogMode === "price"
-            ? "تغییر قیمت"
-            : dialogMode === "notify"
-              ? "موجود شد اطلاع بده"
-              : "افزایش موجودی"}
-        </DialogTitle>
-        <DialogContent>
-          <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, mb: 1.5 }}>
-            {dialogProduct?.name || ""}
-          </Typography>
-          <TextField
-            autoFocus
-            fullWidth
-            label={
-              dialogMode === "price"
-                ? "قیمت فروش جدید (تومان)"
-                : dialogMode === "notify"
-                  ? "شماره موبایل مشتری"
-                  : "موجودی جدید"
-            }
-            value={dialogValue}
-            onChange={(e) =>
-              setDialogValue(
-                dialogMode === "price"
-                  ? formatAmountInput(e.target.value)
-                  : e.target.value,
-              )
-            }
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                void submitDialog();
-              }
-            }}
-            inputMode={dialogMode === "notify" ? "tel" : "decimal"}
-            inputProps={
-              dialogMode === "notify"
-                ? { style: { direction: "ltr", textAlign: "left" }, placeholder: "09xxxxxxxxx" }
-                : undefined
-            }
-            InputLabelProps={{ sx: { color: "var(--admin-text-muted)" } }}
-            sx={{
-              mt: 0.5,
-              "& .MuiOutlinedInput-root": {
-                color: "var(--admin-text)",
-                "& fieldset": { borderColor: "var(--admin-border)" },
-                "&:hover fieldset": { borderColor: "var(--admin-accent)" },
-                "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
-              },
-            }}
-          />
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button
-            onClick={() => {
-              setDialogMode(null);
-              setDialogProduct(null);
-            }}
-            disabled={saving}
-            sx={{ color: "var(--admin-text)" }}
-          >
-            انصراف
-          </Button>
-          <Button
-            variant="contained"
-            onClick={() => void submitDialog()}
-            disabled={saving}
-            startIcon={saving ? <CircularProgress size={16} color="inherit" /> : undefined}
-          >
-            {dialogMode === "notify" ? "ثبت اعلان" : "ذخیره"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onProductUpdated={onProductUpdated}
+      />
     </>
   );
 

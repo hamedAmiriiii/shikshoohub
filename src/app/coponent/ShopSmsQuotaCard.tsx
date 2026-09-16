@@ -19,6 +19,8 @@ interface ShopSmsQuotaCardProps {
   estimateMessage?: string;
   estimateRecipientCount?: number;
   compact?: boolean;
+  /** بدون درخواست شبکه؛ فقط محاسبه محلی (برای تیک سریع گیرندگان) */
+  preferLocalEstimate?: boolean;
 }
 
 function pickQuotaValue(res: Record<string, unknown> | null): number {
@@ -42,6 +44,7 @@ export default function ShopSmsQuotaCard({
   estimateMessage = "",
   estimateRecipientCount = 0,
   compact = false,
+  preferLocalEstimate = false,
 }: ShopSmsQuotaCardProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -93,6 +96,10 @@ export default function ShopSmsQuotaCard({
   );
 
   useEffect(() => {
+    if (preferLocalEstimate) {
+      setServerEstimate(null);
+      return;
+    }
     const runEstimate = async () => {
       if (!estimateMessage.trim() || estimateRecipientCount <= 0) {
         setServerEstimate(null);
@@ -118,7 +125,7 @@ export default function ShopSmsQuotaCard({
     };
     const t = setTimeout(runEstimate, 400);
     return () => clearTimeout(t);
-  }, [estimateMessage, estimateRecipientCount, localTotalUnits]);
+  }, [estimateMessage, estimateRecipientCount, localTotalUnits, preferLocalEstimate]);
 
   const neededUnits = serverEstimate ?? localTotalUnits;
   const enough = quota >= neededUnits || neededUnits === 0;

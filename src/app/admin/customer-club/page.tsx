@@ -4,28 +4,37 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Box,
   Button,
-  Card,
-  CardContent,
   CircularProgress,
   Grid,
   TextField,
   Typography,
 } from "@mui/material";
 import Link from "next/link";
-import PeopleIcon from "@mui/icons-material/People";
-import SmsIcon from "@mui/icons-material/Sms";
+import PeopleOutlineIcon from "@mui/icons-material/PeopleOutline";
+import SmsOutlinedIcon from "@mui/icons-material/SmsOutlined";
 import ShoppingCartCheckoutIcon from "@mui/icons-material/ShoppingCartCheckout";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
-import ShareIcon from "@mui/icons-material/Share";
-import CardMembershipIcon from "@mui/icons-material/CardMembership";
+import ShareOutlinedIcon from "@mui/icons-material/ShareOutlined";
+import CardMembershipOutlinedIcon from "@mui/icons-material/CardMembershipOutlined";
 import PersonAddAltIcon from "@mui/icons-material/PersonAddAlt";
+import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
+import HistoryToggleOffOutlinedIcon from "@mui/icons-material/HistoryToggleOffOutlined";
+import LocalFireDepartmentOutlinedIcon from "@mui/icons-material/LocalFireDepartmentOutlined";
+import ArrowBackIosNewRoundedIcon from "@mui/icons-material/ArrowBackIosNewRounded";
+import DatePicker from "react-multi-date-picker";
+import DateObject from "react-date-object";
+import persian from "react-date-object/calendars/persian";
+import persian_fa from "react-date-object/locales/persian_fa";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import tokenCode from "@/app/coponent/tokenCode";
 import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
 import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
-import CustomersList from "@/app/admin/customers/CustomersList";
-import { formatBeneficiaryAmount, parseAsBeneficiary } from "@/app/lib/beneficiaries";
+import { gregorianApiDateFromDateObject } from "@/app/lib/shopAccess";
+import {
+  CHEQUE_DATE_PICKER_Z,
+  chequeDatePickerBoxSx,
+} from "@/app/admin/cheques/ChequeFormSheet";
 import { adminButtonStartIconSx, adminPageSx } from "@/app/admin/theme/adminTheme";
 import { useShopPermissionGate } from "@/app/lib/shopPermissions";
 
@@ -44,11 +53,23 @@ type BestSeller = {
   image?: string | null;
 };
 
+const noShadow = { boxShadow: "none" } as const;
+
+const panelSx = {
+  ...noShadow,
+  bgcolor: "var(--admin-surface)",
+  border: "1px solid var(--admin-border)",
+  borderRadius: "18px",
+  transition: "border-color 160ms ease, background-color 160ms ease, transform 160ms ease",
+};
+
 const fieldSx = {
   "& .MuiOutlinedInput-root": {
-    backgroundColor: "var(--admin-surface)",
+    backgroundColor: "var(--admin-surface-alt)",
     color: "var(--admin-text)",
     fontSize: "14px",
+    borderRadius: "12px",
+    ...noShadow,
     "& fieldset": { borderColor: "var(--admin-border)" },
     "&:hover fieldset": { borderColor: "var(--admin-accent)" },
     "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
@@ -61,31 +82,55 @@ const formatNumber = (num: number | string) => {
   return new Intl.NumberFormat("fa-IR").format(n);
 };
 
-const formatDate = (dateString: string) => {
-  if (!dateString) return "بدون تاریخ";
-  try {
-    const date = new Date(dateString.replace(" ", "T"));
-    if (Number.isNaN(date.getTime())) return dateString;
-    return new Intl.DateTimeFormat("fa-IR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date);
-  } catch {
-    return dateString;
-  }
-};
-
 const QUICK_LINKS = [
-  { href: "/admin/customers", label: "لیست خریداران", icon: <PeopleIcon />, permission: "customers" as const },
-  { href: "/admin/broadcast-sms", label: "ارسال پیامک", icon: <SmsIcon />, permission: "shop_sms" as const },
-  { href: "/admin/shop-sms-logs", label: "پیامک‌های فروشگاه", icon: <SmsIcon />, permission: "shop_sms" as const },
-  { href: "/admin/sms-packages", label: "خرید بسته پیامک", icon: <ShoppingCartCheckoutIcon />, permission: "shop_sms" as const },
-  { href: "/admin/best-selling", label: "محصولات پرفروش", icon: <TrendingUpIcon />, permission: "products" as const },
-  { href: "/admin/referral", label: "پنل معرفی", icon: <ShareIcon />, permission: "referral" as const },
-  { href: "/admin/shop-plans", label: "تمدید اشتراک", icon: <CardMembershipIcon /> },
+  {
+    href: "/admin/customers",
+    label: "لیست خریداران",
+    hint: "مشاهده و جستجو",
+    icon: <PeopleOutlineIcon />,
+    permission: "customers" as const,
+  },
+  {
+    href: "/admin/broadcast-sms",
+    label: "ارسال پیامک",
+    hint: "گروه و پیام گروهی",
+    icon: <SmsOutlinedIcon />,
+    permission: "shop_sms" as const,
+  },
+  {
+    href: "/admin/shop-sms-logs",
+    label: "پیامک‌های فروشگاه",
+    hint: "سوابق ارسال",
+    icon: <SmsOutlinedIcon />,
+    permission: "shop_sms" as const,
+  },
+  {
+    href: "/admin/sms-packages",
+    label: "خرید بسته پیامک",
+    hint: "افزایش اعتبار",
+    icon: <ShoppingCartCheckoutIcon />,
+    permission: "shop_sms" as const,
+  },
+  {
+    href: "/admin/best-selling",
+    label: "محصولات پرفروش",
+    hint: "گزارش کامل",
+    icon: <TrendingUpIcon />,
+    permission: "products" as const,
+  },
+  {
+    href: "/admin/referral",
+    label: "پنل معرفی",
+    hint: "لینک دعوت",
+    icon: <ShareOutlinedIcon />,
+    permission: "referral" as const,
+  },
+  {
+    href: "/admin/shop-plans",
+    label: "تمدید اشتراک",
+    hint: "پلن فروشگاه",
+    icon: <CardMembershipOutlinedIcon />,
+  },
 ];
 
 export default function CustomerClubPage() {
@@ -99,9 +144,8 @@ export default function CustomerClubPage() {
   const [bestSelling, setBestSelling] = useState<BestSeller[]>([]);
   const [regPhone, setRegPhone] = useState("");
   const [regName, setRegName] = useState("");
-  const [regBirth, setRegBirth] = useState("");
+  const [regBirth, setRegBirth] = useState<DateObject | null>(null);
   const [registering, setRegistering] = useState(false);
-  const [listKey, setListKey] = useState(0);
 
   const loadDashboard = useCallback(async () => {
     try {
@@ -157,7 +201,8 @@ export default function CustomerClubPage() {
         phone,
         name: regName.trim(),
       };
-      if (regBirth.trim()) body.birth_date = regBirth.trim();
+      const birthYmd = gregorianApiDateFromDateObject(regBirth);
+      if (birthYmd) body.birth_date = birthYmd;
       const res = await FetchWithJwtClient("POST", "/api/customers/register", body);
       if (!res || res.hasError) {
         toast.error(getApiErrorMessage(res, "ثبت مشتری ناموفق بود"));
@@ -170,8 +215,7 @@ export default function CustomerClubPage() {
       );
       setRegPhone("");
       setRegName("");
-      setRegBirth("");
-      setListKey((k) => k + 1);
+      setRegBirth(null);
       void loadDashboard();
     } catch {
       toast.error("خطا در ثبت مشتری");
@@ -180,186 +224,439 @@ export default function CustomerClubPage() {
     }
   };
 
-  const searchBoxList = [
-    { fieldName: "phone", fieldOperation: "MATCH" as const, fieldValue: "", nextConditionOperator: "OR" as const },
-    { fieldName: "name", fieldOperation: "MATCH" as const, fieldValue: "", nextConditionOperator: "OR" as const },
-  ];
-
-  const desktopColumns = [
+  const statItems = [
     {
-      label: "نام",
-      field: (item: { name?: string | null }) => item?.name?.trim() || "—",
+      key: "inactive",
+      label: "بدون خرید ۳۰ روز اخیر",
+      value: stats.inactive_30d,
+      icon: <HistoryToggleOffOutlinedIcon sx={{ fontSize: 22 }} />,
+      tone: "warn" as const,
     },
     {
-      label: "شماره تلفن",
-      field: (item: { phone?: string }) => item?.phone || "بدون شماره",
+      key: "frequent",
+      label: "بیش از ۳ خرید در ۳۰ روز",
+      value: stats.frequent_30d,
+      icon: <LocalFireDepartmentOutlinedIcon sx={{ fontSize: 22 }} />,
+      tone: "hot" as const,
     },
     {
-      label: "تعداد کل خریدها",
-      field: (item: { total_purchases?: number }) =>
-        item?.total_purchases ? `${formatNumber(item.total_purchases)} عدد` : "۰ عدد",
-    },
-    {
-      label: "مجموع مبلغ خرید",
-      field: (item: { total_spent?: number }) =>
-        item?.total_spent ? `${formatNumber(item.total_spent)} تومان` : "۰ تومان",
-    },
-    {
-      label: "تاریخ آخرین خرید",
-      field: (item: { last_purchase_date?: string }) =>
-        item?.last_purchase_date ? formatDate(item.last_purchase_date) : "بدون تاریخ",
-    },
-    {
-      label: "اعتبار فعلی",
-      field: (item: { current_credit?: number }) =>
-        item?.current_credit ? `${formatNumber(item.current_credit)} تومان` : "۰ تومان",
-    },
-    {
-      label: "خرید از او (ذینفع)",
-      field: (item: unknown) => {
-        const asBeneficiary = parseAsBeneficiary(item);
-        if (!asBeneficiary) return "—";
-        return `خرید ${formatBeneficiaryAmount(asBeneficiary.purchased_total)} / بدهی ${formatBeneficiaryAmount(asBeneficiary.unpaid_total)}`;
-      },
+      key: "members",
+      label: "اعضای باشگاه",
+      value: stats.club_members,
+      icon: <GroupsOutlinedIcon sx={{ fontSize: 22 }} />,
+      tone: "ok" as const,
     },
   ];
 
   return (
-    <Box sx={{ ...adminPageSx, p: 2, pb: 12 }}>
-      <Typography sx={{ fontSize: 20, fontWeight: 800, mb: 0.5, color: "var(--admin-text)" }}>
-        باشگاه مشتریان
-      </Typography>
-      <Typography sx={{ fontSize: 13, color: "var(--admin-text-muted)", mb: 2 }}>
-        آمار خرید، ثبت مشتری، پیامک و لیست خریداران در یک صفحه
-      </Typography>
+    <Box
+      sx={{
+        ...adminPageSx,
+        p: { xs: 1.5, md: 2.5 },
+        pb: 12,
+        position: "relative",
+        overflow: "hidden",
+        "& *": { boxShadow: "none !important" },
+      }}
+    >
+      <Box
+        aria-hidden
+        sx={{
+          pointerEvents: "none",
+          position: "absolute",
+          inset: 0,
+          background: `
+            radial-gradient(ellipse 70% 45% at 100% 0%, color-mix(in srgb, var(--admin-accent) 22%, transparent), transparent 60%),
+            radial-gradient(ellipse 55% 40% at 0% 20%, color-mix(in srgb, var(--admin-accent) 12%, transparent), transparent 55%),
+            linear-gradient(180deg, transparent 0%, transparent 70%, color-mix(in srgb, var(--admin-surface-alt) 35%, transparent) 100%)
+          `,
+          opacity: 1,
+        }}
+      />
 
-      {loading ? (
-        <Box sx={{ py: 4, display: "flex", justifyContent: "center" }}>
-          <CircularProgress size={28} sx={{ color: "var(--admin-accent)" }} />
+      <Box sx={{ position: "relative", maxWidth: 1100, mx: "auto" }}>
+        <Box
+          sx={{
+            ...panelSx,
+            mb: 2.5,
+            p: { xs: 2, md: 2.75 },
+            background: `
+              linear-gradient(135deg,
+                color-mix(in srgb, var(--admin-accent) 16%, var(--admin-surface)) 0%,
+                var(--admin-surface) 48%,
+                color-mix(in srgb, var(--admin-surface-alt) 70%, var(--admin-surface)) 100%)
+            `,
+            borderColor: "color-mix(in srgb, var(--admin-accent) 35%, var(--admin-border))",
+            overflow: "hidden",
+            position: "relative",
+          }}
+        >
+          <Box
+            aria-hidden
+            sx={{
+              position: "absolute",
+              width: 180,
+              height: 180,
+              borderRadius: "50%",
+              border: "1px solid color-mix(in srgb, var(--admin-accent) 35%, transparent)",
+              top: -60,
+              left: -40,
+              opacity: 0.7,
+            }}
+          />
+          <Box
+            aria-hidden
+            sx={{
+              position: "absolute",
+              width: 120,
+              height: 120,
+              borderRadius: "50%",
+              border: "1px solid color-mix(in srgb, var(--admin-accent) 28%, transparent)",
+              top: 20,
+              left: 40,
+              opacity: 0.5,
+            }}
+          />
+
+          <Box sx={{ position: "relative", display: "flex", alignItems: "flex-start", gap: 1.5 }}>
+            <Box
+              sx={{
+                width: 52,
+                height: 52,
+                borderRadius: "16px",
+                display: "grid",
+                placeItems: "center",
+                bgcolor: "color-mix(in srgb, var(--admin-accent) 18%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--admin-accent) 40%, transparent)",
+                color: "var(--admin-accent)",
+                flexShrink: 0,
+              }}
+            >
+              <GroupsOutlinedIcon sx={{ fontSize: 28 }} />
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography
+                sx={{
+                  fontSize: { xs: 26, md: 32 },
+                  fontWeight: 900,
+                  letterSpacing: "-0.02em",
+                  lineHeight: 1.15,
+                  color: "var(--admin-text)",
+                  mb: 0.75,
+                }}
+              >
+                باشگاه مشتریان
+              </Typography>
+              <Typography
+                sx={{
+                  fontSize: 13.5,
+                  color: "var(--admin-text-muted)",
+                  maxWidth: 520,
+                  lineHeight: 1.7,
+                }}
+              >
+                آمار وفاداری، پرفروش‌ها و ثبت عضو جدید — همه در یک نگاه.
+              </Typography>
+            </Box>
+          </Box>
         </Box>
-      ) : (
-        <>
-          <Grid container spacing={1.5} sx={{ mb: 2 }}>
-            <Grid item xs={12} sm={4}>
-              <Card sx={{ bgcolor: "var(--admin-surface)", border: "1px solid var(--admin-border)", borderRadius: "12px" }}>
-                <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
-                  <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)" }}>
-                    بدون خرید در ۳۰ روز اخیر
-                  </Typography>
-                  <Typography sx={{ fontSize: 26, fontWeight: 800, color: "var(--admin-accent)" }}>
-                    {formatNumber(stats.inactive_30d)}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <Card sx={{ bgcolor: "var(--admin-surface)", border: "1px solid var(--admin-border)", borderRadius: "12px" }}>
-                <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
-                  <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)" }}>
-                    بیش از ۳ خرید در ۳۰ روز گذشته
-                  </Typography>
-                  <Typography sx={{ fontSize: 26, fontWeight: 800, color: "var(--admin-accent)" }}>
-                    {formatNumber(stats.frequent_30d)}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <Card sx={{ bgcolor: "var(--admin-surface)", border: "1px solid var(--admin-border)", borderRadius: "12px" }}>
-                <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
-                  <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)" }}>اعضای باشگاه</Typography>
-                  <Typography sx={{ fontSize: 26, fontWeight: 800, color: "var(--admin-accent)" }}>
-                    {formatNumber(stats.club_members)}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
 
-          <Typography sx={{ fontSize: 15, fontWeight: 700, mb: 1, color: "var(--admin-text)" }}>
-            ۴ محصول پرفروش
-          </Typography>
-          <Grid container spacing={1.5} sx={{ mb: 2 }}>
-            {bestSelling.length === 0 ? (
-              <Grid item xs={12}>
-                <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: 13 }}>
-                  هنوز فروش ثبت‌شده‌ای برای رتبه‌بندی نیست.
-                </Typography>
-              </Grid>
-            ) : (
-              bestSelling.map((p) => (
-                <Grid item xs={6} md={3} key={p.id}>
-                  <Card
+        {loading ? (
+          <Box sx={{ py: 8, display: "flex", justifyContent: "center" }}>
+            <CircularProgress size={30} sx={{ color: "var(--admin-accent)" }} />
+          </Box>
+        ) : (
+          <>
+            <Grid container spacing={1.5} sx={{ mb: 3 }}>
+              {statItems.map((item) => (
+                <Grid item xs={12} sm={4} key={item.key}>
+                  <Box
                     sx={{
+                      ...panelSx,
+                      p: 2,
                       height: "100%",
-                      bgcolor: "var(--admin-surface)",
-                      border: "1px solid var(--admin-border)",
-                      borderRadius: "12px",
+                      background:
+                        item.tone === "ok"
+                          ? "linear-gradient(160deg, color-mix(in srgb, var(--admin-accent) 14%, var(--admin-surface)), var(--admin-surface))"
+                          : item.tone === "hot"
+                            ? "linear-gradient(160deg, color-mix(in srgb, #f59e0b 12%, var(--admin-surface)), var(--admin-surface))"
+                            : "linear-gradient(160deg, color-mix(in srgb, #64748b 10%, var(--admin-surface)), var(--admin-surface))",
+                      borderColor:
+                        item.tone === "ok"
+                          ? "color-mix(in srgb, var(--admin-accent) 40%, var(--admin-border))"
+                          : "var(--admin-border)",
+                      "&:hover": {
+                        transform: "translateY(-2px)",
+                        borderColor: "color-mix(in srgb, var(--admin-accent) 55%, var(--admin-border))",
+                      },
                     }}
                   >
-                    <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
-                      <Typography sx={{ fontSize: 13, fontWeight: 700, mb: 0.5, minHeight: 36 }}>
-                        {p.name}
+                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1.25 }}>
+                      <Box
+                        sx={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: "12px",
+                          display: "grid",
+                          placeItems: "center",
+                          color:
+                            item.tone === "hot"
+                              ? "#f59e0b"
+                              : item.tone === "ok"
+                                ? "var(--admin-accent)"
+                                : "var(--admin-text-muted)",
+                          bgcolor: "var(--admin-surface-alt)",
+                          border: "1px solid var(--admin-border)",
+                        }}
+                      >
+                        {item.icon}
+                      </Box>
+                      <Typography
+                        sx={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: "var(--admin-text-muted)",
+                          letterSpacing: "0.04em",
+                        }}
+                      >
+                        ۳۰ روز
                       </Typography>
-                      <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)" }}>
-                        فروش: {formatNumber(p.total_sold)}
-                      </Typography>
-                      <Typography sx={{ fontSize: 12, color: "var(--admin-accent)", fontWeight: 700 }}>
-                        {formatNumber(p.sale_price)} ت
-                      </Typography>
-                    </CardContent>
-                  </Card>
+                    </Box>
+                    <Typography sx={{ fontSize: 12.5, color: "var(--admin-text-muted)", mb: 0.5, minHeight: 36 }}>
+                      {item.label}
+                    </Typography>
+                    <Typography
+                      sx={{
+                        fontSize: { xs: 30, md: 34 },
+                        fontWeight: 900,
+                        lineHeight: 1,
+                        color: "var(--admin-text)",
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
+                      {formatNumber(item.value)}
+                    </Typography>
+                  </Box>
                 </Grid>
-              ))
-            )}
-          </Grid>
+              ))}
+            </Grid>
 
-          <Typography sx={{ fontSize: 15, fontWeight: 700, mb: 1, color: "var(--admin-text)" }}>
-            میانبرها
-          </Typography>
-          <Grid container spacing={1} sx={{ mb: 2.5 }}>
-            {visibleLinks.map((link) => (
-              <Grid item xs={6} sm={4} md={3} key={link.href}>
+            <Box sx={{ mb: 3 }}>
+              <Box sx={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", mb: 1.25, gap: 1 }}>
+                <Typography sx={{ fontSize: 16, fontWeight: 800, color: "var(--admin-text)" }}>
+                  چهار محصول پرفروش
+                </Typography>
                 <Button
                   component={Link}
-                  href={link.href}
-                  fullWidth
-                  variant="outlined"
-                  startIcon={link.icon}
+                  href="/admin/best-selling"
+                  size="small"
+                  endIcon={<ArrowBackIosNewRoundedIcon sx={{ fontSize: "12px !important" }} />}
                   sx={{
                     ...adminButtonStartIconSx,
-                    justifyContent: "flex-start",
-                    borderColor: "var(--admin-border)",
-                    color: "var(--admin-text)",
-                    bgcolor: "var(--admin-surface)",
-                    borderRadius: "10px",
-                    py: 1.1,
+                    color: "var(--admin-accent)",
                     fontSize: 12,
-                    fontWeight: 600,
+                    fontWeight: 700,
+                    minWidth: 0,
+                    px: 0.5,
                   }}
                 >
-                  {link.label}
+                  همه
                 </Button>
-              </Grid>
-            ))}
-          </Grid>
-        </>
-      )}
+              </Box>
 
-      <Card
-        sx={{
-          mb: 2.5,
-          bgcolor: "var(--admin-surface)",
-          border: "1px solid var(--admin-border)",
-          borderRadius: "12px",
-        }}
-      >
-        <CardContent>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
-            <PersonAddAltIcon sx={{ color: "var(--admin-accent)" }} />
-            <Typography sx={{ fontWeight: 700, fontSize: 15 }}>ثبت مشتری</Typography>
+              {bestSelling.length === 0 ? (
+                <Box
+                  sx={{
+                    ...panelSx,
+                    p: 2.5,
+                    textAlign: "center",
+                    color: "var(--admin-text-secondary)",
+                    fontSize: 13,
+                  }}
+                >
+                  هنوز فروش ثبت‌شده‌ای برای رتبه‌بندی نیست.
+                </Box>
+              ) : (
+                <Grid container spacing={1.25}>
+                  {bestSelling.map((p, index) => (
+                    <Grid item xs={6} md={3} key={p.id}>
+                      <Box
+                        sx={{
+                          ...panelSx,
+                          p: 1.75,
+                          height: "100%",
+                          position: "relative",
+                          overflow: "hidden",
+                          "&:hover": {
+                            borderColor: "color-mix(in srgb, var(--admin-accent) 50%, var(--admin-border))",
+                            bgcolor: "color-mix(in srgb, var(--admin-accent) 6%, var(--admin-surface))",
+                          },
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            position: "absolute",
+                            top: 8,
+                            left: 10,
+                            fontSize: 28,
+                            fontWeight: 900,
+                            lineHeight: 1,
+                            color: "color-mix(in srgb, var(--admin-accent) 28%, transparent)",
+                            userSelect: "none",
+                          }}
+                        >
+                          {formatNumber(index + 1)}
+                        </Typography>
+                        <Typography
+                          sx={{
+                            fontSize: 13.5,
+                            fontWeight: 800,
+                            mb: 1.25,
+                            minHeight: 40,
+                            pr: 0.5,
+                            color: "var(--admin-text)",
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {p.name}
+                        </Typography>
+                        <Box
+                          sx={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            px: 1,
+                            py: 0.35,
+                            borderRadius: "999px",
+                            border: "1px solid var(--admin-border)",
+                            bgcolor: "var(--admin-surface-alt)",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: "var(--admin-text-muted)",
+                            mb: 1,
+                          }}
+                        >
+                          {formatNumber(p.total_sold)} فروش
+                        </Box>
+                        <Typography sx={{ fontSize: 14, fontWeight: 800, color: "var(--admin-accent)" }}>
+                          {formatNumber(p.sale_price)} تومان
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  ))}
+                </Grid>
+              )}
+            </Box>
+
+            <Box sx={{ mb: 3 }}>
+              <Typography sx={{ fontSize: 16, fontWeight: 800, color: "var(--admin-text)", mb: 1.25 }}>
+                میانبرها
+              </Typography>
+              <Grid container spacing={1.25}>
+                {visibleLinks.map((link) => (
+                  <Grid item xs={6} sm={4} md={3} key={link.href}>
+                    <Box
+                      component={Link}
+                      href={link.href}
+                      sx={{
+                        ...panelSx,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 1,
+                        p: 1.6,
+                        height: "100%",
+                        textDecoration: "none",
+                        color: "inherit",
+                        cursor: "pointer",
+                        "&:hover": {
+                          borderColor: "color-mix(in srgb, var(--admin-accent) 55%, var(--admin-border))",
+                          bgcolor: "color-mix(in srgb, var(--admin-accent) 8%, var(--admin-surface))",
+                          transform: "translateY(-2px)",
+                          "& .club-link-arrow": { opacity: 1, transform: "translateX(-2px)" },
+                        },
+                      }}
+                    >
+                      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <Box
+                          sx={{
+                            width: 38,
+                            height: 38,
+                            borderRadius: "12px",
+                            display: "grid",
+                            placeItems: "center",
+                            color: "var(--admin-accent)",
+                            bgcolor: "color-mix(in srgb, var(--admin-accent) 14%, transparent)",
+                            border: "1px solid color-mix(in srgb, var(--admin-accent) 30%, transparent)",
+                          }}
+                        >
+                          {link.icon}
+                        </Box>
+                        <ArrowBackIosNewRoundedIcon
+                          className="club-link-arrow"
+                          sx={{
+                            fontSize: 14,
+                            color: "var(--admin-accent)",
+                            opacity: 0.35,
+                            transition: "opacity 160ms ease, transform 160ms ease",
+                          }}
+                        />
+                      </Box>
+                      <Box>
+                        <Typography sx={{ fontSize: 13, fontWeight: 800, color: "var(--admin-text)" }}>
+                          {link.label}
+                        </Typography>
+                        <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)", mt: 0.25 }}>
+                          {link.hint}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+          </>
+        )}
+
+        <Box
+          sx={{
+            ...panelSx,
+            p: { xs: 2, md: 2.5 },
+            background: `
+              linear-gradient(145deg,
+                var(--admin-surface) 0%,
+                color-mix(in srgb, var(--admin-accent) 8%, var(--admin-surface)) 100%)
+            `,
+            borderColor: "color-mix(in srgb, var(--admin-accent) 28%, var(--admin-border))",
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, mb: 2 }}>
+            <Box
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: "12px",
+                display: "grid",
+                placeItems: "center",
+                bgcolor: "color-mix(in srgb, var(--admin-accent) 16%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--admin-accent) 35%, transparent)",
+                color: "var(--admin-accent)",
+              }}
+            >
+              <PersonAddAltIcon />
+            </Box>
+            <Box>
+              <Typography sx={{ fontWeight: 800, fontSize: 16, color: "var(--admin-text)" }}>
+                ثبت عضو جدید
+              </Typography>
+              <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)" }}>
+                نام، موبایل و تاریخ تولد شمسی
+              </Typography>
+            </Box>
           </Box>
-          <Grid container spacing={1.25}>
+
+          <Grid container spacing={1.5}>
             <Grid item xs={12} sm={4}>
               <TextField
                 fullWidth
@@ -383,50 +680,67 @@ export default function CustomerClubPage() {
               />
             </Grid>
             <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                size="small"
-                type="date"
-                label="تاریخ تولد"
-                value={regBirth}
-                onChange={(e) => setRegBirth(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                sx={fieldSx}
-              />
+              <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, mb: 0.5, fontWeight: 600 }}>
+                تاریخ تولد (شمسی)
+              </Typography>
+              <Box
+                sx={{
+                  ...chequeDatePickerBoxSx,
+                  "& .rmdp-input": {
+                    ...chequeDatePickerBoxSx["& .rmdp-input"],
+                    height: "40px",
+                    borderRadius: "12px",
+                    backgroundColor: "var(--admin-surface-alt)",
+                    boxShadow: "none",
+                  },
+                }}
+              >
+                <DatePicker
+                  value={regBirth}
+                  onChange={(d) =>
+                    setRegBirth(d && !Array.isArray(d) ? (d as DateObject) : null)
+                  }
+                  calendar={persian}
+                  locale={persian_fa}
+                  calendarPosition="bottom-center"
+                  format="YYYY/MM/DD"
+                  zIndex={CHEQUE_DATE_PICKER_Z}
+                  portal
+                  placeholder="مثلاً ۱۳۷۰/۰۱/۰۱"
+                  className="rmdp-mobile"
+                  containerStyle={{ width: "100%" }}
+                  style={{ width: "100%", height: 40, borderRadius: 12, boxShadow: "none" }}
+                />
+              </Box>
             </Grid>
             <Grid item xs={12}>
               <Button
                 variant="contained"
                 disabled={registering}
                 onClick={() => void handleRegister()}
+                startIcon={<PersonAddAltIcon />}
                 sx={{
+                  ...adminButtonStartIconSx,
+                  ...noShadow,
+                  mt: 0.5,
+                  px: 2.5,
+                  py: 1.1,
+                  borderRadius: "12px",
                   bgcolor: "var(--admin-accent)",
                   color: "var(--admin-on-accent)",
-                  fontWeight: 700,
-                  "&:hover": { bgcolor: "var(--admin-accent-hover)" },
+                  fontWeight: 800,
+                  "&:hover": {
+                    bgcolor: "var(--admin-accent-hover)",
+                    boxShadow: "none",
+                  },
                 }}
               >
                 {registering ? "در حال ثبت..." : "ثبت در باشگاه"}
               </Button>
             </Grid>
           </Grid>
-        </CardContent>
-      </Card>
-
-      <Typography sx={{ fontSize: 15, fontWeight: 700, mb: 1, color: "var(--admin-text)" }}>
-        لیست خریداران
-      </Typography>
-      <CustomersList
-        key={listKey}
-        disableFilter
-        searchBoxList={searchBoxList}
-        filterBoxList={[]}
-        url="/api/customers"
-        showTotal
-        textTotal={["مشتری", ""]}
-        rows={20}
-        desktopColumns={desktopColumns}
-      />
+        </Box>
+      </Box>
 
       <ToastContainer
         autoClose={3000}
