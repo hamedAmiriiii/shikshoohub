@@ -12,6 +12,7 @@ import {
   Mail,
   Menu,
   Package,
+  QrCode,
   Settings,
   ShoppingBag,
   TrendingUp,
@@ -19,6 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { oilListProducts, oilLogout } from "@/app/lib/oil/api";
+import { loadOilQrDataUrl } from "@/app/lib/oil/qrCache";
 import { useOilAuth } from "./OilAuth";
 import { OilInstallButton } from "./OilInstall";
 import { OilOfflineIcon } from "./OilOffline";
@@ -30,6 +32,7 @@ const MENU_ITEMS = [
   { href: "/oil/products", label: "محصولات", icon: Package },
   { href: "/oil/reports", label: "گزارش", icon: TrendingUp },
   { href: "/oil/customers", label: "مشتریان", icon: Users },
+  { href: "/oil/qr", label: "QR مشتری", icon: QrCode },
   { href: "/oil/sms", label: "پیامک‌ها", icon: Mail },
   { href: "/oil/sms/packages", label: "خرید بسته پیامک", icon: ShoppingBag },
   { href: "/oil/plans", label: "تمدید اشتراک", icon: CreditCard },
@@ -74,6 +77,7 @@ export default function OilShell({ children }: { children: React.ReactNode }) {
   else if (pathname?.startsWith("/oil/products")) title = "محصولات";
   else if (pathname?.startsWith("/oil/reports")) title = "گزارش";
   else if (pathname?.startsWith("/oil/settings")) title = "تنظیمات";
+  else if (pathname?.startsWith("/oil/qr")) title = "QR مشتری";
   else if (pathname?.startsWith("/oil/sms/packages")) title = "خرید بسته پیامک";
   else if (pathname?.startsWith("/oil/plans")) title = "تمدید اشتراک";
   else if (pathname === "/oil/sms" || pathname?.startsWith("/oil/sms/")) {
@@ -87,6 +91,8 @@ export default function OilShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!session) return;
     void oilListProducts(false);
+    const code = session.shop?.code;
+    if (code) void loadOilQrDataUrl(code, 280);
   }, [session]);
 
   useEffect(() => {

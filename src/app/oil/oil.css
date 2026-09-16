@@ -1056,6 +1056,72 @@ button.iran-letter svg {
   border-color: rgba(255, 255, 255, 0.12);
 }
 
+.oil-qr-home {
+  margin-top: 14px;
+}
+
+.oil-qr-home-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.oil-qr-home-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.oil-qr-home-text strong {
+  font-size: 15px;
+}
+
+.oil-qr-home-actions {
+  margin-top: 10px;
+}
+
+.oil-qr-home-actions .oil-btn {
+  width: auto;
+  min-height: 40px;
+  padding: 0 14px;
+  display: inline-flex;
+}
+
+.oil-qr-thumb {
+  width: 96px;
+  height: 96px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.oil-qr-thumb img {
+  width: 88px;
+  height: 88px;
+  display: block;
+}
+
+.oil-qr-preview {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 240px;
+  margin: 12px 0 16px;
+  padding: 14px;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.oil-qr-preview img {
+  width: 240px;
+  height: 240px;
+  display: block;
+}
+
 .oil-drawer-backdrop {
   position: fixed;
   inset: 0;

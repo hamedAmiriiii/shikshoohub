@@ -2,19 +2,19 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Droplets, Mail, Package, Plus, TrendingUp, Users } from "lucide-react";
-import { formatKm } from "@/app/lib/oil/plate";
+import { Mail, Package, Plus, TrendingUp, Users } from "lucide-react";
 import { isOilApiError, oilGetReports, oilReadCachedReports, normalizeOilReports } from "@/app/lib/oil/api";
 import { useOilAuth } from "./OilAuth";
+import OilQrPanel from "./OilQrPanel";
 
 const formatNumber = (n: number) => new Intl.NumberFormat("fa-IR").format(n);
 
 export default function OilHomePage() {
   const { session } = useOilAuth();
   const accessOk = session?.shop_access?.shop_access_active !== false;
-  const intervalKm = session?.shop?.oil_interval_km || 5000;
   const userName = session?.user?.name || "";
   const shopName = session?.shop?.name || "تعویض روغن";
+  const shopCode = session?.shop?.code || "";
   const [today, setToday] = useState<ReturnType<typeof normalizeOilReports>["today"] | null>(null);
 
   useEffect(() => {
@@ -64,13 +64,6 @@ export default function OilHomePage() {
           <span className="oil-dash-label">سود امروز</span>
           <span className="oil-dash-value">{today ? formatNumber(today.profit) : "…"}</span>
         </Link>
-        {/* <div className="oil-dash-tile oil-dash-tile-wide">
-          <span className="oil-dash-icon">
-            <Droplets size={18} />
-          </span>
-          <span className="oil-dash-label">فاصله تعویض پیشنهادی</span>
-          <span className="oil-dash-value">{formatKm(intervalKm)} کیلومتر</span>
-        </div> */}
       </div>
 
       {accessOk ? (
@@ -102,6 +95,8 @@ export default function OilHomePage() {
           پیامک‌ها
         </Link>
       </div>
+
+      {shopCode ? <OilQrPanel shopCode={shopCode} shopName={shopName} variant="compact" /> : null}
     </div>
   );
 }

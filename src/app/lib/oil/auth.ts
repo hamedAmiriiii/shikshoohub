@@ -2,6 +2,7 @@ import type { OilSession } from "./types";
 
 export const OIL_TOKEN_KEY = "oil_token";
 const OIL_SESSION_KEY = "oil_session";
+const OIL_QR_CACHE_KEY = "oil_qr_cache_v1";
 
 export function getOilToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -37,6 +38,7 @@ export function clearOilSession(): void {
   if (typeof window === "undefined") return;
   localStorage.removeItem(OIL_TOKEN_KEY);
   localStorage.removeItem(OIL_SESSION_KEY);
+  localStorage.removeItem(OIL_QR_CACHE_KEY);
 }
 
 export function isOilShopAccessActive(session: OilSession | null): boolean {
