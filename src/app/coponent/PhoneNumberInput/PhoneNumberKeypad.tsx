@@ -33,6 +33,7 @@ export default function PhoneNumberKeypad({
     let next = value.replace(/\D/g, "");
     if (next.startsWith("0")) next = next.slice(1);
     if (next.length >= 10) return;
+    if (next.length === 0 && digit !== "9") return;
     next = `${next}${digit}`.slice(0, 10);
     onChange(next);
   };

@@ -17,10 +17,14 @@ export function isIranMobile(value: string): boolean {
   return /^09\d{9}$/.test(normalizeIranMobile(value));
 }
 
+export type CardRefundDestination = "customer_credit" | "shop_account";
+
 export type PurchaseReturnPayload = {
   phone?: string;
   notes?: string;
   quantity?: number;
+  card_refund_destination?: CardRefundDestination;
+  shop_account_id?: number;
 };
 
 export async function returnPurchaseItem(
@@ -42,7 +46,12 @@ export async function returnPurchaseItem(
 
 export async function returnFullPurchase(
   purchaseId: number,
-  payload: { phone: string; notes?: string },
+  payload: {
+    phone?: string;
+    notes?: string;
+    card_refund_destination?: CardRefundDestination;
+    shop_account_id?: number;
+  },
 ) {
   return FetchWithJwtClient("POST", `/api/purchased-products/${purchaseId}/return`, payload);
 }
@@ -50,14 +59,43 @@ export async function returnFullPurchase(
 export function purchaseReturnCreditMessage(res: unknown): string {
   if (!res || typeof res !== "object") return "";
   const r = res as Record<string, unknown>;
+  const item =
+    r.returned_item && typeof r.returned_item === "object"
+      ? (r.returned_item as Record<string, unknown>)
+      : null;
+
   const credit =
-    Number(r.credit_added ?? r.credit_returned ?? r.customer_credit ?? r.credit) || 0;
+    Number(
+      r.credit_refunded ??
+        r.credit_added ??
+        r.credit_returned ??
+        item?.credit_refunded ??
+        0,
+    ) || 0;
+  const cash =
+    Number(r.cash_refunded ?? item?.cash_refunded ?? 0) || 0;
+  const card =
+    Number(r.card_refunded ?? item?.card_refunded ?? 0) || 0;
+  const destination = String(
+    r.card_refund_destination ?? item?.card_refund_destination ?? "customer_credit",
+  );
   const reversed =
-    Number(r.credit_reclaimed ?? r.credit_used_reversed ?? r.credit_deducted) || 0;
+    Number(r.credit_reclaimed ?? r.credit_used_reversed ?? r.credit_deducted ?? item?.credit_earned_reversed ?? 0) || 0;
+
   const parts: string[] = [];
+  if (cash > 0) {
+    parts.push(
+      `مبلغ نقد از صندوق برگردانده شد (${new Intl.NumberFormat("fa-IR").format(Math.floor(cash))} تومان).`,
+    );
+  }
+  if (card > 0 && destination === "shop_account") {
+    parts.push(
+      `مبلغ کارت از حساب فروشگاه برداشت شد (${new Intl.NumberFormat("fa-IR").format(Math.floor(card))} تومان).`,
+    );
+  }
   if (credit > 0) {
     parts.push(
-      `مبلغ برگشتی به اعتبار مشتری اضافه شد (${new Intl.NumberFormat("fa-IR").format(Math.floor(credit))} تومان).`,
+      `مبلغ به اعتبار مشتری اضافه شد (${new Intl.NumberFormat("fa-IR").format(Math.floor(credit))} تومان).`,
     );
   }
   if (reversed > 0) {

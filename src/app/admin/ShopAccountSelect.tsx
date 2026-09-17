@@ -23,6 +23,8 @@ type ShopAccountSelectProps = {
   disabled?: boolean;
   required?: boolean;
   compact?: boolean;
+  /** صندوق نقد را از لیست حذف کند */
+  excludeTill?: boolean;
   /** اگر خالی باشد همه حساب‌های فعال لود می‌شوند */
   accounts?: ShopAccount[];
 };
@@ -57,6 +59,7 @@ export default function ShopAccountSelect({
   disabled,
   required,
   compact,
+  excludeTill = false,
   accounts: accountsProp,
 }: ShopAccountSelectProps) {
   const resolvedHelperText =
@@ -66,7 +69,11 @@ export default function ShopAccountSelect({
 
   useEffect(() => {
     if (accountsProp) {
-      setAccounts(accountsProp);
+      setAccounts(
+        excludeTill
+          ? accountsProp.filter((a) => a.type !== "till")
+          : accountsProp,
+      );
       setLoading(false);
       return;
     }
@@ -75,7 +82,10 @@ export default function ShopAccountSelect({
       setLoading(true);
       try {
         const list = await fetchShopAccounts();
-        if (!cancelled) setAccounts(list);
+        const filtered = excludeTill
+          ? list.filter((a) => a.type !== "till")
+          : list;
+        if (!cancelled) setAccounts(filtered);
       } catch {
         if (!cancelled) setAccounts([]);
       } finally {
@@ -85,7 +95,7 @@ export default function ShopAccountSelect({
     return () => {
       cancelled = true;
     };
-  }, [accountsProp]);
+  }, [accountsProp, excludeTill]);
 
   return (
     <Box sx={{ direction: "rtl" }}>

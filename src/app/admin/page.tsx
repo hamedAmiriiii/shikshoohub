@@ -26,10 +26,13 @@ import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 const SUPPORT_PHONE = "09399166196";
 const BALE_PROFILE_URL = "https://ble.ir/AmiriWebino";
 const RUBIKA_PROFILE_URL = "https://rubika.ir/WebinoPlus";
+/** تایم‌اوت درخواست‌های سبک (ثبت خرید و …) */
 const NETWORK_TIMEOUT_MS = 8000;
-const NETWORK_GOOD_MS = 4000;
+/** لیست کامل محصولات فروشگاه‌های بزرگ ممکن است خیلی طول بکشد */
+const PRODUCTS_FETCH_TIMEOUT_MS = 90000;
 const NETWORK_TIMEOUT_ERROR = "NETWORK_TIMEOUT";
 const SLOW_NETWORK_TOAST_ID = "slow-network-offline";
+const SLOW_CATALOG_TOAST_ID = "slow-catalog-load";
 import { styled } from '@mui/material/styles';
 import TableCell, { tableCellClasses } from '@mui/material/TableCell';
 import { apiRequestError } from '@/app/lib/apiRequestError/client';
@@ -53,6 +56,8 @@ import {
 import SalesByDayChart from '@/app/coponent/SalesByDayChart';
 import { readProductsCountFromCache, readProductsFromCache, isCatalogItemOutOfStock } from '@/app/lib/productsCache';
 import { catalogItemKey, isProducedGoodItem, isRawMaterialItem } from '@/app/lib/catalogItems';
+import { getApiErrorMessage, isNonRetryableClientError } from '@/app/lib/apiErrorMessage';
+import { isIranMobile, normalizeIranMobile } from '@/app/lib/purchaseReturns';
 import {
   OUTBOX_CHANGED_EVENT,
   attachClientIdToPayload,
@@ -65,6 +70,9 @@ import {
   syncAllPendingPurchases,
   upsertCustomerCreditCache,
   findCustomerCreditInCache,
+  deductCartQuantitiesFromProducts,
+  applyOutboxStockHolds,
+  isInventoryErrorResponse,
 } from '@/app/lib/offline';
 import {
   readAdminPosSettings,
@@ -760,28 +768,43 @@ export default function ShoppingPage() {
     try {
       const token = tokenCode();
       const startedAt = Date.now();
+      // سنجش اتصال با درخواست سبک؛ لیست ۲۰۰۰ محصول معیار سرعت شبکه نیست
       const res = await withTimeout(
-        apiRequestError("Get", {}, {}, `/api/product-all`, true, true, token),
+        apiRequestError("Get", {}, {}, `/api/settings/loyalty-credit`, true, true, token),
         NETWORK_TIMEOUT_MS,
       );
       const elapsed = Date.now() - startedAt;
 
-      if (!res?.hasError && elapsed <= NETWORK_GOOD_MS) {
-        if (Array.isArray(res) && res.length > 0) {
-          await saveProductsCache(res);
-          setItems(res);
-          setProductsCount(res.length);
-        }
+      if (!res?.hasError) {
         setForcedOffline(false);
-        toast.success(`سرعت شبکه مناسب است (${elapsed}ms) — به حالت آنلاین برگشتید.`);
+        toast.success(`اتصال برقرار است (${elapsed}ms) — به حالت آنلاین برگشتید.`);
+        // در پس‌زمینه کاتالوگ را با تایم‌اوت بلندتر تازه کن
+        void (async () => {
+          try {
+            const catalog = await withTimeout(
+              apiRequestError("Get", {}, {}, `/api/product-all`, true, true, token),
+              PRODUCTS_FETCH_TIMEOUT_MS,
+            );
+            if (Array.isArray(catalog) && catalog.length > 0) {
+              let next = catalog;
+              try {
+                const pending = await listPendingOutboxItems();
+                next = applyOutboxStockHolds(catalog, pending);
+              } catch {
+                /* keep catalog */
+              }
+              await saveProductsCache(next);
+              setItems(next);
+              setProductsCount(next.length);
+            }
+          } catch {
+            /* کاتالوگ کند بود؛ آنلاین ماندن کافی است */
+          }
+        })();
         return;
       }
 
-      setNetworkWarningMessage(
-        elapsed > NETWORK_GOOD_MS
-          ? `پاسخ شبکه کند بود (${elapsed}ms). بهتر است در حالت آفلاین بمانید.`
-          : "وضعیت اینترنت پایدار نیست. بهتر است در حالت آفلاین بمانید.",
-      );
+      setNetworkWarningMessage("وضعیت اینترنت پایدار نیست. بهتر است در حالت آفلاین بمانید.");
       setNetworkWarningOpen(true);
     } catch (error) {
       setNetworkWarningMessage("وضعیت اینترنت خوب نیست. بهتر است در حالت آفلاین بمانید.");
@@ -795,7 +818,10 @@ export default function ShoppingPage() {
     let isActive = true;
     let hasCachedData = false;
 
-    const applyCachedProducts = (list: any[], source: "localStorage" | "indexedDB") => {
+    const applyCachedProducts = (
+      list: any[],
+      source: "localStorage" | "indexedDB",
+    ) => {
       if (!isActive || !Array.isArray(list) || list.length === 0) return;
       setItems(list);
       setProductsCount(list.length);
@@ -809,7 +835,7 @@ export default function ShoppingPage() {
         const token = tokenCode();
         const res = await withTimeout(
           apiRequestError("Get", {}, {}, `/api/product-all`, true, true, token),
-          NETWORK_TIMEOUT_MS,
+          PRODUCTS_FETCH_TIMEOUT_MS,
         );
         if (!isActive) return;
         console.log('res : ',res);
@@ -826,16 +852,24 @@ export default function ShoppingPage() {
         }
         
         if (Array.isArray(res) && res.length > 0) {
+          let next = res;
           try {
-            await saveProductsCache(res);
-            console.log(' بروزرسانی شد:', res.length, 'محصول');
+            const pending = await listPendingOutboxItems();
+            next = applyOutboxStockHolds(res, pending);
+          } catch {
+            /* keep res */
+          }
+          try {
+            // کش = موجودی قابل فروش (سرور − رزرو outbox) تا بعد از رفرش دوباره نفروشند
+            await saveProductsCache(next);
+            console.log(' بروزرسانی شد:', next.length, 'محصول');
           } catch (error) {
             console.error('خطا در ذخیره محصولات:', error);
           }
           
           if (!isActive) return;
-          setItems(res);
-          setProductsCount(res.length);
+          setItems(next);
+          setProductsCount(next.length);
           console.log('محصولات از API بروزرسانی شد');
         } else {
           console.warn('داده‌های دریافتی معتبر نیستند،  حفظ می‌شود');
@@ -846,10 +880,16 @@ export default function ShoppingPage() {
         const isTimeout =
           error instanceof Error && error.message === NETWORK_TIMEOUT_ERROR && navigator.onLine;
         if (isTimeout) {
-          setForcedOffline(true);
-          toast.warn("اینترنت کند است؛ سیستم موقتاً روی حالت آفلاین رفت.", {
-            toastId: SLOW_NETWORK_TOAST_ID,
-          });
+          // کاتالوگ بزرگ ≠ قطع اینترنت؛ آفلاین اجباری نکن
+          if (hasCachedData) {
+            toast.warn("دریافت لیست محصولات طول کشید؛ از نسخهٔ ذخیره‌شده استفاده می‌شود.", {
+              toastId: SLOW_CATALOG_TOAST_ID,
+            });
+          } else {
+            toast.warn("دریافت لیست محصولات طول کشید. اتصال برقرار است؛ لطفاً دوباره تلاش کنید.", {
+              toastId: SLOW_CATALOG_TOAST_ID,
+            });
+          }
           return;
         }
         if (!hasCachedData && navigator.onLine) {
@@ -1321,8 +1361,18 @@ export default function ShoppingPage() {
     clearOrRemoveActiveCart({ clearScanned: true });
   }, [clearOrRemoveActiveCart]);
 
+  const applyLocalStockDeduction = useCallback((saleCart: any[]) => {
+    if (!Array.isArray(saleCart) || saleCart.length === 0) return;
+    setItems((prev: any[]) => {
+      const next = deductCartQuantitiesFromProducts(prev, saleCart);
+      void saveProductsCache(next);
+      return next;
+    });
+  }, []);
+
   const finalizeSuccessfulSale = useCallback(
     (res: any, successMessage: string) => {
+      applyLocalStockDeduction(cart);
       const purchaseId = res?.id ?? res?.purchase_id ?? res?.data?.id;
       const receipt = {
         ...buildSaleReceiptFromCurrentSale(purchaseId),
@@ -1344,7 +1394,7 @@ export default function ShoppingPage() {
       }
       setIsSubmitting(false);
     },
-    [buildSaleReceiptFromCurrentSale, resetCartAfterSale, editingPurchaseId, router],
+    [applyLocalStockDeduction, buildSaleReceiptFromCurrentSale, cart, resetCartAfterSale, editingPurchaseId, router],
   );
 
   const handlePrintLastSaleReceipt = useCallback(() => {
@@ -1371,6 +1421,7 @@ export default function ShoppingPage() {
       message: string,
       level: "success" | "warn" = "success",
     ) => {
+      applyLocalStockDeduction(cart);
       const receipt = buildSaleReceiptFromCurrentSale();
       await enqueueOutboxItem({
         type: "purchase",
@@ -1382,13 +1433,13 @@ export default function ShoppingPage() {
       setLastSaleReceipt(receipt);
       setSkipPrintPreview(false);
       setSaleSuccessOpen(true);
-      const items = await listPendingOutboxItems();
-      setPendingPurchases(items.map(outboxItemToLegacyPending));
+      const pendingItems = await listPendingOutboxItems();
+      setPendingPurchases(pendingItems.map(outboxItemToLegacyPending));
       if (level === "warn") toast.warn(message);
       else toast.success(message);
       resetCartAfterQueuedSale();
     },
-    [buildSaleReceiptFromCurrentSale, cart, total, phone, resetCartAfterQueuedSale],
+    [applyLocalStockDeduction, buildSaleReceiptFromCurrentSale, cart, total, phone, resetCartAfterQueuedSale],
   );
 
   const buildPurchaseProductLine = useCallback(
@@ -1482,8 +1533,8 @@ export default function ShoppingPage() {
         setIsSubmitting(false);
         return;
       }
-      if (residual > 0 && (!phone || phone.trim() === "")) {
-        toast.error("برای مانده نسیه باید شماره تلفن مشتری را وارد کنید");
+      if (residual > 0 && !isIranMobile(normalizeIranMobile(phone || ""))) {
+        toast.error("برای مانده نسیه باید شماره موبایل معتبر (۰۹…) وارد کنید");
         setIsSubmitting(false);
         return;
       }
@@ -1537,6 +1588,22 @@ export default function ShoppingPage() {
       return;
     }
 
+    // اگر شماره وارد شده، باید کامل و با فرمت ۰۹ باشد
+    const normalizedPhone = phone ? normalizeIranMobile(phone) : "";
+    if (normalizedPhone && !isIranMobile(normalizedPhone)) {
+      toast.error("شماره تلفن معتبر نیست. باید با ۰۹ شروع شود و دقیقاً ۱۱ رقم باشد.");
+      setIsSubmitting(false);
+      return;
+    }
+    if (
+      (paymentType === "debt" || paymentType === "installment") &&
+      !isIranMobile(normalizedPhone)
+    ) {
+      toast.error("برای این نوع فروش، شماره موبایل معتبر (۰۹…) الزامی است");
+      setIsSubmitting(false);
+      return;
+    }
+
     // اعتبارسنجی: تعداد اقساط باید معتبر باشد (حداقل 2، حداکثر 24)
     if (paymentType === 'installment' && (installmentCount < 2 || installmentCount > 24)) {
       toast.error("تعداد اقساط باید بین 2 تا 24 ماه باشد");
@@ -1556,7 +1623,7 @@ export default function ShoppingPage() {
     }
 
     if (phone) {
-      loadData.phone = phone;
+      loadData.phone = normalizeIranMobile(phone);
     }
 
     if (useCreditAmount > 0 || editReuseCredit) {
@@ -1694,31 +1761,20 @@ export default function ShoppingPage() {
      console.log("res : ",res);
      
       if (res.hasError) {
-        // چک کردن نوع ارور
-        let isInventoryError = false;
-        try {
-          const errorData = JSON.parse(res.errorText);
-          if (errorData.error && errorData.error.includes('موجودی')) {
-            isInventoryError = true;
-            toast.error(errorData.error);
-          }
-        } catch (parseError) {
-          // اگر parse نشد، فرض کنیم ارور عمومی است
-          console.error('خطا در parse ارور:', parseError);
+        if (isInventoryErrorResponse(res)) {
+          toast.error(getApiErrorMessage(res, "موجودی کافی نیست"));
+          setIsSubmitting(false);
+          return;
         }
 
-        if (isInventoryError) {
+        if (isNonRetryableClientError(res)) {
+          toast.error(getApiErrorMessage(res, "اطلاعات خرید نامعتبر است"));
           setIsSubmitting(false);
           return;
         }
 
         if (editingPurchaseId) {
-          try {
-            const errorData = JSON.parse(res.errorText);
-            toast.error(errorData.error || errorData.message || "ویرایش فاکتور انجام نشد");
-          } catch {
-            toast.error("ویرایش فاکتور انجام نشد");
-          }
+          toast.error(getApiErrorMessage(res, "ویرایش فاکتور انجام نشد"));
           setIsSubmitting(false);
           return;
         }
@@ -1905,11 +1961,13 @@ export default function ShoppingPage() {
   }, [openModal]);
 
   const onChangePhone = (value: string) => {
-    const phoneValue = value ? (!value.startsWith("0") ? "0" + value : value) : "";
+    const digits = String(value || "").replace(/\D/g, "");
+    const withoutCountry = digits.startsWith("98") ? digits.slice(2) : digits;
+    const national = withoutCountry.startsWith("0") ? withoutCountry.slice(1) : withoutCountry;
+    const phoneValue = national ? `0${national.slice(0, 10)}` : "";
     setPhone(phoneValue);
-    
-    // اگر شماره تلفن معتبر است (11 رقم یا 10 رقم که با 9 شروع شود)
-    if (phoneValue && (phoneValue.length === 11 || (phoneValue.length === 10 && phoneValue.startsWith("9")))) {
+
+    if (isIranMobile(phoneValue)) {
       checkCredit(phoneValue);
     } else {
       setCredit(0);

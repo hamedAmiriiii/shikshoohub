@@ -14,6 +14,11 @@ import {
   DialogActions,
   IconButton,
   CircularProgress,
+  FormControl,
+  FormControlLabel,
+  FormLabel,
+  Radio,
+  RadioGroup,
 } from "@mui/material";
 import ReplayIcon from '@mui/icons-material/Replay';
 import InstallmentIcon from '@mui/icons-material/AccountBalance';
@@ -45,8 +50,10 @@ import {
   purchaseReturnCreditMessage,
   returnFullPurchase,
   returnPurchaseItem,
+  type CardRefundDestination,
 } from "@/app/lib/purchaseReturns";
 import { canReplacePurchase, navigateToPurchaseEdit } from "@/app/lib/purchaseEdit";
+import ShopAccountSelect from "@/app/admin/ShopAccountSelect";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -136,6 +143,9 @@ export default function purchas(props: any) {
   const [returnQuantity, setReturnQuantity] = useState(1);
   const [returnPhone, setReturnPhone] = useState("");
   const [returnNotes, setReturnNotes] = useState("");
+  const [cardRefundDestination, setCardRefundDestination] =
+    useState<CardRefundDestination>("customer_credit");
+  const [refundShopAccountId, setRefundShopAccountId] = useState<number | "">("");
   const [adjustedQuantities, setAdjustedQuantities] = useState<Record<number, number>>({});
   const [deleting, setDeleting] = useState(false);
   const [totalDeleting, setTotalDeleting] = useState(0);
@@ -154,7 +164,20 @@ export default function purchas(props: any) {
   const isCheque = data?.payment_type === 'cheque';
 
   const purchasePhone = typeof data?.phone === "string" ? normalizeIranMobile(data.phone) : "";
-  const needsReturnPhone = !isIranMobile(purchasePhone);
+  const purchaseCashAmount = Math.max(0, Number(data?.cash_amount) || 0);
+  const purchaseCardAmount = Math.max(0, Number(data?.card_amount) || 0);
+  const hasCardPayment = purchaseCardAmount > 0.01;
+  const hasCashPayment = purchaseCashAmount > 0.01;
+  const willTouchCustomerCredit =
+    Number(data?.credit_used) > 0 ||
+    Number(data?.credit_earned) > 0 ||
+    (hasCardPayment && cardRefundDestination === "customer_credit");
+  const needsReturnPhone = !isIranMobile(purchasePhone) && willTouchCustomerCredit;
+
+  const resetRefundOptions = () => {
+    setCardRefundDestination("customer_credit");
+    setRefundShopAccountId("");
+  };
 
   const handleOpenDeleteDialog = (item: any) => {
     setReturnMode("item");
@@ -163,6 +186,7 @@ export default function purchas(props: any) {
     setReturnQuantity(isKg ? 0.5 : 1);
     setReturnPhone(purchasePhone);
     setReturnNotes("");
+    resetRefundOptions();
     setDeleteDialogOpen(true);
   };
 
@@ -171,6 +195,7 @@ export default function purchas(props: any) {
     setSelectedItem(null);
     setReturnPhone(purchasePhone);
     setReturnNotes("");
+    resetRefundOptions();
     setDeleteDialogOpen(true);
   };
 
@@ -179,16 +204,48 @@ export default function purchas(props: any) {
     setSelectedItem(null);
     setReturnQuantity(1);
     setReturnNotes("");
+    resetRefundOptions();
     setDeleting(false);
   };
 
   const resolveReturnPhone = (): string | null => {
     const phone = normalizeIranMobile(returnPhone || purchasePhone);
-    if (!isIranMobile(phone)) {
-      toast.error("برای برگشت باید شماره موبایل مشتری را وارد کنید تا اعتبار به همان فرد برگردد");
+    if (isIranMobile(phone)) return phone;
+    if (willTouchCustomerCredit) {
+      toast.error("برای برگشت به اعتبار مشتری، شماره موبایل را وارد کنید");
       return null;
     }
-    return phone;
+    return "";
+  };
+
+  const buildRefundPayload = (): {
+    card_refund_destination: CardRefundDestination;
+    shop_account_id?: number;
+  } | null => {
+    if (
+      hasCardPayment &&
+      cardRefundDestination === "shop_account" &&
+      refundShopAccountId === ""
+    ) {
+      toast.error("برای برگشت مبلغ کارت، حساب فروشگاه را انتخاب کنید");
+      return null;
+    }
+    const payload: {
+      card_refund_destination: CardRefundDestination;
+      shop_account_id?: number;
+    } = {
+      card_refund_destination: hasCardPayment
+        ? cardRefundDestination
+        : "customer_credit",
+    };
+    if (
+      hasCardPayment &&
+      cardRefundDestination === "shop_account" &&
+      refundShopAccountId !== ""
+    ) {
+      payload.shop_account_id = Number(refundShopAccountId);
+    }
+    return payload;
   };
 
   const getItemQuantity = (item: any) => {
@@ -267,7 +324,9 @@ export default function purchas(props: any) {
     if (!selectedItem || !data?.id) return;
 
     const phone = resolveReturnPhone();
-    if (!phone) return;
+    if (phone === null) return;
+    const refund = buildRefundPayload();
+    if (!refund) return;
 
     const maxQty = getItemQuantity(selectedItem);
     const minQty = getMinQuantity(selectedItem.product ?? selectedItem);
@@ -278,10 +337,17 @@ export default function purchas(props: any) {
 
     setDeleting(true);
     try {
-      const payload: { quantity: number; phone: string; notes?: string } = {
+      const payload: {
+        quantity: number;
+        phone?: string;
+        notes?: string;
+        card_refund_destination: CardRefundDestination;
+        shop_account_id?: number;
+      } = {
         quantity: qtyToReturn,
-        phone,
+        ...refund,
       };
+      if (phone) payload.phone = phone;
       if (returnNotes.trim()) payload.notes = returnNotes.trim();
 
       const response = await returnPurchaseItem(data.id, selectedItem.id, payload);
@@ -311,7 +377,7 @@ export default function purchas(props: any) {
 
         const creditMsg = purchaseReturnCreditMessage(response);
         toast.success(creditMsg || (returnedQty === 1 ? "برگشت کالا ثبت شد" : "برگشت کالا ثبت شد"));
-        setReturnPhone(phone);
+        if (phone) setReturnPhone(phone);
 
         if (onRefresh) {
           onRefresh();
@@ -330,11 +396,19 @@ export default function purchas(props: any) {
   const handleFullReturn = async () => {
     if (!data?.id) return;
     const phone = resolveReturnPhone();
-    if (!phone) return;
+    if (phone === null) return;
+    const refund = buildRefundPayload();
+    if (!refund) return;
 
     setDeleting(true);
     try {
-      const payload: { phone: string; notes?: string } = { phone };
+      const payload: {
+        phone?: string;
+        notes?: string;
+        card_refund_destination: CardRefundDestination;
+        shop_account_id?: number;
+      } = { ...refund };
+      if (phone) payload.phone = phone;
       if (returnNotes.trim()) payload.notes = returnNotes.trim();
       const response = await returnFullPurchase(data.id, payload);
       if (!response || response.hasError) {
@@ -348,10 +422,10 @@ export default function purchas(props: any) {
         response?.return_amount ?? response?.return_sale_total ?? data?.total_amount ?? 0,
       );
       if (returnedTotal > 0) setTotalDeleting(returnedTotal);
-      setReturnPhone(phone);
+      if (phone) setReturnPhone(phone);
 
       const creditMsg = purchaseReturnCreditMessage(response);
-      toast.success(creditMsg || "فاکتور به‌طور کامل برگشت خورد و مبلغ به اعتبار مشتری اضافه شد");
+      toast.success(creditMsg || "فاکتور به‌طور کامل برگشت خورد");
       if (onRefresh) onRefresh();
     } catch (error) {
       console.error("Error returning purchase:", error);
@@ -698,8 +772,8 @@ export default function purchas(props: any) {
         <DialogContent>
           <DialogContentText sx={{ color: "var(--admin-text-secondary)", textAlign: "center" }}>
             {returnMode === "full"
-              ? "تمام کالاهای این فاکتور برگشت می‌خورد. مبلغ فروش به اعتبار مشتری اضافه می‌شود و اگر از اعتبار این خرید استفاده شده باشد، به نسبت از اعتبار کم می‌شود."
-              : "آیا از برگشت این کالا مطمئن هستید؟ مبلغ به اعتبار مشتری برمی‌گردد."}
+              ? "تمام کالاهای این فاکتور برگشت می‌خورد. مبلغ نقد از صندوق و مبلغ کارت طبق گزینهٔ زیر تسویه می‌شود."
+              : "آیا از برگشت این کالا مطمئن هستید؟"}
           </DialogContentText>
             {returnMode === "item" && selectedItem && (
               <Box sx={{ 
@@ -760,6 +834,66 @@ export default function purchas(props: any) {
                 </Typography>
               </Box>
             )}
+            {(hasCashPayment || hasCardPayment) && (
+              <Box
+                sx={{
+                  mt: 1.5,
+                  p: 1.5,
+                  borderRadius: "8px",
+                  backgroundColor: "var(--admin-surface-alt)",
+                  color: "var(--admin-text)",
+                }}
+              >
+                {hasCashPayment && (
+                  <Typography variant="body2" sx={{ mb: hasCardPayment ? 1 : 0 }}>
+                    مبلغ نقد از صندوق برگردانده می‌شود
+                    {purchaseCashAmount > 0 ? ` (${formatNumber(purchaseCashAmount)} تومان در فاکتور)` : ""}.
+                  </Typography>
+                )}
+                {hasCardPayment && (
+                  <FormControl component="fieldset" fullWidth>
+                    <FormLabel
+                      component="legend"
+                      sx={{ color: "var(--admin-text-secondary)", mb: 0.5, fontSize: "0.85rem" }}
+                    >
+                      مقصد مبلغ کارتخوان
+                      {purchaseCardAmount > 0 ? ` (${formatNumber(purchaseCardAmount)} تومان)` : ""}
+                    </FormLabel>
+                    <RadioGroup
+                      value={cardRefundDestination}
+                      onChange={(e) =>
+                        setCardRefundDestination(e.target.value as CardRefundDestination)
+                      }
+                    >
+                      <FormControlLabel
+                        value="customer_credit"
+                        control={<Radio size="small" />}
+                        label="شارژ اعتبار مشتری (پیش‌فرض)"
+                        sx={{ color: "var(--admin-text)" }}
+                      />
+                      <FormControlLabel
+                        value="shop_account"
+                        control={<Radio size="small" />}
+                        label="برداشت از حساب فروشگاه و تحویل به مشتری"
+                        sx={{ color: "var(--admin-text)" }}
+                      />
+                    </RadioGroup>
+                    {cardRefundDestination === "shop_account" && (
+                      <Box sx={{ mt: 1 }}>
+                        <ShopAccountSelect
+                          value={refundShopAccountId}
+                          onChange={setRefundShopAccountId}
+                          label="حساب برداشت"
+                          required
+                          excludeTill
+                          helperText="حساب بانکی یا تنخواه (نه صندوق نقد)"
+                        />
+                      </Box>
+                    )}
+                  </FormControl>
+                )}
+              </Box>
+            )}
             <TextField
               fullWidth
               required={needsReturnPhone}
@@ -768,9 +902,11 @@ export default function purchas(props: any) {
               onChange={(e) => setReturnPhone(normalizeIranMobile(e.target.value))}
               placeholder="09xxxxxxxxx"
               helperText={
-                needsReturnPhone
-                  ? "این فاکتور مشتری ندارد. با این شماره کاربر باشگاه پیدا یا ساخته می‌شود و اعتبار به همان فرد برمی‌گردد."
-                  : "مبلغ برگشتی به اعتبار همین شماره اضافه می‌شود."
+                willTouchCustomerCredit
+                  ? needsReturnPhone
+                    ? "برای شارژ اعتبار مشتری، شماره موبایل لازم است."
+                    : "مبلغ کارت/اعتبار به همین شماره اضافه می‌شود."
+                  : "برای برگشت فقط نقد از صندوق، موبایل اختیاری است."
               }
               sx={{
                 mt: 1.5,

@@ -16,6 +16,7 @@ export {
 export {
   attachClientIdToPayload,
   isDuplicatePurchaseResponse,
+  isInventoryErrorResponse,
   syncOutboxItem,
   syncAllPendingPurchases,
   type SyncPurchasesResult,
@@ -28,4 +29,8 @@ export {
   upsertCustomerCreditCache,
   findCustomerCreditInCache,
 } from "./cache";
+export {
+  deductCartQuantitiesFromProducts,
+  applyOutboxStockHolds,
+} from "./stockHolds";
 export { PURCHASE_CLIENT_ID_FIELD, type PurchaseIdempotentResponse } from "./backendContract";

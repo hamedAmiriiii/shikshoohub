@@ -1,5 +1,6 @@
 import tokenCode from "@/app/coponent/tokenCode";
 import { apiRequestError } from "@/app/lib/apiRequestError/client";
+import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
 import {
   listPendingOutboxItems,
   removeOutboxItem,
@@ -26,9 +27,7 @@ export function attachClientIdToPayload(
 }
 
 function extractErrorText(res: unknown): string {
-  if (!res || typeof res !== "object") return "";
-  const obj = res as Record<string, unknown>;
-  return String(obj.errorText ?? obj.message ?? obj.error ?? "");
+  return getApiErrorMessage(res, "");
 }
 
 export function isDuplicatePurchaseResponse(res: unknown): boolean {
@@ -111,7 +110,18 @@ export async function syncOutboxItem(item: OutboxItem): Promise<"success" | "dup
       await updateOutboxItem(item.id, {
         status: "failed",
         retryCount: item.retryCount + 1,
-        lastError: extractErrorText(res) || "خطای موجودی",
+        lastError: extractErrorText(res) || "موجودی کافی نیست",
+        lastAttemptAt: Date.now(),
+      });
+      return "failed";
+    }
+
+    const status = Number((res as { statusCode?: number }).statusCode ?? 0);
+    if ([400, 401, 403, 422].includes(status)) {
+      await updateOutboxItem(item.id, {
+        status: "failed",
+        retryCount: item.retryCount + 1,
+        lastError: extractErrorText(res) || "اطلاعات خرید نامعتبر است",
         lastAttemptAt: Date.now(),
       });
       return "failed";

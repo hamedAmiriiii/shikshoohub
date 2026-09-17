@@ -417,7 +417,7 @@ export default function ReturnedProductsPage() {
         "Post",
         {},
         body,
-        "/api/purchase-item-returns",
+        "/api/returned-products",
         true,
         true,
         token

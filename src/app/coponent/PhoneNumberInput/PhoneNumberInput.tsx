@@ -19,7 +19,13 @@ interface PhoneNumberInputProps {
 
 function stripPhoneDigits(value: string): string {
   let digits = value.replace(/\D/g, "");
+  if (digits.startsWith("98") && digits.length >= 12) digits = digits.slice(2);
   if (digits.startsWith("0")) digits = digits.slice(1);
+  // فقط موبایل ایران: باید با ۹ شروع شود
+  if (digits.length > 0 && digits[0] !== "9") {
+    const nineAt = digits.indexOf("9");
+    digits = nineAt >= 0 ? digits.slice(nineAt) : "";
+  }
   return digits.slice(0, 10);
 }
 
