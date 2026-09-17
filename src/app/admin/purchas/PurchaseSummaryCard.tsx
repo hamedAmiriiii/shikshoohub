@@ -102,6 +102,11 @@ export default function PurchaseSummaryCard({
           </Typography>
         </Box>
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, alignItems: "center" }}>
+          {data?.customer_name ? (
+            <Typography sx={{ fontSize: 12, fontWeight: 700, color: "var(--admin-text)" }}>
+              {data.customer_name}
+            </Typography>
+          ) : null}
           <Typography sx={{ fontSize: 12, color: "var(--admin-text)" }} dir="ltr">
             {data?.phone || "بدون شماره"}
           </Typography>

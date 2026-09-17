@@ -125,6 +125,11 @@ export default function ListPurches() {
                 width: "110px",
             },
             {
+                label: "مشتری",
+                field: (item: any) => item?.customer_name || "—",
+                width: "120px",
+            },
+            {
                 label: "تلفن",
                 field: (item: any) => item?.phone || "بدون شماره",
                 width: "120px",
@@ -160,6 +165,7 @@ export default function ListPurches() {
     
     let searchBoxList: any = [
       { fieldName: "phone", fieldOperation: "MATCH", fieldValue: "", nextConditionOperator: "OR" },
+      { fieldName: "customer_name", fieldOperation: "MATCH", fieldValue: "", nextConditionOperator: "OR" },
     ];
 
 

@@ -538,6 +538,7 @@ export default function purchas(props: any) {
             {data?.total_amount !== undefined && (
               <PurchaseInfoRow label="مجموع مبلغ" value={`${formatNumber(data.total_amount)} تومان`} />
             )}
+            {data?.customer_name && <PurchaseInfoRow label="نام مشتری" value={data.customer_name} />}
             {data?.phone && <PurchaseInfoRow label="شماره تلفن" value={data.phone} />}
 
             {(data?.payment_type_label || data?.payment_type) && (
