@@ -165,6 +165,11 @@ export default function OilPlansPage() {
                   {plan.description}
                 </p>
               ) : null}
+              {plan.unlimited_products ? (
+                <p className="oil-km" style={{ margin: "6px 0 0", fontSize: 13 }}>
+                  بدون سقف تعداد کالا
+                </p>
+              ) : null}
               <button
                 type="button"
                 className="oil-btn oil-btn-primary"
@@ -172,7 +177,11 @@ export default function OilPlansPage() {
                 disabled={buyingId === plan.id}
                 onClick={() => void handleBuy(plan)}
               >
-                {buyingId === plan.id ? "در حال انتقال…" : "پرداخت و تمدید"}
+                {buyingId === plan.id
+                  ? "در حال انتقال…"
+                  : plan.unlimited_products
+                    ? "خرید اشتراک طلایی"
+                    : "پرداخت و تمدید"}
               </button>
             </article>
           );

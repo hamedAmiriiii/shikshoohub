@@ -89,6 +89,44 @@ export function getApiErrorMessage(res: any, fallback: string): string {
   return fallback;
 }
 
+export type ProductLimitError = {
+  message: string;
+  upgrade_url: string;
+  upgrade_label: string;
+  code: string;
+};
+
+/** خطای سقف ۱۰۰۰ کالا — در صورت وجود لینک خرید اشتراک طلایی */
+export function parseProductLimitError(res: any): ProductLimitError | null {
+  let parsed: Record<string, unknown> | null = null;
+  if (res && typeof res === "object") {
+    if (res.code === "PRODUCT_LIMIT_REACHED") {
+      parsed = res as Record<string, unknown>;
+    } else if (typeof res.errorText === "string") {
+      try {
+        parsed = JSON.parse(res.errorText) as Record<string, unknown>;
+      } catch {
+        parsed = null;
+      }
+    }
+  }
+  if (!parsed || parsed.code !== "PRODUCT_LIMIT_REACHED") return null;
+  const message =
+    typeof parsed.message === "string" && parsed.message.trim()
+      ? parsed.message
+      : "شما به سقف ایجاد محصول رسیدید. برای ثبت بیشتر باید اشتراک طلایی بخرید.";
+  const upgrade_url =
+    typeof parsed.upgrade_url === "string" && parsed.upgrade_url.trim()
+      ? parsed.upgrade_url
+      : "/admin/shop-plans";
+  const upgrade_label =
+    typeof parsed.upgrade_label === "string" && parsed.upgrade_label.trim()
+      ? parsed.upgrade_label
+      : "اشتراک طلایی";
+
+  return { message, upgrade_url, upgrade_label, code: "PRODUCT_LIMIT_REACHED" };
+}
+
 /** خطاهایی که نباید به صف آفلاین بروند (ورودی نامعتبر / احراز هویت) */
 export function isNonRetryableClientError(res: unknown): boolean {
   if (!res || typeof res !== "object") return false;

@@ -199,6 +199,11 @@ export default function ShopPlansPage() {
                       {plan.description}
                     </Typography>
                   )}
+                  {plan.unlimited_products ? (
+                    <Typography sx={{ color: "var(--admin-accent)", fontSize: "13px", fontWeight: 600 }}>
+                      بدون سقف تعداد کالا
+                    </Typography>
+                  ) : null}
                   <Button
                     variant="contained"
                     fullWidth
@@ -211,7 +216,11 @@ export default function ShopPlansPage() {
                       "&:hover": { bgcolor: "var(--admin-accent-hover)" },
                     }}
                   >
-                    {buyingId === plan.id ? "در حال انتقال…" : "پرداخت و تمدید"}
+                    {buyingId === plan.id
+                      ? "در حال انتقال…"
+                      : plan.unlimited_products
+                        ? "خرید اشتراک طلایی"
+                        : "پرداخت و تمدید"}
                   </Button>
                 </CardContent>
               </Card>

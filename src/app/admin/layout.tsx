@@ -76,6 +76,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/accounting/balance-sheet': 'ترازنامه',
     '/admin/daily-reconciliation': 'تطبیق روزانه',
     '/admin/shop-accounts': 'حساب‌های فروشگاه',
+    '/admin/partners': 'شرکا',
     '/admin/petty-cash': 'تنخواه',
     '/admin/purchase-debts': 'بدهکاران (نسیه)',
     '/admin/payroll': 'حقوق',

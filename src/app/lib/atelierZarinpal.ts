@@ -21,6 +21,7 @@ export type PaymentsCatalogItem = {
   duration_months?: number;
   is_active?: boolean;
   is_shop_custom_price?: boolean;
+  unlimited_products?: boolean;
 };
 
 export type ShopSubscriptionPricing = {
@@ -30,6 +31,7 @@ export type ShopSubscriptionPricing = {
   renewal_price_toman?: number | null;
   renewal_days?: number | null;
   has_custom_renewal?: boolean;
+  unlimited_products?: boolean;
 };
 
 export type PaymentGatewayId = "zarinpal" | "sep";
@@ -173,6 +175,7 @@ export function parseCatalogItem(value: unknown): PaymentsCatalogItem | null {
     duration_months: durationMonths > 0 ? durationMonths : undefined,
     is_active: row.is_active !== false && row.active !== false,
     is_shop_custom_price: Boolean(row.is_shop_custom_price),
+    unlimited_products: Boolean(row.unlimited_products),
   };
 }
 
@@ -196,6 +199,7 @@ function parseShopSubscription(value: unknown): ShopSubscriptionPricing | null {
     renewal_price_toman: asNumber(row.renewal_price_toman) || null,
     renewal_days: asNumber(row.renewal_days) || null,
     has_custom_renewal: Boolean(row.has_custom_renewal),
+    unlimited_products: Boolean(row.unlimited_products),
   };
 }
 

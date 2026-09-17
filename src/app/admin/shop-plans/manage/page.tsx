@@ -57,6 +57,7 @@ type PlanForm = {
   duration_days: string;
   description: string;
   is_active: boolean;
+  unlimited_products: boolean;
 };
 
 const emptyForm = (projectType: ProjectTypeFilter): PlanForm => ({
@@ -67,6 +68,7 @@ const emptyForm = (projectType: ProjectTypeFilter): PlanForm => ({
   duration_days: "",
   description: "",
   is_active: true,
+  unlimited_products: false,
 });
 
 function toForm(plan: PaymentsCatalogItem | null, fallbackType: ProjectTypeFilter): PlanForm {
@@ -86,6 +88,7 @@ function toForm(plan: PaymentsCatalogItem | null, fallbackType: ProjectTypeFilte
         : "",
     description: plan.description || "",
     is_active: plan.is_active !== false,
+    unlimited_products: Boolean(plan.unlimited_products),
   };
 }
 
@@ -233,6 +236,7 @@ export default function AdminShopPlansManagePage() {
       duration_days: days,
       description: form.description.trim() || null,
       is_active: form.is_active,
+      unlimited_products: form.unlimited_products,
     };
     try {
       const res = editing
@@ -325,6 +329,7 @@ export default function AdminShopPlansManagePage() {
                     <Typography sx={{ color: "var(--admin-text)", fontWeight: 700 }}>
                       {plan.name}
                       {plan.is_active === false ? " — غیرفعال" : ""}
+                      {plan.unlimited_products ? " — بدون سقف کالا" : ""}
                     </Typography>
                     <PlanPriceBlock plan={plan} />
                     {plan.description ? (
@@ -417,6 +422,21 @@ export default function AdminShopPlansManagePage() {
             <Switch
               checked={form.is_active}
               onChange={(e) => setForm((prev) => ({ ...prev, is_active: e.target.checked }))}
+              sx={{
+                "& .MuiSwitch-switchBase.Mui-checked": { color: "var(--admin-accent)" },
+                "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                  backgroundColor: "var(--admin-accent)",
+                },
+              }}
+            />
+          </Box>
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: "14px" }}>
+              بدون سقف تعداد کالا (طلایی)
+            </Typography>
+            <Switch
+              checked={form.unlimited_products}
+              onChange={(e) => setForm((prev) => ({ ...prev, unlimited_products: e.target.checked }))}
               sx={{
                 "& .MuiSwitch-switchBase.Mui-checked": { color: "var(--admin-accent)" },
                 "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {

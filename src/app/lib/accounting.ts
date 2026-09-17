@@ -217,6 +217,7 @@ export const ACCOUNTING_SOURCE_TYPES = [
   { value: "purchase_return", label: "برگشت فروش" },
   { value: "income", label: "چک دریافتنی" },
   { value: "manual_trade", label: "خرید و فروش دستی" },
+  { value: "partner_settlement", label: "تقسیم سود شرکا" },
 ] as const;
 
 const OPERATIONAL_SOURCE_TYPES = new Set([
@@ -234,6 +235,7 @@ const OPERATIONAL_SOURCE_TYPES = new Set([
   "purchase_return",
   "income",
   "manual_trade",
+  "partner_settlement",
 ]);
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -344,6 +346,8 @@ export function voucherSourceHref(voucher: Pick<AccountingVoucher, "source_type"
       return "/admin/returned-products";
     case "manual_trade":
       return "/admin/manual-trades";
+    case "partner_settlement":
+      return "/admin/partners";
     default:
       return null;
   }

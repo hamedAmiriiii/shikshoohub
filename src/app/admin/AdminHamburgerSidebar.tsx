@@ -208,6 +208,13 @@ export default function AdminHamburgerSidebar({
         permission: "shop_accounts",
       },
       {
+        id: "partners",
+        label: "شرکا",
+        href: "/admin/partners",
+        icon: <HandshakeIcon />,
+        permission: "partners",
+      },
+      {
         id: "daily",
         label: "تطبیق روزانه",
         href: "/admin/daily-reconciliation",

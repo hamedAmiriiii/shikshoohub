@@ -26,6 +26,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { apiRequestError } from "@/app/lib/apiRequestError/client";
 import tokenCode from "@/app/coponent/tokenCode";
+import { parseProductLimitError } from "@/app/lib/apiErrorMessage";
 import {
   PRODUCT_IMPORT_FIELDS,
   autoMapColumns,
@@ -163,6 +164,19 @@ export default function ProductImportPage() {
       );
 
       if (res?.hasError) {
+        const limitErr = parseProductLimitError(res);
+        if (limitErr) {
+          toast.error(
+            <span>
+              {limitErr.message}{" "}
+              <a href={limitErr.upgrade_url} style={{ color: "#fff", textDecoration: "underline", fontWeight: 700 }}>
+                خرید {limitErr.upgrade_label}
+              </a>
+            </span>,
+            { autoClose: 10000 },
+          );
+          return;
+        }
         let message = "خطا در ارسال فایل به سرور";
         try {
           const parsed = JSON.parse(res.errorText);

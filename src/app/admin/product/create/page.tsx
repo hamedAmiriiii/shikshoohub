@@ -4,6 +4,7 @@
 import tokenCode from "@/app/coponent/tokenCode";
 import { apiRequestError } from "@/app/lib/apiRequestError/client";
 import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
+import { parseProductLimitError } from "@/app/lib/apiErrorMessage";
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { toast, ToastContainer } from "react-toastify";
 
@@ -566,6 +567,19 @@ export default function Page() {
       apiRequestError("Post", {}, data, "/api/product", true, true, token).then((res) => {
         setIsSubmitting(false);
         if (res.hasError) {
+          const limitErr = parseProductLimitError(res);
+          if (limitErr) {
+            toast.error(
+              <span>
+                {limitErr.message}{" "}
+                <a href={limitErr.upgrade_url} style={{ color: "#fff", textDecoration: "underline", fontWeight: 700 }}>
+                  خرید {limitErr.upgrade_label}
+                </a>
+              </span>,
+              { autoClose: 10000 },
+            );
+            return;
+          }
           const parsedResponse = JSON.parse(res.errorText);
           const readableMessage = parsedResponse.message;
           toast.error(readableMessage);
