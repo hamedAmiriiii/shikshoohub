@@ -2,12 +2,22 @@ import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
 import tokenCode from "@/app/coponent/tokenCode";
 
 async function api<T = any>(
-  method: "Get" | "Post" | "Put" | "Delete",
+  method: "GET" | "POST" | "PUT" | "DELETE",
   path: string,
-  body: Record<string, unknown> = {},
+  body?: Record<string, unknown>,
 ): Promise<T> {
   const token = tokenCode();
-  return (await FetchWithJwtClient(method, {}, body, path, true, true, token)) as T;
+  const res =
+    method === "GET" || method === "DELETE"
+      ? await FetchWithJwtClient(method, path, token)
+      : await FetchWithJwtClient(method, path, token, {}, {
+          body: JSON.stringify(body ?? {}),
+        });
+
+  if (res && typeof res === "object" && (res as { hasError?: boolean }).hasError) {
+    throw res;
+  }
+  return res as T;
 }
 
 export type SmartOverview = {
@@ -72,7 +82,7 @@ export type SmartCampaign = {
 export type SmartThresholds = Record<string, string | number>;
 
 export function fetchSmartOverview() {
-  return api<SmartOverview>("Get", "/api/smart-customer/overview");
+  return api<SmartOverview>("GET", "/api/smart-customer/overview");
 }
 
 export function fetchSmartCustomers(params: Record<string, string | number | undefined> = {}) {
@@ -82,64 +92,90 @@ export function fetchSmartCustomers(params: Record<string, string | number | und
   });
   const q = qs.toString();
   return api<{ data: SmartCustomerRow[]; total: number; segment_labels: Record<string, string> }>(
-    "Get",
+    "GET",
     `/api/smart-customer/customers${q ? `?${q}` : ""}`,
   );
 }
 
 export function fetchSmartThresholds() {
-  return api<{ thresholds: SmartThresholds }>("Get", "/api/smart-customer/thresholds");
+  return api<{ thresholds: SmartThresholds }>("GET", "/api/smart-customer/thresholds");
 }
 
 export function updateSmartThresholds(body: Record<string, unknown>) {
-  return api("Put", "/api/smart-customer/thresholds", body);
+  return api("PUT", "/api/smart-customer/thresholds", body);
 }
 
 export function recomputeSmartCustomer() {
-  return api("Post", "/api/smart-customer/recompute");
+  return api("POST", "/api/smart-customer/recompute");
+}
+
+export type ProductSignalResult = {
+  type: "bad" | "good";
+  title: string;
+  description: string;
+  customer_count: number;
+  common_products: {
+    product_id: number;
+    product_name: string;
+    customer_count: number;
+  }[];
+  customers: {
+    phone: string;
+    name?: string | null;
+    frequency: number;
+    avg_days_between: number;
+    recency_days: number;
+    overdue_threshold_days: number;
+    last_product_id?: number | null;
+    last_product_name?: string | null;
+  }[];
+};
+
+export function fetchProductSignals(type: "bad" | "good") {
+  return api<ProductSignalResult>("GET", `/api/smart-customer/product-signals?type=${type}`);
 }
 
 export function fetchSmartActions(status = "suggested") {
-  return api<{ data: SmartAction[] }>("Get", `/api/smart-customer/actions?status=${status}`);
+  return api<{ data: SmartAction[] }>("GET", `/api/smart-customer/actions?status=${status}`);
 }
 
 export function dismissSmartAction(id: number) {
-  return api("Post", `/api/smart-customer/actions/${id}/dismiss`);
+  return api("POST", `/api/smart-customer/actions/${id}/dismiss`);
 }
 
 export function executeSmartAction(id: number) {
-  return api("Post", `/api/smart-customer/actions/${id}/execute`);
+  return api("POST", `/api/smart-customer/actions/${id}/execute`);
 }
 
 export function fetchSmartCampaigns() {
-  return api<{ campaigns: SmartCampaign[] }>("Get", "/api/smart-customer/campaigns");
+  return api<{ campaigns: SmartCampaign[] }>("GET", "/api/smart-customer/campaigns");
 }
 
 export function fetchSmartCampaign(id: number) {
-  return api<{ campaign: SmartCampaign }>("Get", `/api/smart-customer/campaigns/${id}`);
+  return api<{ campaign: SmartCampaign }>("GET", `/api/smart-customer/campaigns/${id}`);
 }
 
 export function createSmartCampaign(body: Record<string, unknown>) {
-  return api("Post", "/api/smart-customer/campaigns", body);
+  return api("POST", "/api/smart-customer/campaigns", body);
 }
 
 export function updateSmartCampaign(id: number, body: Record<string, unknown>) {
-  return api("Put", `/api/smart-customer/campaigns/${id}`, body);
+  return api("PUT", `/api/smart-customer/campaigns/${id}`, body);
 }
 
 export function deleteSmartCampaign(id: number) {
-  return api("Delete", `/api/smart-customer/campaigns/${id}`);
+  return api("DELETE", `/api/smart-customer/campaigns/${id}`);
 }
 
 export function previewSmartCampaign(id: number) {
   return api<{ matched: number; estimated_revenue: number; sample_phones: string[] }>(
-    "Get",
+    "GET",
     `/api/smart-customer/campaigns/${id}/preview`,
   );
 }
 
 export function runSmartCampaign(id: number) {
-  return api("Post", `/api/smart-customer/campaigns/${id}/run`);
+  return api("POST", `/api/smart-customer/campaigns/${id}/run`);
 }
 
 export function toFaNum(n: number | string | null | undefined) {

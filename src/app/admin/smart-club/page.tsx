@@ -5,22 +5,37 @@ import {
   Box,
   Button,
   CircularProgress,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  Divider,
   Grid,
+  IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
   Typography,
 } from "@mui/material";
 import Link from "next/link";
+import CloseIcon from "@mui/icons-material/Close";
 import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
 import CampaignOutlinedIcon from "@mui/icons-material/CampaignOutlined";
 import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
 import BoltOutlinedIcon from "@mui/icons-material/BoltOutlined";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import ThumbDownAltOutlinedIcon from "@mui/icons-material/ThumbDownAltOutlined";
+import ThumbUpAltOutlinedIcon from "@mui/icons-material/ThumbUpAltOutlined";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { adminButtonStartIconSx, adminPageSx } from "@/app/admin/theme/adminTheme";
 import {
+  fetchProductSignals,
   fetchSmartOverview,
   recomputeSmartCustomer,
   toFaNum,
+  type ProductSignalResult,
   type SmartOverview,
 } from "@/app/lib/smartCustomer";
 import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
@@ -37,6 +52,9 @@ export default function SmartClubDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [data, setData] = useState<SmartOverview | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [signal, setSignal] = useState<ProductSignalResult | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -64,6 +82,21 @@ export default function SmartClubDashboardPage() {
       toast.error(getApiErrorMessage(e, "محاسبه ناموفق بود"));
     } finally {
       setBusy(false);
+    }
+  };
+
+  const openSignals = async (type: "bad" | "good") => {
+    setModalOpen(true);
+    setModalLoading(true);
+    setSignal(null);
+    try {
+      const res = await fetchProductSignals(type);
+      setSignal(res);
+    } catch (e) {
+      toast.error(getApiErrorMessage(e, "خطا در دریافت لیست کالا"));
+      setModalOpen(false);
+    } finally {
+      setModalLoading(false);
     }
   };
 
@@ -125,6 +158,33 @@ export default function SmartClubDashboardPage() {
               </Typography>
             )}
           </Box>
+
+          <Grid container spacing={1.5} mb={2}>
+            <Grid item xs={12} sm={6}>
+              <Button
+                fullWidth
+                variant="outlined"
+                color="error"
+                startIcon={<ThumbDownAltOutlinedIcon />}
+                onClick={() => void openSignals("bad")}
+                sx={{ ...adminButtonStartIconSx, py: 1.75, ...panelSx }}
+              >
+                کالاهای بد
+              </Button>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Button
+                fullWidth
+                variant="outlined"
+                color="success"
+                startIcon={<ThumbUpAltOutlinedIcon />}
+                onClick={() => void openSignals("good")}
+                sx={{ ...adminButtonStartIconSx, py: 1.75, ...panelSx }}
+              >
+                کالاهای خوب
+              </Button>
+            </Grid>
+          </Grid>
 
           <Typography fontWeight={700} mb={1}>
             پیشنهادهای امروز
@@ -202,6 +262,93 @@ export default function SmartClubDashboardPage() {
           </Grid>
         </>
       )}
+
+      <Dialog open={modalOpen} onClose={() => setModalOpen(false)} fullWidth maxWidth="md">
+        <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
+          <Typography fontWeight={800}>{signal?.title || "نتیجه"}</Typography>
+          <IconButton onClick={() => setModalOpen(false)} size="small">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          {modalLoading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : !signal ? null : (
+            <>
+              <Typography variant="body2" color="text.secondary" mb={1}>
+                {signal.description}
+              </Typography>
+              <Typography fontWeight={700} mb={1}>
+                {toFaNum(signal.customer_count)} مشتری
+              </Typography>
+
+              <Typography fontWeight={700} mt={2} mb={1}>
+                کالاهای مشترک (بیشترین)
+              </Typography>
+              {signal.common_products.length === 0 ? (
+                <Typography color="text.secondary" mb={2}>
+                  کالایی پیدا نشد. اول «محاسبه دوباره» را بزنید.
+                </Typography>
+              ) : (
+                <Box sx={{ overflowX: "auto", mb: 2, border: "1px solid var(--admin-border)", borderRadius: 2 }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>کالا</TableCell>
+                        <TableCell>تعداد مشتری</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {signal.common_products.map((p) => (
+                        <TableRow key={p.product_id}>
+                          <TableCell>{p.product_name}</TableCell>
+                          <TableCell>{toFaNum(p.customer_count)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </Box>
+              )}
+
+              <Divider sx={{ my: 1.5 }} />
+              <Typography fontWeight={700} mb={1}>
+                جزئیات مشتریان
+              </Typography>
+              <Box sx={{ overflowX: "auto", border: "1px solid var(--admin-border)", borderRadius: 2 }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>مشتری</TableCell>
+                      <TableCell>خریدها</TableCell>
+                      <TableCell>میانگین فاصله</TableCell>
+                      <TableCell>روز از آخرین</TableCell>
+                      <TableCell>آستانه ۲۰٪+</TableCell>
+                      <TableCell>آخرین کالا</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {signal.customers.map((c) => (
+                      <TableRow key={c.phone}>
+                        <TableCell>
+                          <Typography fontWeight={600}>{c.name || "—"}</Typography>
+                          <Typography variant="caption">{c.phone}</Typography>
+                        </TableCell>
+                        <TableCell>{toFaNum(c.frequency)}</TableCell>
+                        <TableCell>{toFaNum(c.avg_days_between)} روز</TableCell>
+                        <TableCell>{toFaNum(c.recency_days)}</TableCell>
+                        <TableCell>{toFaNum(c.overdue_threshold_days)}</TableCell>
+                        <TableCell>{c.last_product_name || "—"}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Box>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }
