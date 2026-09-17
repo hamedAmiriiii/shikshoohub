@@ -149,6 +149,8 @@ export function shopFeatureAllowsPath(
   if (
     pathname === "/admin/customer-club" ||
     pathname.startsWith("/admin/customer-club/") ||
+    pathname === "/admin/smart-club" ||
+    pathname.startsWith("/admin/smart-club/") ||
     pathname === "/admin/customers" ||
     pathname.startsWith("/admin/customers/") ||
     pathname === "/admin/broadcast-sms" ||

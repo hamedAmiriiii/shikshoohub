@@ -57,6 +57,10 @@ import FileUploadIcon from "@mui/icons-material/FileUpload";
 import KitchenIcon from "@mui/icons-material/Kitchen";
 import DescriptionIcon from "@mui/icons-material/Description";
 import GroupsIcon from "@mui/icons-material/Groups";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
+import BoltOutlinedIcon from "@mui/icons-material/BoltOutlined";
+import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
+import CampaignOutlinedIcon from "@mui/icons-material/CampaignOutlined";
 import { useShopPermissionGate, type ShopPermissionKey } from "@/app/lib/shopPermissions";
 import { readShopFeatures, SHOP_FEATURES_CHANGED_EVENT } from "@/app/lib/shopFeatures";
 
@@ -413,6 +417,50 @@ export default function AdminHamburgerSidebar({
     [customerClubEnabled],
   );
 
+  const smartClubChildren: NavLeaf[] = useMemo(
+    () =>
+      customerClubEnabled
+        ? [
+            {
+              id: "smart-club-home",
+              label: "داشبورد هوشمند",
+              href: "/admin/smart-club",
+              icon: <AutoAwesomeIcon />,
+              permission: ["customers", "shop_sms"],
+            },
+            {
+              id: "smart-club-customers",
+              label: "مشتریان RFM",
+              href: "/admin/smart-club/customers",
+              icon: <PeopleIcon />,
+              permission: "customers",
+            },
+            {
+              id: "smart-club-actions",
+              label: "پیشنهاد اقدام",
+              href: "/admin/smart-club/actions",
+              icon: <BoltOutlinedIcon />,
+              permission: "customers",
+            },
+            {
+              id: "smart-club-campaigns",
+              label: "کمپین‌ها",
+              href: "/admin/smart-club/campaigns",
+              icon: <CampaignOutlinedIcon />,
+              permission: "customers",
+            },
+            {
+              id: "smart-club-thresholds",
+              label: "آستانه‌ها",
+              href: "/admin/smart-club/thresholds",
+              icon: <TuneOutlinedIcon />,
+              permission: "customers",
+            },
+          ]
+        : [],
+    [customerClubEnabled],
+  );
+
   const adminChildren: NavLeaf[] = useMemo(
     () => [
       {
@@ -573,6 +621,16 @@ export default function AdminHamburgerSidebar({
         icon: customerClubEnabled ? <GroupsIcon /> : <SmsIcon />,
         children: smsChildren.filter((child) => can(child.permission)),
       },
+      ...(customerClubEnabled && smartClubChildren.length > 0
+        ? [
+            {
+              id: "smart-club",
+              label: "باشگاه هوشمند",
+              icon: <AutoAwesomeIcon />,
+              children: smartClubChildren.filter((child) => can(child.permission)),
+            } as NavGroup,
+          ]
+        : []),
     ].filter((group) => group.children.length > 0);
     if (isSuperAdmin) {
       base.push({
@@ -583,7 +641,7 @@ export default function AdminHamburgerSidebar({
       });
     }
     return base;
-  }, [accountingChildren, accountingEnabled, adminChildren, can, customerClubEnabled, financialChildren, isSuperAdmin, payrollChildren, productChildren, smsChildren]);
+  }, [accountingChildren, accountingEnabled, adminChildren, can, customerClubEnabled, financialChildren, isSuperAdmin, payrollChildren, productChildren, smartClubChildren, smsChildren]);
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
