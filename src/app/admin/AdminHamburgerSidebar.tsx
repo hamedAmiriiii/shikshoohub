@@ -49,6 +49,7 @@ import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 import BalanceIcon from "@mui/icons-material/Balance";
 import CalculateIcon from "@mui/icons-material/Calculate";
+import FactCheckIcon from "@mui/icons-material/FactCheck";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import AddBoxIcon from "@mui/icons-material/AddBox";
 import ListAltIcon from "@mui/icons-material/ListAlt";
@@ -233,6 +234,13 @@ export default function AdminHamburgerSidebar({
         permission: "shop_accounts",
       },
       { id: "profit", label: "سود و ضرر", href: "/admin/profit-loss", icon: <TrendingUpIcon />, permission: "reports" },
+      {
+        id: "smart-review",
+        label: "بررسی هوشمند",
+        href: "/admin/smart-review",
+        icon: <FactCheckIcon />,
+        permission: "reports",
+      },
     ],
     [],
   );

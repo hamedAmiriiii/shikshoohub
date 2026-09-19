@@ -71,6 +71,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/installments': 'اقساط',
     '/admin/installment-credits': 'اعتبار اقساطی',
     '/admin/profit-loss': 'سود و ضرر',
+    '/admin/smart-review': 'بررسی هوشمند',
     '/admin/accounting': 'حسابداری',
     '/admin/accounting/accounts': 'درخت حساب',
     '/admin/accounting/vouchers': 'اسناد حسابداری',

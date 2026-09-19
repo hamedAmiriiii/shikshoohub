@@ -1102,6 +1102,17 @@ export const KNOWLEDGE: KnowledgeEntry[] = [
     path: "/admin/profit-loss",
   },
   {
+    id: "smart-review",
+    audience: "admin",
+    title: "بررسی هوشمند",
+    questions: ["بررسی هوشمند", "خطای ورود داده", "فاکتور اشتباه"],
+    keywords: ["بررسی هوشمند", "ممیزی", "خطای فاکتور"],
+    answers: [
+      "مالی → بررسی هوشمند: داده‌های فروشگاه را چک می‌کند. ورود اشتباه مثل قیمت صفر یا فروش زیر بها، کار ناقص مثل نسیه تسویه‌نشده، و ناسازگاری محاسبه را جدا نشان می‌دهد.",
+    ],
+    path: "/admin/smart-review",
+  },
+  {
     id: "daily-recon",
     audience: "admin",
     title: "تطبیق روزانه",
