@@ -21,8 +21,17 @@ interface MonthlyReport {
   total_profit: number;
   total_expenses: number;
   total_invoices: number;
+  invoice_cash_out?: number;
+  invoice_unpaid?: number;
+  expense_cash_out?: number;
   net_profit: number;
   account_balance: number;
+  cash_and_card_total?: number;
+  total_collected?: number;
+  uncollected_debts?: number;
+  uncollected_installments?: number;
+  open_cheques?: number;
+  credit_used_total?: number;
 }
 
 interface FinancialReportResponse {
@@ -37,12 +46,84 @@ interface FinancialReportResponse {
     total_invoices: number;
     total_net_profit: number;
     total_account_balance: number;
+    cash_and_card_total?: number;
+    total_collected?: number;
+    uncollected_debts?: number;
+    uncollected_installments?: number;
+    open_cheques?: number;
+    credit_used_total?: number;
+    invoice_cash_out?: number;
+    invoice_unpaid?: number;
+    expense_cash_out?: number;
   };
 }
 
 const formatNumber = (num: number) => {
   return new Intl.NumberFormat('fa-IR').format(num);
 };
+
+function MoneyRow({
+  label,
+  amount,
+  hint,
+  color,
+  strong,
+}: {
+  label: string;
+  amount: number;
+  hint?: string;
+  color?: string;
+  strong?: boolean;
+}) {
+  return (
+    <TableRow
+      sx={{
+        "&:hover": {
+          backgroundColor: "var(--admin-surface-alt)",
+        },
+      }}
+    >
+      <TableCell sx={{ color: "var(--admin-text)", verticalAlign: "top" }}>
+        {label}
+        {hint ? (
+          <Typography sx={{ fontSize: "12px", color: "var(--admin-text-secondary)", mt: "4px", lineHeight: 1.6 }}>
+            {hint}
+          </Typography>
+        ) : null}
+      </TableCell>
+      <TableCell
+        align="right"
+        sx={{
+          color: color ?? "var(--admin-text)",
+          fontWeight: strong ? 700 : 600,
+          fontSize: strong ? "18px" : undefined,
+          whiteSpace: "nowrap",
+        }}
+      >
+        {formatNumber(amount)} تومان
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function SectionRow({ title }: { title: string }) {
+  return (
+    <TableRow>
+      <TableCell
+        colSpan={2}
+        sx={{
+          color: "var(--admin-text-secondary)",
+          fontWeight: 700,
+          fontSize: "13px",
+          pt: "18px",
+          borderBottom: "1px solid var(--admin-divider)",
+        }}
+      >
+        {title}
+      </TableCell>
+    </TableRow>
+  );
+}
 
 const monthNames = [
   'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
@@ -318,6 +399,12 @@ export default function ProfitLossPage() {
                          فاکتورها
                       </TableCell>
                       <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)", whiteSpace: "nowrap" }}>
+                         پرداخت فاکتور
+                      </TableCell>
+                      <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)", whiteSpace: "nowrap" }}>
+                         نسیه باز
+                      </TableCell>
+                      <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)", whiteSpace: "nowrap" }}>
                         سود خالص
                       </TableCell>
                       <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600", borderBottom: "1px solid var(--admin-divider)", whiteSpace: "nowrap" }}>
@@ -362,6 +449,12 @@ export default function ProfitLossPage() {
                         <TableCell align="right" sx={{ color: "var(--admin-text)" }}>
                           {formatNumber(report.total_invoices)} 
                         </TableCell>
+                        <TableCell align="right" sx={{ color: "var(--admin-text)" }}>
+                          {formatNumber(report.invoice_cash_out ?? 0)}
+                        </TableCell>
+                        <TableCell align="right" sx={{ color: (report.uncollected_debts ?? 0) > 0 ? "var(--admin-warning)" : "var(--admin-text)" }}>
+                          {formatNumber(report.uncollected_debts ?? 0)}
+                        </TableCell>
                         <TableCell align="right" sx={{ color: report.net_profit >= 0 ? "var(--admin-accent)" : "var(--admin-error)", fontWeight: "600" }}>
                           {formatNumber(report.net_profit)} 
                         </TableCell>
@@ -386,8 +479,11 @@ export default function ProfitLossPage() {
                   border: "1px solid rgba(55, 84, 165, 0.3)",
                 }}
               >
-                <Typography sx={{ fontSize: "20px", color: "var(--admin-text)", fontWeight: "700", marginBottom: "20px" }}>
+                <Typography sx={{ fontSize: "20px", color: "var(--admin-text)", fontWeight: "700", marginBottom: "8px" }}>
                   مجموع کلی
+                </Typography>
+                <Typography sx={{ fontSize: "13px", color: "var(--admin-text-secondary)", marginBottom: "20px", lineHeight: 1.8 }}>
+                  سود از فروش و بهای کالا است. موجودی حساب نقد عملیاتی است و نسیه یا فاکتور پرداخت‌نشده را پول داخل صندوق حساب نمی‌کند.
                 </Typography>
                 <TableContainer>
                   <Table>
@@ -402,114 +498,71 @@ export default function ProfitLossPage() {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      <TableRow
-                        sx={{
-                          "&:hover": {
-                            backgroundColor: "var(--admin-surface-alt)",
-                          },
-                        }}
-                      >
-                        <TableCell sx={{ color: "var(--admin-text)" }}>کل فروش</TableCell>
-                        <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600" }}>
-                          {formatNumber(data.totals.total_sales)} تومان
-                        </TableCell>
-                      </TableRow>
-                      <TableRow
-                        sx={{
-                          "&:hover": {
-                            backgroundColor: "var(--admin-surface-alt)",
-                          },
-                        }}
-                      >
-                        <TableCell sx={{ color: "var(--admin-text)" }}>سند فروش دستی</TableCell>
-                        <TableCell align="right" sx={{ color: "var(--admin-accent)", fontWeight: "600" }}>
-                          {formatNumber(data.totals.total_manual_sales ?? 0)} تومان
-                        </TableCell>
-                      </TableRow>
-                      <TableRow
-                        sx={{
-                          "&:hover": {
-                            backgroundColor: "var(--admin-surface-alt)",
-                          },
-                        }}
-                      >
-                        <TableCell sx={{ color: "var(--admin-text)" }}>کل مبلغ خرید</TableCell>
-                        <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600" }}>
-                          {formatNumber(data.totals.total_purchases)} تومان
-                        </TableCell>
-                      </TableRow>
-                      <TableRow
-                        sx={{
-                          "&:hover": {
-                            backgroundColor: "var(--admin-surface-alt)",
-                          },
-                        }}
-                      >
-                        <TableCell sx={{ color: "var(--admin-text)" }}>سند خرید دستی</TableCell>
-                        <TableCell align="right" sx={{ color: "var(--admin-warning)", fontWeight: "600" }}>
-                          {formatNumber(data.totals.total_manual_purchases ?? 0)} تومان
-                        </TableCell>
-                      </TableRow>
-                      <TableRow
-                        sx={{
-                          "&:hover": {
-                            backgroundColor: "var(--admin-surface-alt)",
-                          },
-                        }}
-                      >
-                        <TableCell sx={{ color: "var(--admin-text)" }}>کل سود</TableCell>
-                        <TableCell align="right" sx={{ color: "var(--admin-accent)", fontWeight: "600" }}>
-                          {formatNumber(data.totals.total_profit)} تومان
-                        </TableCell>
-                      </TableRow>
-                      <TableRow
-                        sx={{
-                          "&:hover": {
-                            backgroundColor: "var(--admin-surface-alt)",
-                          },
-                        }}
-                      >
-                        <TableCell sx={{ color: "var(--admin-text)" }}>کل هزینه‌های جاری</TableCell>
-                        <TableCell align="right" sx={{ color: "var(--admin-warning)", fontWeight: "600" }}>
-                          {formatNumber(data.totals.total_expenses)} تومان
-                        </TableCell>
-                      </TableRow>
-                      <TableRow
-                        sx={{
-                          "&:hover": {
-                            backgroundColor: "var(--admin-surface-alt)",
-                          },
-                        }}
-                      >
-                        <TableCell sx={{ color: "var(--admin-text)" }}>کل فاکتورها</TableCell>
-                        <TableCell align="right" sx={{ color: "var(--admin-text)", fontWeight: "600" }}>
-                          {formatNumber(data.totals.total_invoices)} تومان
-                        </TableCell>
-                      </TableRow>
-                      <TableRow
-                        sx={{
-                          "&:hover": {
-                            backgroundColor: "var(--admin-surface-alt)",
-                          },
-                        }}
-                      >
-                        <TableCell sx={{ color: "var(--admin-text)" }}>خالص سود</TableCell>
-                        <TableCell align="right" sx={{ color: data.totals.total_net_profit >= 0 ? "var(--admin-accent)" : "var(--admin-error)", fontWeight: "700", fontSize: "18px" }}>
-                          {formatNumber(data.totals.total_net_profit)} تومان
-                        </TableCell>
-                      </TableRow>
-                      <TableRow
-                        sx={{
-                          "&:hover": {
-                            backgroundColor: "var(--admin-surface-alt)",
-                          },
-                        }}
-                      >
-                        <TableCell sx={{ color: "var(--admin-text)" }}>موجودی حساب</TableCell>
-                        <TableCell align="right" sx={{ color: data.totals.total_account_balance >= 0 ? "var(--admin-online)" : "var(--admin-error)", fontWeight: "700", fontSize: "18px" }}>
-                          {formatNumber(data.totals.total_account_balance)} تومان
-                        </TableCell>
-                      </TableRow>
+                      <SectionRow title="سود و زیان" />
+                      <MoneyRow label="کل فروش" amount={data.totals.total_sales} hint="فروش تعهدی همین دوره؛ شامل نسیه وصول‌نشده هم هست" />
+                      <MoneyRow label="سند فروش دستی" amount={data.totals.total_manual_sales ?? 0} color="var(--admin-accent)" />
+                      <MoneyRow label="بهای تمام‌شده کالای فروش‌رفته" amount={data.totals.total_purchases} hint="این خرید از تأمین‌کننده نیست؛ هزینه کالایی است که فروخته شده" />
+                      <MoneyRow label="سند خرید دستی" amount={data.totals.total_manual_purchases ?? 0} color="var(--admin-warning)" />
+                      <MoneyRow label="سود ناخالص" amount={data.totals.total_profit} color="var(--admin-accent)" />
+                      <MoneyRow label="هزینه‌های جاری" amount={data.totals.total_expenses} color="var(--admin-warning)" hint="مبلغ ثبت‌شده هزینه؛ ممکن است همه نقد پرداخت نشده باشد" />
+                      <MoneyRow
+                        label="پرداخت نقدی هزینه"
+                        amount={data.totals.expense_cash_out ?? 0}
+                        hint="پولی که واقعاً بابت هزینه از حساب رفته"
+                      />
+                      <MoneyRow
+                        label="سود خالص"
+                        amount={data.totals.total_net_profit}
+                        color={data.totals.total_net_profit >= 0 ? "var(--admin-accent)" : "var(--admin-error)"}
+                        strong
+                      />
+
+                      <SectionRow title="فاکتور خرید از تأمین‌کننده" />
+                      <MoneyRow
+                        label="فاکتور ثبت‌شده"
+                        amount={data.totals.total_invoices}
+                        hint="مبلغ فاکتور خرید؛ تا نقد پرداخت نشود از موجودی حساب کم نمی‌شود"
+                      />
+                      <MoneyRow
+                        label="پرداخت نقدی فاکتور"
+                        amount={data.totals.invoice_cash_out ?? 0}
+                        hint="پولی که بابت فاکتور از حساب رفته"
+                      />
+                      <MoneyRow
+                        label="مانده فاکتور پرداخت‌نشده"
+                        amount={data.totals.invoice_unpaid ?? 0}
+                        color={(data.totals.invoice_unpaid ?? 0) > 0 ? "var(--admin-warning)" : "var(--admin-text)"}
+                        hint="فاکتور ثبت‌شده منهای پرداخت نقدی"
+                      />
+
+                      <SectionRow title="وصول فروش" />
+                      <MoneyRow
+                        label="وصول نقد و کارت"
+                        amount={data.totals.cash_and_card_total ?? 0}
+                        hint="پولی که سر فروش نقد/کارت گرفته شده"
+                      />
+                      <MoneyRow
+                        label="نسیه وصول‌نشده"
+                        amount={data.totals.uncollected_debts ?? 0}
+                        color={(data.totals.uncollected_debts ?? 0) > 0 ? "var(--admin-warning)" : "var(--admin-text)"}
+                        hint="فروش نسیه که هنوز تسویه نشده؛ داخل صندوق نیست"
+                      />
+                      <MoneyRow label="قسط وصول‌نشده" amount={data.totals.uncollected_installments ?? 0} />
+                      <MoneyRow label="چک وصول‌نشده" amount={data.totals.open_cheques ?? 0} />
+                      <MoneyRow
+                        label="جمع وصول‌شده"
+                        amount={data.totals.total_collected ?? 0}
+                        hint="نقد/کارت + وصول نسیه و قسط و چک پاس‌شده"
+                      />
+
+                      <SectionRow title="نقد عملیاتی" />
+                      <MoneyRow
+                        label="موجودی حساب"
+                        amount={data.totals.total_account_balance}
+                        color={data.totals.total_account_balance >= 0 ? "var(--admin-online)" : "var(--admin-error)"}
+                        strong
+                        hint="فروش منهای نسیه و چک وصول‌نشده و پرداخت نقدی فاکتور و هزینه"
+                      />
                     </TableBody>
                   </Table>
                 </TableContainer>
