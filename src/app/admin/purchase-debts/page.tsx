@@ -41,8 +41,11 @@ import {
   formatDebtStatus,
   getDebtInvoiceAmount,
   getDebtInvoiceId,
+  getDebtInvoiceOriginalAmount,
+  getDebtInvoicePaidAmount,
   getDebtInvoiceProducts,
   getDebtProductName,
+  getDebtorDisplayName,
   isDebtInvoicePending,
   type PurchaseDebtInvoice,
   type PurchaseDebtorRow,
@@ -75,6 +78,7 @@ export default function PurchaseDebtsPage() {
   const [debtors, setDebtors] = useState<PurchaseDebtorRow[]>([]);
   const [meta, setMeta] = useState<PurchaseDebtsGridMeta>({});
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
+  const [selectedName, setSelectedName] = useState<string>("");
   const [invoices, setInvoices] = useState<PurchaseDebtInvoice[]>([]);
   const [invoicesLoading, setInvoicesLoading] = useState(false);
   const [invoiceStatus, setInvoiceStatus] = useState<string>("pending");
@@ -119,7 +123,9 @@ export default function PurchaseDebtsPage() {
         toast.error(getApiErrorMessage(res, "خطا در دریافت فاکتورها"));
         return;
       }
-      setInvoices(extractDebtInvoiceList(res.purchases));
+      setInvoices(extractDebtInvoiceList(res));
+      const name = String(res?.name || res?.customer_name || "").trim();
+      if (name) setSelectedName(name);
     } finally {
       setInvoicesLoading(false);
     }
@@ -155,10 +161,12 @@ export default function PurchaseDebtsPage() {
     }
   }, [selectedPhone, invoiceStatus, loadInvoices]);
 
-  const handleOpenDebtor = (phone: string) => {
-    setSelectedPhone(phone);
+  const handleOpenDebtor = (row: PurchaseDebtorRow) => {
+    setSelectedPhone(row.phone);
+    setSelectedName(getDebtorDisplayName(row));
     setInvoiceStatus("pending");
     setExpandedId(null);
+    setInvoiceDetails({});
   };
 
   const handleToggleDetails = async (invoice: PurchaseDebtInvoice) => {
@@ -174,6 +182,7 @@ export default function PurchaseDebtsPage() {
   };
 
   const handleSettled = () => {
+    setInvoiceDetails({});
     loadDebtors();
     if (selectedPhone) loadInvoices(selectedPhone, invoiceStatus);
   };
@@ -227,6 +236,7 @@ export default function PurchaseDebtsPage() {
           <Table size="small">
             <TableHead>
               <TableRow>
+                <TableCell align="center">نام مشتری</TableCell>
                 <TableCell align="center">شماره تلفن</TableCell>
                 <TableCell align="center">تعداد قرض</TableCell>
                 <TableCell align="center">مبلغ کل بدهی</TableCell>
@@ -236,13 +246,14 @@ export default function PurchaseDebtsPage() {
             <TableBody>
               {debtors.map((row) => (
                 <TableRow key={row.phone} hover>
+                  <TableCell align="center">{getDebtorDisplayName(row) || "—"}</TableCell>
                   <TableCell align="center" sx={{ direction: "ltr" }}>{row.phone}</TableCell>
                   <TableCell align="center">{formatNumber(row.debt_count)}</TableCell>
                   <TableCell align="center" sx={{ color: "var(--admin-accent)", fontWeight: 700 }}>
-                    {formatNumber(row.total_debt_amount)} تومان
+                    {formatNumber(row.total_debt_amount ?? 0)} تومان
                   </TableCell>
                   <TableCell align="center">
-                    <Button size="small" variant="outlined" onClick={() => handleOpenDebtor(row.phone)}>
+                    <Button size="small" variant="outlined" onClick={() => handleOpenDebtor(row)}>
                       جزئیات
                     </Button>
                   </TableCell>
@@ -255,15 +266,21 @@ export default function PurchaseDebtsPage() {
 
       <Dialog
         open={Boolean(selectedPhone)}
-        onClose={() => setSelectedPhone(null)}
+        onClose={() => {
+          setSelectedPhone(null);
+          setSelectedName("");
+        }}
         fullWidth
         maxWidth="md"
       >
         <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <Typography sx={{ fontWeight: 700, color: "var(--admin-text)" }}>
-            فاکتورهای نسیه — {selectedPhone}
+            فاکتورهای نسیه — {selectedName ? `${selectedName} — ` : ""}{selectedPhone}
           </Typography>
-          <IconButton size="small" onClick={() => setSelectedPhone(null)}>
+          <IconButton size="small" onClick={() => {
+            setSelectedPhone(null);
+            setSelectedName("");
+          }}>
             <CloseIcon />
           </IconButton>
         </DialogTitle>
@@ -301,6 +318,10 @@ export default function PurchaseDebtsPage() {
                 const detail = invoiceDetails[id];
                 const products = getDebtInvoiceProducts(detail ?? invoice);
                 const pending = isDebtInvoicePending(invoice);
+                const remaining = getDebtInvoiceAmount(invoice);
+                const originalAmount = getDebtInvoiceOriginalAmount(invoice);
+                const paidAmount = getDebtInvoicePaidAmount(invoice);
+                const partial = pending && paidAmount > 0;
 
                 return (
                   <Card key={id} sx={{ border: "1px solid var(--admin-border)", borderRadius: "10px" }}>
@@ -308,26 +329,34 @@ export default function PurchaseDebtsPage() {
                       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
                         <Box>
                           <Typography sx={{ fontWeight: 600, color: "var(--admin-text)", fontSize: "14px" }}>
-                            فاکتور #{id} — {formatNumber(getDebtInvoiceAmount(invoice))} تومان
+                            فاکتور #{id} — مانده {formatNumber(remaining)} تومان
                           </Typography>
                           <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "12px" }}>
                             {formatDate(invoice.created_at)}
+                            {originalAmount > remaining || paidAmount > 0
+                              ? ` — اصل ${formatNumber(originalAmount)} / پرداخت‌شده ${formatNumber(paidAmount)}`
+                              : ""}
                           </Typography>
                         </Box>
                         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                           <Chip
                             size="small"
                             label={formatDebtStatus(invoice)}
-                            color={pending ? "warning" : "success"}
+                            color={pending ? (partial ? "info" : "warning") : "success"}
                           />
                           {pending && (
                             <Button
                               size="small"
                               variant="contained"
-                              onClick={() => setSettleInvoice(invoice)}
+                              onClick={() => setSettleInvoice({
+                                ...invoice,
+                                phone: invoice.phone || selectedPhone || undefined,
+                                name: selectedName || invoice.name,
+                                customer_name: selectedName || invoice.customer_name,
+                              })}
                               sx={{ bgcolor: "var(--admin-accent)", "&:hover": { bgcolor: "var(--admin-accent-hover)" } }}
                             >
-                              تسویه
+                              {partial ? "پرداخت" : "تسویه"}
                             </Button>
                           )}
                           <IconButton size="small" onClick={() => handleToggleDetails(invoice)}>

@@ -2,9 +2,20 @@ export type PurchaseDebtStatus = "pending" | "settled" | "all";
 
 export type PurchaseDebtorRow = {
   phone: string;
+  name?: string | null;
+  customer_name?: string | null;
   debt_count: number;
   total_debt_amount?: number;
   purchases?: PurchaseDebtInvoice[];
+};
+
+export type PurchaseDebtPayment = {
+  id?: number;
+  card_amount?: number;
+  cash_amount?: number;
+  amount?: number;
+  note?: string | null;
+  paid_at?: string | null;
 };
 
 export type PurchaseDebtProduct = {
@@ -24,11 +35,16 @@ export type PurchaseDebtInvoice = {
   id: number;
   purchase_id?: number;
   phone?: string;
+  name?: string | null;
+  customer_name?: string | null;
   status?: string;
   payment_type?: string;
   payment_type_label?: string;
   total_amount?: number;
   payable_amount?: number;
+  invoice_payable_amount?: number;
+  paid_amount?: number;
+  remaining_amount?: number;
   debt_amount?: number;
   amount?: number;
   discount_amount?: number;
@@ -39,6 +55,7 @@ export type PurchaseDebtInvoice = {
   is_debt_settled?: boolean;
   products?: PurchaseDebtProduct[];
   items?: PurchaseDebtProduct[];
+  debt_payments?: PurchaseDebtPayment[];
 };
 
 export type PurchaseDebtsGridMeta = {
@@ -68,6 +85,8 @@ export function extractDebtorList(res: unknown): PurchaseDebtorRow[] {
   if (Array.isArray(obj.data)) {
     return (obj.data as Record<string, unknown>[]).map((row) => ({
       phone: String(row.phone ?? ""),
+      name: typeof row.name === "string" && row.name.trim() ? row.name : (typeof row.customer_name === "string" ? row.customer_name : null),
+      customer_name: typeof row.customer_name === "string" ? row.customer_name : (typeof row.name === "string" ? row.name : null),
       debt_count: Number(row.debt_count) || 0,
       total_debt_amount: getDebtorTotalAmount(row),
       purchases: Array.isArray(row.purchases)
@@ -121,11 +140,31 @@ export function getDebtInvoiceId(invoice: PurchaseDebtInvoice): number {
 }
 
 export function getDebtInvoiceAmount(invoice: PurchaseDebtInvoice): number {
+  if (typeof invoice.remaining_amount === "number") return invoice.remaining_amount;
   if (typeof invoice.payable_amount === "number") return invoice.payable_amount;
   if (typeof invoice.debt_amount === "number") return invoice.debt_amount;
   if (typeof invoice.total_amount === "number") return invoice.total_amount;
   if (typeof invoice.amount === "number") return invoice.amount;
   return 0;
+}
+
+export function getDebtInvoicePaidAmount(invoice: PurchaseDebtInvoice): number {
+  if (typeof invoice.paid_amount === "number") return invoice.paid_amount;
+  if (Array.isArray(invoice.debt_payments)) {
+    return invoice.debt_payments.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+  }
+  return 0;
+}
+
+export function getDebtInvoiceOriginalAmount(invoice: PurchaseDebtInvoice): number {
+  if (typeof invoice.invoice_payable_amount === "number") return invoice.invoice_payable_amount;
+  if (typeof invoice.total_amount === "number") return invoice.total_amount;
+  return getDebtInvoiceAmount(invoice);
+}
+
+export function getDebtorDisplayName(row: PurchaseDebtorRow | PurchaseDebtInvoice | { name?: string | null; customer_name?: string | null }): string {
+  const name = (row.customer_name || row.name || "").trim();
+  return name;
 }
 
 export function getDebtInvoiceProducts(invoice: PurchaseDebtInvoice): PurchaseDebtProduct[] {
@@ -150,6 +189,7 @@ export function formatDebtStatus(invoice: PurchaseDebtInvoice | string | undefin
     return invoice;
   }
   if (invoice.is_debt_settled === true) return "تسویه‌شده";
+  if (getDebtInvoicePaidAmount(invoice) > 0) return "پرداخت ناقص";
   if (invoice.is_debt_settled === false) return "تسویه‌نشده";
   if (invoice.status === "pending") return "تسویه‌نشده";
   if (invoice.status === "settled") return "تسویه‌شده";
