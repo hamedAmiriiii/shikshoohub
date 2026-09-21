@@ -61,13 +61,19 @@ const StyledTableCell = styled(TableCell)(({ theme }) => ({
     backgroundColor: "var(--admin-surface-alt)",
     color: "var(--admin-text)",
     fontWeight: "600",
-    fontSize: "16px",
-    padding: "16px 24px",
+    fontSize: "12px",
+    padding: "6px 8px",
+    whiteSpace: "nowrap",
+    lineHeight: 1.3,
   },
   [`&.${tableCellClasses.body}`]: {
     color: "var(--admin-text)",
-    fontSize: 16,
-    padding: "16px 24px",
+    fontSize: 12,
+    padding: "5px 8px",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    lineHeight: 1.35,
   },
 }));
 
@@ -144,7 +150,7 @@ function DeliveryStatusChip({ log }: { log: ShopSmsLog }) {
       size="small"
       color={getSmsDeliveryStatusColor(log.delivery_status)}
       variant="outlined"
-      sx={{ fontSize: '12px' }}
+      sx={{ fontSize: "11px", height: 22, "& .MuiChip-label": { px: 0.75 } }}
     />
   );
 }
@@ -379,7 +385,7 @@ export default function ShopSmsLogsPage() {
       paddingBottom: { xs: '100px', md: '40px' },
       direction: 'rtl'
     }}>
-      <Container maxWidth={false} sx={{ paddingX: { xs: '16px', md: '24px' } }}>
+      <Container maxWidth={false} sx={{ paddingX: { xs: "12px", md: "16px" } }}>
         {/* Header */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '12px', flexWrap: 'wrap' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -530,77 +536,83 @@ export default function ShopSmsLogsPage() {
             <TableContainer 
               component={Paper} 
               sx={{ 
-                backgroundColor: 'var(--admin-surface)',
-                borderRadius: '16px',
-                border: '1px solid rgba(55, 84, 165, 0.3)',
-                overflowX: 'auto'
+                backgroundColor: "var(--admin-surface)",
+                borderRadius: "8px",
+                border: "1px solid rgba(55, 84, 165, 0.3)",
+                overflowX: "hidden",
+                width: "100%",
               }}
             >
-              <Table aria-label="SMS logs table">
+              <Table
+                aria-label="SMS logs table"
+                sx={{
+                  tableLayout: "fixed",
+                  width: "100%",
+                  minWidth: 0,
+                }}
+              >
                 <TableHead>
                   <TableRow>
-                    <StyledTableCell align="right">نام</StyledTableCell>
-                    <StyledTableCell align="right">شماره تلفن</StyledTableCell>
-                    <StyledTableCell align="right">نوع پیامک</StyledTableCell>
-                    <StyledTableCell align="right">وضعیت</StyledTableCell>
-                    <StyledTableCell align="right">پیام</StyledTableCell>
-                    <StyledTableCell align="right">شناسه خرید</StyledTableCell>
-                    <StyledTableCell align="right">مبلغ اعتبار</StyledTableCell>
-                    <StyledTableCell align="right">تاریخ</StyledTableCell>
-                    <StyledTableCell align="center">عملیات</StyledTableCell>
+                    <StyledTableCell align="right" sx={{ width: "11%" }}>نام</StyledTableCell>
+                    <StyledTableCell align="right" sx={{ width: "12%" }}>شماره</StyledTableCell>
+                    <StyledTableCell align="right" sx={{ width: "9%" }}>نوع</StyledTableCell>
+                    <StyledTableCell align="right" sx={{ width: "10%" }}>وضعیت</StyledTableCell>
+                    <StyledTableCell align="right" sx={{ width: "24%" }}>پیام</StyledTableCell>
+                    <StyledTableCell align="right" sx={{ width: "8%" }}>خرید</StyledTableCell>
+                    <StyledTableCell align="right" sx={{ width: "10%" }}>اعتبار</StyledTableCell>
+                    <StyledTableCell align="right" sx={{ width: "10%" }}>تاریخ</StyledTableCell>
+                    <StyledTableCell align="center" sx={{ width: "6%" }}>عملیات</StyledTableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {logs.map((log) => (
                     <StyledTableRow key={log.id}>
-                      <StyledTableCell>{smsCustomerName(log) || '—'}</StyledTableCell>
-                      <StyledTableCell>{log.phone}</StyledTableCell>
+                      <StyledTableCell title={smsCustomerName(log) || undefined}>
+                        {smsCustomerName(log) || "—"}
+                      </StyledTableCell>
+                      <StyledTableCell sx={{ direction: "ltr" }}>{log.phone}</StyledTableCell>
                       <StyledTableCell>
                         <Chip 
                           label={getSmsTypeLabel(log.sms_type)} 
                           size="small"
                           sx={{ 
                             backgroundColor: getSmsTypeColor(log.sms_type),
-                            color: 'var(--admin-text)',
-                            fontSize: '12px'
+                            color: "var(--admin-text)",
+                            fontSize: "11px",
+                            height: 22,
+                            "& .MuiChip-label": { px: 0.75 },
                           }}
                         />
                       </StyledTableCell>
                       <StyledTableCell>
                         <DeliveryStatusChip log={log} />
                       </StyledTableCell>
-                      <StyledTableCell sx={{ maxWidth: '400px' }}>
-                        <Typography 
-                          sx={{ 
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
-                          }}
-                        >
-                          {log.message}
-                        </Typography>
+                      <StyledTableCell title={log.message}>
+                        {log.message}
                       </StyledTableCell>
-                      <StyledTableCell>{log.purchase_id || '-'}</StyledTableCell>
+                      <StyledTableCell>{log.purchase_id || "—"}</StyledTableCell>
                       <StyledTableCell>
-                        {log.credit_amount ? formatNumber(parseFloat(log.credit_amount)) + ' تومان' : '-'}
+                        {log.credit_amount ? formatNumber(parseFloat(log.credit_amount)) : "—"}
                       </StyledTableCell>
-                      <StyledTableCell>{log.created_at}</StyledTableCell>
-                      <StyledTableCell align="center">
+                      <StyledTableCell title={log.created_at}>{log.created_at}</StyledTableCell>
+                      <StyledTableCell align="center" sx={{ whiteSpace: "nowrap", overflow: "visible" }}>
                         {canRefreshSmsDeliveryStatus(log) && (
                           <IconButton
                             onClick={() => handleRefreshStatus(log)}
                             disabled={refreshingId === log.id}
-                            sx={{ color: 'var(--admin-accent)' }}
+                            size="small"
+                            sx={{ color: "var(--admin-accent)", p: 0.35 }}
                             title="به‌روزرسانی وضعیت"
                           >
-                            {refreshingId === log.id ? <CircularProgress size={18} /> : <RefreshIcon />}
+                            {refreshingId === log.id ? <CircularProgress size={14} /> : <RefreshIcon sx={{ fontSize: 16 }} />}
                           </IconButton>
                         )}
                         <IconButton 
                           onClick={() => handleViewDetail(log.id)}
-                          sx={{ color: 'var(--admin-accent)' }}
+                          size="small"
+                          sx={{ color: "var(--admin-accent)", p: 0.35 }}
                         >
-                          <VisibilityIcon />
+                          <VisibilityIcon sx={{ fontSize: 16 }} />
                         </IconButton>
                       </StyledTableCell>
                     </StyledTableRow>

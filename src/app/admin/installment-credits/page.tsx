@@ -15,7 +15,7 @@ import BottomSheet from "@/app/coponent/BottomSheet";
 import { adminButtonStartIconSx } from "@/app/admin/theme/adminTheme";
 import {
   creditDisplayName,
-  formatCreditDate,
+  formatCreditDateShort,
   formatCreditMoney,
   toCreditRow,
   type InstallmentCreditRow,
@@ -53,37 +53,34 @@ export default function InstallmentCreditsPage() {
 
   const desktopColumns = [
     {
-      label: "کاربر",
+      label: "نام",
+      field: (item: unknown) => toCreditRow(item).name || "—",
+    },
+    {
+      label: "شماره",
+      field: (item: unknown) => toCreditRow(item).phone || "—",
+    },
+    {
+      label: "اقساطی",
+      field: (item: unknown) => formatCreditMoney(toCreditRow(item).installment_credit),
+    },
+    {
+      label: "عادی",
+      field: (item: unknown) => formatCreditMoney(toCreditRow(item).credit),
+    },
+    {
+      label: "ایجاد",
       field: (item: unknown) => {
         const row = toCreditRow(item);
-        if (row.name && row.phone) return `${row.name} — ${row.phone}`;
-        return row.name || row.phone || "بدون مشخصات";
+        return formatCreditDateShort(row.created_at_jalali || row.created_at);
       },
-      width: "220px",
     },
     {
-      label: "اعتبار اقساطی",
-      field: (item: unknown) => `${formatCreditMoney(toCreditRow(item).installment_credit)} تومان`,
-    },
-    {
-      label: "اعتبار عادی",
-      field: (item: unknown) => `${formatCreditMoney(toCreditRow(item).credit)} تومان`,
-    },
-    {
-      label: "تاریخ ایجاد",
+      label: "بروزرسانی",
       field: (item: unknown) => {
         const row = toCreditRow(item);
-        return formatCreditDate(row.created_at_jalali || row.created_at);
+        return formatCreditDateShort(row.updated_at_jalali || row.updated_at);
       },
-      width: "170px",
-    },
-    {
-      label: "تاریخ بروزرسانی",
-      field: (item: unknown) => {
-        const row = toCreditRow(item);
-        return formatCreditDate(row.updated_at_jalali || row.updated_at);
-      },
-      width: "170px",
     },
   ];
 
@@ -212,12 +209,15 @@ export default function InstallmentCreditsPage() {
     <Suspense fallback={<div>در حال بارگذاری...</div>}>
       <Box
         sx={{
-          width: { xs: "100%", md: "130%" },
+          width: "100%",
+          maxWidth: "100%",
           direction: "rtl",
-          padding: "16px",
+          padding: { xs: "12px", md: "16px" },
           minHeight: "100vh",
           paddingBottom: "100px",
           background: "var(--admin-bg-gradient)",
+          boxSizing: "border-box",
+          overflowX: "hidden",
         }}
       >
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
@@ -236,7 +236,15 @@ export default function InstallmentCreditsPage() {
           </Button>
         </Box>
 
-        <div style={{ width: "100%", direction: "rtl" }} className="flex-col items-center justify-center">
+        <Box
+          sx={{
+            width: "100%",
+            maxWidth: "100%",
+            direction: "rtl",
+            "& table": { tableLayout: "fixed", width: "100%", minWidth: "0 !important" },
+            "& th, & td": { overflow: "hidden", textOverflow: "ellipsis" },
+          }}
+        >
           <List
             key={refreshKey}
             disableFilter={true}
@@ -250,12 +258,13 @@ export default function InstallmentCreditsPage() {
             showTotal={true}
             enablePagination
             compactDesktop
+            actionsColumnWidth="72px"
             desktopColumns={desktopColumns}
             onEditItem={handleEditCredit}
             onDeleteItem={handleAskDelete}
             hidePrintAction
           />
-        </div>
+        </Box>
 
         <BottomSheet open={formOpen} onClose={closeForm} title={editing ? "ویرایش اعتبار" : "ایجاد اعتبار جدید"}>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, direction: "rtl" }}>

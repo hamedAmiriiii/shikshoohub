@@ -73,6 +73,29 @@ export function formatCreditDate(value?: string | null): string {
   }
 }
 
+export function formatCreditDateShort(value?: string | null): string {
+  if (!value) return "—";
+  const jalali = /^\d{4}[/-]\d{1,2}[/-]\d{1,2}/.test(value) && Number(value.slice(0, 4)) < 1700;
+  if (jalali) {
+    const normalized = value.replace(/-/g, "/");
+    const [datePart, timePart] = normalized.split(/[ T]/);
+    return timePart ? `${datePart} ${timePart.slice(0, 5)}` : datePart;
+  }
+  try {
+    const date = new Date(String(value).replace(" ", "T"));
+    if (isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat("fa-IR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+  } catch {
+    return value;
+  }
+}
+
 export function creditDisplayName(row: Pick<InstallmentCreditRow, "phone" | "name">): string {
   if (row.name && row.phone) return `${row.name} (${row.phone})`;
   return row.name || row.phone || "این کاربر";

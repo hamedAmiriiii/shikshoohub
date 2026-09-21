@@ -186,7 +186,7 @@ export default function AdminHamburgerSidebar({
       { id: "installments", label: "لیست اقساط", href: "/admin/installments", icon: <CreditCardIcon />, permission: "installments" },
       {
         id: "installment-credits",
-        label: "اعتبار اقساطی",
+        label: "اعتبار مشتریان",
         href: "/admin/installment-credits",
         icon: <CreditCardIcon />,
         permission: "installments",

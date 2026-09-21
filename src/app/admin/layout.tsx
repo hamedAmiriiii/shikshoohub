@@ -32,7 +32,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/reports': 'گزارشات',
     '/admin/customers': 'خریداران',
     '/admin/customer-club': 'باشگاه مشتریان',
-    '/admin/smart-club': 'باشگاه هوشمند',
+    '/admin/smart-club': 'داشبورد هوشمند',
     '/admin/smart-club/customers': 'مشتریان RFM',
     '/admin/smart-club/actions': 'پیشنهاد اقدام',
     '/admin/smart-club/campaigns': 'کمپین‌ها',

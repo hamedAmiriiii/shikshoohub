@@ -30,14 +30,19 @@ import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
 import ImageOutlinedIcon from "@mui/icons-material/ImageOutlined";
 import SortIcon from "@mui/icons-material/Sort";
 import CloudDownloadIcon from "@mui/icons-material/CloudDownload";
+import TuneIcon from "@mui/icons-material/Tune";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useRouter } from "next/navigation";
 import { apiRequestError } from "@/app/lib/apiRequestError/client";
 import tokenCode from "@/app/coponent/tokenCode";
 import { adminButtonStartIconSx, adminPageSx } from "@/app/admin/theme/adminTheme";
-import { startAdminOnboarding } from "@/app/admin/onboarding/AdminOnboardingProvider";
 import {
+  startAdminOnboarding,
+  startSettingsSetup,
+} from "@/app/admin/onboarding/AdminOnboardingProvider";
+import {
+  ADMIN_POS_SETTINGS_CHANGED_EVENT,
   readAdminPosSettings,
   writeAdminPosSettings,
 } from "@/app/lib/adminPosSettings";
@@ -291,22 +296,25 @@ export default function SettingsPage() {
   const [invoiceTemplateOpen, setInvoiceTemplateOpen] = useState(false);
 
   useEffect(() => {
-    const settings = readAdminPosSettings();
-    setShowProductListOnMainPage(settings.showProductListOnMainPage);
-    setMenuMode(settings.menuMode);
-    setMenuModeShowProductImages(settings.menuModeShowProductImages);
-    setInstallmentPaymentEnabled(settings.installmentPaymentEnabled);
-    setDebtPaymentEnabled(settings.debtPaymentEnabled);
-    setChequePaymentEnabled(settings.chequePaymentEnabled);
-    setKgSalesEnabled(settings.kgSalesEnabled);
-    setSalePriceEditEnabled(settings.salePriceEditEnabled);
-    setSaleDateEditEnabled(Boolean(settings.saleDateEditEnabled));
-    setClassicPosMode(settings.classicPosMode);
-    setAskCustomerName(settings.askCustomerName);
-    setShowDailyTicketNumber(Boolean(settings.showDailyTicketNumber));
-    setProductDisplayOrderEnabled(Boolean(settings.productDisplayOrderEnabled));
-    setRestaurantCafeEnabled(readShopFeatures().restaurant_cafe_enabled);
-    setMenuTableOrdersPopupEnabled(settings.menuTableOrdersPopupEnabled);
+    const syncPosSettings = () => {
+      const settings = readAdminPosSettings();
+      setShowProductListOnMainPage(settings.showProductListOnMainPage);
+      setMenuMode(settings.menuMode);
+      setMenuModeShowProductImages(settings.menuModeShowProductImages);
+      setInstallmentPaymentEnabled(settings.installmentPaymentEnabled);
+      setDebtPaymentEnabled(settings.debtPaymentEnabled);
+      setChequePaymentEnabled(settings.chequePaymentEnabled);
+      setKgSalesEnabled(settings.kgSalesEnabled);
+      setSalePriceEditEnabled(settings.salePriceEditEnabled);
+      setSaleDateEditEnabled(Boolean(settings.saleDateEditEnabled));
+      setClassicPosMode(settings.classicPosMode);
+      setAskCustomerName(settings.askCustomerName);
+      setShowDailyTicketNumber(Boolean(settings.showDailyTicketNumber));
+      setProductDisplayOrderEnabled(Boolean(settings.productDisplayOrderEnabled));
+      setRestaurantCafeEnabled(readShopFeatures().restaurant_cafe_enabled);
+      setMenuTableOrdersPopupEnabled(settings.menuTableOrdersPopupEnabled);
+    };
+    syncPosSettings();
     const printSettings = readSaleReceiptPrintSettings();
     setReceiptPrintSettings(printSettings);
     setListReceiptPrintSettings(readListReceiptPrintSettings());
@@ -314,6 +322,8 @@ export default function SettingsPage() {
       setReceiptPrintSettings(hydrated);
       setListReceiptPrintSettings(readListReceiptPrintSettings());
     });
+    window.addEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, syncPosSettings);
+    return () => window.removeEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, syncPosSettings);
   }, []);
 
   const handleToggleProductListOnMainPage = (
@@ -370,8 +380,8 @@ export default function SettingsPage() {
     writeAdminPosSettings({ installmentPaymentEnabled: enabled });
     toast.success(
       enabled
-        ? "گزینه‌های نقدی و اقساطی در صفحه فروش نمایش داده می‌شوند"
-        : "گزینه‌های نقدی و اقساطی از صفحه فروش پنهان شدند",
+        ? "گزینه اقساط در صفحه فروش نمایش داده می‌شود"
+        : "گزینه اقساط از صفحه فروش پنهان شد",
     );
   };
 
@@ -733,6 +743,31 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      <Card
+        sx={{
+          ...settingsCardSx,
+          cursor: "pointer",
+          transition: "background-color 0.15s ease",
+          "&:hover": { bgcolor: "var(--admin-menu-hover)" },
+        }}
+        onClick={() => startSettingsSetup()}
+      >
+        <CardContent sx={{ py: 1, px: 1.25, "&:last-child": { pb: 1 } }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+            <TuneIcon sx={{ color: "var(--admin-accent)", fontSize: 18 }} />
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography sx={{ color: "var(--admin-text)", fontSize: "13px", fontWeight: 600 }}>
+                تنظیم مرحله‌ای فروشگاه
+              </Typography>
+              <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "11px" }}>
+                هر تنظیم را جدا مشخص کن یا رد کن
+              </Typography>
+            </Box>
+            <ChevronRightIcon sx={{ color: "var(--admin-text-muted)", fontSize: 18 }} />
+          </Box>
+        </CardContent>
+      </Card>
+
       {restaurantCafeEnabled ? (
       <Card sx={settingsCardSx}>
         <CardContent sx={{ py: 0.5, px: 1.25, "&:last-child": { pb: 0.5 } }}>
@@ -781,15 +816,15 @@ export default function SettingsPage() {
           />
           <SettingsToggleRow
             icon={<PaymentsIcon sx={{ fontSize: 18 }} />}
-            title="پرداخت نقدی و اقساطی"
-            hint="نمایش گزینه‌ها هنگام ثبت فروش"
+            title="پرداخت اقساطی"
+            hint="گزینه اقساط هنگام ثبت فروش در سبد دیده شوند"
             checked={installmentPaymentEnabled}
             onChange={handleToggleInstallmentPayment}
           />
           <SettingsToggleRow
             icon={<AccountBalanceWalletIcon sx={{ fontSize: 18 }} />}
             title="فروش نسیه"
-            hint="مشتری بدهکار می‌شود"
+            hint="مشتری بصورت قرضی خرید می‌کند و بدهکار می‌شود و بعداً از بخش بدهکاران تسویه می‌کنی."
             checked={debtPaymentEnabled}
             onChange={handleToggleDebtPayment}
           />

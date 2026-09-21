@@ -16,6 +16,7 @@ import { adminButtonStartIconSx, adminPageSx } from "@/app/admin/theme/adminThem
 import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
 import {
   fetchShopHealth,
+  fixVoidedCreditReturns,
   type HealthFinding,
   type ShopHealthReport,
 } from "@/app/lib/shopDataHealth";
@@ -50,7 +51,19 @@ function severityColor(severity: string) {
   return "var(--admin-text-secondary)";
 }
 
-function FindingCard({ finding }: { finding: HealthFinding }) {
+const ACTION_LABEL: Record<string, string> = {
+  fix_voided_credit_returns: "برداشتن اعتبار اشتباه",
+};
+
+function FindingCard({
+  finding,
+  actionBusy,
+  onAction,
+}: {
+  finding: HealthFinding;
+  actionBusy?: boolean;
+  onAction?: (action: string) => void;
+}) {
   return (
     <Box
       sx={{
@@ -94,16 +107,28 @@ function FindingCard({ finding }: { finding: HealthFinding }) {
           ))}
         </Box>
       ) : null}
-      {finding.href ? (
-        <Button
-          component={Link}
-          href={finding.href}
-          size="small"
-          variant="outlined"
-          sx={{ mt: 1.5 }}
-        >
-          {finding.href_label || "رفتن"}
-        </Button>
+      {finding.action || finding.href ? (
+        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mt: 1.5 }}>
+          {finding.action ? (
+            <Button
+              size="small"
+              variant="contained"
+              disabled={actionBusy}
+              onClick={() => onAction?.(finding.action as string)}
+              sx={{
+                bgcolor: "var(--admin-accent)",
+                "&:hover": { bgcolor: "var(--admin-accent-hover)" },
+              }}
+            >
+              {actionBusy ? "در حال اصلاح…" : ACTION_LABEL[finding.action] || "اصلاح"}
+            </Button>
+          ) : null}
+          {finding.href ? (
+            <Button component={Link} href={finding.href} size="small" variant="outlined">
+              {finding.href_label || "رفتن"}
+            </Button>
+          ) : null}
+        </Box>
       ) : null}
     </Box>
   );
@@ -111,6 +136,7 @@ function FindingCard({ finding }: { finding: HealthFinding }) {
 
 export default function SmartReviewPage() {
   const [loading, setLoading] = useState(true);
+  const [actionBusy, setActionBusy] = useState(false);
   const [data, setData] = useState<ShopHealthReport | null>(null);
 
   const load = useCallback(async () => {
@@ -128,6 +154,31 @@ export default function SmartReviewPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const runAction = useCallback(
+    async (action: string) => {
+      if (action !== "fix_voided_credit_returns" || actionBusy) {
+        return;
+      }
+      const ok = window.confirm(
+        "اعتبار اشتباه این فاکتورها از کیف پول مشتری کم می‌شود و سند برگشت به‌جای اعتبار، نقد یا کارتخوان می‌شود. ادامه می‌دهید؟"
+      );
+      if (!ok) {
+        return;
+      }
+      setActionBusy(true);
+      try {
+        const res = await fixVoidedCreditReturns();
+        toast.success(res.message || "اعتبار اشتباه برداشته شد.");
+        await load();
+      } catch (e) {
+        toast.error(getApiErrorMessage(e, "اصلاح اعتبار انجام نشد"));
+      } finally {
+        setActionBusy(false);
+      }
+    },
+    [actionBusy, load]
+  );
 
   const grouped = useMemo(() => {
     const findings = data?.findings ?? [];
@@ -151,7 +202,7 @@ export default function SmartReviewPage() {
           variant="outlined"
           startIcon={<RefreshIcon />}
           onClick={() => void load()}
-          disabled={loading}
+          disabled={loading || actionBusy}
           sx={adminButtonStartIconSx}
         >
           بررسی دوباره
@@ -179,13 +230,28 @@ export default function SmartReviewPage() {
           ) : (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
               {grouped.error.map((finding) => (
-                <FindingCard key={finding.code} finding={finding} />
+                <FindingCard
+                  key={finding.code}
+                  finding={finding}
+                  actionBusy={actionBusy}
+                  onAction={runAction}
+                />
               ))}
               {grouped.warning.map((finding) => (
-                <FindingCard key={finding.code} finding={finding} />
+                <FindingCard
+                  key={finding.code}
+                  finding={finding}
+                  actionBusy={actionBusy}
+                  onAction={runAction}
+                />
               ))}
               {grouped.info.map((finding) => (
-                <FindingCard key={finding.code} finding={finding} />
+                <FindingCard
+                  key={finding.code}
+                  finding={finding}
+                  actionBusy={actionBusy}
+                  onAction={runAction}
+                />
               ))}
             </Box>
           )}

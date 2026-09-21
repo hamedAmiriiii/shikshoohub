@@ -20,6 +20,7 @@ export type HealthFinding = {
   amount?: number | null;
   href?: string | null;
   href_label?: string | null;
+  action?: string | null;
   samples: HealthSample[];
 };
 
@@ -42,4 +43,19 @@ export async function fetchShopHealth(): Promise<ShopHealthReport> {
     throw res;
   }
   return res as ShopHealthReport;
+}
+
+export type FixVoidedCreditReturnsResult = {
+  message: string;
+  fixed: number;
+  credit_removed: number;
+};
+
+export async function fixVoidedCreditReturns(): Promise<FixVoidedCreditReturnsResult> {
+  const token = tokenCode();
+  const res = await FetchWithJwtClient("POST", "/api/shop-health/fix-voided-credit-returns", token);
+  if (res && typeof res === "object" && (res as { hasError?: boolean }).hasError) {
+    throw res;
+  }
+  return res as FixVoidedCreditReturnsResult;
 }

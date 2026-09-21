@@ -4,11 +4,16 @@ import React, { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import AdminOnboardingTour from "./AdminOnboardingTour";
 import AdminOnboardingPracticeBar from "./AdminOnboardingPracticeBar";
+import SettingsSetupWizard from "./SettingsSetupWizard";
 import {
   ADMIN_ONBOARDING_START_EVENT,
   ADMIN_ONBOARDING_STEPS,
   type AdminOnboardingStep,
 } from "./adminOnboardingSteps";
+import {
+  SETTINGS_SETUP_START_EVENT,
+  type SettingsSetupAnswers,
+} from "./settingsSetupSteps";
 import {
   clearOnboardingProgress,
   isOnboardingCompleted,
@@ -18,6 +23,13 @@ import {
   writeOnboardingPracticeMode,
   writeOnboardingStepIndex,
 } from "./adminOnboardingStorage";
+import {
+  clearSettingsSetupProgress,
+  isSettingsSetupCompleted,
+  markSettingsSetupCompleted,
+  readSettingsSetupProgress,
+  writeSettingsSetupProgress,
+} from "./settingsSetupStorage";
 import {
   adminSaleCartHasItems,
   COMPLETE_SALE_STEP_ID,
@@ -44,8 +56,31 @@ export default function AdminOnboardingProvider({
   const [guideOpen, setGuideOpen] = useState(false);
   const [practiceMode, setPracticeMode] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
+  const [settingsSetupOpen, setSettingsSetupOpen] = useState(false);
+  const [settingsStepId, setSettingsStepId] = useState("intro");
+  const [settingsAnswers, setSettingsAnswers] = useState<SettingsSetupAnswers>({});
 
   const step = ADMIN_ONBOARDING_STEPS[stepIndex];
+
+  const beginSettingsSetup = useCallback(
+    (reset: boolean) => {
+      if (isPublicAdminPath(pathname)) return;
+      if (reset) {
+        clearSettingsSetupProgress();
+        setSettingsStepId("intro");
+        setSettingsAnswers({});
+      } else {
+        const saved = readSettingsSetupProgress();
+        setSettingsStepId(saved?.stepId || "intro");
+        setSettingsAnswers(saved?.answers || {});
+      }
+      setActive(false);
+      setGuideOpen(false);
+      setPracticeMode(false);
+      setSettingsSetupOpen(true);
+    },
+    [pathname],
+  );
 
   const beginTour = useCallback(
     (reset: boolean) => {
@@ -77,9 +112,31 @@ export default function AdminOnboardingProvider({
   }, [beginTour]);
 
   useEffect(() => {
+    const onStart = () => beginSettingsSetup(true);
+    window.addEventListener(SETTINGS_SETUP_START_EVENT, onStart);
+    return () => window.removeEventListener(SETTINGS_SETUP_START_EVENT, onStart);
+  }, [beginSettingsSetup]);
+
+  useEffect(() => {
+    if (!settingsSetupOpen) return;
+    writeSettingsSetupProgress({ stepId: settingsStepId, answers: settingsAnswers });
+  }, [settingsSetupOpen, settingsStepId, settingsAnswers]);
+
+  useEffect(() => {
     if (isPublicAdminPath(pathname)) return;
     const token = localStorage.getItem("token");
-    if (!token || isOnboardingCompleted()) return;
+    if (!token) return;
+    if (settingsSetupOpen) return;
+
+    const settingsDone = isSettingsSetupCompleted();
+    const onboardingDone = isOnboardingCompleted();
+
+    if (!settingsDone && !onboardingDone && !readOnboardingPracticeMode()) {
+      const timer = setTimeout(() => beginSettingsSetup(false), 800);
+      return () => clearTimeout(timer);
+    }
+
+    if (!settingsDone || onboardingDone) return;
 
     if (readOnboardingPracticeMode()) {
       beginTour(false);
@@ -88,7 +145,7 @@ export default function AdminOnboardingProvider({
 
     const timer = setTimeout(() => beginTour(true), 1200);
     return () => clearTimeout(timer);
-  }, [pathname, beginTour]);
+  }, [pathname, beginTour, beginSettingsSetup, settingsSetupOpen]);
 
   const exitTour = useCallback(() => {
     setActive(false);
@@ -190,11 +247,27 @@ export default function AdminOnboardingProvider({
     exitTour();
   }, [exitTour]);
 
-  const showUi = active && !isPublicAdminPath(pathname) && step;
+  const finishSettingsSetup = useCallback(() => {
+    markSettingsSetupCompleted();
+    setSettingsSetupOpen(false);
+  }, []);
+
+  const showUi = active && !settingsSetupOpen && !isPublicAdminPath(pathname) && step;
 
   return (
     <>
       {children}
+      {settingsSetupOpen && !isPublicAdminPath(pathname) && (
+        <SettingsSetupWizard
+          open={settingsSetupOpen}
+          answers={settingsAnswers}
+          stepId={settingsStepId}
+          onStepIdChange={setSettingsStepId}
+          onAnswersChange={setSettingsAnswers}
+          onClose={finishSettingsSetup}
+          onFinish={finishSettingsSetup}
+        />
+      )}
       {showUi && practiceMode && (
         <AdminOnboardingPracticeBar
           step={step}
@@ -223,5 +296,11 @@ export default function AdminOnboardingProvider({
 export function startAdminOnboarding() {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent(ADMIN_ONBOARDING_START_EVENT));
+  }
+}
+
+export function startSettingsSetup() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(SETTINGS_SETUP_START_EVENT));
   }
 }

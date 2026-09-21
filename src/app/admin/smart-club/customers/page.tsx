@@ -31,6 +31,7 @@ export default function SmartClubCustomersPage() {
   const [rows, setRows] = useState<SmartCustomerRow[]>([]);
   const [labels, setLabels] = useState<Record<string, string>>({});
   const [segment, setSegment] = useState(searchParams.get("segment") || "");
+  const [tag, setTag] = useState(searchParams.get("tag") || "");
   const [search, setSearch] = useState("");
   const [total, setTotal] = useState(0);
 
@@ -39,6 +40,7 @@ export default function SmartClubCustomersPage() {
     try {
       const res = await fetchSmartCustomers({
         segment: segment || undefined,
+        tag: tag || undefined,
         search: search || undefined,
         per_page: 50,
       });
@@ -50,7 +52,7 @@ export default function SmartClubCustomersPage() {
     } finally {
       setLoading(false);
     }
-  }, [segment, search]);
+  }, [segment, tag, search]);
 
   useEffect(() => {
     void load();
@@ -77,6 +79,20 @@ export default function SmartClubCustomersPage() {
               {v}
             </MenuItem>
           ))}
+        </TextField>
+        <TextField
+          select
+          size="small"
+          label="برچسب"
+          value={tag}
+          onChange={(e) => setTag(e.target.value)}
+          sx={{ minWidth: 180 }}
+        >
+          <MenuItem value="">همه</MenuItem>
+          <MenuItem value="ready_repurchase">آماده خرید مجدد</MenuItem>
+          <MenuItem value="near_vip">نزدیک به VIP</MenuItem>
+          <MenuItem value="high_value">ارزش بالا</MenuItem>
+          <MenuItem value="low_value">ارزش پایین</MenuItem>
         </TextField>
         <TextField
           size="small"

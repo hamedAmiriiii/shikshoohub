@@ -20,10 +20,21 @@ async function api<T = any>(
   return res as T;
 }
 
+export type SmartDashboardCard = {
+  key: string;
+  title: string;
+  count?: number | null;
+  percent?: number;
+  trend_pct?: number | null;
+  sparkline?: number[];
+  href?: string;
+};
+
 export type SmartOverview = {
   ready: boolean;
   message?: string;
   last_computed_at?: string | null;
+  window_label?: string;
   segment_labels?: Record<string, string>;
   counts?: Record<string, number>;
   tag_counts?: { near_vip: number; ready_repurchase: number };
@@ -36,6 +47,12 @@ export type SmartOverview = {
     severity: string;
   }[];
   total_customers?: number;
+  featured?: SmartDashboardCard[];
+  extra_cards?: SmartDashboardCard[];
+  distribution?: { key: string; label: string; count: number; percent: number }[];
+  rfm?: { R: number; F: number; M: number; overall: number };
+  ai_suggestion?: { title: string; body: string; href: string } | null;
+  ops?: { key: string; title: string; count: number | null; href: string }[];
 };
 
 export type SmartCustomerRow = {
