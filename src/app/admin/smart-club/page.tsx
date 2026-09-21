@@ -15,6 +15,7 @@ import {
   TableCell,
   TableHead,
   TableRow,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import Link from "next/link";
@@ -252,9 +253,12 @@ function ScoreRing({ value }: { value: number }) {
         />
       </svg>
       <Box sx={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", textAlign: "center" }}>
-        <Typography sx={{ fontWeight: 800, fontSize: 16, lineHeight: 1, color: "#2dd4bf" }}>
-          {toFaNum(value)}
-        </Typography>
+        <Box>
+          <Typography sx={{ fontWeight: 800, fontSize: 15, lineHeight: 1, color: "#2dd4bf" }}>
+            {toFaNum(value)}
+          </Typography>
+          <Typography sx={{ fontSize: 9, color: "var(--admin-text)", opacity: 0.65, lineHeight: 1.2 }}>از ۵</Typography>
+        </Box>
       </Box>
     </Box>
   );
@@ -322,9 +326,9 @@ export default function SmartClubDashboardPage() {
     () =>
       rfm
         ? [
-            { key: "R", title: "Recency (R)", value: rfm.R },
-            { key: "F", title: "Frequency (F)", value: rfm.F },
-            { key: "M", title: "Monetary (M)", value: rfm.M },
+            { key: "R", title: "تازگی خرید", hint: "چقدر زود دوباره میان", value: rfm.R },
+            { key: "F", title: "تعداد خرید", hint: "چند بار میان فروشگاه", value: rfm.F },
+            { key: "M", title: "مبلغ خرید", hint: "چقدر خرج می‌کنن", value: rfm.M },
           ]
         : [],
     [rfm],
@@ -337,7 +341,7 @@ export default function SmartClubDashboardPage() {
         <Box>
           <Typography sx={{ fontWeight: 800, fontSize: 16, lineHeight: 1.2 }}>نمای کلی</Typography>
           <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: 11 }}>
-            تحلیل RFM مشتریان شما
+            نگاه کلی به مشتری‌های فروشگاه
           </Typography>
         </Box>
         <Box sx={{ display: "flex", gap: 0.75, alignItems: "center", flexWrap: "wrap" }}>
@@ -403,22 +407,33 @@ export default function SmartClubDashboardPage() {
             }}
           >
             <Box sx={{ ...panelSx, px: 1.25, py: 1 }}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.75 }}>
-                <Typography sx={{ fontWeight: 700, fontSize: 13 }}>امتیاز RFM</Typography>
-                <InfoOutlinedIcon sx={{ fontSize: 14, color: "var(--admin-text-muted)" }} />
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.35 }}>
+                <Typography sx={{ fontWeight: 700, fontSize: 13 }}>وضعیت خرید مشتری‌ها</Typography>
+                <Tooltip
+                  title="میانگین همه مشتری‌ها از ۵ نمره. هرچی بالاتر یعنی مشتری‌ها تازه‌تر میان، بیشتر می‌خرن و مبلغ خریدشان بیشتر است."
+                  arrow
+                >
+                  <InfoOutlinedIcon sx={{ fontSize: 15, color: "var(--admin-text)", opacity: 0.55, cursor: "help" }} />
+                </Tooltip>
               </Box>
+              <Typography sx={{ fontSize: 11, color: "var(--admin-text)", opacity: 0.7, mb: 0.85, lineHeight: 1.5 }}>
+                نمره از ۵ است؛ بالاتر یعنی بهتر.
+              </Typography>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1, justifyContent: "space-between" }}>
                 <Box sx={{ display: "flex", gap: 1.25, flex: 1, minWidth: 0 }}>
                   {rfmRows.map((row) => {
                     const grade = rfmGrade(row.value);
                     return (
                       <Box key={row.key} sx={{ minWidth: 0 }}>
-                        <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: 10 }}>
+                        <Typography sx={{ color: "var(--admin-text)", fontSize: 11, fontWeight: 700 }}>
                           {row.title}
                         </Typography>
-                        <Typography sx={{ fontWeight: 800, fontSize: 16, lineHeight: 1.2 }}>
+                        <Typography sx={{ color: "var(--admin-text)", opacity: 0.65, fontSize: 10, mb: 0.15 }}>
+                          {row.hint}
+                        </Typography>
+                        <Typography sx={{ fontWeight: 800, fontSize: 16, lineHeight: 1.2, color: "var(--admin-text)" }}>
                           {toFaNum(row.value)}
-                          <Typography component="span" sx={{ color: "var(--admin-text-muted)", fontSize: 11 }}>
+                          <Typography component="span" sx={{ color: "var(--admin-text)", opacity: 0.55, fontSize: 11 }}>
                             /۵
                           </Typography>
                         </Typography>
@@ -427,12 +442,17 @@ export default function SmartClubDashboardPage() {
                     );
                   })}
                 </Box>
-                <ScoreRing value={rfm?.overall || 0} />
+                <Box sx={{ textAlign: "center" }}>
+                  <ScoreRing value={rfm?.overall || 0} />
+                  <Typography sx={{ fontSize: 10, color: "var(--admin-text)", opacity: 0.7, mt: 0.25 }}>
+                    میانگین
+                  </Typography>
+                </Box>
               </Box>
             </Box>
 
             <Box sx={{ ...panelSx, px: 1.25, py: 1 }}>
-              <Typography sx={{ fontWeight: 700, fontSize: 13, mb: 0.5 }}>توزیع سگمنت</Typography>
+              <Typography sx={{ fontWeight: 700, fontSize: 13, mb: 0.5 }}>گروه مشتریان</Typography>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 <Donut slices={distribution} />
                 <Box sx={{ display: "flex", flexDirection: "column", gap: 0.35, minWidth: 0, flex: 1 }}>

@@ -175,18 +175,35 @@ export default function BeneficiarySelect({
           listbox: {
             sx: {
               py: 0,
+              bgcolor: "var(--admin-surface)",
+              color: "var(--admin-text)",
               "& .MuiAutocomplete-option": {
-                minHeight: compact ? 32 : 44,
-                py: compact ? 0.4 : 0.75,
+                minHeight: compact ? 36 : 48,
+                py: compact ? 0.5 : 0.85,
                 fontSize: compact ? 12 : 13,
+                color: "var(--admin-text)",
               },
             },
           },
         }}
         renderOption={(props, option) => (
           <li {...props} key={option.id}>
-            <Box sx={{ display: "grid" }}>
-              <Typography sx={{ fontSize: compact ? 12 : 13 }}>{formatBeneficiaryLabel(option)}</Typography>
+            <Box sx={{ display: "grid", width: "100%", gap: 0.15 }}>
+              <Typography sx={{ fontSize: compact ? 12 : 13, fontWeight: 600, color: "var(--admin-text)" }}>
+                {String(option.name || "").trim() || "بدون نام"}
+              </Typography>
+              {option.phone ? (
+                <Typography
+                  sx={{
+                    fontSize: compact ? 11 : 12,
+                    color: "var(--admin-text-muted)",
+                    direction: "ltr",
+                    textAlign: "right",
+                  }}
+                >
+                  {option.phone}
+                </Typography>
+              ) : null}
               {!compact && (option.unpaid_total || option.purchased_total) ? (
                 <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)" }}>
                   خرید {formatBeneficiaryAmount(option.purchased_total)} — بدهی{" "}

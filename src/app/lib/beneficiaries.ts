@@ -154,6 +154,7 @@ export async function fetchBeneficiaries(query?: string, onlyWithDocs = false): 
   const params: Record<string, string | number | boolean> = {};
   if (query?.trim()) params.q = query.trim();
   if (onlyWithDocs) params.only_with_docs = 1;
+  params.per_page = 50;
   const res = await FetchWithJwtClient("GET", "/api/beneficiaries", token, params);
   if (!res || res.hasError) return [];
   return extractBeneficiaryList(res);

@@ -24,7 +24,8 @@ import {
   FormControlLabel,
   Radio,
   Card,
-  CardContent
+  CardContent,
+  InputAdornment
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { tableCellClasses } from '@mui/material/TableCell';
@@ -38,6 +39,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ReceiptIcon from '@mui/icons-material/Receipt';
+import SearchIcon from '@mui/icons-material/Search';
 import BeneficiarySelect from '@/app/admin/BeneficiarySelect';
 import DocumentPaymentFields from '@/app/admin/DocumentPaymentFields';
 import { DocumentPaymentChips, documentNeedsSettle } from '@/app/admin/DocumentPaymentBadge';
@@ -188,6 +190,7 @@ export default function InvoicesPage() {
   // Filter states
   const [filterMode, setFilterMode] = useState<'today' | 'week' | 'month' | 'year' | 'range' | null>(null);
   const [dateRange, setDateRange] = useState<any>([]);
+  const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterBeneficiaryId, setFilterBeneficiaryId] = useState<number | "">("");
   const [filterBeneficiaryOption, setFilterBeneficiaryOption] = useState<Beneficiary | null>(null);
@@ -200,6 +203,17 @@ export default function InvoicesPage() {
   useEffect(() => {
     fetchInvoices();
   }, [filterMode, dateRange, searchQuery, currentPage, perPage, filterBeneficiaryId]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearchQuery((prev) => {
+        if (prev === searchInput) return prev;
+        setCurrentPage(1);
+        return searchInput;
+      });
+    }, 320);
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -501,7 +515,6 @@ export default function InvoicesPage() {
   const handleClearFilters = () => {
     setFilterMode(null);
     setDateRange([]);
-    setSearchQuery("");
     setFilterBeneficiaryId("");
     setFilterBeneficiaryOption(null);
     setCurrentPage(1);
@@ -514,7 +527,7 @@ export default function InvoicesPage() {
   };
 
   const hasActiveFilters = () => {
-    return filterMode !== null || dateRange.length > 0 || searchQuery.trim() !== "" || filterBeneficiaryId !== "";
+    return filterMode !== null || dateRange.length > 0 || filterBeneficiaryId !== "";
   };
 
   return (
@@ -622,6 +635,29 @@ export default function InvoicesPage() {
             </CardContent>
           </Card>
         )}
+
+        <TextField
+          size="small"
+          fullWidth
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder="جستجو (عنوان، توضیح، کاربر)"
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon sx={{ color: "var(--admin-text)", opacity: 0.55, fontSize: 20 }} />
+              </InputAdornment>
+            ),
+          }}
+          sx={{
+            ...compactFieldSx,
+            mb: 1.5,
+            "& .MuiOutlinedInput-root": {
+              ...compactFieldSx["& .MuiOutlinedInput-root"],
+              backgroundColor: "var(--admin-surface)",
+            },
+          }}
+        />
 
         {/* Invoices Table */}
         {loading ? (
@@ -1178,35 +1214,6 @@ export default function InvoicesPage() {
           onClose={() => setOpenFilterSheet(false)}
         >
           <Box sx={{ padding: "16px" }}>
-            {/* Search */}
-            <TextField
-              label="جستجو (عنوان، توضیح، کاربر)"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
-              fullWidth
-              sx={{
-                marginBottom: "16px",
-                '& .MuiOutlinedInput-root': {
-                  color: 'var(--admin-text)',
-                  '& fieldset': {
-                    borderColor: 'var(--admin-border)',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: 'var(--admin-accent)',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: 'var(--admin-accent)',
-                  },
-                },
-                '& .MuiInputLabel-root': {
-                  color: 'var(--admin-text-muted)',
-                },
-              }}
-            />
-
             <Box sx={{ marginBottom: "16px" }}>
               <BeneficiarySelect
                 value={filterBeneficiaryId}
@@ -1217,7 +1224,7 @@ export default function InvoicesPage() {
                   setCurrentPage(1);
                 }}
                 label="ذینفع"
-                helperText="فقط فاکتورهای این طرف‌حساب"
+                helperText="با نام یا شماره مشتری جستجو کنید"
                 allowRegister={false}
               />
             </Box>

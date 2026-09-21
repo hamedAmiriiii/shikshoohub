@@ -199,3 +199,26 @@ export function toFaNum(n: number | string | null | undefined) {
   const raw = Number(n || 0);
   return new Intl.NumberFormat("fa-IR").format(raw);
 }
+
+export const SMART_SEGMENT_LABELS: Record<string, string> = {
+  vip: "ویژه",
+  at_risk: "نزدیک به رفتن",
+  churned: "دیگه نمیاد",
+  inactive: "مدتی نخریده",
+  loyal: "همیشگی",
+  growing: "رو به رشد",
+  new: "تازه‌وارد",
+  other: "بقیه",
+};
+
+export const SMART_TAG_LABELS: Record<string, string> = {
+  ready_repurchase: "وقت خرید دوباره",
+  near_vip: "نزدیک به مشتری ویژه",
+  high_value: "خرید زیاد",
+  low_value: "خرید کم",
+};
+
+export function smartSegmentLabel(key?: string | null, extra?: Record<string, string>) {
+  if (!key) return "";
+  return extra?.[key] || SMART_SEGMENT_LABELS[key] || key;
+}

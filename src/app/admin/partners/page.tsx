@@ -336,6 +336,9 @@ export default function PartnersPage() {
                 <Typography sx={{ color: "var(--admin-accent)", fontWeight: 800, fontSize: 28 }}>
                   {formatNumber(preview?.net_profit || 0)} تومان
                 </Typography>
+                <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, mt: 0.5 }}>
+                  همان سود خالص گزارش سود و ضرر فروشگاه در این بازه
+                </Typography>
                 <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: 13, mt: 1 }}>
                   جمع سرمایه: {formatNumber(preview?.total_capital || totalCapital)} تومان
                   {preview?.last_settlement_at_jalali

@@ -438,7 +438,7 @@ export default function AdminHamburgerSidebar({
             },
             {
               id: "smart-club-customers",
-              label: "مشتریان RFM",
+              label: "لیست مشتریان",
               href: "/admin/smart-club/customers",
               icon: <PeopleIcon />,
               permission: "customers",
