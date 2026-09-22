@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import {
   Box,
   Button,
@@ -34,15 +34,9 @@ const panelSx = {
   bgcolor: "var(--admin-surface)",
   border: "1px solid var(--admin-border)",
   borderRadius: "12px",
-  p: 2,
-  mb: 1.5,
+  p: 1.25,
+  mb: 1,
 } as const;
-
-const STATUS_LABEL: Record<string, string> = {
-  draft: "پیش‌نویس — هنوز اجرا نمی‌شود",
-  active: "فعال — می‌توانی اجرا کنی",
-  paused: "متوقف",
-};
 
 const STATUS_SHORT: Record<string, string> = {
   draft: "پیش‌نویس",
@@ -50,25 +44,25 @@ const STATUS_SHORT: Record<string, string> = {
   paused: "متوقف",
 };
 
-const FIELD_PHRASE: Record<string, (op: string, value: string) => string> = {
-  recency_days: (op, value) =>
-    op === "<=" || op === "<"
-      ? `حداکثر ${value} روز از آخرین خرید گذشته باشد`
-      : `حداقل ${value} روز از آخرین خرید گذشته باشد`,
-  frequency: (op, value) =>
-    op === "<=" || op === "<"
-      ? `حداکثر ${value} بار خرید کرده باشند`
-      : `حداقل ${value} بار از فروشگاه خرید کرده باشند`,
-  monetary: (_op, value) => `جمع خریدشان حداقل ${value} تومان باشد`,
-  avg_days_between: (_op, value) => `فاصله معمول بین خریدهایشان حدود ${value} روز باشد`,
-  avg_order_value: (_op, value) => `میانگین هر فاکتورشان حداقل ${value} تومان باشد`,
-  purchase_count_30d: (_op, value) => `در ۳۰ روز اخیر حداقل ${value} بار خرید کرده باشند`,
-  purchase_count_90d: (_op, value) => `در ۹۰ روز اخیر حداقل ${value} بار خرید کرده باشند`,
+const STATUS_SX: Record<string, { color: string; bg: string }> = {
+  draft: { color: "var(--admin-text)", bg: "var(--admin-surface-alt)" },
+  active: { color: "#4ade80", bg: "rgba(74,222,128,0.12)" },
+  paused: { color: "#f59e0b", bg: "rgba(245,158,11,0.14)" },
+};
+
+const FIELD_CHIP: Record<string, (op: string, value: string) => string> = {
+  recency_days: (_op, value) => `${value} روز بی‌خرید`,
+  frequency: (_op, value) => `حداقل ${value} خرید`,
+  monetary: (_op, value) => `خرید از ${value} تومان`,
+  avg_days_between: (_op, value) => `فاصله خرید ${value} روز`,
+  avg_order_value: (_op, value) => `فاکتور از ${value} تومان`,
+  purchase_count_30d: (_op, value) => `${value} خرید در ۳۰ روز`,
+  purchase_count_90d: (_op, value) => `${value} خرید در ۹۰ روز`,
 };
 
 const ACTION_LABEL: Record<string, string> = {
-  grant_credit: "اعتبار هدیه به کیف پول",
-  send_sms: "ارسال پیامک",
+  grant_credit: "اعتبار هدیه",
+  send_sms: "پیامک",
 };
 
 function formatValue(value: unknown) {
@@ -80,41 +74,45 @@ function formatValue(value: unknown) {
 
 function formatRule(rule: { field: string; op: string; value: unknown }) {
   const value = formatValue(rule.value);
-  const builder = FIELD_PHRASE[rule.field];
+  const builder = FIELD_CHIP[rule.field];
   if (builder) return builder(rule.op, value);
-  const op =
-    rule.op === ">="
-      ? "حداقل"
-      : rule.op === "<="
-        ? "حداکثر"
-        : rule.op === ">"
-          ? "بیشتر از"
-          : rule.op === "<"
-            ? "کمتر از"
-            : "برابر";
-  return `${rule.field} ${op} ${value}`;
+  return `${rule.field} ${value}`;
 }
 
-function formatActions(actions: SmartCampaign["actions"]) {
-  if (!actions?.length) return "هنوز اقدامی تعریف نشده";
-  return actions
-    .map((a) => {
-      const base = ACTION_LABEL[a.type] || a.type;
-      const amount = a.config?.amount;
-      if (a.type === "grant_credit" && amount != null) {
-        const days = Number(a.config?.expires_days);
-        const until = typeof a.config?.expires_at === "string" ? a.config.expires_at : "";
-        let extra = "";
-        if (Number.isFinite(days) && days > 0) {
-          extra = ` — مهلت استفاده ${toFaNum(days)} روز`;
-        } else if (until) {
-          extra = ` — تا ${until} قابل استفاده`;
-        }
-        return `${base} (${toFaNum(amount)} تومان)${extra}`;
-      }
-      return base;
-    })
-    .join(" و ");
+function actionChips(actions: SmartCampaign["actions"]) {
+  if (!actions?.length) return ["اقدامی ندارد"];
+  return actions.map((a) => {
+    if (a.type === "grant_credit" && a.config?.amount != null) {
+      const days = Number(a.config?.expires_days);
+      const amount = `${toFaNum(a.config.amount)} تومان`;
+      if (Number.isFinite(days) && days > 0) return `اعتبار ${amount} · ${toFaNum(days)} روز`;
+      return `اعتبار ${amount}`;
+    }
+    return ACTION_LABEL[a.type] || a.type;
+  });
+}
+
+function Chip({ children, tone }: { children: ReactNode; tone?: "status" | "muted" }) {
+  return (
+    <Box
+      component="span"
+      sx={{
+        display: "inline-flex",
+        alignItems: "center",
+        px: 0.85,
+        py: 0.25,
+        borderRadius: "8px",
+        fontSize: 11,
+        fontWeight: 600,
+        lineHeight: 1.4,
+        bgcolor: tone === "muted" ? "var(--admin-surface-alt)" : "rgba(120,181,104,0.12)",
+        color: "var(--admin-text)",
+        border: "1px solid var(--admin-border)",
+      }}
+    >
+      {children}
+    </Box>
+  );
 }
 
 const defaultForm = {
@@ -248,13 +246,14 @@ export default function SmartClubCampaignsPage() {
   };
 
   return (
-    <Box sx={adminPageSx}>
+    <Box sx={{ ...adminPageSx, p: 1.5, pb: 10, color: "var(--admin-text)" }}>
       <ToastContainer position="top-center" rtl />
-      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
-        <Typography variant="h5" fontWeight={800}>
-          کمپین‌ها
-        </Typography>
-        <Button component={Link} href="/admin/smart-club" variant="outlined">
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
+        <Box>
+          <Typography sx={{ fontWeight: 800, fontSize: 17 }}>کمپین‌ها</Typography>
+          <Typography sx={{ fontSize: 12, opacity: 0.7 }}>اعتبار و پیامک برای مشتری‌هایی که مدتی نیامده‌اند</Typography>
+        </Box>
+        <Button component={Link} href="/admin/smart-club" size="small" variant="outlined">
           داشبورد
         </Button>
       </Box>
@@ -361,83 +360,61 @@ export default function SmartClubCampaignsPage() {
       ) : (
         campaigns.map((c) => {
           const rules = (c.conditions?.all || []).map(formatRule);
+          const actions = actionChips(c.actions);
+          const status = STATUS_SX[c.status] || STATUS_SX.draft;
           return (
             <Box key={c.id} sx={panelSx}>
-              <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1, alignItems: "flex-start", mb: 0.75 }}>
-                <Typography fontWeight={700}>{c.name}</Typography>
-                <Typography
+              <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1, alignItems: "center", mb: 1 }}>
+                <Typography sx={{ fontWeight: 800, fontSize: 14, lineHeight: 1.3 }}>{c.name}</Typography>
+                <Box
                   sx={{
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: 700,
                     whiteSpace: "nowrap",
                     px: 1,
-                    py: 0.25,
+                    py: 0.3,
                     borderRadius: "8px",
-                    bgcolor: "var(--admin-surface-alt)",
-                    color: "var(--admin-text-secondary)",
+                    bgcolor: status.bg,
+                    color: status.color,
                   }}
                 >
-                  {STATUS_LABEL[c.status] || STATUS_SHORT[c.status] || c.status}
-                </Typography>
+                  {STATUS_SHORT[c.status] || c.status}
+                </Box>
               </Box>
-              {c.description ? (
-                <Typography variant="body2" color="text.secondary" mb={0.75}>
-                  {c.description}
-                </Typography>
-              ) : null}
-              <Typography variant="body2" sx={{ mb: 0.5 }}>
-                این کمپین برای مشتریانی است که:
-              </Typography>
-              <Box component="ul" sx={{ m: 0, mb: 1, pr: 2.5 }}>
-                {rules.length ? (
-                  rules.map((rule) => (
-                    <Typography component="li" key={rule} variant="body2" color="text.secondary">
-                      {rule}
-                    </Typography>
-                  ))
-                ) : (
-                  <Typography component="li" variant="body2" color="text.secondary">
-                    شرط خاصی ندارد
-                  </Typography>
-                )}
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.6, mb: 0.75 }}>
+                {(rules.length ? rules : ["بدون شرط"]).map((rule) => (
+                  <Chip key={rule} tone="muted">
+                    {rule}
+                  </Chip>
+                ))}
+                {actions.map((action) => (
+                  <Chip key={action}>{action}</Chip>
+                ))}
               </Box>
-              <Typography variant="body2" color="text.secondary" mb={0.35}>
-                کار کمپین: {formatActions(c.actions)}
+              <Typography sx={{ fontSize: 11, opacity: 0.7, mb: 1 }}>
+                فاصله {toFaNum(c.cooldown_days)} روز
+                {c.max_recipients_per_run ? ` · حداکثر ${toFaNum(c.max_recipients_per_run)} نفر` : ""}
               </Typography>
-              <Typography variant="body2" color="text.secondary" mb={0.35}>
-                فاصله بین دو پیام به یک نفر: {toFaNum(c.cooldown_days)} روز
-              </Typography>
-              {c.max_recipients_per_run ? (
-                <Typography variant="body2" color="text.secondary" mb={1}>
-                  در هر اجرا حداکثر {toFaNum(c.max_recipients_per_run)} نفر
-                </Typography>
-              ) : (
-                <Box mb={1} />
-              )}
-              <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                <Button size="small" variant="outlined" onClick={() => void onPreview(c.id)}>
-                  چند نفر جور می‌شوند؟
+              <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap" }}>
+                <Button size="small" variant="outlined" onClick={() => void onPreview(c.id)} sx={{ fontSize: 12, py: 0.25 }}>
+                  چند نفر؟
                 </Button>
                 <Button
                   size="small"
                   variant="contained"
                   disabled={busy || c.status !== "active"}
                   onClick={() => setRunTarget(c)}
+                  sx={{ fontSize: 12, py: 0.25 }}
                 >
-                  اجرا کن
+                  اجرا
                 </Button>
-                <Button size="small" onClick={() => void onToggleActive(c)}>
-                  {c.status === "active" ? "متوقف کن" : "فعال کن"}
+                <Button size="small" onClick={() => void onToggleActive(c)} sx={{ fontSize: 12, py: 0.25 }}>
+                  {c.status === "active" ? "توقف" : "فعال کن"}
                 </Button>
-                <Button size="small" color="error" onClick={() => void onDelete(c.id)}>
+                <Button size="small" color="error" onClick={() => void onDelete(c.id)} sx={{ fontSize: 12, py: 0.25 }}>
                   حذف
                 </Button>
               </Box>
-              {c.status !== "active" ? (
-                <Typography variant="caption" color="text.secondary" display="block" mt={0.75}>
-                  برای اجرا، اول «فعال کن» را بزن. پیش‌نویس یعنی فقط ذخیره شده.
-                </Typography>
-              ) : null}
             </Box>
           );
         })
