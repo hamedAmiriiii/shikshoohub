@@ -50,6 +50,7 @@ import MenuBookIcon from "@mui/icons-material/MenuBook";
 import BalanceIcon from "@mui/icons-material/Balance";
 import CalculateIcon from "@mui/icons-material/Calculate";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
+import EventAvailableIcon from "@mui/icons-material/EventAvailable";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import AddBoxIcon from "@mui/icons-material/AddBox";
 import ListAltIcon from "@mui/icons-material/ListAlt";
@@ -294,6 +295,13 @@ export default function AdminHamburgerSidebar({
         label: "ترازنامه",
         href: "/admin/accounting/balance-sheet",
         icon: <AccountBalanceIcon />,
+        permission: "accounting",
+      },
+      {
+        id: "accounting-close",
+        label: "بستن سال / دوره",
+        href: "/admin/accounting/period-close",
+        icon: <EventAvailableIcon />,
         permission: "accounting",
       },
     ],

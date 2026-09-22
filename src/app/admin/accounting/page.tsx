@@ -23,7 +23,7 @@ import BalanceIcon from "@mui/icons-material/Balance";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
-import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import EventAvailableIcon from "@mui/icons-material/EventAvailable";
 import DateObject from "react-date-object";
 import { toast } from "react-toastify";
 import {
@@ -46,6 +46,7 @@ const LINKS = [
   { href: "/admin/accounting/ledger", title: "دفتر حساب", desc: "آرتیکل‌های یک حساب با مانده جاری", icon: <MenuBookIcon /> },
   { href: "/admin/accounting/profit-loss", title: "سود و زیان دفتر", desc: "مبنای تعهدی از آرتیکل سند", icon: <TrendingUpIcon /> },
   { href: "/admin/accounting/balance-sheet", title: "ترازنامه", desc: "دارایی، بدهی، سرمایه و تطبیق نقد", icon: <AccountBalanceIcon /> },
+  { href: "/admin/accounting/period-close", title: "بستن سال / میان‌دوره", desc: "صفر کردن درآمد و هزینه و انتقال به سود انباشته", icon: <EventAvailableIcon /> },
 ];
 
 export default function AccountingHomePage() {

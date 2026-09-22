@@ -80,6 +80,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/accounting/ledger': 'دفتر حساب',
     '/admin/accounting/profit-loss': 'سود و زیان دفتر',
     '/admin/accounting/balance-sheet': 'ترازنامه',
+    '/admin/accounting/period-close': 'بستن سال / دوره',
     '/admin/daily-reconciliation': 'تطبیق روزانه',
     '/admin/shop-accounts': 'حساب‌های فروشگاه',
     '/admin/partners': 'شرکا',

@@ -210,6 +210,7 @@ export const ACCOUNTING_SOURCE_TYPES = [
   { value: "recon_deposit", label: "تطبیق روزانه" },
   { value: "account_transfer", label: "شارژ تنخواه" },
   { value: "opening", label: "افتتاحیه" },
+  { value: "year_close", label: "بستن دوره" },
   { value: "invoice", label: "فاکتور خرید" },
   { value: "expense", label: "هزینه" },
   { value: "document_payment", label: "تسویه فاکتور/هزینه" },
@@ -348,6 +349,10 @@ export function voucherSourceHref(voucher: Pick<AccountingVoucher, "source_type"
       return "/admin/manual-trades";
     case "partner_settlement":
       return "/admin/partners";
+    case "year_close":
+      return "/admin/accounting/period-close";
+    case "opening":
+      return "/admin/accounting";
     default:
       return null;
   }
@@ -791,5 +796,206 @@ export async function postAccountingOpening(date?: string): Promise<OpeningResul
     message: asString(obj.message, "انجام شد."),
     data: parseVoucher(voucherRaw),
     statusCode: asNumber(obj.statusCode, 200),
+  };
+}
+
+export type PeriodCloseMode = "year" | "mid";
+
+export type PeriodCloseStep = {
+  key: string;
+  title: string;
+  ok: boolean;
+  detail: string;
+  hint: string | null;
+};
+
+export type PeriodCloseLine = {
+  account_id: number;
+  account_code: string;
+  account_name: string;
+  debit: number;
+  credit: number;
+  description: string;
+};
+
+export type PeriodClosePreview = {
+  mode: PeriodCloseMode;
+  year: number;
+  as_of: string;
+  period_from: string | null;
+  closed_through: string | null;
+  can_close: boolean;
+  already_posted: boolean;
+  steps: PeriodCloseStep[];
+  trial_balance: {
+    balanced: boolean;
+    totals: TrialBalanceReport["totals"];
+  };
+  profit_loss: ProfitLossReport;
+  lines: PeriodCloseLine[];
+  voucher: AccountingVoucher | null;
+  note: string;
+};
+
+export type PeriodCloseStatus = {
+  closed_through: string | null;
+  latest: AccountingVoucher | null;
+  history: AccountingVoucher[];
+  default_year: number;
+  today: string;
+  jalali_year_end: string;
+};
+
+export type PeriodCloseResult = {
+  ok: boolean;
+  already_posted: boolean;
+  message: string;
+  data: AccountingVoucher | null;
+  preview: PeriodClosePreview | null;
+  statusCode: number;
+};
+
+function parsePeriodStep(raw: unknown): PeriodCloseStep {
+  const obj = asRecord(raw) ?? {};
+  return {
+    key: asString(obj.key),
+    title: asString(obj.title),
+    ok: asBool(obj.ok, false),
+    detail: asString(obj.detail),
+    hint: obj.hint == null || obj.hint === "" ? null : asString(obj.hint),
+  };
+}
+
+function parsePeriodLine(raw: unknown): PeriodCloseLine {
+  const obj = asRecord(raw) ?? {};
+  return {
+    account_id: asNumber(obj.account_id),
+    account_code: asString(obj.account_code),
+    account_name: asString(obj.account_name),
+    debit: asNumber(obj.debit),
+    credit: asNumber(obj.credit),
+    description: asString(obj.description),
+  };
+}
+
+function parsePeriodPreview(raw: unknown): PeriodClosePreview | null {
+  const obj = asRecord(raw);
+  if (!obj) return null;
+  const tb = asRecord(obj.trial_balance) ?? {};
+  const totals = asRecord(tb.totals) ?? {};
+  const pnl = asRecord(obj.profit_loss) ?? {};
+  const steps = Array.isArray(obj.steps) ? obj.steps.map(parsePeriodStep) : [];
+  const lines = Array.isArray(obj.lines) ? obj.lines.map(parsePeriodLine) : [];
+  return {
+    mode: asString(obj.mode, "year") === "mid" ? "mid" : "year",
+    year: asNumber(obj.year),
+    as_of: asString(obj.as_of),
+    period_from: obj.period_from == null ? null : asString(obj.period_from),
+    closed_through: obj.closed_through == null ? null : asString(obj.closed_through),
+    can_close: asBool(obj.can_close, false),
+    already_posted: asBool(obj.already_posted, false),
+    steps,
+    trial_balance: {
+      balanced: asBool(tb.balanced, false),
+      totals: {
+        debit_turnover: asNumber(totals.debit_turnover),
+        credit_turnover: asNumber(totals.credit_turnover),
+        debit_balance: asNumber(totals.debit_balance),
+        credit_balance: asNumber(totals.credit_balance),
+      },
+    },
+    profit_loss: {
+      from: pnl.from == null ? null : asString(pnl.from),
+      to: pnl.to == null ? null : asString(pnl.to),
+      sales: asNumber(pnl.sales),
+      discounts: asNumber(pnl.discounts),
+      cogs: asNumber(pnl.cogs),
+      gross_profit: asNumber(pnl.gross_profit),
+      operating_expense: asNumber(pnl.operating_expense),
+      payroll: asNumber(pnl.payroll),
+      loyalty: asNumber(pnl.loyalty),
+      other_income: asNumber(pnl.other_income),
+      net_profit: asNumber(pnl.net_profit),
+      note: asString(pnl.note),
+    },
+    lines,
+    voucher: parseVoucher(obj.voucher),
+    note: asString(obj.note),
+  };
+}
+
+export async function fetchPeriodCloseStatus(): Promise<PeriodCloseStatus> {
+  const res = await FetchWithJwtClient("GET", "/api/accounting/period-close", authToken());
+  const obj = asRecord(unwrapData(res)) ?? {};
+  const history = Array.isArray(obj.history) ? obj.history : [];
+  return {
+    closed_through: obj.closed_through == null ? null : asString(obj.closed_through),
+    latest: parseVoucher(obj.latest),
+    history: history.map(parseVoucher).filter((item): item is AccountingVoucher => item != null),
+    default_year: asNumber(obj.default_year),
+    today: asString(obj.today),
+    jalali_year_end: asString(obj.jalali_year_end),
+  };
+}
+
+export async function fetchPeriodClosePreview(options: {
+  mode: PeriodCloseMode;
+  year?: number;
+  asOf?: string;
+}): Promise<PeriodClosePreview> {
+  const params: Record<string, string> = { mode: options.mode };
+  if (options.year) params.year = String(options.year);
+  if (options.asOf) params.as_of = options.asOf;
+  const res = await FetchWithJwtClient(
+    "GET",
+    "/api/accounting/period-close/preview",
+    authToken(),
+    params,
+  );
+  const parsed = parsePeriodPreview(unwrapData(res));
+  if (!parsed) throw new Error("پاسخ پیش‌نمایش بستن دوره نامعتبر است.");
+  return parsed;
+}
+
+export async function postPeriodClose(options: {
+  mode: PeriodCloseMode;
+  year?: number;
+  asOf?: string;
+}): Promise<PeriodCloseResult> {
+  const body: Record<string, unknown> = { mode: options.mode };
+  if (options.year) body.year = options.year;
+  if (options.asOf) body.as_of = options.asOf;
+  const res = await FetchWithJwtClient(
+    "POST",
+    "/api/accounting/period-close",
+    authToken(),
+    {},
+    { body: JSON.stringify(body) },
+  );
+  const obj = asRecord(res) ?? {};
+  if (obj.hasError) throwApiError(obj, "خطا در بستن دوره");
+  return {
+    ok: asBool(obj.ok, true),
+    already_posted: asBool(obj.already_posted, false),
+    message: asString(obj.message, "انجام شد."),
+    data: parseVoucher(obj.data),
+    preview: parsePeriodPreview(obj.preview),
+    statusCode: asNumber(obj.statusCode, 200),
+  };
+}
+
+export async function reopenPeriodClose(): Promise<{ message: string; data: AccountingVoucher | null }> {
+  const res = await FetchWithJwtClient(
+    "POST",
+    "/api/accounting/period-close/reopen",
+    authToken(),
+    {},
+    { body: JSON.stringify({}) },
+  );
+  const obj = asRecord(res) ?? {};
+  if (obj.hasError) throwApiError(obj, "خطا در بازگشایی دوره");
+  return {
+    message: asString(obj.message, "بازگشایی شد."),
+    data: parseVoucher(obj.data),
   };
 }
