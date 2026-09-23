@@ -7,6 +7,7 @@ export type ShopAccount = {
   name: string;
   balance: number;
   type?: ShopAccountType;
+  is_till?: boolean;
   is_default?: boolean;
   is_active?: boolean;
   sort_order?: number;
@@ -14,6 +15,7 @@ export type ShopAccount = {
   charged_total?: number;
   expenses_total?: number;
   invoices_total?: number;
+  adjustments_total?: number;
 };
 
 export function isPettyCashAccount(account: Pick<ShopAccount, "type">): boolean {
@@ -52,6 +54,9 @@ export function parseShopAccounts(raw: unknown): ShopAccount[] {
           row.expenses_total != null ? Math.floor(Number(row.expenses_total) || 0) : undefined,
         invoices_total:
           row.invoices_total != null ? Math.floor(Number(row.invoices_total) || 0) : undefined,
+        adjustments_total:
+          row.adjustments_total != null ? Math.floor(Number(row.adjustments_total) || 0) : undefined,
+        is_till: row.is_till === true || row.type === "till",
       } satisfies ShopAccount;
     })
     .filter((item): item is ShopAccount => item != null)
@@ -94,6 +99,32 @@ export async function fetchShopAccounts(options?: {
     );
   }
   return parseShopAccounts(extractAccountsPayload(res));
+}
+
+export async function setShopAccountBalances(payload: {
+  date?: string;
+  description?: string;
+  items: { shop_account_id: number; target_balance: number }[];
+}): Promise<{ message: string }> {
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
+  const res = await apiRequestError(
+    "Post",
+    {},
+    payload,
+    "/api/shop-accounts/set-balances",
+    true,
+    true,
+    token
+  );
+  if (res?.hasError) {
+    throw new Error(
+      typeof res.message === "string" ? res.message : "خطا در تنظیم مانده حساب"
+    );
+  }
+  const rec = res && typeof res === "object" ? (res as Record<string, unknown>) : {};
+  return {
+    message: typeof rec.message === "string" ? rec.message : "مانده حساب‌ها به‌روز شد.",
+  };
 }
 
 export function formatAccountOptionLabel(account: ShopAccount): string {

@@ -66,6 +66,7 @@ interface FinancialReportResponse {
     total_invoices: number;
     total_net_profit: number;
     total_account_balance: number;
+    reconstructed_account_balance?: number;
     cash_and_card_total?: number;
     total_collected?: number;
     uncollected_debts?: number;
@@ -296,7 +297,7 @@ const MONTHLY_COLUMNS: { key: keyof MonthlyReport | "label"; label: string; colo
   },
   {
     key: "account_balance",
-    label: "موجودی",
+    label: "نقد ماه",
     color: (row) => moneyColor(row.account_balance, "var(--admin-online)"),
   },
 ];
@@ -403,7 +404,7 @@ export default function ProfitLossPage() {
             سود و ضرر
           </Typography>
           <Typography sx={{ color: "var(--admin-text)", opacity: 0.7, fontSize: 12, mt: 0.25 }}>
-            سود از فروش و بهای کالاست؛ موجودی فقط نقد عملیاتی است
+            سود از فروش و بهای کالاست؛ موجودی حساب ماندهٔ واقعی صندوق، بانک و تنخواه است
           </Typography>
         </Box>
         <Box sx={{ display: "flex", gap: 0.75, alignItems: "center" }}>
@@ -613,8 +614,13 @@ export default function ProfitLossPage() {
                   label="موجودی حساب"
                   amount={data.totals.total_account_balance}
                   color={moneyColor(data.totals.total_account_balance, "var(--admin-online)")}
-                  hint="فروش منهای نسیه و چک وصول‌نشده و پرداخت نقدی فاکتور و هزینه"
+                  hint="جمع ماندهٔ واقعی صندوق، حساب‌های فروشگاه و تنخواه در همین لحظه"
                   strong
+                />
+                <AmountLine
+                  label="نقد ساخته‌شده از فروش"
+                  amount={data.totals.reconstructed_account_balance ?? 0}
+                  hint="فروش منهای نسیه و چک وصول‌نشده و پرداخت نقدی فاکتور و هزینه؛ موجودی واقعی نیست"
                 />
               </DetailBlock>
             </Box>

@@ -28,8 +28,13 @@ import "react-toastify/dist/ReactToastify.css";
 import {
   fetchShopAccounts,
   isMainShopAccount,
+  setShopAccountBalances,
   type ShopAccount,
 } from "@/app/lib/shopAccounts";
+import { jalaliYmd, todayJalaliYmd } from "@/app/lib/accounting";
+import { todayJalaliDateObject } from "@/app/lib/cheques";
+import { AccountingJalaliDateField } from "@/app/admin/accounting/ui";
+import DateObject from "react-date-object";
 
 const formatNumber = (num: number) =>
   new Intl.NumberFormat("fa-IR").format(Math.round(num || 0));
@@ -68,9 +73,12 @@ export default function ShopAccountsPage() {
   const [accounts, setAccounts] = useState<ShopAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [balanceOpen, setBalanceOpen] = useState(false);
   const [editing, setEditing] = useState<ShopAccount | null>(null);
   const [nameInput, setNameInput] = useState("");
   const [saving, setSaving] = useState(false);
+  const [balanceDate, setBalanceDate] = useState<DateObject | null>(() => todayJalaliDateObject());
+  const [balanceTargets, setBalanceTargets] = useState<Record<number, string>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -93,6 +101,57 @@ export default function ShopAccountsPage() {
     () => accounts.reduce((sum, item) => sum + (item.balance || 0), 0),
     [accounts]
   );
+
+  const openBalance = () => {
+    const next: Record<number, string> = {};
+    accounts.forEach((account) => {
+      next[account.id] = String(Math.round(account.balance || 0));
+    });
+    setBalanceTargets(next);
+    setBalanceDate(todayJalaliDateObject());
+    setBalanceOpen(true);
+  };
+
+  const parseToman = (raw: string): number | null => {
+    const normalized = raw
+      .replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)))
+      .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)))
+      .replace(/[,٬\s]/g, "");
+    if (normalized === "" || normalized === "-") return null;
+    const n = Number(normalized);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const handleSetBalances = async () => {
+    const items: { shop_account_id: number; target_balance: number }[] = [];
+    for (const account of accounts) {
+      const parsed = parseToman(balanceTargets[account.id] ?? "");
+      if (parsed == null) {
+        toast.error(`مانده واقعی «${account.name}» را وارد کنید`);
+        return;
+      }
+      items.push({ shop_account_id: account.id, target_balance: parsed });
+    }
+    if (items.length === 0) {
+      toast.error("حسابی برای اصلاح نیست");
+      return;
+    }
+    setSaving(true);
+    try {
+      const result = await setShopAccountBalances({
+        date: jalaliYmd(balanceDate) || todayJalaliYmd(),
+        description: "اصلاح مانده با موجودی واقعی پایان دوره",
+        items,
+      });
+      toast.success(result.message);
+      setBalanceOpen(false);
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "خطا در تنظیم مانده");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -215,7 +274,7 @@ export default function ShopAccountsPage() {
               </Typography>
             </Box>
           </Box>
-          <Box sx={{ display: "flex", gap: 1 }}>
+          <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
             <Button
               variant="outlined"
               startIcon={<RefreshIcon />}
@@ -224,6 +283,14 @@ export default function ShopAccountsPage() {
               sx={{ color: "var(--admin-text)", borderColor: "var(--admin-border)" }}
             >
               بروزرسانی
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={openBalance}
+              disabled={loading || accounts.length === 0}
+              sx={{ color: "var(--admin-text)", borderColor: "var(--admin-border)" }}
+            >
+              تنظیم مانده واقعی
             </Button>
             <Button
               variant="contained"
@@ -412,6 +479,53 @@ export default function ShopAccountsPage() {
               }}
             >
               {saving ? "..." : "ذخیره"}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog open={balanceOpen} onClose={() => setBalanceOpen(false)} fullWidth maxWidth="sm">
+          <DialogTitle sx={{ color: "var(--admin-text)" }}>تنظیم مانده واقعی</DialogTitle>
+          <DialogContent>
+            <Typography sx={{ fontSize: 13, color: "var(--admin-text-muted)", mb: 2 }}>
+              موجودی صفحهٔ حساب‌ها و دفتر همان حساب با رقمی که وارد می‌کنید یکی می‌شود. اختلاف به سرمایه می‌رود. بعد از این کار بستن سال را بزنید.
+            </Typography>
+            <Box sx={{ mb: 2 }}>
+              <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)", mb: 0.5 }}>
+                تاریخ اصلاح
+              </Typography>
+              <AccountingJalaliDateField
+                value={balanceDate}
+                onChange={setBalanceDate}
+                placeholder="تاریخ"
+              />
+            </Box>
+            {accounts.map((account) => (
+              <TextField
+                key={account.id}
+                fullWidth
+                label={`${account.name} — الان ${formatNumber(account.balance)}`}
+                value={balanceTargets[account.id] ?? ""}
+                onChange={(e) =>
+                  setBalanceTargets((prev) => ({ ...prev, [account.id]: e.target.value }))
+                }
+                sx={{ ...fieldSx, mb: 1.5 }}
+              />
+            ))}
+          </DialogContent>
+          <DialogActions sx={{ px: 2, pb: 2 }}>
+            <Button onClick={() => setBalanceOpen(false)} disabled={saving} sx={{ color: "var(--admin-text-muted)" }}>
+              انصراف
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleSetBalances}
+              disabled={saving}
+              sx={{
+                bgcolor: "var(--admin-accent)",
+                "&:hover": { bgcolor: "var(--admin-accent-hover)" },
+              }}
+            >
+              {saving ? "..." : "اعمال مانده واقعی"}
             </Button>
           </DialogActions>
         </Dialog>

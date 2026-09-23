@@ -211,6 +211,7 @@ export const ACCOUNTING_SOURCE_TYPES = [
   { value: "account_transfer", label: "شارژ تنخواه" },
   { value: "opening", label: "افتتاحیه" },
   { value: "year_close", label: "بستن دوره" },
+  { value: "balance_adjust", label: "اصلاح مانده حساب" },
   { value: "invoice", label: "فاکتور خرید" },
   { value: "expense", label: "هزینه" },
   { value: "document_payment", label: "تسویه فاکتور/هزینه" },
@@ -351,6 +352,8 @@ export function voucherSourceHref(voucher: Pick<AccountingVoucher, "source_type"
       return "/admin/partners";
     case "year_close":
       return "/admin/accounting/period-close";
+    case "balance_adjust":
+      return "/admin/shop-accounts";
     case "opening":
       return "/admin/accounting";
     default:
