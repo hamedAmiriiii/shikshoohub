@@ -1176,7 +1176,7 @@ export default function DailyReconciliationPage() {
               {latestCumulative != null && (
                 <>
                   {" "}
-                  — آخرین اختلاف تجمعی در این ماه:{" "}
+                  — آخرین اختلاف تجمعی این دوره:{" "}
                   <Box component="span" sx={{ color: "var(--admin-accent)", fontWeight: 700 }}>
                     {formatNumber(latestCumulative)} تومان
                   </Box>
