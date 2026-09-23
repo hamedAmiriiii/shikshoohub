@@ -56,6 +56,16 @@ interface MonthlyReport {
 
 interface FinancialReportResponse {
   data: MonthlyReport[];
+  meta?: {
+    period?: {
+      scope?: string;
+      closed_through?: string | null;
+      start?: string | null;
+      today?: string | null;
+      applied_start?: string | null;
+      applied_end?: string | null;
+    };
+  };
   totals: {
     total_sales: number;
     total_purchases: number;
@@ -85,6 +95,13 @@ const formatNumber = (num: number) => new Intl.NumberFormat("fa-IR").format(num 
 
 const formatYear = (year: number | string) =>
   String(year).replace(/\d/g, (d) => FA_DIGITS[Number(d)]);
+
+const formatJalali = (value?: string | null) => {
+  if (!value) return "";
+  return formatYear(value.replace(/-/g, "/"));
+};
+
+const isYearScope = (scope: string) => /^\d{4}$/.test(scope);
 
 const panelSx = {
   bgcolor: "var(--admin-surface)",
@@ -309,9 +326,9 @@ export default function ProfitLossPage() {
 
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<FinancialReportResponse | null>(null);
-  const [selectedYear, setSelectedYear] = useState<number | "">("");
+  const [selectedScope, setSelectedScope] = useState("current");
   const [selectedMonth, setSelectedMonth] = useState<number | "">("");
-  const [draftYear, setDraftYear] = useState<number | "">("");
+  const [draftScope, setDraftScope] = useState("current");
   const [draftMonth, setDraftMonth] = useState<number | "">("");
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
 
@@ -319,9 +336,9 @@ export default function ProfitLossPage() {
     let url = "/api/financial-report/monthly";
     const params: string[] = [];
 
-    if (selectedYear) {
+    if (isYearScope(selectedScope)) {
+      const year = Number(selectedScope);
       if (selectedMonth) {
-        const year = selectedYear;
         const month = selectedMonth;
         const startDateStr = `${year}-${String(month).padStart(2, "0")}-01`;
         let lastDay = 30;
@@ -331,9 +348,13 @@ export default function ProfitLossPage() {
         params.push(`start_date=${encodeURIComponent(startDateStr)}`);
         params.push(`end_date=${encodeURIComponent(endDateStr)}`);
       } else {
-        params.push(`start_date=${encodeURIComponent(`${selectedYear}-01-01`)}`);
-        params.push(`end_date=${encodeURIComponent(`${selectedYear}-12-29`)}`);
+        params.push(`start_date=${encodeURIComponent(`${year}-01-01`)}`);
+        params.push(`end_date=${encodeURIComponent(`${year}-12-29`)}`);
       }
+    } else if (selectedScope === "all") {
+      params.push("period=all");
+    } else {
+      params.push("period=current");
     }
 
     if (params.length > 0) url += `?${params.join("&")}`;
@@ -361,10 +382,10 @@ export default function ProfitLossPage() {
     };
 
     fetchFinancialReport();
-  }, [selectedYear, selectedMonth]);
+  }, [selectedScope, selectedMonth]);
 
   const openFilter = () => {
-    setDraftYear(selectedYear);
+    setDraftScope(selectedScope);
     setDraftMonth(selectedMonth);
     setFilterSheetOpen(true);
   };
@@ -372,24 +393,32 @@ export default function ProfitLossPage() {
   const closeFilter = () => setFilterSheetOpen(false);
 
   const applyFilter = () => {
-    setSelectedYear(draftYear);
-    setSelectedMonth(draftYear ? draftMonth : "");
+    setSelectedScope(draftScope);
+    setSelectedMonth(isYearScope(draftScope) ? draftMonth : "");
     setFilterSheetOpen(false);
   };
 
   const clearFilter = () => {
-    setDraftYear("");
+    setDraftScope("current");
     setDraftMonth("");
-    setSelectedYear("");
+    setSelectedScope("current");
     setSelectedMonth("");
     setFilterSheetOpen(false);
   };
 
-  const hasDraftFilters = draftYear !== "" || draftMonth !== "";
-  const hasActiveFilters = selectedYear !== "" || selectedMonth !== "";
-  const periodLabel = selectedYear
-    ? `${selectedMonth ? monthNames[Number(selectedMonth) - 1] + " " : ""}${formatYear(Number(selectedYear))}`
-    : "کل دوره";
+  const hasDraftFilters = draftScope !== "current" || draftMonth !== "";
+  const hasActiveFilters = selectedScope !== "current" || selectedMonth !== "";
+  const periodMeta = data?.meta?.period;
+  const periodLabel = (() => {
+    if (isYearScope(selectedScope)) {
+      return `${selectedMonth ? monthNames[Number(selectedMonth) - 1] + " " : ""}${formatYear(selectedScope)}`;
+    }
+    if (selectedScope === "all") return "کل دوره‌ها";
+    if (periodMeta?.applied_start) {
+      return `دوره جاری از ${formatJalali(periodMeta.applied_start)}`;
+    }
+    return "دوره جاری";
+  })();
 
   const monthValue = (row: MonthlyReport, key: (typeof MONTHLY_COLUMNS)[number]["key"]) => {
     if (key === "label") return `${row.month_name} ${formatYear(row.year)}`;
@@ -404,7 +433,7 @@ export default function ProfitLossPage() {
             سود و ضرر
           </Typography>
           <Typography sx={{ color: "var(--admin-text)", opacity: 0.7, fontSize: 12, mt: 0.25 }}>
-            سود از فروش و بهای کالاست؛ موجودی حساب جمع صندوق، بانک و تنخواه‌های فعال است
+            سود از فروش و بهای کالاست؛ پیش‌فرض دورهٔ جاری بعد از آخرین بستن است
           </Typography>
         </Box>
         <Box sx={{ display: "flex", gap: 0.75, alignItems: "center" }}>
@@ -635,23 +664,24 @@ export default function ProfitLossPage() {
       <BottomSheet open={filterSheetOpen} onClose={closeFilter} title="فیلتر گزارش">
         <Box sx={{ color: "var(--admin-text)" }}>
           <FormControl fullWidth sx={{ ...adminFieldSx, mb: 2 }}>
-            <InputLabel sx={{ color: "var(--admin-text) !important" }}>سال</InputLabel>
+            <InputLabel sx={{ color: "var(--admin-text) !important" }}>دوره</InputLabel>
             <Select
-              value={draftYear}
+              value={draftScope}
               onChange={(e) => {
-                setDraftYear(e.target.value as number | "");
+                setDraftScope(String(e.target.value));
                 setDraftMonth("");
               }}
-              label="سال"
+              label="دوره"
               MenuProps={selectMenuProps}
               sx={{
                 color: "var(--admin-text)",
                 "& .MuiSelect-icon": { color: "var(--admin-text)" },
               }}
             >
-              <MenuItem value="">همه</MenuItem>
+              <MenuItem value="current">دوره جاری</MenuItem>
+              <MenuItem value="all">کل دوره‌ها</MenuItem>
               {years.map((year) => (
-                <MenuItem key={year} value={year}>
+                <MenuItem key={year} value={String(year)}>
                   {formatYear(year)}
                 </MenuItem>
               ))}
@@ -663,7 +693,7 @@ export default function ProfitLossPage() {
             {monthNames.map((monthName, index) => {
               const monthNumber = index + 1;
               const isSelected = draftMonth === monthNumber;
-              const isDisabled = !draftYear;
+              const isDisabled = !isYearScope(draftScope);
               return (
                 <Grid item xs={4} sm={3} key={monthNumber}>
                   <Chip
