@@ -46,7 +46,7 @@ import { useRouter } from "next/navigation";
 import 'react-toastify/dist/ReactToastify.css';
 import { appendProductLabelPrintParams } from "@/app/lib/productLabelPrint";
 import { readAdminPosSettings } from "@/app/lib/adminPosSettings";
-import type { ProductUnitType } from "@/app/lib/productUnits";
+import { isMeasuredProduct, type ProductUnitType } from "@/app/lib/productUnits";
 import { ToggleButton, ToggleButtonGroup, FormControl, FormLabel } from "@mui/material";
 
 const PROFIT_STORAGE_KEY = "admin_product_profit_percent";
@@ -516,13 +516,13 @@ export default function Page() {
         return;
       }
 
-      const qtyNum =
-        unitType === "kg" && kgSalesEnabled
+      const measuredUnit = kgSalesEnabled && isMeasuredProduct({ unit_type: unitType });
+      const qtyNum = measuredUnit
           ? parseFloat(String(quantity).replace(/,/g, ""))
           : parseInt(String(quantity).replace(/,/g, ""), 10);
 
       if (Number.isNaN(qtyNum) || qtyNum < 0) {
-        toast.error(unitType === "kg" && kgSalesEnabled ? "موجودی باید عدد معتبر باشد" : "موجودی باید عدد صحیح باشد");
+        toast.error(measuredUnit ? "موجودی باید عدد معتبر باشد" : "موجودی باید عدد صحیح باشد");
         return;
       }
 
@@ -892,7 +892,15 @@ export default function Page() {
                 <Box sx={fieldWrapSx}>
                   <TextInput
                     value={sale_price}
-                    label={kgSalesEnabled && unitType === "kg" ? "قیمت فروش (هر کیلو)" : "قیمت فروش"}
+                    label={
+                      !kgSalesEnabled
+                        ? "قیمت فروش"
+                        : unitType === "kg"
+                          ? "قیمت فروش (هر کیلو)"
+                          : unitType === "meter"
+                            ? "قیمت فروش (هر متر)"
+                            : "قیمت فروش"
+                    }
                     onChange={(e) => setPale_price(e)}
                     name="sale_price"
                     type="number"
@@ -917,7 +925,9 @@ export default function Page() {
                     label={
                       kgSalesEnabled && unitType === "kg"
                         ? "موجودی (کیلو)"
-                        : "موجودی (عدد)"
+                        : kgSalesEnabled && unitType === "meter"
+                          ? "موجودی (متر)"
+                          : "موجودی (عدد)"
                     }
                     onChange={(e) => setQuantity(e)}
                     name="quantity"
@@ -955,6 +965,7 @@ export default function Page() {
                     >
                       <ToggleButton value="piece">عدد</ToggleButton>
                       <ToggleButton value="kg">کیلو</ToggleButton>
+                      <ToggleButton value="meter">متر</ToggleButton>
                     </ToggleButtonGroup>
                   </FormControl>
                 </Grid>

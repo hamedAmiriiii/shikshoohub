@@ -39,7 +39,7 @@ import {
   getMinQuantity,
   getUnitLabel,
   getPriceUnitLabel,
-  isKgProduct,
+  isMeasuredProduct,
   parseQuantityInput,
 } from "@/app/lib/productUnits";
 import { paymentTypeLabel } from "@/app/lib/paymentTypes";
@@ -182,7 +182,7 @@ export default function purchas(props: any) {
   const handleOpenDeleteDialog = (item: any) => {
     setReturnMode("item");
     setSelectedItem(item);
-    const isKg = isKgProduct(item.product ?? item);
+    const isKg = isMeasuredProduct(item.product ?? item);
     setReturnQuantity(isKg ? 0.5 : 1);
     setReturnPhone(purchasePhone);
     setReturnNotes("");
@@ -256,7 +256,7 @@ export default function purchas(props: any) {
   };
 
   const isSelectedKg = selectedItem
-    ? isKgProduct(selectedItem.product ?? selectedItem)
+    ? isMeasuredProduct(selectedItem.product ?? selectedItem)
     : false;
 
   const handleOpenPayInstallmentDialog = (installment: any) => {
@@ -795,7 +795,7 @@ export default function purchas(props: any) {
                   value={returnQuantity}
                   onChange={(e) => {
                     const productRef = selectedItem.product ?? selectedItem;
-                    if (isKgProduct(productRef)) {
+                    if (isMeasuredProduct(productRef)) {
                       const parsed = parseQuantityInput(e.target.value, productRef);
                       if (parsed !== null) {
                         setReturnQuantity(Math.min(Math.max(getMinQuantity(productRef), parsed), getItemQuantity(selectedItem)));

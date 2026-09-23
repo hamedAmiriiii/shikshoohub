@@ -82,6 +82,7 @@ import {
 import { formatAmountInput, parseAmountInput as parseMoneyAmount } from '@/app/lib/amountInput';
 import type { PaymentType } from '@/app/lib/paymentTypes';
 import SaleProductListPanel from '@/app/admin/SaleProductListPanel';
+import AdminTypedSaleListView from '@/app/admin/AdminTypedSaleListView';
 import AdminMenuModeView from '@/app/admin/AdminMenuModeView';
 import AdminClassicPosView from '@/app/admin/AdminClassicPosView';
 import type { AdminMenuModeCartPanelProps } from '@/app/admin/AdminMenuModeCartPanel';
@@ -89,7 +90,7 @@ import { ADMIN_SIDEBAR_WIDTH } from '@/app/admin/AdminHamburgerSidebar';
 import CartQuantityControl from '@/app/admin/CartQuantityControl';
 import MultiCartToolbar, { MAX_MULTI_CARTS } from '@/app/admin/MultiCartToolbar';
 import PosSegmentButtons from '@/app/admin/PosSegmentButtons';
-import { getPriceUnitLabel, getDefaultCartQuantity, getQuantityIncrement, normalizeQuantityValue, isKgProduct } from '@/app/lib/productUnits';
+import { getPriceUnitLabel, getDefaultCartQuantity, getQuantityIncrement, normalizeQuantityValue, isMeasuredProduct } from '@/app/lib/productUnits';
 import { createEmptyCartSlot, type CartSlotSnapshot } from '@/app/admin/multiCartState';
 import { publishAdminSaleCartSnapshot } from '@/app/admin/onboarding/adminSaleCartCheck';
 import CategoryIcon from '@mui/icons-material/Category';
@@ -227,6 +228,7 @@ export default function ShoppingPage() {
   const [isRefreshingDashboard, setIsRefreshingDashboard] = useState(false);
   const [productsCount, setProductsCount] = useState(0);
   const [showProductListOnMainPage, setShowProductListOnMainPage] = useState(false);
+  const [typedSaleListMode, setTypedSaleListMode] = useState(false);
   const [menuMode, setMenuMode] = useState(false);
   const [classicPosMode, setClassicPosMode] = useState(false);
   const [installmentPaymentEnabled, setInstallmentPaymentEnabled] = useState(true);
@@ -1036,6 +1038,7 @@ export default function ShoppingPage() {
     const applyPosSettings = () => {
       const settings = readAdminPosSettings();
       setShowProductListOnMainPage(settings.showProductListOnMainPage);
+      setTypedSaleListMode(Boolean(settings.typedSaleListMode));
       setMenuMode(settings.menuMode);
       setClassicPosMode(settings.classicPosMode);
       setAskCustomerName(settings.askCustomerName);
@@ -1214,7 +1217,7 @@ export default function ShoppingPage() {
       return;
     }
     setCart((prevCart) => {
-      const addQty = kgSalesEnabled && item.unit_type === "kg"
+      const addQty = kgSalesEnabled && isMeasuredProduct(item)
         ? getDefaultCartQuantity(item)
         : 1;
       const incomingKey = catalogItemKey(item);
@@ -2515,7 +2518,7 @@ export default function ShoppingPage() {
 
   return (
     <Box sx={{ position: 'relative', minHeight: '100vh', direction: "rtl", background: "var(--admin-bg-gradient)" }}>
-      <Container maxWidth="xl" sx={{ padding: { xs: '6px 10px', md: '4px 24px 24px' }, paddingBottom: { xs: '140px', md: '56px' } }}>
+      <Container maxWidth={typedSaleListMode ? false : "xl"} sx={{ padding: typedSaleListMode ? { xs: '6px 8px', md: '4px 12px 8px' } : { xs: '6px 10px', md: '4px 24px 24px' }, paddingBottom: typedSaleListMode ? { xs: '96px', md: '12px' } : { xs: '140px', md: '56px' } }}>
 
         {editingPurchaseId ? (
           <Box
@@ -2670,7 +2673,14 @@ export default function ShoppingPage() {
           </Box>
         )}
 
-        {menuMode ? (
+        {typedSaleListMode ? (
+          <AdminTypedSaleListView
+            products={items}
+            onAddProduct={addProductToCart}
+            formatNumber={formatNumber}
+            cartPanel={posCartPanel}
+          />
+        ) : menuMode ? (
           <AdminMenuModeView
             products={items}
             onAddProduct={addProductToCart}
@@ -2769,7 +2779,7 @@ export default function ShoppingPage() {
                                 پیش‌فرض: {formatNumber(Number(item.default_sale_price))}
                               </Typography>
                             )}
-                            {kgSalesEnabled && isKgProduct(item) && (
+                            {kgSalesEnabled && isMeasuredProduct(item) && (
                               <Typography sx={{ fontSize: "10px", color: "var(--admin-text-muted)" }}>
                                 {getPriceUnitLabel(item)}
                               </Typography>
@@ -4153,7 +4163,7 @@ export default function ShoppingPage() {
         )}
       </Container>
 
-      {!menuMode && showProductListOnMainPage && (
+      {!menuMode && !typedSaleListMode && showProductListOnMainPage && (
         <Box sx={{ display: { xs: "none", md: "block" } }}>
           <SaleProductListPanel
             variant="floating"
@@ -4165,7 +4175,7 @@ export default function ShoppingPage() {
       )}
 
       {/* Floating Action Button — کنار سایدبار راست تا روی منو نرود */}
-      {!menuMode && (
+      {!menuMode && !typedSaleListMode && (
       <Button
         data-admin-tour="scan-product"
         onClick={handleOpenModal}

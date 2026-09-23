@@ -35,24 +35,30 @@ export { ADMIN_MENU_CART_WIDTH, ADMIN_MENU_CART_WIDTH_VAR } from "@/app/admin/ad
 
 type SettlementMode = "split" | "card_all" | "cash_all";
 
-const tinyFieldSx = {
-  "& .MuiOutlinedInput-root": {
-    backgroundColor: "var(--admin-surface-alt)",
-    color: "var(--admin-text)",
-    fontSize: "10px",
-    minHeight: 28,
-    "& fieldset": { borderColor: "var(--admin-border)" },
-    "&:hover fieldset": { borderColor: "var(--admin-accent)" },
-    "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
-  },
-  "& .MuiInputBase-input": {
-    color: "var(--admin-text)",
-    fontSize: "10px",
-    py: 0.5,
-    px: 0.75,
-  },
-  "& .MuiFormHelperText-root": { fontSize: "9px", m: 0 },
-};
+function cartFont(size: number, boost: number) {
+  return `${size + boost}px`;
+}
+
+function cartFieldSx(boost: number) {
+  return {
+    "& .MuiOutlinedInput-root": {
+      backgroundColor: "var(--admin-surface-alt)",
+      color: "var(--admin-text)",
+      fontSize: cartFont(10, boost),
+      minHeight: 28,
+      "& fieldset": { borderColor: "var(--admin-border)" },
+      "&:hover fieldset": { borderColor: "var(--admin-accent)" },
+      "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
+    },
+    "& .MuiInputBase-input": {
+      color: "var(--admin-text)",
+      fontSize: cartFont(10, boost),
+      py: 0.5,
+      px: 0.75,
+    },
+    "& .MuiFormHelperText-root": { fontSize: cartFont(9, boost), m: 0 },
+  };
+}
 
 type MenuCartItem = {
   id: number | string;
@@ -143,6 +149,9 @@ export type AdminMenuModeCartPanelProps = {
   submitLabel?: string;
   cartTitle?: string;
   clearLabel?: string;
+  cartWidth?: number;
+  /** یک شماره به فونت‌های سبد اضافه می‌شود */
+  largerText?: boolean;
 };
 
 export default function AdminMenuModeCartPanel({
@@ -214,17 +223,22 @@ export default function AdminMenuModeCartPanel({
   submitLabel,
   cartTitle,
   clearLabel,
+  cartWidth = ADMIN_MENU_CART_WIDTH,
+  largerText = false,
 }: AdminMenuModeCartPanelProps) {
+  const fontBoost = largerText ? 1 : 0;
+  const fs = (size: number) => cartFont(size, fontBoost);
+  const fieldSx = cartFieldSx(fontBoost);
   const finalTotal = Math.max(0, total - useCreditAmount - discounttype - backPrice);
   const showPaymentTypeSelector = true;
 
   useEffect(() => {
     const root = document.documentElement;
-    root.style.setProperty(ADMIN_MENU_CART_WIDTH_VAR, `${ADMIN_MENU_CART_WIDTH}px`);
+    root.style.setProperty(ADMIN_MENU_CART_WIDTH_VAR, `${cartWidth}px`);
     return () => {
       root.style.removeProperty(ADMIN_MENU_CART_WIDTH_VAR);
     };
-  }, []);
+  }, [cartWidth]);
 
   const submitDisabled =
     !total ||
@@ -250,6 +264,21 @@ export default function AdminMenuModeCartPanel({
         !selectedChequeId ||
         (chequeRemainder > 0 && !paymentFieldsValid)));
 
+  useEffect(() => {
+    if (!largerText) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "F8") return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest?.("[role='dialog']")) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (submitDisabled) return;
+      onConfirm();
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [largerText, submitDisabled, onConfirm]);
+
   return (
     <Box
       component="aside"
@@ -259,7 +288,7 @@ export default function AdminMenuModeCartPanel({
         left: 0,
         top: 0,
         bottom: 0,
-        width: ADMIN_MENU_CART_WIDTH,
+        width: cartWidth,
         zIndex: (theme) => theme.zIndex.drawer + 3,
         display: "flex",
         flexDirection: "column",
@@ -268,7 +297,7 @@ export default function AdminMenuModeCartPanel({
         borderRadius: 0,
         boxSizing: "border-box",
         overflow: "hidden",
-        fontSize: "10px",
+        fontSize: fs(10),
       }}
     >
       <Box
@@ -280,14 +309,14 @@ export default function AdminMenuModeCartPanel({
           flexShrink: 0,
         }}
       >
-        <Typography sx={{ fontSize: "10px", fontWeight: 600, color: "var(--admin-text-muted)" }}>
+        <Typography sx={{ fontSize: fs(10), fontWeight: 600, color: "var(--admin-text-muted)" }}>
           سبد {activeCartIndex + 1} · {cart.length} کالا{cartTitle ? ` · ${cartTitle}` : ""}
         </Typography>
       </Box>
 
       <Box sx={{ flex: 1, overflowY: "auto", px: 0.75, py: 0.5 }}>
         {cart.length === 0 && (
-          <Typography sx={{ fontSize: "9px", color: "var(--admin-text-muted)", textAlign: "center", py: 2 }}>
+          <Typography sx={{ fontSize: fs(9), color: "var(--admin-text-muted)", textAlign: "center", py: 2 }}>
             سبد خالی است
           </Typography>
         )}
@@ -305,7 +334,7 @@ export default function AdminMenuModeCartPanel({
               <Typography
                 sx={{
                   flex: 1,
-                  fontSize: "9px",
+                  fontSize: fs(9),
                   fontWeight: 600,
                   color: "var(--admin-text)",
                   lineHeight: 1.3,
@@ -335,20 +364,20 @@ export default function AdminMenuModeCartPanel({
                     value={formatAmountInput(String(item.sale_price ?? ""))}
                     onChange={(e) => onSalePriceChange(catalogItemKey(item), e.target.value)}
                     inputProps={{ inputMode: "numeric", style: { textAlign: "right", direction: "ltr" } }}
-                    sx={{ ...tinyFieldSx, mb: 0.25 }}
+                    sx={{ ...fieldSx, mb: 0.25 }}
                   />
                 ) : (
-                  <Typography sx={{ fontSize: "9px", color: "var(--admin-accent)", fontWeight: 700 }}>
+                  <Typography sx={{ fontSize: fs(9), color: "var(--admin-accent)", fontWeight: 700 }}>
                     {formatNumber(Number(item.sale_price) * item.quantity)}
                   </Typography>
                 )}
                 {salePriceEditEnabled && onSalePriceChange ? (
-                  <Typography sx={{ fontSize: "8px", color: "var(--admin-text-muted)" }}>
+                  <Typography sx={{ fontSize: fs(8), color: "var(--admin-text-muted)" }}>
                     جمع: {formatNumber(Number(item.sale_price) * item.quantity)}
                   </Typography>
                 ) : null}
                 {kgSalesEnabled && (
-                  <Typography sx={{ fontSize: "8px", color: "var(--admin-text-muted)" }}>
+                  <Typography sx={{ fontSize: fs(8), color: "var(--admin-text-muted)" }}>
                     {getPriceUnitLabel(item)}
                   </Typography>
                 )}
@@ -358,6 +387,7 @@ export default function AdminMenuModeCartPanel({
                 kgSalesEnabled={kgSalesEnabled}
                 onChange={onSetQuantity}
                 compact
+                fontBoost={fontBoost}
               />
             </Box>
           </Box>
@@ -380,6 +410,7 @@ export default function AdminMenuModeCartPanel({
         <MultiCartToolbar
           compact
           hideCaptions
+          fontBoost={fontBoost}
           cartCount={cartCount}
           activeIndex={activeCartIndex}
           onSwitch={onSwitchCart}
@@ -395,7 +426,7 @@ export default function AdminMenuModeCartPanel({
           compact
           sx={{
             width: "100%",
-            ...tinyFieldSx,
+            ...fieldSx,
           }}
         />
         {saleDateEditEnabled && onSaleDateChange && (
@@ -405,7 +436,7 @@ export default function AdminMenuModeCartPanel({
               "& .rmdp-input": {
                 ...chequeDatePickerBoxSx["& .rmdp-input"],
                 height: "28px",
-                fontSize: "10px",
+                fontSize: fs(10),
                 borderRadius: "6px",
               },
               "& .rmdp-portal": { zIndex: `${CHEQUE_DATE_PICKER_Z} !important` },
@@ -429,19 +460,19 @@ export default function AdminMenuModeCartPanel({
           </Box>
         )}
         {checkingCredit && (
-          <Typography sx={{ fontSize: "9px", color: "var(--admin-text-muted)" }}>
+          <Typography sx={{ fontSize: fs(9), color: "var(--admin-text-muted)" }}>
             بررسی اعتبار...
           </Typography>
         )}
         {!checkingCredit && credit > 0 && (
-          <Typography sx={{ fontSize: "10px", color: "var(--admin-accent)", fontWeight: 600 }}>
+          <Typography sx={{ fontSize: fs(10), color: "var(--admin-accent)", fontWeight: 600 }}>
             اعتبار: {formatNumber(credit)}
           </Typography>
         )}
 
         {(!installmentPaymentEnabled || paymentType !== "installment") && (
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-            <Typography sx={{ fontSize: "9px", fontWeight: 700, color: "var(--admin-text)", flexShrink: 0 }}>
+            <Typography sx={{ fontSize: fs(9), fontWeight: 700, color: "var(--admin-text)", flexShrink: 0 }}>
               تخفیف
             </Typography>
             <TextField
@@ -452,17 +483,17 @@ export default function AdminMenuModeCartPanel({
               onBlur={(e) => onDiscountPercentBlur?.(e.target.value)}
               error={!!discountError}
               sx={{
-                ...tinyFieldSx,
+                ...fieldSx,
                 width: 56,
                 flex: "0 0 56px",
                 "& .MuiOutlinedInput-root": {
-                  ...tinyFieldSx["& .MuiOutlinedInput-root"],
-                  fontSize: "11px",
+                  ...fieldSx["& .MuiOutlinedInput-root"],
+                  fontSize: fs(11),
                   minHeight: 30,
                 },
                 "& .MuiInputBase-input": {
-                  ...tinyFieldSx["& .MuiInputBase-input"],
-                  fontSize: "11px",
+                  ...fieldSx["& .MuiInputBase-input"],
+                  fontSize: fs(11),
                   py: 0.6,
                   textAlign: "center",
                 },
@@ -479,16 +510,16 @@ export default function AdminMenuModeCartPanel({
               error={!!discountError}
               helperText={discountError || undefined}
               sx={{
-                ...tinyFieldSx,
+                ...fieldSx,
                 flex: 1,
                 "& .MuiOutlinedInput-root": {
-                  ...tinyFieldSx["& .MuiOutlinedInput-root"],
-                  fontSize: "11px",
+                  ...fieldSx["& .MuiOutlinedInput-root"],
+                  fontSize: fs(11),
                   minHeight: 30,
                 },
                 "& .MuiInputBase-input": {
-                  ...tinyFieldSx["& .MuiInputBase-input"],
-                  fontSize: "11px",
+                  ...fieldSx["& .MuiInputBase-input"],
+                  fontSize: fs(11),
                   py: 0.6,
                 },
               }}
@@ -499,11 +530,12 @@ export default function AdminMenuModeCartPanel({
 
         {showPaymentTypeSelector && (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
-            <Typography sx={{ fontSize: "9px", fontWeight: 700, color: "var(--admin-text)" }}>
+            <Typography sx={{ fontSize: fs(9), fontWeight: 700, color: "var(--admin-text)" }}>
               نوع پرداخت
             </Typography>
             <PosSegmentButtons
               dense
+              fontBoost={fontBoost}
               value={paymentType}
               onChange={onPaymentTypeChange}
               options={[
@@ -518,14 +550,14 @@ export default function AdminMenuModeCartPanel({
         )}
 
         {paymentType === "debt" && (
-          <Typography sx={{ fontSize: "8px", color: "var(--admin-warning)", lineHeight: 1.3 }}>
+          <Typography sx={{ fontSize: fs(8), color: "var(--admin-warning)", lineHeight: 1.3 }}>
             ثبت قرضی — مبلغ به بدهی مشتری اضافه می‌شود
           </Typography>
         )}
 
         {paymentType === "mixed" && (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 0.35 }}>
-            <Typography sx={{ fontSize: "8px", fontWeight: 700, color: "var(--admin-text)" }}>
+            <Typography sx={{ fontSize: fs(8), fontWeight: 700, color: "var(--admin-text)" }}>
               ترکیبی — نقد / کارت / چک / نسیه
             </Typography>
             <TextField
@@ -533,14 +565,14 @@ export default function AdminMenuModeCartPanel({
               placeholder="نقد"
               value={cashAmountInput}
               onChange={(e) => onCashAmountChange(e.target.value)}
-              sx={tinyFieldSx}
+              sx={fieldSx}
             />
             <TextField
               size="small"
               placeholder="کارت"
               value={cardAmountInput}
               onChange={(e) => onCardAmountChange(e.target.value)}
-              sx={tinyFieldSx}
+              sx={fieldSx}
             />
             {chequePaymentEnabled && (
               <Box sx={{ display: "flex", gap: 0.35, alignItems: "center" }}>
@@ -553,7 +585,7 @@ export default function AdminMenuModeCartPanel({
                   }
                   SelectProps={{ native: true }}
                   disabled={loadingAvailableCheques}
-                  sx={{ ...tinyFieldSx, flex: 1 }}
+                  sx={{ ...fieldSx, flex: 1 }}
                 >
                   <option value="">{loadingAvailableCheques ? "بارگذاری..." : "چک (اختیاری)"}</option>
                   {matchingCheques.map((cheque) => (
@@ -585,11 +617,11 @@ export default function AdminMenuModeCartPanel({
                 )}
               </Box>
             )}
-            <Typography sx={{ fontSize: "9px", fontWeight: 700, color: "var(--admin-accent)" }}>
+            <Typography sx={{ fontSize: fs(9), fontWeight: 700, color: "var(--admin-accent)" }}>
               مانده نسیه: {formatNumber(mixedDebtResidual)}
             </Typography>
             {mixedDebtResidual > 0 && (
-              <Typography sx={{ fontSize: "8px", color: "var(--admin-warning)", lineHeight: 1.3 }}>
+              <Typography sx={{ fontSize: fs(8), color: "var(--admin-warning)", lineHeight: 1.3 }}>
                 برای مانده نسیه، شماره تلفن الزامی است
               </Typography>
             )}
@@ -598,10 +630,10 @@ export default function AdminMenuModeCartPanel({
 
         {chequePaymentEnabled && paymentType === "cheque" && (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 0.35 }}>
-            <Typography sx={{ fontSize: "8px", fontWeight: 700, color: "var(--admin-text)" }}>
+            <Typography sx={{ fontSize: fs(8), fontWeight: 700, color: "var(--admin-text)" }}>
               پرداخت با چک
             </Typography>
-            <Typography sx={{ fontSize: "8px", color: "var(--admin-text-muted)" }}>
+            <Typography sx={{ fontSize: fs(8), color: "var(--admin-text-muted)" }}>
               فاکتور: {formatNumber(salePayableAmount)}
               {selectedChequeId
                 ? ` · چک: ${formatNumber(selectedChequeAmount)} · باقی: ${formatNumber(chequeRemainder)}`
@@ -617,7 +649,7 @@ export default function AdminMenuModeCartPanel({
                 }
                 SelectProps={{ native: true }}
                 disabled={loadingAvailableCheques}
-                sx={{ ...tinyFieldSx, flex: 1 }}
+                sx={{ ...fieldSx, flex: 1 }}
               >
                 <option value="">{loadingAvailableCheques ? "بارگذاری..." : "انتخاب چک"}</option>
                 {matchingCheques.map((cheque) => (
@@ -649,17 +681,17 @@ export default function AdminMenuModeCartPanel({
               )}
             </Box>
             {!loadingAvailableCheques && matchingCheques.length === 0 && (
-              <Typography sx={{ fontSize: "8px", color: "var(--admin-error-soft)", lineHeight: 1.3 }}>
+              <Typography sx={{ fontSize: fs(8), color: "var(--admin-error-soft)", lineHeight: 1.3 }}>
                 چک مناسب نیست — با + ثبت کنید
               </Typography>
             )}
             {selectedChequeId && chequeRemainder === 0 && (
-              <Typography sx={{ fontSize: "8px", color: "var(--admin-online)", lineHeight: 1.3 }}>
+              <Typography sx={{ fontSize: fs(8), color: "var(--admin-online)", lineHeight: 1.3 }}>
                 چک کل مبلغ را پوشش می‌دهد
               </Typography>
             )}
             {selectedChequeId && chequeRemainder > 0 && (
-              <Typography sx={{ fontSize: "8px", color: "var(--admin-accent)", lineHeight: 1.3 }}>
+              <Typography sx={{ fontSize: fs(8), color: "var(--admin-accent)", lineHeight: 1.3 }}>
                 باقی‌مانده را پایین با نقد یا کارت بپردازید
               </Typography>
             )}
@@ -678,20 +710,21 @@ export default function AdminMenuModeCartPanel({
               }
             }}
             inputProps={{ min: 2, max: 24 }}
-            sx={tinyFieldSx}
+            sx={fieldSx}
           />
         )}
 
         {(paymentType === "cash" && payableNow > 0) ||
         (paymentType === "cheque" && !!selectedChequeId && chequeRemainder > 0) ? (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
-            <Typography sx={{ fontSize: "9px", fontWeight: 700, color: "var(--admin-text)" }}>
+            <Typography sx={{ fontSize: fs(9), fontWeight: 700, color: "var(--admin-text)" }}>
               {paymentType === "cheque"
                 ? `روش پرداخت باقی‌مانده (${formatNumber(chequeRemainder)})`
                 : "روش پرداخت"}
             </Typography>
             <PosSegmentButtons
               dense
+              fontBoost={fontBoost}
               value={settlementMode}
               onChange={onSettlementModeChange}
               options={[
@@ -711,30 +744,30 @@ export default function AdminMenuModeCartPanel({
               placeholder="کارت خوان"
               value={cardAmountInput}
               onChange={(e) => onCardAmountChange(e.target.value)}
-              sx={tinyFieldSx}
+              sx={fieldSx}
             />
             <TextField
               size="small"
               placeholder="نقدی"
               value={cashAmountInput}
               onChange={(e) => onCashAmountChange(e.target.value)}
-              sx={tinyFieldSx}
+              sx={fieldSx}
             />
           </Box>
         )}
 
         {paymentSplitError && (
-          <Typography sx={{ fontSize: "8px", color: "var(--admin-error-soft)" }}>{paymentSplitError}</Typography>
+          <Typography sx={{ fontSize: fs(8), color: "var(--admin-error-soft)" }}>{paymentSplitError}</Typography>
         )}
 
         {installmentPaymentEnabled && paymentType === "installment" && calculatingInstallments && (
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
             <CircularProgress size={10} />
-            <Typography sx={{ fontSize: "8px" }}>محاسبه...</Typography>
+            <Typography sx={{ fontSize: fs(8) }}>محاسبه...</Typography>
           </Box>
         )}
         {installmentPaymentEnabled && paymentType === "installment" && installmentCreditError && (
-          <Typography sx={{ fontSize: "8px", color: "var(--admin-error-soft)", lineHeight: 1.3 }}>
+          <Typography sx={{ fontSize: fs(8), color: "var(--admin-error-soft)", lineHeight: 1.3 }}>
             {installmentCreditError}
           </Typography>
         )}
@@ -742,36 +775,36 @@ export default function AdminMenuModeCartPanel({
         <Divider sx={{ my: 0.25 }} />
 
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 0.5 }}>
-          <Typography sx={{ fontSize: "12px", color: "var(--admin-text-secondary)" }}>جمع</Typography>
-          <Typography sx={{ fontSize: "14px", fontWeight: 700, lineHeight: 1.2 }}>{formatNumber(total)}</Typography>
+          <Typography sx={{ fontSize: fs(12), color: "var(--admin-text-secondary)" }}>جمع</Typography>
+          <Typography sx={{ fontSize: fs(14), fontWeight: 700, lineHeight: 1.2 }}>{formatNumber(total)}</Typography>
         </Box>
         {useCreditAmount > 0 && (
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 0.5 }}>
-            <Typography sx={{ fontSize: "12px", color: "var(--admin-text-muted)" }}>اعتبار</Typography>
-            <Typography sx={{ fontSize: "13px", fontWeight: 700, color: "var(--admin-error-soft)", lineHeight: 1.2 }}>
+            <Typography sx={{ fontSize: fs(12), color: "var(--admin-text-muted)" }}>اعتبار</Typography>
+            <Typography sx={{ fontSize: fs(13), fontWeight: 700, color: "var(--admin-error-soft)", lineHeight: 1.2 }}>
               -{formatNumber(useCreditAmount)}
             </Typography>
           </Box>
         )}
         {backPrice > 0 && (
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 0.5 }}>
-            <Typography sx={{ fontSize: "12px", color: "var(--admin-text-muted)" }}>برگشتی</Typography>
-            <Typography sx={{ fontSize: "13px", fontWeight: 700, color: "var(--admin-error-soft)", lineHeight: 1.2 }}>
+            <Typography sx={{ fontSize: fs(12), color: "var(--admin-text-muted)" }}>برگشتی</Typography>
+            <Typography sx={{ fontSize: fs(13), fontWeight: 700, color: "var(--admin-error-soft)", lineHeight: 1.2 }}>
               -{formatNumber(backPrice)}
             </Typography>
           </Box>
         )}
         {discounttype > 0 && (
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 0.5 }}>
-            <Typography sx={{ fontSize: "12px", color: "var(--admin-text-muted)" }}>تخفیف</Typography>
-            <Typography sx={{ fontSize: "13px", fontWeight: 700, lineHeight: 1.2 }}>
+            <Typography sx={{ fontSize: fs(12), color: "var(--admin-text-muted)" }}>تخفیف</Typography>
+            <Typography sx={{ fontSize: fs(13), fontWeight: 700, lineHeight: 1.2 }}>
               -{formatNumber(discounttype)}
             </Typography>
           </Box>
         )}
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 0.5 }}>
-          <Typography sx={{ fontSize: "13px", fontWeight: 800 }}>نهایی</Typography>
-          <Typography sx={{ fontSize: "18px", fontWeight: 800, color: "var(--admin-accent)", lineHeight: 1.15 }}>
+          <Typography sx={{ fontSize: fs(13), fontWeight: 800 }}>نهایی</Typography>
+          <Typography sx={{ fontSize: fs(18), fontWeight: 800, color: "var(--admin-accent)", lineHeight: 1.15 }}>
             {formatNumber(
               installmentPaymentEnabled && paymentType === "installment" && payableNow > 0
                 ? payableNow
@@ -790,7 +823,7 @@ export default function AdminMenuModeCartPanel({
             sx={{
               flex: 1,
               minWidth: 0,
-              fontSize: "9px",
+              fontSize: fs(9),
               py: 0.3,
               borderColor: "var(--admin-border)",
               color: "var(--admin-text-secondary)",
@@ -806,7 +839,7 @@ export default function AdminMenuModeCartPanel({
             sx={{
               flex: 1.4,
               minWidth: 0,
-              fontSize: "9px",
+              fontSize: fs(9),
               py: 0.3,
               bgcolor: "var(--admin-accent)",
               "&:hover": { bgcolor: "var(--admin-accent-hover)" },

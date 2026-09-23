@@ -15,6 +15,7 @@ import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import ImageOutlinedIcon from "@mui/icons-material/ImageOutlined";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
+import ViewListIcon from "@mui/icons-material/ViewList";
 import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
 import PaymentsIcon from "@mui/icons-material/Payments";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
@@ -49,6 +50,7 @@ const STEP_ICONS: Record<string, React.ReactNode> = {
   menuModeShowProductImages: <ImageOutlinedIcon sx={{ fontSize: 28 }} />,
   menuTableOrdersPopup: <NotificationsActiveIcon sx={{ fontSize: 28 }} />,
   showProductListOnMainPage: <Inventory2Icon sx={{ fontSize: 28 }} />,
+  typedSaleListMode: <ViewListIcon sx={{ fontSize: 28 }} />,
   classicPosMode: <PointOfSaleIcon sx={{ fontSize: 28 }} />,
   installmentPaymentEnabled: <PaymentsIcon sx={{ fontSize: 28 }} />,
   debtPaymentEnabled: <AccountBalanceWalletIcon sx={{ fontSize: 28 }} />,

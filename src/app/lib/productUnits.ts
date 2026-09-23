@@ -1,4 +1,4 @@
-export type ProductUnitType = "kg" | "piece";
+export type ProductUnitType = "kg" | "meter" | "piece";
 
 export type ProductUnitFields = {
   unit_type?: ProductUnitType | string;
@@ -10,21 +10,34 @@ export function isKgProduct(item: ProductUnitFields | null | undefined): boolean
   return item?.unit_type === "kg";
 }
 
+export function isMeterProduct(item: ProductUnitFields | null | undefined): boolean {
+  return item?.unit_type === "meter";
+}
+
+/** کیلو و متر هر دو مقدار اعشاری دارند */
+export function isMeasuredProduct(item: ProductUnitFields | null | undefined): boolean {
+  return isKgProduct(item) || isMeterProduct(item);
+}
+
 export function getUnitLabel(item: ProductUnitFields | null | undefined): string {
   if (item?.unit_label) return item.unit_label;
-  return isKgProduct(item) ? "کیلو" : "عدد";
+  if (isKgProduct(item)) return "کیلو";
+  if (isMeterProduct(item)) return "متر";
+  return "عدد";
 }
 
 export function getPriceUnitLabel(item: ProductUnitFields | null | undefined): string {
   if (item?.price_unit_label) return item.price_unit_label;
-  return isKgProduct(item) ? "هر کیلو" : "هر عدد";
+  if (isKgProduct(item)) return "هر کیلو";
+  if (isMeterProduct(item)) return "هر متر";
+  return "هر عدد";
 }
 
 export function formatProductQuantity(
   quantity: number,
   item: ProductUnitFields | null | undefined,
 ): string {
-  if (isKgProduct(item)) {
+  if (isMeasuredProduct(item)) {
     const fixed = Number(quantity.toFixed(3));
     return new Intl.NumberFormat("fa-IR", {
       minimumFractionDigits: 0,
@@ -38,7 +51,7 @@ export function normalizeQuantityValue(
   quantity: number,
   item: ProductUnitFields | null | undefined,
 ): number {
-  if (isKgProduct(item)) {
+  if (isMeasuredProduct(item)) {
     const rounded = Math.round(quantity * 1000) / 1000;
     return rounded > 0 ? rounded : 0;
   }
@@ -46,7 +59,7 @@ export function normalizeQuantityValue(
 }
 
 export function getQuantityIncrement(item: ProductUnitFields | null | undefined): number {
-  return isKgProduct(item) ? 0.1 : 1;
+  return isMeasuredProduct(item) ? 0.1 : 1;
 }
 
 export function getDefaultCartQuantity(item: ProductUnitFields | null | undefined): number {
@@ -54,10 +67,10 @@ export function getDefaultCartQuantity(item: ProductUnitFields | null | undefine
 }
 
 export function getMinQuantity(item: ProductUnitFields | null | undefined): number {
-  return isKgProduct(item) ? 0.001 : 1;
+  return isMeasuredProduct(item) ? 0.001 : 1;
 }
 
-/** پارس ورودی مقدار — برای کیلو اعشاری، برای عدد صحیح */
+/** پارس ورودی مقدار — برای کیلو و متر اعشاری، برای عدد صحیح */
 export function parseQuantityInput(
   value: string,
   item: ProductUnitFields | null | undefined,
@@ -73,7 +86,7 @@ export function parseQuantityInput(
 
   if (normalized === "" || normalized === ".") return null;
 
-  if (isKgProduct(item)) {
+  if (isMeasuredProduct(item)) {
     const n = parseFloat(normalized);
     return Number.isNaN(n) ? null : n;
   }

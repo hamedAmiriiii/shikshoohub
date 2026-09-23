@@ -17,6 +17,7 @@ type Props<T extends string> = {
   columns?: number;
   /** عنوان و دکمه‌ها در یک ردیف افقی */
   inlineLabel?: ReactNode;
+  fontBoost?: number;
 };
 
 export default function PosSegmentButtons<T extends string>({
@@ -26,6 +27,7 @@ export default function PosSegmentButtons<T extends string>({
   dense,
   columns = 3,
   inlineLabel,
+  fontBoost = 0,
 }: Props<T>) {
   const visible = options.filter((o) => o.show !== false);
 
@@ -61,7 +63,7 @@ export default function PosSegmentButtons<T extends string>({
               px: dense ? 0.35 : inlineLabel ? 0.5 : 0.75,
               py: dense ? 0.45 : inlineLabel ? 0.55 : 0.85,
               fontSize: dense
-                ? "9px"
+                ? `${9 + fontBoost}px`
                 : inlineLabel
                   ? { xs: "10px", md: "11px" }
                   : { xs: "11px", md: "13px" },
@@ -106,7 +108,7 @@ export default function PosSegmentButtons<T extends string>({
         sx={{
           flexShrink: 0,
           color: "var(--admin-text)",
-          fontSize: dense ? "9px" : { xs: "11px", md: "12px" },
+          fontSize: dense ? `${9 + fontBoost}px` : { xs: "11px", md: "12px" },
           fontWeight: 600,
           whiteSpace: "nowrap",
         }}

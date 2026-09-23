@@ -17,6 +17,7 @@ export type MultiCartToolbarProps = {
   fullWidth?: boolean;
   /** فقط آیکون و شماره سبد — مناسب پنل باریک حالت منو */
   hideCaptions?: boolean;
+  fontBoost?: number;
 };
 
 export default function MultiCartToolbar({
@@ -28,6 +29,7 @@ export default function MultiCartToolbar({
   compact = false,
   fullWidth = true,
   hideCaptions = false,
+  fontBoost = 0,
 }: MultiCartToolbarProps) {
   const canAdd = cartCount < MAX_MULTI_CARTS;
   const tabMinWidth = compact ? 34 : 40;
@@ -54,7 +56,7 @@ export default function MultiCartToolbar({
         {!hideCaptions ? (
           <Typography
             sx={{
-              fontSize: compact ? "10px" : "12px",
+              fontSize: compact ? `${10 + fontBoost}px` : "12px",
               fontWeight: 700,
               color: "var(--admin-text-muted)",
               whiteSpace: "nowrap",
@@ -105,7 +107,7 @@ export default function MultiCartToolbar({
                 <Typography
                   component="span"
                   sx={{
-                    fontSize: compact ? "11px" : "12px",
+                    fontSize: compact ? `${11 + fontBoost}px` : "12px",
                     fontWeight: 800,
                     lineHeight: 1,
                     color: "inherit",
@@ -159,7 +161,7 @@ export default function MultiCartToolbar({
                 minHeight: tabHeight,
                 px: 0,
                 borderRadius: "6px",
-                fontSize: compact ? "14px" : "16px",
+                fontSize: compact ? `${14 + fontBoost}px` : "16px",
                 fontWeight: 700,
                 lineHeight: 1,
                 textTransform: "none",

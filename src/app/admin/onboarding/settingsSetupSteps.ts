@@ -10,6 +10,7 @@ export type SettingsSetupToggleKey = Extract<
   | "menuModeShowProductImages"
   | "menuTableOrdersPopupEnabled"
   | "showProductListOnMainPage"
+  | "typedSaleListMode"
   | "classicPosMode"
   | "installmentPaymentEnabled"
   | "debtPaymentEnabled"
@@ -86,6 +87,17 @@ export const SETTINGS_SETUP_STEPS: SettingsSetupStep[] = [
     settingKey: "showProductListOnMainPage",
     enableLabel: "لیست نشان داده شود",
     disableLabel: "مخفی بماند",
+    visible: ({ answers }) =>
+      !isSettingChosenOn(answers, "menuMode") && !isSettingChosenOn(answers, "typedSaleListMode"),
+  },
+  {
+    id: "typedSaleListMode",
+    kind: "toggle",
+    title: "لیست فروش تایپی",
+    body: "سبد سمت چپ مثل حالت منو می‌ماند. سمت راست لیست عریض کالا تا انتهای صفحه است؛ جستجو و افزودن سریع از کش محلی.",
+    settingKey: "typedSaleListMode",
+    enableLabel: "این چیدمان",
+    disableLabel: "چیدمان فعلی",
     visible: ({ answers }) => !isSettingChosenOn(answers, "menuMode"),
   },
   {
@@ -127,10 +139,10 @@ export const SETTINGS_SETUP_STEPS: SettingsSetupStep[] = [
   {
     id: "kgSalesEnabled",
     kind: "toggle",
-    title: "فروش کیلویی",
-    body: "برای کالاهایی مثل مواد غذایی می‌توانی واحد کیلو بگذاری و در سبد مقدار اعشاری بزنی.",
+    title: "فروش کیلویی و متری",
+    body: "برای کالا می‌توانی واحد کیلو یا متر بگذاری و در سبد مقدار اعشاری بزنی. قیمت بر اساس هر کیلو یا هر متر است.",
     settingKey: "kgSalesEnabled",
-    enableLabel: "فروش کیلو",
+    enableLabel: "کیلو و متر",
     disableLabel: "لازم نیست",
   },
   {

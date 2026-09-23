@@ -36,7 +36,7 @@ import {
 } from "@/app/lib/productsCache";
 import { catalogItemKey, isProducedGoodItem } from "@/app/lib/catalogItems";
 import { formatAmountInput, parseAmountInput } from "@/app/lib/amountInput";
-import { isKgProduct } from "@/app/lib/productUnits";
+import { isMeasuredProduct } from "@/app/lib/productUnits";
 import { menuProductNumericId, updateMenuProductFields } from "@/app/lib/menuModeProductUpdate";
 import tokenCode from "@/app/coponent/tokenCode";
 import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
@@ -154,7 +154,7 @@ function MenuModeEditDialog({
           toast.error("موجودی معتبر نیست");
           return;
         }
-        const nextQty = isKgProduct(product) ? qty : Math.floor(qty);
+        const nextQty = isMeasuredProduct(product) ? qty : Math.floor(qty);
         const res = await updateMenuProductFields(product, { quantity: nextQty });
         if (res.ok === false) {
           toast.error(res.message);

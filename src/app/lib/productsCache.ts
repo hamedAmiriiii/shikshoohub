@@ -16,7 +16,7 @@ export type CachedProduct = {
   discount_percent?: number | string;
   has_discount?: boolean;
   quantity?: number;
-  unit_type?: "kg" | "piece" | string;
+  unit_type?: "kg" | "meter" | "piece" | string;
   unit_label?: string;
   price_unit_label?: string;
   category_id?: number | string;

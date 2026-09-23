@@ -8,7 +8,7 @@ import {
   formatProductQuantity,
   getMinQuantity,
   getQuantityIncrement,
-  isKgProduct,
+  isMeasuredProduct,
   normalizeQuantityValue,
   parseQuantityInput,
   type ProductUnitFields,
@@ -20,6 +20,7 @@ type CartQuantityControlProps = {
   kgSalesEnabled: boolean;
   onChange: (itemId: number | string, quantity: number) => void;
   compact?: boolean;
+  fontBoost?: number;
 };
 
 export default function CartQuantityControl({
@@ -27,8 +28,9 @@ export default function CartQuantityControl({
   kgSalesEnabled,
   onChange,
   compact = false,
+  fontBoost = 0,
 }: CartQuantityControlProps) {
-  const isKg = kgSalesEnabled && isKgProduct(item);
+  const isKg = kgSalesEnabled && isMeasuredProduct(item);
   const [draft, setDraft] = useState<string | null>(null);
 
   const displayQty = draft ?? formatProductQuantity(item.quantity, item);
@@ -72,7 +74,7 @@ export default function CartQuantityControl({
             color: "var(--admin-text)",
             minWidth: compact ? 14 : { xs: 24, md: 40 },
             textAlign: "center",
-            fontSize: compact ? "9px" : { xs: "12px", md: "16px" },
+            fontSize: compact ? `${9 + fontBoost}px` : { xs: "12px", md: "16px" },
           }}
         >
           {formatProductQuantity(item.quantity, item)}
@@ -115,7 +117,7 @@ export default function CartQuantityControl({
         }}
         inputProps={{
           inputMode: "decimal",
-          style: { textAlign: "center", fontSize: compact ? 10 : 14, padding: compact ? "2px 4px" : undefined },
+          style: { textAlign: "center", fontSize: compact ? 10 + fontBoost : 14, padding: compact ? "2px 4px" : undefined },
         }}
         sx={{
           width: compact ? 52 : 72,

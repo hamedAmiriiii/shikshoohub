@@ -16,6 +16,7 @@ import MenuBookIcon from "@mui/icons-material/MenuBook";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import LoyaltyIcon from "@mui/icons-material/Loyalty";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
+import ViewListIcon from "@mui/icons-material/ViewList";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import PaymentsIcon from "@mui/icons-material/Payments";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
@@ -267,6 +268,7 @@ export default function SettingsPage() {
   const [isSavingExpiry, setIsSavingExpiry] = useState(false);
   const [isSavingInterestRate, setIsSavingInterestRate] = useState(false);
   const [showProductListOnMainPage, setShowProductListOnMainPage] = useState(false);
+  const [typedSaleListMode, setTypedSaleListMode] = useState(false);
   const [menuMode, setMenuMode] = useState(false);
   const [menuModeShowProductImages, setMenuModeShowProductImages] = useState(true);
   const [installmentPaymentEnabled, setInstallmentPaymentEnabled] = useState(true);
@@ -299,6 +301,7 @@ export default function SettingsPage() {
     const syncPosSettings = () => {
       const settings = readAdminPosSettings();
       setShowProductListOnMainPage(settings.showProductListOnMainPage);
+      setTypedSaleListMode(Boolean(settings.typedSaleListMode));
       setMenuMode(settings.menuMode);
       setMenuModeShowProductImages(settings.menuModeShowProductImages);
       setInstallmentPaymentEnabled(settings.installmentPaymentEnabled);
@@ -339,10 +342,29 @@ export default function SettingsPage() {
     );
   };
 
+  const handleToggleTypedSaleList = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setTypedSaleListMode(enabled);
+    if (enabled) setMenuMode(false);
+    writeAdminPosSettings({
+      typedSaleListMode: enabled,
+      ...(enabled ? { menuMode: false } : {}),
+    });
+    toast.success(
+      enabled
+        ? "لیست فروش تایپی فعال شد — سبد چپ و لیست عریض کالا سمت راست"
+        : "لیست فروش تایپی غیرفعال شد",
+    );
+  };
+
   const handleToggleMenuMode = (event: React.ChangeEvent<HTMLInputElement>) => {
     const enabled = event.target.checked;
     setMenuMode(enabled);
-    writeAdminPosSettings({ menuMode: enabled });
+    if (enabled) setTypedSaleListMode(false);
+    writeAdminPosSettings({
+      menuMode: enabled,
+      ...(enabled ? { typedSaleListMode: false } : {}),
+    });
     toast.success(
       enabled
         ? "حالت منو فعال شد — صفحه فروش به نمای کارتی تغییر می‌کند"
@@ -402,8 +424,8 @@ export default function SettingsPage() {
     writeAdminPosSettings({ kgSalesEnabled: enabled });
     toast.success(
       enabled
-        ? "فروش محصولات کیلویی فعال شد — هنگام ثبت کالا می‌توانید واحد کیلو انتخاب کنید"
-        : "فروش محصولات کیلویی غیرفعال شد",
+        ? "فروش کیلویی و متری فعال شد — هنگام ثبت کالا می‌توانید واحد کیلو یا متر انتخاب کنید"
+        : "فروش کیلویی و متری غیرفعال شد",
     );
   };
 
@@ -785,12 +807,19 @@ export default function SettingsPage() {
       <Card sx={settingsCardSx}>
         <CardContent sx={{ py: 0.5, px: 1.25, "&:last-child": { pb: 0.5 } }}>
           <SettingsToggleRow
+            icon={<ViewListIcon sx={{ fontSize: 18 }} />}
+            title="لیست فروش تایپی"
+            hint="سبد چپ مثل منو؛ لیست عریض کالا تا انتها — جستجو و افزودن سریع از کش محلی"
+            checked={typedSaleListMode}
+            onChange={handleToggleTypedSaleList}
+          />
+          <SettingsToggleRow
             icon={<Inventory2Icon sx={{ fontSize: 18 }} />}
             title="لیست کالا در صفحه فروش"
             hint="جستجو و افزودن سریع از کش محلی"
             checked={showProductListOnMainPage}
             onChange={handleToggleProductListOnMainPage}
-            disabled={menuMode}
+            disabled={menuMode || typedSaleListMode}
           />
           <SettingsToggleRow
             icon={<RestaurantMenuIcon sx={{ fontSize: 18 }} />}
@@ -837,8 +866,8 @@ export default function SettingsPage() {
           />
           <SettingsToggleRow
             icon={<ScaleIcon sx={{ fontSize: 18 }} />}
-            title="فروش کیلویی"
-            hint="واحد کیلو و مقدار اعشاری"
+            title="فروش کیلویی و متری"
+            hint="واحد کیلو یا متر و مقدار اعشاری"
             checked={kgSalesEnabled}
             onChange={handleToggleKgSales}
           />

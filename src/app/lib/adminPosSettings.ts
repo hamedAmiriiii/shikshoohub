@@ -3,6 +3,8 @@ export const ADMIN_POS_SETTINGS_CHANGED_EVENT = "admin-pos-settings-changed";
 
 export type AdminPosSettings = {
   showProductListOnMainPage: boolean;
+  /** چیدمان صفحه فروش: سبد چپ مثل منو، لیست عریض کالا سمت راست */
+  typedSaleListMode: boolean;
   menuMode: boolean;
   /** در حالت منو، تصویر کالا روی کارت نشان داده شود */
   menuModeShowProductImages: boolean;
@@ -12,7 +14,7 @@ export type AdminPosSettings = {
   chequePaymentEnabled: boolean;
   /** نمایش «کالاهای تولیدی» در منوی مدیریت کالا */
   producedGoodsMenuEnabled: boolean;
-  /** فروش محصولات با واحد کیلوگرم */
+  /** فروش محصولات با واحد کیلوگرم یا متر */
   kgSalesEnabled: boolean;
   /** میز، سفارش حضوری و پولینگ رسیدگی‌نشده */
   restaurantCafeEnabled: boolean;
@@ -36,6 +38,7 @@ export type AdminPosSettings = {
 
 const DEFAULT_SETTINGS: AdminPosSettings = {
   showProductListOnMainPage: false,
+  typedSaleListMode: false,
   menuMode: false,
   menuModeShowProductImages: true,
   installmentPaymentEnabled: true,
