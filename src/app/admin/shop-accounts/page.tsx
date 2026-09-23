@@ -28,6 +28,7 @@ import "react-toastify/dist/ReactToastify.css";
 import {
   fetchShopAccounts,
   isMainShopAccount,
+  remainingBalanceDeleteMessage,
   setShopAccountBalances,
   type ShopAccount,
 } from "@/app/lib/shopAccounts";
@@ -217,6 +218,11 @@ export default function ShopAccountsPage() {
   const handleDelete = async (account: ShopAccount) => {
     if (account.is_default) {
       toast.error("حساب‌های پیش‌فرض قابل حذف نیستند");
+      return;
+    }
+    const blocked = remainingBalanceDeleteMessage(account);
+    if (blocked) {
+      toast.error(blocked);
       return;
     }
     if (!window.confirm(`حساب «${account.name}» غیرفعال شود؟`)) return;

@@ -26,6 +26,15 @@ export function isMainShopAccount(account: Pick<ShopAccount, "type">): boolean {
   return !isPettyCashAccount(account);
 }
 
+export function remainingBalanceDeleteMessage(account: ShopAccount): string | null {
+  const balance = Number(account.balance) || 0;
+  if (Math.abs(balance) < 0.01) return null;
+  const amount = new Intl.NumberFormat("fa-IR").format(Math.round(Math.abs(balance)));
+  const kind = isPettyCashAccount(account) ? "تنخواه" : "حساب";
+  const state = balance < 0 ? "بدهکار" : "مانده";
+  return `این ${kind} «${account.name}» هنوز ${state} ${amount} تومان دارد. اول موجودی را صفر کنید، بعد حذف کنید.`;
+}
+
 export function parseShopAccounts(raw: unknown): ShopAccount[] {
   if (!Array.isArray(raw)) return [];
   return raw

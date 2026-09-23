@@ -404,7 +404,7 @@ export default function ProfitLossPage() {
             سود و ضرر
           </Typography>
           <Typography sx={{ color: "var(--admin-text)", opacity: 0.7, fontSize: 12, mt: 0.25 }}>
-            سود از فروش و بهای کالاست؛ موجودی حساب ماندهٔ واقعی صندوق، بانک و تنخواه است
+            سود از فروش و بهای کالاست؛ موجودی حساب جمع صندوق، بانک و تنخواه‌های فعال است
           </Typography>
         </Box>
         <Box sx={{ display: "flex", gap: 0.75, alignItems: "center" }}>
@@ -614,7 +614,7 @@ export default function ProfitLossPage() {
                   label="موجودی حساب"
                   amount={data.totals.total_account_balance}
                   color={moneyColor(data.totals.total_account_balance, "var(--admin-online)")}
-                  hint="جمع ماندهٔ واقعی صندوق، حساب‌های فروشگاه و تنخواه در همین لحظه"
+                  hint="جمع ماندهٔ فعال صندوق نقد، حساب‌های فروشگاه و تنخواه؛ حساب حذف‌شده داخل این رقم نیست"
                   strong
                 />
                 <AmountLine

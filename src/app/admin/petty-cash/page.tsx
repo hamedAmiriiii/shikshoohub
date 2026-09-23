@@ -32,6 +32,7 @@ import "react-toastify/dist/ReactToastify.css";
 import {
   fetchShopAccounts,
   isMainShopAccount,
+  remainingBalanceDeleteMessage,
   type ShopAccount,
 } from "@/app/lib/shopAccounts";
 
@@ -225,6 +226,11 @@ export default function PettyCashPage() {
   };
 
   const handleDelete = async (account: ShopAccount) => {
+    const blocked = remainingBalanceDeleteMessage(account);
+    if (blocked) {
+      toast.error(blocked);
+      return;
+    }
     if (!window.confirm(`تنخواه «${account.name}» غیرفعال شود؟`)) return;
     const token = tokenCode();
     try {
