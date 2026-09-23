@@ -121,45 +121,73 @@ const GALLERY = Array.from({ length: 10 }, (_, i) => ({
 
 const PLANS = [
   {
-    name: "پلن اولیه",
-    description: "همه امکانات اصلی فروش و حسابداری",
+    name: "پایه",
+    price: "۱۱ میلیون",
+    description: "صندوق فروش برای مغازه‌ای که کالا، موجودی و فیش می‌خواهد",
     popular: false,
     features: [
-      "فروش، انبار و مشتریان",
-      "گزارشات و سود و ضرر",
-      "فروش اقساطی و نسیه",
-      "چاپ فاکتور و لیبل",
-      "ارسال پیامک",
-      "فروش آفلاین",
+      "فروش نقد، کارت و ترکیبی",
+      "حالت منو، فاکتور کلاسیک و چند سبد",
+      "بارکد، تخفیف، فروش کیلویی و تغییر قیمت در سبد",
+      "ثبت کالا، دسته‌بندی، اکسل و چاپ لیبل",
+      "موجودی انبار، لیست فروش و گزارش فروش",
+      "چاپ فیش، فروش آفلاین، نصب روی موبایل و ویندوز",
     ],
   },
   {
-    name: "پلن باشگاه مشتریان",
-    description: "پلن اولیه + باشگاه مشتریان و امکانات وفاداری",
+    name: "فروش کامل",
+    price: "۱۶ میلیون",
+    description: "پایه به‌علاوه خرید، نسیه، هزینه، تولید و میز",
+    popular: false,
+    features: [
+      "همه امکانات پایه",
+      "اقساط، نسیه، چک و اعتبار اقساطی",
+      "فاکتور خرید، هزینه، سود فروشگاه و تطبیق صندوق",
+      "حساب فروشگاه، تنخواه و برگشت کالا",
+      "مواد تولیدی، فرمول و قیمت تمام‌شده",
+      "رزرو و سفارش آنلاین میز و اتاق",
+      "حقوق و پرسنل",
+    ],
+  },
+  {
+    name: "باشگاه مشتریان",
+    price: "۲۲ میلیون",
+    description: "فروش کامل به‌علاوه اعتبار، پرونده مشتری و پیامک",
     popular: true,
     features: [
-      "تمام امکانات پلن اولیه",
-      "باشگاه مشتریان",
-      "اعتبار و امتیاز مشتری",
-      "پیامک مناسبتی",
-      "فروشگاه آنلاین",
-      "پشتیبانی اولویت‌دار",
+      "همه امکانات فروش کامل",
+      "اعتبار خرید و سطح‌های باشگاه روی فاکتور",
+      "داشبورد باشگاه و پرونده خریداران",
+      "پیامک خرید و ارسال گروهی",
+      "گزارش پیامک‌ها و لینک معرفی",
     ],
   },
   {
-    name: "پلن سازمانی",
-    description: "برای فروشگاه‌های بزرگ و چندشعبه‌ای",
+    name: "هوشمند و حسابداری",
+    price: "۲۹ میلیون",
+    description: "باشگاه به‌علاوه گروه‌بندی مشتری، کمپین و دفتر",
     popular: false,
     features: [
-      "تمام امکانات پلن باشگاه مشتریان",
-      "پشتیبانی ویژه و آموزش اختصاصی",
-      "اولویت در راه‌اندازی",
-      "مشاوره اختصاصی فروشگاه",
-      "گزارش‌های سفارشی",
-      "همراهی در توسعه امکانات",
+      "همه امکانات باشگاه مشتریان",
+      "گروه‌بندی مشتری: ویژه، وفادار، در خطر و ریزش",
+      "پیشنهاد اقدام و کمپین پیامک یا اعتبار",
+      "درخت حساب، سند، تراز آزمایشی و دفتر",
+      "سود و زیان دفتری، ترازنامه و بستن سال",
     ],
   },
 ];
+
+const ONLINE_STORE = {
+  name: "فروشگاه آنلاین",
+  price: "۹ میلیون",
+  description: "افزودنی جدا روی هر چهار پکیج",
+  features: [
+    "ویترین با آدرس اختصاصی فروشگاه",
+    "سبد خرید و ثبت سفارش توسط مشتری",
+    "موجودی و قیمت همان پنل",
+    "پیگیری سفارش در سفارشات اینترنتی",
+  ],
+};
 
 const STEPS = [
   { n: "۱", title: "درخواست مشاوره", desc: "فرم تماس را تکمیل کنید" },
@@ -181,8 +209,12 @@ const FAQS = [
     a: "بله. فروش اقساطی، مدیریت اقساط و اعتبار مشتری پشتیبانی می‌شود.",
   },
   {
-    q: "تفاوت سه پکیج چیست؟",
-    a: "پلن اولیه فروش و حسابداری کامل است. پلن باشگاه مشتریان امکانات وفاداری و فروشگاه آنلاین را هم دارد. پلن سازمانی برای مجموعه‌های بزرگ‌تر با پشتیبانی و مشاوره اختصاصی است.",
+    q: "تفاوت پکیج‌ها چیست؟",
+    a: "پایه ۱۱ میلیون تومان صندوق، کالا و گزارش فروش است. فروش کامل ۱۶ میلیون اقساط، نسیه، خرید، سود، مواد تولیدی و رزرو آنلاین میز را اضافه می‌کند. باشگاه مشتریان ۲۲ میلیون اعتبار و پیامک دارد. هوشمند و حسابداری ۲۹ میلیون گروه‌بندی مشتری، کمپین و دفتر حسابداری را دارد.",
+  },
+  {
+    q: "فروشگاه آنلاین داخل کدام پکیج است؟",
+    a: "جداست و روی هر چهار پکیج اضافه می‌شود. هزینه آن ۹ میلیون تومان است. ویترین، سبد و سفارش اینترنتی با همان موجودی پنل فعال می‌شود.",
   },
   {
     q: "چطور پکیج بگیرم؟",
@@ -570,14 +602,14 @@ export default function LandingShopClient() {
         <div className="max-w-6xl mx-auto px-4">
           <motion.div {...fadeUp()} className="text-center mb-12">
             <h2 className="text-2xl md:text-3xl font-bold">پکیج‌های وبینو حسابداری</h2>
-            <p className="text-slate-400 mt-2">پکیج مناسب فروشگاه خود را انتخاب کنید؛ قیمت و جزئیات با مشاوره اعلام می‌شود</p>
+            <p className="text-slate-400 mt-2">هر پکیج بالاتر، امکانات پکیج قبلی را هم دارد</p>
           </motion.div>
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-5">
             {PLANS.map((plan, i) => (
               <motion.div
                 key={plan.name}
-                {...fadeUp(i * 0.1)}
-                className={`relative rounded-2xl p-7 border transition hover:scale-[1.02] flex flex-col ${
+                {...fadeUp(i * 0.08)}
+                className={`relative rounded-2xl p-6 border transition hover:scale-[1.02] flex flex-col ${
                   plan.popular
                     ? "border-fuchsia-500/50 bg-gradient-to-b from-fuchsia-950/40 to-violet-950/20 shadow-xl shadow-fuchsia-900/20"
                     : "border-white/10 bg-white/[0.03]"
@@ -588,19 +620,21 @@ export default function LandingShopClient() {
                     پیشنهادی
                   </span>
                 )}
-                <h3 className="text-xl font-bold text-white">{plan.name}</h3>
-                <p className="text-slate-400 text-sm mt-1">{plan.description}</p>
-                <ul className="space-y-2.5 my-8 flex-1">
+                <h3 className="text-lg font-bold text-white">{plan.name}</h3>
+                <p className="text-2xl font-bold text-cyan-300 mt-2">{plan.price}</p>
+                <p className="text-slate-500 text-xs mt-0.5">تومان</p>
+                <p className="text-slate-400 text-sm mt-2 leading-relaxed">{plan.description}</p>
+                <ul className="space-y-2.5 my-6 flex-1">
                   {plan.features.map((f) => (
-                    <li key={f} className="flex items-center gap-2 text-sm text-slate-300">
-                      <CheckCircle2 size={15} className="text-cyan-400 shrink-0" />
+                    <li key={f} className="flex items-start gap-2 text-sm text-slate-300">
+                      <CheckCircle2 size={15} className="text-cyan-400 shrink-0 mt-0.5" />
                       {f}
                     </li>
                   ))}
                 </ul>
                 <button
                   type="button"
-                  onClick={() => scrollToConsult(plan.name)}
+                  onClick={() => scrollToConsult(`${plan.name} — ${plan.price}`)}
                   className={`block w-full text-center py-3.5 rounded-xl font-semibold transition ${
                     plan.popular
                       ? "bg-gradient-to-l from-violet-600 to-fuchsia-600 text-white hover:opacity-90 shadow-lg shadow-fuchsia-900/30"
@@ -612,8 +646,44 @@ export default function LandingShopClient() {
               </motion.div>
             ))}
           </div>
+
+          <motion.div
+            {...fadeUp(0.15)}
+            className="mt-6 rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-6 md:p-7"
+          >
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+              <div className="md:max-w-sm">
+                <div className="inline-flex items-center gap-2 text-emerald-300 text-xs font-medium mb-2">
+                  <Globe size={14} />
+                  افزودنی جدا
+                </div>
+                <h3 className="text-xl font-bold text-white">{ONLINE_STORE.name}</h3>
+                <p className="text-2xl font-bold text-emerald-300 mt-2">
+                  {ONLINE_STORE.price}
+                  <span className="text-sm font-medium text-slate-400 mr-2">تومان</span>
+                </p>
+                <p className="text-slate-400 text-sm mt-2 leading-relaxed">{ONLINE_STORE.description}</p>
+              </div>
+              <ul className="grid sm:grid-cols-2 gap-2.5 flex-1">
+                {ONLINE_STORE.features.map((f) => (
+                  <li key={f} className="flex items-start gap-2 text-sm text-slate-300">
+                    <CheckCircle2 size={15} className="text-emerald-400 shrink-0 mt-0.5" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <button
+                type="button"
+                onClick={() => scrollToConsult(`${ONLINE_STORE.name} — ${ONLINE_STORE.price}`)}
+                className="md:self-end shrink-0 px-6 py-3.5 rounded-xl font-semibold bg-emerald-600 text-white hover:bg-emerald-500 transition"
+              >
+                افزودن به پکیج
+              </button>
+            </div>
+          </motion.div>
+
           <p className="text-center text-slate-500 text-sm mt-8">
-            پشتیبانی راه‌اندازی · انتخاب پکیج با مشاوره · بدون پیچیدگی نصب
+            · فروشگاه آنلاین روی هر پکیج ۹ میلیون تومان اضافه می‌شود
           </p>
         </div>
       </section>
