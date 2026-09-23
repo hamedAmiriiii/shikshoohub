@@ -164,6 +164,14 @@ export function executeSmartAction(id: number) {
   return api("POST", `/api/smart-customer/actions/${id}/execute`);
 }
 
+export function bulkSmartActions(op: "execute" | "dismiss", ids: number[]) {
+  return api<{ message: string; ok: number; failed: { id: number; message: string }[] }>(
+    "POST",
+    "/api/smart-customer/actions/bulk",
+    { op, ids },
+  );
+}
+
 export function fetchSmartCampaigns() {
   return api<{ campaigns: SmartCampaign[] }>("GET", "/api/smart-customer/campaigns");
 }

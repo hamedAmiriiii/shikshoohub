@@ -32,6 +32,7 @@ import "react-toastify/dist/ReactToastify.css";
 import tokenCode from "@/app/coponent/tokenCode";
 import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
 import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
+import { notifySmsQuotaIfExhausted } from "@/app/lib/notifySmsQuota";
 import { gregorianApiDateFromDateObject } from "@/app/lib/shopAccess";
 import {
   CHEQUE_DATE_PICKER_Z,
@@ -316,6 +317,7 @@ export default function CustomerClubPage() {
             ? "اطلاعات مشتری به‌روز شد"
             : "مشتری ثبت شد",
       );
+      notifySmsQuotaIfExhausted(res);
       setRegPhone("");
       setRegName("");
       setRegBirth(null);

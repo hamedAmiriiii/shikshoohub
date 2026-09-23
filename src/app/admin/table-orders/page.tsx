@@ -32,6 +32,7 @@ import "react-toastify/dist/ReactToastify.css";
 import tokenCode from "@/app/coponent/tokenCode";
 import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
 import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
+import { notifySmsQuotaIfExhausted } from "@/app/lib/notifySmsQuota";
 import { adminPageSx } from "@/app/admin/theme/adminTheme";
 import { getDebtProductName } from "@/app/lib/purchaseDebts";
 import {
@@ -142,6 +143,7 @@ export default function TableOrdersPage() {
         return;
       }
       toast.success(res?.message || "فاکتور ساخته شد");
+      notifySmsQuotaIfExhausted(res);
       const paidId = payOrder.id;
       const purchase = res?.purchase;
       const purchaseId = Number(purchase?.id ?? res?.table_order?.purchase_id);

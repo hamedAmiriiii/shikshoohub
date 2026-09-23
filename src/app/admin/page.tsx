@@ -37,6 +37,7 @@ import { styled } from '@mui/material/styles';
 import TableCell, { tableCellClasses } from '@mui/material/TableCell';
 import { apiRequestError } from '@/app/lib/apiRequestError/client';
 import { toast, ToastContainer } from 'react-toastify';
+import { notifySmsQuotaIfExhausted } from "@/app/lib/notifySmsQuota";
 import { useSearchParams, useRouter } from "next/navigation";
 import 'react-toastify/dist/ReactToastify.css';
 import PhoneNumberInput from '@/app/coponent/PhoneNumberInput/PhoneNumberInput';
@@ -1383,6 +1384,7 @@ export default function ShoppingPage() {
       setSkipPrintPreview(false);
       setSaleSuccessOpen(true);
       toast.success(successMessage);
+      notifySmsQuotaIfExhausted(res);
       resetCartAfterSale();
       if (editingPurchaseId) {
         editLoadedRef.current = null;
@@ -2128,6 +2130,7 @@ export default function ShoppingPage() {
       } else {
         toast.success(res.message || "کاربر با موفقیت ثبت شد");
       }
+      notifySmsQuotaIfExhausted(res);
 
       // بعد از ثبت/یافتن کاربر، شماره را در فرم خرید هم قرار می‌دهیم.
       setPhone(normalizedPhone);

@@ -11,6 +11,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { formatAmountInput, parseAmountInput } from "@/app/lib/amountInput";
 import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
+import { notifySmsQuotaIfExhausted } from "@/app/lib/notifySmsQuota";
 import BottomSheet from "@/app/coponent/BottomSheet";
 import { adminButtonStartIconSx } from "@/app/admin/theme/adminTheme";
 import {
@@ -196,6 +197,7 @@ export default function InstallmentCreditsPage() {
         return;
       }
       toast.success(editing ? "اعتبار به‌روزرسانی شد" : "اعتبار ایجاد شد");
+      notifySmsQuotaIfExhausted(res);
       closeForm();
       setRefreshKey((prev) => prev + 1);
     } catch {
