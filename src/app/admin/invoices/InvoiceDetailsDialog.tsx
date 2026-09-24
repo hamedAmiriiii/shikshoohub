@@ -501,7 +501,7 @@ export default function InvoiceDetailsDialog({
                       <StyledTableCell align="center">فی</StyledTableCell>
                       <StyledTableCell align="center">تعداد</StyledTableCell>
                       {productEntryEnabled ? <StyledTableCell align="center">بارکد</StyledTableCell> : null}
-                      {productEntryEnabled ? <StyledTableCell align="center">قیمت خرید</StyledTableCell> : null}
+                      {productEntryEnabled ? <StyledTableCell align="center">قیمت فروش</StyledTableCell> : null}
                       <StyledTableCell align="center">کل</StyledTableCell>
                       <StyledTableCell align="center">عملیات</StyledTableCell>
                     </TableRow>

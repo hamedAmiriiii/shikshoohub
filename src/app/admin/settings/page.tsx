@@ -32,6 +32,7 @@ import ImageOutlinedIcon from "@mui/icons-material/ImageOutlined";
 import SortIcon from "@mui/icons-material/Sort";
 import QrCode2Icon from "@mui/icons-material/QrCode2";
 import CloudDownloadIcon from "@mui/icons-material/CloudDownload";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import TuneIcon from "@mui/icons-material/Tune";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -63,6 +64,10 @@ import {
 import { StationPrinterSettings } from "@/app/admin/print/sale/StationPrinterSettings";
 import { ReceiptTemplatePicker } from "@/app/admin/print/sale/ReceiptTemplatePicker";
 import { hydrateReceiptPrintSettingsFromDb, persistSharedReceiptSettings } from "@/app/lib/receiptPrintDbSync";
+import {
+  restoreShopBrowserSettingsFromServer,
+  saveShopBrowserSettingsToServer,
+} from "@/app/lib/shopBrowserSettingsSync";
 import { useShopPermissionGate } from "@/app/lib/shopPermissions";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 
@@ -300,6 +305,8 @@ export default function SettingsPage() {
   const [printerOpen, setPrinterOpen] = useState(false);
   const [listPrinterOpen, setListPrinterOpen] = useState(false);
   const [invoiceTemplateOpen, setInvoiceTemplateOpen] = useState(false);
+  const [savingBrowserSettings, setSavingBrowserSettings] = useState(false);
+  const [restoringBrowserSettings, setRestoringBrowserSettings] = useState(false);
 
   useEffect(() => {
     const syncPosSettings = () => {
@@ -778,8 +785,64 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSaveBrowserSettings = async () => {
+    setSavingBrowserSettings(true);
+    const result = await saveShopBrowserSettingsToServer();
+    setSavingBrowserSettings(false);
+    if (!result.ok) {
+      toast.error(result.message);
+      return;
+    }
+    toast.success("تنظیمات این فروشگاه در وبینو ذخیره شد");
+  };
+
+  const handleRestoreBrowserSettings = async () => {
+    setRestoringBrowserSettings(true);
+    const result = await restoreShopBrowserSettingsFromServer();
+    setRestoringBrowserSettings(false);
+    if (!result.ok) {
+      toast.error(result.message);
+      return;
+    }
+    setReceiptPrintSettings(result.bundle.saleReceipt);
+    setListReceiptPrintSettings(result.bundle.listReceipt);
+    toast.success("تنظیمات از وبینو روی این مرورگر قرار گرفت");
+  };
+
   return (
     <Box sx={{ ...adminPageSx, p: 1.5, pb: 12 }}>
+      <Card sx={settingsCardSx}>
+        <CardContent sx={{ py: 1.25, px: 1.25, "&:last-child": { pb: 1.25 } }}>
+          <Typography sx={{ color: "var(--admin-text)", fontSize: 13, fontWeight: 700, mb: 0.25 }}>
+            تنظیمات فروشگاه در وبینو
+          </Typography>
+          <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: 11, mb: 1, lineHeight: 1.7 }}>
+            تا وقتی این دکمه‌ها را نزنید، تنظیمات مثل قبل فقط روی همین مرورگر می‌ماند.
+          </Typography>
+          <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+            <Button
+              size="small"
+              variant="contained"
+              startIcon={savingBrowserSettings ? <CircularProgress size={14} color="inherit" /> : <CloudUploadIcon />}
+              disabled={savingBrowserSettings || restoringBrowserSettings}
+              onClick={() => void handleSaveBrowserSettings()}
+              sx={{ ...adminButtonStartIconSx, bgcolor: "var(--admin-accent)" }}
+            >
+              ذخیره تنظیمات در وبینو
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={restoringBrowserSettings ? <CircularProgress size={14} color="inherit" /> : <CloudDownloadIcon />}
+              disabled={savingBrowserSettings || restoringBrowserSettings}
+              onClick={() => void handleRestoreBrowserSettings()}
+              sx={adminButtonStartIconSx}
+            >
+              بازیابی تنظیمات از وبینو
+            </Button>
+          </Box>
+        </CardContent>
+      </Card>
       <Card
         sx={{
           ...settingsCardSx,
