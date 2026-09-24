@@ -146,6 +146,23 @@ function filenameFromDisposition(header: string | null): string | null {
   return null;
 }
 
+const BACKUP_REMINDER_KEY = "admin_backup_reminder_at";
+const BACKUP_REMINDER_MS = 3 * 24 * 60 * 60 * 1000;
+
+export function isBackupReminderDue(): boolean {
+  if (typeof window === "undefined") return false;
+  const raw = localStorage.getItem(BACKUP_REMINDER_KEY);
+  if (!raw) return true;
+  const at = Number(raw);
+  if (!Number.isFinite(at)) return true;
+  return Date.now() - at >= BACKUP_REMINDER_MS;
+}
+
+export function markBackupReminderSeen(): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(BACKUP_REMINDER_KEY, String(Date.now()));
+}
+
 export async function downloadShopBackup(): Promise<{ ok: true } | { ok: false; message: string }> {
   const token = tokenCode();
   if (!token) return { ok: false, message: "لطفاً وارد شوید" };
@@ -181,6 +198,7 @@ export async function downloadShopBackup(): Promise<{ ok: true } | { ok: false; 
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+  markBackupReminderSeen();
   return { ok: true };
 }
 

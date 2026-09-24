@@ -131,6 +131,7 @@ const saveBtnSx = {
 };
 
 function SettingsSectionCard({
+  id,
   icon,
   title,
   hint,
@@ -138,6 +139,7 @@ function SettingsSectionCard({
   loading = false,
   action,
 }: {
+  id?: string;
   icon: React.ReactNode;
   title: string;
   hint?: string;
@@ -146,7 +148,7 @@ function SettingsSectionCard({
   action?: React.ReactNode;
 }) {
   return (
-    <Card sx={settingsCardSx}>
+    <Card id={id} sx={settingsCardSx}>
       <CardContent sx={{ py: 1, px: 1.25, "&:last-child": { pb: 1 } }}>
         <Box
           sx={{
@@ -332,6 +334,11 @@ export default function SettingsPage() {
       setMenuTableOrdersPopupEnabled(settings.menuTableOrdersPopupEnabled);
     };
     syncPosSettings();
+    if (window.location.hash === "#shop-backup") {
+      window.setTimeout(() => {
+        document.getElementById("shop-backup")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 200);
+    }
     const printSettings = readSaleReceiptPrintSettings();
     setReceiptPrintSettings(printSettings);
     setListReceiptPrintSettings(readListReceiptPrintSettings());
@@ -1196,6 +1203,7 @@ export default function SettingsPage() {
 
       {can("backup") ? (
       <SettingsSectionCard
+        id="shop-backup"
         icon={<CloudDownloadIcon sx={{ fontSize: 18 }} />}
         title="پشتیبان‌گیری"
         hint="دانلود و بازگردانی دادهٔ همین فروشگاه"

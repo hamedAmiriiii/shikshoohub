@@ -39,6 +39,7 @@ import { apiRequestError } from '@/app/lib/apiRequestError/client';
 import { toast, ToastContainer } from 'react-toastify';
 import { notifySmsQuotaIfExhausted } from "@/app/lib/notifySmsQuota";
 import { useSearchParams, useRouter } from "next/navigation";
+import { isBackupReminderDue, markBackupReminderSeen } from "@/app/lib/shopBackup";
 import 'react-toastify/dist/ReactToastify.css';
 import PhoneNumberInput from '@/app/coponent/PhoneNumberInput/PhoneNumberInput';
 import tokenCode from '@/app/coponent/tokenCode';
@@ -261,6 +262,7 @@ export default function ShoppingPage() {
   const [saleDateEditEnabled, setSaleDateEditEnabled] = useState(false);
   const [saleDate, setSaleDate] = useState<DateObject>(() => todayJalaliDateObject());
   const [saleSuccessOpen, setSaleSuccessOpen] = useState(false);
+  const [showBackupReminder, setShowBackupReminder] = useState(false);
   const [lastSaleReceipt, setLastSaleReceipt] = useState<SaleReceiptData | null>(null);
   const [skipPrintPreview, setSkipPrintPreview] = useState(false);
   const [isRegisteringUser, setIsRegisteringUser] = useState(false);
@@ -1463,6 +1465,9 @@ export default function ShoppingPage() {
       saveSaleReceiptPrintData(receipt);
       setLastSaleReceipt(receipt);
       setSkipPrintPreview(false);
+      const remindBackup = purchaseId != null && isBackupReminderDue();
+      if (remindBackup) markBackupReminderSeen();
+      setShowBackupReminder(remindBackup);
       setSaleSuccessOpen(true);
       const linkedProformaId = pendingProformaIdRef.current;
       pendingProformaIdRef.current = null;
@@ -1520,6 +1525,7 @@ export default function ShoppingPage() {
       saveSaleReceiptPrintData(receipt);
       setLastSaleReceipt(receipt);
       setSkipPrintPreview(false);
+      setShowBackupReminder(false);
       setSaleSuccessOpen(true);
       const pendingItems = await listPendingOutboxItems();
       setPendingPurchases(pendingItems.map(outboxItemToLegacyPending));
@@ -4566,6 +4572,37 @@ export default function ShoppingPage() {
               شماره فاکتور: {lastSaleReceipt.purchaseId}
             </Typography>
           )}
+          {showBackupReminder ? (
+            <Box
+              sx={{
+                mt: 1,
+                mb: 0.5,
+                p: 1.25,
+                borderRadius: "12px",
+                bgcolor: "var(--admin-surface-alt)",
+                border: "1px solid var(--admin-menu-hover)",
+                textAlign: "right",
+              }}
+            >
+              <Typography sx={{ color: "var(--admin-text)", fontSize: 13, fontWeight: 700, mb: 0.5 }}>
+                پشتیبان‌گیری
+              </Typography>
+              <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: 12, lineHeight: 1.7 }}>
+                سه روز از آخرین یادآوری گذشته است. از اطلاعات موجود فروشگاه یک پشتیبان بگیرید.
+              </Typography>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => {
+                  setSaleSuccessOpen(false);
+                  router.push("/admin/settings#shop-backup");
+                }}
+                sx={{ mt: 1, borderColor: "var(--admin-accent)", color: "var(--admin-accent)" }}
+              >
+                رفتن به پشتیبان‌گیری
+              </Button>
+            </Box>
+          ) : null}
           <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, mt: 2 }}>
             <Button
               variant="contained"
