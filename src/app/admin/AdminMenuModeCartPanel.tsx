@@ -20,6 +20,7 @@ import PosSegmentButtons from "@/app/admin/PosSegmentButtons";
 import { getPriceUnitLabel } from "@/app/lib/productUnits";
 import { formatAmountInput } from "@/app/lib/amountInput";
 import { catalogItemKey } from "@/app/lib/catalogItems";
+import SaleChequePicker from "@/app/admin/SaleChequePicker";
 import {
   ADMIN_MENU_CART_WIDTH,
   ADMIN_MENU_CART_WIDTH_VAR,
@@ -117,6 +118,9 @@ export type AdminMenuModeCartPanelProps = {
   paymentFieldsValid: boolean;
   isSubmitting: boolean;
   onConfirm: () => void;
+  proformaEnabled?: boolean;
+  onSaveProforma?: () => void;
+  savingProforma?: boolean;
   calculatingInstallments: boolean;
   installmentCreditError: string;
   installmentCalculation: any;
@@ -124,7 +128,8 @@ export type AdminMenuModeCartPanelProps = {
   debtPaymentEnabled?: boolean;
   chequePaymentEnabled?: boolean;
   selectedChequeId: number | null;
-  onSelectedChequeChange: (id: number | null) => void;
+  selectedChequeIds: number[];
+  onSelectedChequeIdsChange: (ids: number[]) => void;
   matchingCheques: Array<{
     id: number;
     cheque_number?: string;
@@ -198,6 +203,9 @@ export default function AdminMenuModeCartPanel({
   paymentFieldsValid,
   isSubmitting,
   onConfirm,
+  proformaEnabled = false,
+  onSaveProforma,
+  savingProforma = false,
   calculatingInstallments,
   installmentCreditError,
   installmentCalculation,
@@ -205,7 +213,8 @@ export default function AdminMenuModeCartPanel({
   debtPaymentEnabled = false,
   chequePaymentEnabled = false,
   selectedChequeId,
-  onSelectedChequeChange,
+  selectedChequeIds,
+  onSelectedChequeIdsChange,
   matchingCheques,
   loadingAvailableCheques = false,
   salePayableAmount,
@@ -575,47 +584,17 @@ export default function AdminMenuModeCartPanel({
               sx={fieldSx}
             />
             {chequePaymentEnabled && (
-              <Box sx={{ display: "flex", gap: 0.35, alignItems: "center" }}>
-                <TextField
-                  select
-                  size="small"
-                  value={selectedChequeId ?? ""}
-                  onChange={(e) =>
-                    onSelectedChequeChange(e.target.value ? Number(e.target.value) : null)
-                  }
-                  SelectProps={{ native: true }}
-                  disabled={loadingAvailableCheques}
-                  sx={{ ...fieldSx, flex: 1 }}
-                >
-                  <option value="">{loadingAvailableCheques ? "بارگذاری..." : "چک (اختیاری)"}</option>
-                  {matchingCheques.map((cheque) => (
-                    <option key={cheque.id} value={cheque.id}>
-                      {[
-                        cheque.cheque_number ? `چک ${cheque.cheque_number}` : `#${cheque.id}`,
-                        cheque.bank_name,
-                        cheque.amount != null ? formatNumber(Number(cheque.amount)) : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" — ")}
-                    </option>
-                  ))}
-                </TextField>
-                {onOpenCreateCheque && (
-                  <IconButton
-                    size="small"
-                    onClick={onOpenCreateCheque}
-                    aria-label="ثبت چک جدید"
-                    sx={{
-                      p: 0.35,
-                      border: "1px solid var(--admin-border)",
-                      borderRadius: "6px",
-                      color: "var(--admin-accent)",
-                    }}
-                  >
-                    <AddIcon sx={{ fontSize: 16 }} />
-                  </IconButton>
-                )}
-              </Box>
+              <SaleChequePicker
+                dense
+                selectedIds={selectedChequeIds}
+                onChange={onSelectedChequeIdsChange}
+                options={matchingCheques}
+                loading={loadingAvailableCheques}
+                payableAmount={salePayableAmount}
+                onCreate={onOpenCreateCheque}
+                formatAmount={formatNumber}
+                fieldSx={fieldSx}
+              />
             )}
             <Typography sx={{ fontSize: fs(9), fontWeight: 700, color: "var(--admin-accent)" }}>
               مانده نسیه: {formatNumber(mixedDebtResidual)}
@@ -635,51 +614,21 @@ export default function AdminMenuModeCartPanel({
             </Typography>
             <Typography sx={{ fontSize: fs(8), color: "var(--admin-text-muted)" }}>
               فاکتور: {formatNumber(salePayableAmount)}
-              {selectedChequeId
-                ? ` · چک: ${formatNumber(selectedChequeAmount)} · باقی: ${formatNumber(chequeRemainder)}`
+              {selectedChequeIds.length > 0
+                ? ` · جمع چک: ${formatNumber(selectedChequeAmount)} · باقی: ${formatNumber(chequeRemainder)}`
                 : ""}
             </Typography>
-            <Box sx={{ display: "flex", gap: 0.35, alignItems: "center" }}>
-              <TextField
-                select
-                size="small"
-                value={selectedChequeId ?? ""}
-                onChange={(e) =>
-                  onSelectedChequeChange(e.target.value ? Number(e.target.value) : null)
-                }
-                SelectProps={{ native: true }}
-                disabled={loadingAvailableCheques}
-                sx={{ ...fieldSx, flex: 1 }}
-              >
-                <option value="">{loadingAvailableCheques ? "بارگذاری..." : "انتخاب چک"}</option>
-                {matchingCheques.map((cheque) => (
-                  <option key={cheque.id} value={cheque.id}>
-                    {[
-                      cheque.cheque_number ? `چک ${cheque.cheque_number}` : `#${cheque.id}`,
-                      cheque.bank_name,
-                      cheque.amount != null ? formatNumber(Number(cheque.amount)) : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" — ")}
-                  </option>
-                ))}
-              </TextField>
-              {onOpenCreateCheque && (
-                <IconButton
-                  size="small"
-                  onClick={onOpenCreateCheque}
-                  aria-label="ثبت چک جدید"
-                  sx={{
-                    p: 0.35,
-                    border: "1px solid var(--admin-border)",
-                    borderRadius: "6px",
-                    color: "var(--admin-accent)",
-                  }}
-                >
-                  <AddIcon sx={{ fontSize: 16 }} />
-                </IconButton>
-              )}
-            </Box>
+            <SaleChequePicker
+              dense
+              selectedIds={selectedChequeIds}
+              onChange={onSelectedChequeIdsChange}
+              options={matchingCheques}
+              loading={loadingAvailableCheques}
+              payableAmount={salePayableAmount}
+              onCreate={onOpenCreateCheque}
+              formatAmount={formatNumber}
+              fieldSx={fieldSx}
+            />
             {!loadingAvailableCheques && matchingCheques.length === 0 && (
               <Typography sx={{ fontSize: fs(8), color: "var(--admin-error-soft)", lineHeight: 1.3 }}>
                 چک مناسب نیست — با + ثبت کنید
@@ -831,6 +780,24 @@ export default function AdminMenuModeCartPanel({
           >
             {clearLabel || "انصراف"}
           </Button>
+          {proformaEnabled ? (
+            <Button
+              size="small"
+              variant="outlined"
+              disabled={!total || isSubmitting || savingProforma}
+              onClick={onSaveProforma}
+              sx={{
+                flex: 1,
+                minWidth: 0,
+                fontSize: fs(9),
+                py: 0.3,
+                borderColor: "var(--admin-accent)",
+                color: "var(--admin-accent)",
+              }}
+            >
+              {savingProforma ? "..." : "پیش فاکتور"}
+            </Button>
+          ) : null}
           <Button
             size="small"
             variant="contained"

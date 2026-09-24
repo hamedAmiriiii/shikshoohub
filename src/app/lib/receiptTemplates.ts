@@ -1,6 +1,13 @@
 import type { SaleReceiptData, SaleReceiptPrintSettings } from "@/app/lib/saleReceiptPrint";
 
-export const RECEIPT_TEMPLATE_IDS = ["classic", "retail", "minimal", "bold"] as const;
+export const RECEIPT_TEMPLATE_IDS = [
+  "classic",
+  "retail",
+  "minimal",
+  "bold",
+  "formal-a5",
+  "formal-a5-land",
+] as const;
 
 export type ReceiptTemplateId = (typeof RECEIPT_TEMPLATE_IDS)[number];
 
@@ -31,7 +38,25 @@ export const RECEIPT_TEMPLATES: ReceiptTemplateMeta[] = [
     title: "پررنگ",
     hint: "نوار مشکی عنوان و مبلغ بزرگ",
   },
+  {
+    id: "formal-a5",
+    title: "فاکتور رسمی a5 عمودی",
+    hint: "همان فاکتور رسمی سیستم — سایز پیش‌فرض A5 عمودی",
+  },
+  {
+    id: "formal-a5-land",
+    title: "فاکتور رسمی a5 عرضی",
+    hint: "همان فاکتور رسمی سیستم — سایز پیش‌فرض A5 عرضی",
+  },
 ];
+
+export function isFormalReceiptTemplate(value: unknown): value is "formal-a5" | "formal-a5-land" {
+  return value === "formal-a5" || value === "formal-a5-land";
+}
+
+export function formalReceiptOrientation(value: unknown): "portrait" | "landscape" {
+  return value === "formal-a5" ? "portrait" : "landscape";
+}
 
 export function normalizeReceiptTemplateId(value: unknown): ReceiptTemplateId {
   if (typeof value === "string" && (RECEIPT_TEMPLATE_IDS as readonly string[]).includes(value)) {

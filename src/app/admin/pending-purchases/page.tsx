@@ -41,6 +41,7 @@ import {
   syncOutboxItem,
   type OutboxItem,
 } from "@/app/lib/offline";
+import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
 
 const formatNumber = (num: number) => new Intl.NumberFormat("fa-IR").format(num);
 
@@ -120,7 +121,7 @@ export default function PendingPurchasesPage() {
       if (outcome === "success" || outcome === "duplicate") {
         toast.success("خرید ثبت شد");
       } else {
-        toast.error(item.lastError || "ثبت ناموفق بود");
+        toast.error(getApiErrorMessage({ message: item.lastError }, "ثبت ناموفق بود"));
       }
     } finally {
       setIsSyncing(false);
@@ -242,7 +243,7 @@ export default function PendingPurchasesPage() {
                         <Chip size="small" color={chip.color} label={chip.label} />
                         {item.lastError ? (
                           <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)", mt: 0.5 }}>
-                            {item.lastError}
+                            {getApiErrorMessage({ message: item.lastError }, item.lastError)}
                           </Typography>
                         ) : null}
                       </TableCell>

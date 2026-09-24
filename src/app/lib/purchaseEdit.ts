@@ -20,6 +20,7 @@ export type PurchaseEditApplyState = {
   installmentCount: number;
   useCreditAmount: number;
   selectedChequeId: number | null;
+  selectedChequeIds: number[];
   settlementMode: SettlementMode;
   cardAmountInput: string;
   cashAmountInput: string;
@@ -193,6 +194,19 @@ export function buildPurchaseEditPayload(purchase: any, catalog: any[] = []): Pu
   const discount = Number(purchase.discount_amount) || 0;
   const card = Number(purchase.card_amount) || 0;
   const cash = Number(purchase.cash_amount) || 0;
+  const rawCheques = Array.isArray(purchase.received_cheques)
+    ? purchase.received_cheques
+    : Array.isArray(purchase.cheques)
+      ? purchase.cheques
+      : purchase.cheque
+        ? [purchase.cheque]
+        : [];
+  const selectedChequeIds = rawCheques
+    .map((cheque: { id?: number }) => Number(cheque?.id))
+    .filter((id: number) => Number.isFinite(id) && id > 0);
+  if (selectedChequeIds.length === 0 && Number(purchase.cheque_id) > 0) {
+    selectedChequeIds.push(Number(purchase.cheque_id));
+  }
 
   return {
     ok: true,
@@ -205,7 +219,8 @@ export function buildPurchaseEditPayload(purchase: any, catalog: any[] = []): Pu
       paymentType: (purchase.payment_type || "cash") as PaymentType,
       installmentCount: Number(purchase.installment_count) || 2,
       useCreditAmount: Number(purchase.credit_used) > 0 ? Number(purchase.credit_used) : 0,
-      selectedChequeId: purchase.cheque_id || purchase.cheque?.id || null,
+      selectedChequeId: selectedChequeIds[0] ?? null,
+      selectedChequeIds,
       settlementMode: (card > 0 && cash > 0 ? "split" : cash > 0 ? "cash_all" : "card_all") as SettlementMode,
       cardAmountInput: moneyField(card),
       cashAmountInput: moneyField(cash),

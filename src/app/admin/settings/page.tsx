@@ -30,6 +30,7 @@ import PriceChangeIcon from "@mui/icons-material/PriceChange";
 import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
 import ImageOutlinedIcon from "@mui/icons-material/ImageOutlined";
 import SortIcon from "@mui/icons-material/Sort";
+import QrCode2Icon from "@mui/icons-material/QrCode2";
 import CloudDownloadIcon from "@mui/icons-material/CloudDownload";
 import TuneIcon from "@mui/icons-material/Tune";
 import { ToastContainer, toast } from "react-toastify";
@@ -281,6 +282,9 @@ export default function SettingsPage() {
   const [askCustomerName, setAskCustomerName] = useState(false);
   const [showDailyTicketNumber, setShowDailyTicketNumber] = useState(false);
   const [productDisplayOrderEnabled, setProductDisplayOrderEnabled] = useState(false);
+  const [sequentialProductBarcodeEnabled, setSequentialProductBarcodeEnabled] = useState(false);
+  const [proformaEnabled, setProformaEnabled] = useState(false);
+  const [invoiceProductEntryEnabled, setInvoiceProductEntryEnabled] = useState(false);
   const [restaurantCafeEnabled, setRestaurantCafeEnabled] = useState(false);
   const [menuTableOrdersPopupEnabled, setMenuTableOrdersPopupEnabled] = useState(false);
   const [receiptPrintSettings, setReceiptPrintSettings] = useState<SaleReceiptPrintSettings>(
@@ -314,6 +318,9 @@ export default function SettingsPage() {
       setAskCustomerName(settings.askCustomerName);
       setShowDailyTicketNumber(Boolean(settings.showDailyTicketNumber));
       setProductDisplayOrderEnabled(Boolean(settings.productDisplayOrderEnabled));
+      setSequentialProductBarcodeEnabled(Boolean(settings.sequentialProductBarcodeEnabled));
+      setProformaEnabled(Boolean(settings.proformaEnabled));
+      setInvoiceProductEntryEnabled(Boolean(settings.invoiceProductEntryEnabled));
       setRestaurantCafeEnabled(readShopFeatures().restaurant_cafe_enabled);
       setMenuTableOrdersPopupEnabled(settings.menuTableOrdersPopupEnabled);
     };
@@ -391,8 +398,8 @@ export default function SettingsPage() {
     writeAdminPosSettings({ classicPosMode: enabled });
     toast.success(
       enabled
-        ? "تم کلاسیک فاکتور فعال شد — با حالت منو هم قابل ترکیب است"
-        : "تم کلاسیک فاکتور غیرفعال شد",
+        ? "تم کلاسیک  فعال شد — با حالت منو هم قابل ترکیب است"
+        : "تم کلاسیک  غیرفعال شد",
     );
   };
 
@@ -426,6 +433,39 @@ export default function SettingsPage() {
       enabled
         ? "فروش کیلویی و متری فعال شد — هنگام ثبت کالا می‌توانید واحد کیلو یا متر انتخاب کنید"
         : "فروش کیلویی و متری غیرفعال شد",
+    );
+  };
+
+  const handleToggleProforma = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setProformaEnabled(enabled);
+    writeAdminPosSettings({ proformaEnabled: enabled });
+    toast.success(
+      enabled
+        ? "پیش‌فاکتور فعال شد — کنار ثبت فروش می‌توانید سبد را بدون خرید ذخیره کنید"
+        : "پیش‌فاکتور غیرفعال شد",
+    );
+  };
+
+  const handleToggleInvoiceProductEntry = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setInvoiceProductEntryEnabled(enabled);
+    writeAdminPosSettings({ invoiceProductEntryEnabled: enabled });
+    toast.success(
+      enabled
+        ? "ورود کالا از فاکتور فعال شد — در جزئیات فاکتور می‌توانید کالا را همان‌جا ثبت کنید"
+        : "ورود کالا از فاکتور غیرفعال شد",
+    );
+  };
+
+  const handleToggleSequentialBarcode = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setSequentialProductBarcodeEnabled(enabled);
+    writeAdminPosSettings({ sequentialProductBarcodeEnabled: enabled });
+    toast.success(
+      enabled
+        ? "بارکد پشت‌سرهم فعال شد — بعد از ثبت کالا، بارکد بعدی روی همین دستگاه پر می‌شود"
+        : "بارکد پشت‌سرهم غیرفعال شد",
     );
   };
 
@@ -838,7 +878,7 @@ export default function SettingsPage() {
           />
           <SettingsToggleRow
             icon={<PointOfSaleIcon sx={{ fontSize: 18 }} />}
-            title="تم کلاسیک فاکتور"
+            title="تم کلاسیک "
             hint="ظاهر فاکتور سنتی — با حالت منو هم کار می‌کند"
             checked={classicPosMode}
             onChange={handleToggleClassicPosMode}
@@ -870,6 +910,27 @@ export default function SettingsPage() {
             hint="واحد کیلو یا متر و مقدار اعشاری"
             checked={kgSalesEnabled}
             onChange={handleToggleKgSales}
+          />
+          <SettingsToggleRow
+            icon={<ReceiptLongIcon sx={{ fontSize: 18 }} />}
+            title="پیش فاکتور"
+            hint="کنار ثبت فروش، سبد بدون کم شدن موجودی ذخیره می‌شود"
+            checked={proformaEnabled}
+            onChange={handleToggleProforma}
+          />
+          <SettingsToggleRow
+            icon={<Inventory2Icon sx={{ fontSize: 18 }} />}
+            title="ورود کالا از فاکتور"
+            hint="در جزئیات فاکتور، بارکد و قیمت خرید را وارد کنید و کالا را همان‌جا ثبت کنید"
+            checked={invoiceProductEntryEnabled}
+            onChange={handleToggleInvoiceProductEntry}
+          />
+          <SettingsToggleRow
+            icon={<QrCode2Icon sx={{ fontSize: 18 }} />}
+            title="بارکد پشت سر هم کالا"
+            hint="بعد از ثبت، بارکد بعدی روی همین دستگاه خودکار پر می‌شود"
+            checked={sequentialProductBarcodeEnabled}
+            onChange={handleToggleSequentialBarcode}
           />
           <SettingsToggleRow
             icon={<SortIcon sx={{ fontSize: 18 }} />}

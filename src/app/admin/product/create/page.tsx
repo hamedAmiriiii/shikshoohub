@@ -45,7 +45,12 @@ import TextInput from "@/app/coponent/TextInput/TextInput";
 import { useRouter } from "next/navigation";
 import 'react-toastify/dist/ReactToastify.css';
 import { appendProductLabelPrintParams } from "@/app/lib/productLabelPrint";
-import { readAdminPosSettings } from "@/app/lib/adminPosSettings";
+import {
+  nextSequentialBarcode,
+  readAdminPosSettings,
+  readLastSequentialBarcode,
+  writeLastSequentialBarcode,
+} from "@/app/lib/adminPosSettings";
 import { isMeasuredProduct, type ProductUnitType } from "@/app/lib/productUnits";
 import { ToggleButton, ToggleButtonGroup, FormControl, FormLabel } from "@mui/material";
 
@@ -141,6 +146,10 @@ export default function Page() {
     setKgSalesEnabled(settings.kgSalesEnabled);
     setProductDisplayOrderEnabled(Boolean(settings.productDisplayOrderEnabled));
     setProfitPercentage(String(readStoredProfitPercent()));
+    if (settings.sequentialProductBarcodeEnabled) {
+      const next = nextSequentialBarcode(readLastSequentialBarcode());
+      if (next) setBarcode(next);
+    }
   }, []);
 
   const applyScannedBarcode = useCallback((code: string) => {
@@ -459,7 +468,11 @@ export default function Page() {
   };
 
   const resetForm = () => {
-    setBarcode("");
+    const settings = readAdminPosSettings();
+    const next = settings.sequentialProductBarcodeEnabled
+      ? nextSequentialBarcode(readLastSequentialBarcode())
+      : null;
+    setBarcode(next || "");
     setPale_price("");
     setPurchase_price("");
     setQuantity("");
@@ -593,6 +606,9 @@ export default function Page() {
           trimmedBarcode ||
           (productId != null ? String(productId) : "");
         const productName = payload?.name ?? full_name;
+        if (readAdminPosSettings().sequentialProductBarcodeEnabled && productBarcode) {
+          writeLastSequentialBarcode(String(productBarcode));
+        }
 
         setCreatedProduct({
           id: productId,

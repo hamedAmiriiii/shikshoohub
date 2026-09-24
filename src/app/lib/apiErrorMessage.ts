@@ -25,6 +25,13 @@ function translateKnownValidation(message: string): string {
   if (lower.includes("unauthenticated") || lower.includes("unauthorized")) {
     return "نشست شما منقضی شده است. دوباره وارد شوید.";
   }
+  if (
+    lower.includes("does not exist") ||
+    lower.includes("badmethodcallexception") ||
+    lower.includes("cannot redeclare")
+  ) {
+    return "ثبت فروش به‌خاطر خطای موقت سرور انجام نشد. دوباره ارسال کنید.";
+  }
 
   return raw;
 }

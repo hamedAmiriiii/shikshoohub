@@ -85,6 +85,7 @@ import SaleProductListPanel from '@/app/admin/SaleProductListPanel';
 import AdminTypedSaleListView from '@/app/admin/AdminTypedSaleListView';
 import AdminMenuModeView from '@/app/admin/AdminMenuModeView';
 import AdminClassicPosView from '@/app/admin/AdminClassicPosView';
+import SaleChequePicker from '@/app/admin/SaleChequePicker';
 import type { AdminMenuModeCartPanelProps } from '@/app/admin/AdminMenuModeCartPanel';
 import { ADMIN_SIDEBAR_WIDTH } from '@/app/admin/AdminHamburgerSidebar';
 import CartQuantityControl from '@/app/admin/CartQuantityControl';
@@ -101,6 +102,13 @@ import {
   silentPrintSaleReceiptOrFail,
 } from '@/app/lib/saleReceiptPrint';
 import { dailyTicketFromRecord, formatDailyTicketNumber } from '@/app/lib/dailyTicketNumber';
+import {
+  consumeProformaCartLoad,
+  printProformaReceipt,
+  proformaItemsToCart,
+  proformaToSaleReceipt,
+  type ProformaCartLoad,
+} from '@/app/lib/proformaCart';
 import {
   adminFieldSx,
   adminCartTableContainerSx,
@@ -187,9 +195,17 @@ export default function ShoppingPage() {
   const [cartCount, setCartCount] = useState(1);
   const [activeCartIndex, setActiveCartIndex] = useState(0);
   const cartSlotsRef = useRef<CartSlotSnapshot[]>([createEmptyCartSlot()]);
+  const pendingProformaIdRef = useRef<number | null>(null);
+  const proformaCartEnrichedRef = useRef(false);
+  const [proformaSavedOpen, setProformaSavedOpen] = useState(false);
+  const [proformaPrintReceipt, setProformaPrintReceipt] = useState<SaleReceiptData | null>(null);
+  const [proformaPrintLabel, setProformaPrintLabel] = useState("");
 
   useEffect(() => {
     publishAdminSaleCartSnapshot(cart);
+    if (!Array.isArray(cart) || cart.length === 0) {
+      pendingProformaIdRef.current = null;
+    }
   }, [cart]);
   const [scannedCode, setScannedCode] = useState('');
   const [torchOn, setTorchOn] = useState(false);
@@ -234,7 +250,9 @@ export default function ShoppingPage() {
   const [installmentPaymentEnabled, setInstallmentPaymentEnabled] = useState(true);
   const [debtPaymentEnabled, setDebtPaymentEnabled] = useState(false);
   const [chequePaymentEnabled, setChequePaymentEnabled] = useState(false);
-  const [selectedChequeId, setSelectedChequeId] = useState<number | null>(null);
+  const [proformaEnabled, setProformaEnabled] = useState(false);
+  const [savingProforma, setSavingProforma] = useState(false);
+  const [selectedChequeIds, setSelectedChequeIds] = useState<number[]>([]);
   const [availableCheques, setAvailableCheques] = useState<Cheque[]>([]);
   const [loadingAvailableCheques, setLoadingAvailableCheques] = useState(false);
   const [chequeCreateOpen, setChequeCreateOpen] = useState(false);
@@ -313,14 +331,17 @@ export default function ShoppingPage() {
     [availableCheques, salePayableAmount],
   );
 
-  const selectedCheque = useMemo(
-    () => matchingCheques.find((c) => c.id === selectedChequeId) ?? null,
-    [matchingCheques, selectedChequeId],
+  const selectedChequeId = selectedChequeIds[0] ?? null;
+  const selectedCheques = useMemo(
+    () =>
+      selectedChequeIds
+        .map((id) => availableCheques.find((cheque) => cheque.id === id) ?? matchingCheques.find((cheque) => cheque.id === id))
+        .filter((cheque): cheque is NonNullable<typeof cheque> => !!cheque),
+    [availableCheques, matchingCheques, selectedChequeIds],
   );
-
-  const selectedChequeAmount = selectedCheque ? parseAmount(selectedCheque.amount) : 0;
-  const mixedChequeAmount =
-    paymentType === "mixed" && selectedCheque ? selectedChequeAmount : 0;
+  const selectedCheque = selectedCheques[0] ?? null;
+  const selectedChequeAmount = selectedCheques.reduce((sum, cheque) => sum + parseAmount(cheque.amount), 0);
+  const mixedChequeAmount = paymentType === "mixed" ? selectedChequeAmount : 0;
   const mixedDebtResidual = useMemo(() => {
     if (paymentType !== "mixed") return 0;
     const cash = parseAmountInput(cashAmountInput);
@@ -445,6 +466,7 @@ export default function ShoppingPage() {
     cashAmountInput,
     paymentSplitError,
     selectedChequeId,
+    selectedChequeIds,
   }), [
     cart,
     total,
@@ -464,6 +486,7 @@ export default function ShoppingPage() {
     cashAmountInput,
     paymentSplitError,
     selectedChequeId,
+    selectedChequeIds,
   ]);
 
   const applyCartSlot = useCallback((slot: CartSlotSnapshot) => {
@@ -492,9 +515,64 @@ export default function ShoppingPage() {
     setCardAmountInput(formatAmountInput(slot.cardAmountInput ?? ""));
     setCashAmountInput(formatAmountInput(slot.cashAmountInput ?? ""));
     setPaymentSplitError(slot.paymentSplitError ?? "");
-    setSelectedChequeId(slot.selectedChequeId ?? null);
+    setSelectedChequeIds(
+      slot.selectedChequeIds?.length
+        ? slot.selectedChequeIds
+        : slot.selectedChequeId
+          ? [slot.selectedChequeId]
+          : [],
+    );
     setIsDiscountFocused(false);
   }, []);
+
+  useEffect(() => {
+    const payload = consumeProformaCartLoad();
+    if (!payload) return;
+    const cartItems = proformaItemsToCart(payload.items);
+    if (!cartItems.length) return;
+    const nextTotal = cartItems.reduce(
+      (sum, item) => sum + Number(item.sale_price) * Number(item.quantity),
+      0,
+    );
+    const discount = Math.max(0, Number(payload.discount_amount) || 0);
+    const slot: CartSlotSnapshot = {
+      ...createEmptyCartSlot(),
+      cart: cartItems,
+      total: nextTotal,
+      phone: payload.phone || "",
+      discounttype: discount,
+      discountDisplay: discount > 0 ? formatAmountInput(String(Math.round(discount))) : "",
+    };
+    cartSlotsRef.current = [slot];
+    setCartCount(1);
+    setActiveCartIndex(0);
+    applyCartSlot(slot);
+    pendingProformaIdRef.current = payload.id;
+    proformaCartEnrichedRef.current = false;
+    toast.info("اقلام پیش‌فاکتور در سبد است. پرداخت و ثبت فروش را از همین‌جا انجام دهید");
+  }, [applyCartSlot]);
+
+  useEffect(() => {
+    if (proformaCartEnrichedRef.current || pendingProformaIdRef.current == null) return;
+    if (!Array.isArray(items) || items.length === 0) return;
+    proformaCartEnrichedRef.current = true;
+    setCart((prevCart: any[]) =>
+      prevCart.map((item) => {
+        const match = items.find((product: any) => catalogItemKey(product) === catalogItemKey(item));
+        if (!match) return item;
+        return {
+          ...match,
+          ...item,
+          name: item.name || match.name,
+          quantity: item.quantity,
+          sale_price: item.sale_price,
+          default_sale_price: parseMoneyAmount(match.sale_price),
+          purchase_price: match.purchase_price ?? item.purchase_price,
+          unit_type: match.unit_type || item.unit_type || "piece",
+        };
+      }),
+    );
+  }, [items]);
 
   const switchCart = useCallback(
     (index: number) => {
@@ -1045,6 +1123,7 @@ export default function ShoppingPage() {
       setInstallmentPaymentEnabled(settings.installmentPaymentEnabled);
       setDebtPaymentEnabled(settings.debtPaymentEnabled);
       setChequePaymentEnabled(settings.chequePaymentEnabled);
+      setProformaEnabled(Boolean(settings.proformaEnabled));
       setKgSalesEnabled(settings.kgSalesEnabled);
       setSalePriceEditEnabled(settings.salePriceEditEnabled);
       setSaleDateEditEnabled(Boolean(settings.saleDateEditEnabled));
@@ -1074,10 +1153,10 @@ export default function ShoppingPage() {
   useEffect(() => {
     if (!chequePaymentEnabled && paymentType === "cheque") {
       setPaymentType("cash");
-      setSelectedChequeId(null);
+      setSelectedChequeIds([]);
     }
     if (!chequePaymentEnabled && paymentType === "mixed") {
-      setSelectedChequeId(null);
+      setSelectedChequeIds([]);
     }
   }, [chequePaymentEnabled, paymentType]);
 
@@ -1088,13 +1167,12 @@ export default function ShoppingPage() {
     ) {
       return;
     }
-    if (
-      selectedChequeId &&
-      !matchingCheques.some((cheque) => cheque.id === selectedChequeId)
-    ) {
-      setSelectedChequeId(null);
-    }
-  }, [paymentType, chequePaymentEnabled, matchingCheques, selectedChequeId]);
+    if (loadingAvailableCheques) return;
+    setSelectedChequeIds((prev) => {
+      const next = prev.filter((id) => matchingCheques.some((cheque) => cheque.id === id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [paymentType, chequePaymentEnabled, matchingCheques, loadingAvailableCheques]);
 
   const loadAvailableCheques = useCallback(async () => {
     setLoadingAvailableCheques(true);
@@ -1386,6 +1464,11 @@ export default function ShoppingPage() {
       setLastSaleReceipt(receipt);
       setSkipPrintPreview(false);
       setSaleSuccessOpen(true);
+      const linkedProformaId = pendingProformaIdRef.current;
+      pendingProformaIdRef.current = null;
+      if (linkedProformaId) {
+        void FetchWithJwtClient("DELETE", `/api/proforma-invoices/${linkedProformaId}`);
+      }
       toast.success(successMessage);
       notifySmsQuotaIfExhausted(res);
       resetCartAfterSale();
@@ -1574,7 +1657,7 @@ export default function ShoppingPage() {
         setIsSubmitting(false);
         return;
       }
-      if (!selectedChequeId || !selectedCheque) {
+      if (selectedChequeIds.length === 0 || selectedCheques.length !== selectedChequeIds.length) {
         toast.error("چک دریافتی را انتخاب کنید");
         setIsSubmitting(false);
         return;
@@ -1648,7 +1731,8 @@ export default function ShoppingPage() {
       // installment_amount در response برمی‌گردد و نیازی به ارسال نیست
     }
     if (paymentType === 'cheque') {
-      loadData.cheque_id = selectedChequeId;
+      loadData.cheque_ids = selectedChequeIds;
+      loadData.cheque_id = selectedChequeIds[0];
       let cash = 0;
       let card = 0;
       if (chequeRemainder > 0) {
@@ -1685,8 +1769,9 @@ export default function ShoppingPage() {
       const card = parseAmountInput(cardAmountInput);
       loadData.cash_amount = cash;
       loadData.card_amount = card;
-      if (selectedChequeId) {
-        loadData.cheque_id = selectedChequeId;
+      if (selectedChequeIds.length > 0) {
+        loadData.cheque_ids = selectedChequeIds;
+        loadData.cheque_id = selectedChequeIds[0];
       }
       setPaymentSplitError("");
     }
@@ -1828,7 +1913,7 @@ export default function ShoppingPage() {
         "warn",
       );
     });
-  }, [cart, phone, useCreditAmount, effectiveOnline, discounttype, total, formatNumber, paymentType, installmentCount, payableNow, paymentFieldsValid, settlementMode, appendPaymentSettlement, resetPaymentSettlement, installmentCalculation, calculatingInstallments, installmentCreditError, finalizeSuccessfulSale, queueCurrentPurchase, withTimeout, selectedChequeId, selectedCheque, selectedChequeAmount, chequeRemainder, salePayableAmount, loadingAvailableCheques, buildPurchaseProductLine, parseAmountInput, cardAmountInput, cashAmountInput, editingPurchaseId, editReuseCredit, saleDateEditEnabled, saleDate, mixedDebtResidual]);
+  }, [cart, phone, useCreditAmount, effectiveOnline, discounttype, total, formatNumber, paymentType, installmentCount, payableNow, paymentFieldsValid, settlementMode, appendPaymentSettlement, resetPaymentSettlement, installmentCalculation, calculatingInstallments, installmentCreditError, finalizeSuccessfulSale, queueCurrentPurchase, withTimeout, selectedChequeId, selectedChequeIds, selectedCheques, selectedCheque, selectedChequeAmount, chequeRemainder, salePayableAmount, loadingAvailableCheques, buildPurchaseProductLine, parseAmountInput, cardAmountInput, cashAmountInput, editingPurchaseId, editReuseCredit, saleDateEditEnabled, saleDate, mixedDebtResidual]);
 
   // بررسی اعتبارسنجی تخفیف هنگام تغییر total
   useEffect(() => {
@@ -2031,7 +2116,12 @@ export default function ShoppingPage() {
         paymentType: state.paymentType,
         installmentCount: state.installmentCount,
         useCreditAmount: state.useCreditAmount,
-        selectedChequeId: state.selectedChequeId,
+        selectedChequeId: state.selectedChequeIds?.[0] ?? state.selectedChequeId,
+        selectedChequeIds: state.selectedChequeIds?.length
+          ? state.selectedChequeIds
+          : state.selectedChequeId
+            ? [state.selectedChequeId]
+            : [],
         settlementMode: state.settlementMode,
         cardAmountInput: state.cardAmountInput,
         cashAmountInput: state.cashAmountInput,
@@ -2324,24 +2414,24 @@ export default function ShoppingPage() {
       setInstallmentCalculation(null);
       installmentCalculationRef.current = null;
       setInstallmentCreditError("");
-      setSelectedChequeId(null);
+      setSelectedChequeIds([]);
     } else if (next === "installment") {
       setDiscounttype(0);
       setDiscountDisplay("");
       setDiscountPercentDisplay("");
       setDiscountError("");
-      setSelectedChequeId(null);
+      setSelectedChequeIds([]);
     } else if (next === "cheque") {
-      setSelectedChequeId(null);
+      setSelectedChequeIds([]);
       setSettlementMode("cash_all");
       setPaymentSplitError("");
     } else if (next === "mixed") {
-      setSelectedChequeId(null);
+      setSelectedChequeIds([]);
       setCardAmountInput("");
       setCashAmountInput("");
       setPaymentSplitError("");
     } else if (next === "debt") {
-      setSelectedChequeId(null);
+      setSelectedChequeIds([]);
     }
   }, []);
 
@@ -2357,6 +2447,58 @@ export default function ShoppingPage() {
     [settlementTarget],
   );
 
+  const saveProforma = useCallback(() => {
+    if (!cart.length || savingProforma) return;
+    const items = cart.map((item: any) => {
+      const line: Record<string, unknown> = {
+        name: String(item.name || "کالا"),
+        quantity: item.quantity,
+        sale_price: Number(item.sale_price) || 0,
+        purchase_price: Number(item.purchase_price) || 0,
+      };
+      if (isProducedGoodItem(item)) {
+        line.produced_good_id = Number(item.produced_good_id ?? item.id);
+      } else if (isRawMaterialItem(item)) {
+        line.raw_material_id = Number(item.raw_material_id ?? item.id);
+      } else {
+        line.product_id = Number(item.id);
+      }
+      if (item.size) line.size = item.size;
+      if (item.color) line.color = item.color;
+      return line;
+    });
+    setSavingProforma(true);
+    void FetchWithJwtClient("POST", "/api/proforma-invoices", {
+      phone: phone ? normalizeIranMobile(phone) : undefined,
+      discount_amount: discounttype > 0 ? discounttype : 0,
+      items,
+    }).then((res) => {
+      setSavingProforma(false);
+      if (!res || res.hasError) {
+        toast.error(getApiErrorMessage(res, "ثبت پیش‌فاکتور انجام نشد"));
+        return;
+      }
+      const created = (res?.data && !Array.isArray(res.data) ? res.data : res) as ProformaCartLoad;
+      const savedId = Number(created?.id) || 0;
+      const receipt = proformaToSaleReceipt(
+        {
+          id: savedId,
+          phone: phone ? normalizeIranMobile(phone) : undefined,
+          discount_amount: discounttype > 0 ? discounttype : 0,
+          created_at: created?.created_at || new Date().toISOString(),
+          items: items as ProformaCartLoad["items"],
+        },
+        getShopNameFromUser(),
+      );
+      setProformaPrintReceipt(receipt);
+      setProformaPrintLabel(savedId ? `شماره پیش‌فاکتور: ${savedId}` : "");
+      setProformaSavedOpen(true);
+      clearOrRemoveActiveCart();
+    }).catch(() => {
+      setSavingProforma(false);
+      toast.error("ثبت پیش‌فاکتور انجام نشد");
+    });
+  }, [cart, savingProforma, phone, discounttype, clearOrRemoveActiveCart, getShopNameFromUser]);
 
   const posCartPanel = useMemo((): AdminMenuModeCartPanelProps => ({
     cart,
@@ -2427,6 +2569,9 @@ export default function ShoppingPage() {
     paymentFieldsValid,
     isSubmitting,
     onConfirm: confirm,
+    proformaEnabled,
+    savingProforma,
+    onSaveProforma: saveProforma,
     calculatingInstallments,
     installmentCreditError,
     installmentCalculation,
@@ -2434,7 +2579,8 @@ export default function ShoppingPage() {
     debtPaymentEnabled,
     chequePaymentEnabled,
     selectedChequeId,
-    onSelectedChequeChange: setSelectedChequeId,
+    selectedChequeIds,
+    onSelectedChequeIdsChange: setSelectedChequeIds,
     matchingCheques,
     loadingAvailableCheques,
     salePayableAmount,
@@ -2490,6 +2636,9 @@ export default function ShoppingPage() {
     paymentFieldsValid,
     isSubmitting,
     confirm,
+    proformaEnabled,
+    savingProforma,
+    saveProforma,
     calculatingInstallments,
     installmentCreditError,
     installmentCalculation,
@@ -2497,6 +2646,7 @@ export default function ShoppingPage() {
     debtPaymentEnabled,
     chequePaymentEnabled,
     selectedChequeId,
+    selectedChequeIds,
     matchingCheques,
     loadingAvailableCheques,
     salePayableAmount,
@@ -3557,46 +3707,18 @@ export default function ShoppingPage() {
                         {chequePaymentEnabled && (
                           <Box sx={{ mt: 1.5 }}>
                             <Typography sx={{ color: "var(--admin-text)", fontSize: { xs: "11px", md: "13px" }, fontWeight: 600, mb: 0.75 }}>
-                              چک (اختیاری)
+                              چک‌ها (اختیاری)
                             </Typography>
-                            <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-                              <FormControl fullWidth size="small" sx={posFieldSx} disabled={loadingAvailableCheques}>
-                                <InputLabel sx={{ color: "var(--admin-text-muted)" }}>انتخاب چک</InputLabel>
-                                <Select
-                                  value={selectedChequeId ?? ""}
-                                  label="انتخاب چک"
-                                  onChange={(e) =>
-                                    setSelectedChequeId(e.target.value ? Number(e.target.value) : null)
-                                  }
-                                  sx={{
-                                    color: "var(--admin-text)",
-                                    "& .MuiOutlinedInput-notchedOutline": { borderColor: "var(--admin-border)" },
-                                  }}
-                                >
-                                  <MenuItem value="">
-                                    <em>بدون چک</em>
-                                  </MenuItem>
-                                  {matchingCheques.map((cheque) => (
-                                    <MenuItem key={cheque.id} value={cheque.id}>
-                                      {formatChequeOptionLabel(cheque)}
-                                    </MenuItem>
-                                  ))}
-                                </Select>
-                              </FormControl>
-                              <IconButton
-                                onClick={() => setChequeCreateOpen(true)}
-                                aria-label="ثبت چک جدید"
-                                sx={{
-                                  bgcolor: "var(--admin-icon-bg)",
-                                  border: "1px solid var(--admin-border)",
-                                  borderRadius: "10px",
-                                  color: "var(--admin-accent)",
-                                  flexShrink: 0,
-                                }}
-                              >
-                                <AddIcon />
-                              </IconButton>
-                            </Box>
+                            <SaleChequePicker
+                              selectedIds={selectedChequeIds}
+                              onChange={setSelectedChequeIds}
+                              options={matchingCheques}
+                              loading={loadingAvailableCheques}
+                              payableAmount={salePayableAmount}
+                              onCreate={() => setChequeCreateOpen(true)}
+                              formatAmount={formatNumber}
+                              fieldSx={posFieldSx}
+                            />
                           </Box>
                         )}
                         <Typography sx={{ color: "var(--admin-accent)", fontSize: { xs: "11px", md: "13px" }, fontWeight: 600, mt: 1.5 }}>
@@ -3635,48 +3757,20 @@ export default function ShoppingPage() {
                         </Typography>
                         <Typography sx={{ color: "var(--admin-text-muted)", fontSize: { xs: "11px", md: "13px" }, mb: 1 }}>
                           مبلغ فاکتور: {formatNumber(salePayableAmount)} تومان
-                          {selectedChequeId
-                            ? ` — چک: ${formatNumber(selectedChequeAmount)} — باقی‌مانده: ${formatNumber(chequeRemainder)}`
+                          {selectedChequeIds.length > 0
+                            ? ` — جمع چک: ${formatNumber(selectedChequeAmount)} — باقی‌مانده: ${formatNumber(chequeRemainder)}`
                             : ""}
                         </Typography>
-                        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-                          <FormControl fullWidth size="small" sx={posFieldSx} disabled={loadingAvailableCheques}>
-                            <InputLabel sx={{ color: "var(--admin-text-muted)" }}>انتخاب چک</InputLabel>
-                            <Select
-                              value={selectedChequeId ?? ""}
-                              label="انتخاب چک"
-                              onChange={(e) =>
-                                setSelectedChequeId(e.target.value ? Number(e.target.value) : null)
-                              }
-                              sx={{
-                                color: "var(--admin-text)",
-                                "& .MuiOutlinedInput-notchedOutline": { borderColor: "var(--admin-border)" },
-                              }}
-                            >
-                              <MenuItem value="">
-                                <em>{loadingAvailableCheques ? "بارگذاری..." : "انتخاب چک"}</em>
-                              </MenuItem>
-                              {matchingCheques.map((cheque) => (
-                                <MenuItem key={cheque.id} value={cheque.id}>
-                                  {formatChequeOptionLabel(cheque)}
-                                </MenuItem>
-                              ))}
-                            </Select>
-                          </FormControl>
-                          <IconButton
-                            onClick={() => setChequeCreateOpen(true)}
-                            aria-label="ثبت چک جدید"
-                            sx={{
-                              bgcolor: "var(--admin-icon-bg)",
-                              border: "1px solid var(--admin-border)",
-                              borderRadius: "10px",
-                              color: "var(--admin-accent)",
-                              flexShrink: 0,
-                            }}
-                          >
-                            <AddIcon />
-                          </IconButton>
-                        </Box>
+                        <SaleChequePicker
+                          selectedIds={selectedChequeIds}
+                          onChange={setSelectedChequeIds}
+                          options={matchingCheques}
+                          loading={loadingAvailableCheques}
+                          payableAmount={salePayableAmount}
+                          onCreate={() => setChequeCreateOpen(true)}
+                          formatAmount={formatNumber}
+                          fieldSx={posFieldSx}
+                        />
                         {!loadingAvailableCheques && matchingCheques.length === 0 && (
                           <Typography sx={{ color: "var(--admin-warning)", fontSize: { xs: "11px", md: "12px" }, mt: 1 }}>
                             چک مناسبی نیست — با + چک جدید ثبت کنید
@@ -4093,6 +4187,25 @@ export default function ShoppingPage() {
                   </CardContent>
                 </Card>
 
+                <Box sx={{ display: "flex", gap: 1, mb: { xs: "16px", md: "8px" } }}>
+                {proformaEnabled ? (
+                  <Button
+                    type="button"
+                    variant="outlined"
+                    disabled={!total || isSubmitting || savingProforma}
+                    onClick={saveProforma}
+                    sx={{
+                      flex: 1,
+                      height: { xs: "42px", md: "48px" },
+                      borderRadius: { xs: "12px", md: "14px" },
+                      borderColor: "var(--admin-accent)",
+                      color: "var(--admin-accent)",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {savingProforma ? "..." : "پیش فاکتور"}
+                  </Button>
+                ) : null}
                 <Button
                   type="button"
                   disabled={
@@ -4130,10 +4243,10 @@ export default function ShoppingPage() {
                     )
                   }
                   sx={{
+                    flex: 1.4,
                     color: "var(--admin-on-accent)",
                     height: { xs: "42px", md: "48px" },
                     borderRadius: { xs: "12px", md: "14px" },
-                    marginBottom: { xs: "16px", md: "8px" },
                     background: total && !isSubmitting 
                       ? "linear-gradient(135deg, var(--admin-accent) 0%, var(--admin-accent-hover) 100%)" 
                       : "rgba(120, 181, 104, 0.2)",
@@ -4156,6 +4269,7 @@ export default function ShoppingPage() {
                 >
                   {isSubmitting ? "در حال ثبت..." : editingPurchaseId ? "جایگزینی فاکتور" : "ثبت خرید"}
                 </Button>
+                </Box>
               </Box>
             </Grid>
           )}
@@ -4354,6 +4468,70 @@ export default function ShoppingPage() {
       </Modal>
 
       <Modal
+        open={proformaSavedOpen}
+        onClose={() => setProformaSavedOpen(false)}
+        aria-labelledby="proforma-saved-modal"
+      >
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: { xs: "92%", sm: 420 },
+            bgcolor: "var(--admin-surface)",
+            borderRadius: "16px",
+            boxShadow: 24,
+            p: 3,
+            textAlign: "center",
+            direction: "rtl",
+            border: "1px solid var(--admin-menu-hover)",
+          }}
+        >
+          <CheckCircleIcon sx={{ fontSize: 56, color: "var(--admin-success)", mb: 1.5 }} />
+          <Typography id="proforma-saved-modal" sx={{ fontWeight: 700, fontSize: "18px", color: "var(--admin-text)", mb: 1 }}>
+            پیش‌فاکتور ثبت شد
+          </Typography>
+          {proformaPrintLabel ? (
+            <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "14px", mb: 2 }}>
+              {proformaPrintLabel}
+            </Typography>
+          ) : null}
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, mt: 2 }}>
+            <Button
+              variant="contained"
+              startIcon={<PrintIcon />}
+              onClick={() => {
+                if (!proformaPrintReceipt) return;
+                const result = printProformaReceipt(proformaPrintReceipt);
+                if (!result.ok) toast.warn(result.message);
+              }}
+              sx={{
+                bgcolor: "var(--admin-accent)",
+                "&:hover": { bgcolor: "var(--admin-accent-hover)" },
+                borderRadius: "12px",
+                py: 1.2,
+              }}
+            >
+              چاپ پیش‌فاکتور
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => setProformaSavedOpen(false)}
+              sx={{
+                borderColor: "var(--admin-menu-hover)",
+                color: "var(--admin-text)",
+                borderRadius: "12px",
+                py: 1.2,
+              }}
+            >
+              ادامه فروش
+            </Button>
+          </Box>
+        </Box>
+      </Modal>
+
+      <Modal
         open={saleSuccessOpen}
         onClose={() => setSaleSuccessOpen(false)}
         aria-labelledby="sale-success-modal"
@@ -4424,7 +4602,7 @@ export default function ShoppingPage() {
         onClose={() => setChequeCreateOpen(false)}
         defaultType="received"
         lockType
-        defaultAmount={salePayableAmount}
+        defaultAmount={Math.max(0, salePayableAmount - selectedChequeAmount) || salePayableAmount}
         defaultPayee={phone}
         onSaved={(cheque) => {
           const amount = parseAmount(cheque.amount);
@@ -4433,11 +4611,22 @@ export default function ShoppingPage() {
             return [cheque, ...prev];
           });
           setChequeCreateOpen(false);
-          if (amount > 0 && amount <= salePayableAmount) {
-            setSelectedChequeId(cheque.id);
-          } else if (amount > salePayableAmount) {
-            toast.warn("مبلغ چک بیشتر از مبلغ فاکتور است و قابل انتخاب نیست");
-          }
+          setSelectedChequeIds((prev) => {
+            if (prev.includes(cheque.id)) return prev;
+            const used = prev.reduce((sum, id) => {
+              const row = availableCheques.find((item) => item.id === id);
+              return sum + (row ? parseAmount(row.amount) : 0);
+            }, 0);
+            if (amount > 0 && used + amount <= salePayableAmount + 0.02) {
+              return [...prev, cheque.id];
+            }
+            toast.warn(
+              amount > salePayableAmount
+                ? "مبلغ چک بیشتر از مبلغ فاکتور است و قابل انتخاب نیست"
+                : "جمع چک‌ها بیشتر از مبلغ فاکتور می‌شود",
+            );
+            return prev;
+          });
           void loadAvailableCheques();
         }}
       />

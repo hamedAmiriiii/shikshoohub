@@ -22,6 +22,7 @@ import { ReceiptTicketsBlock } from "@/app/admin/print/sale/SaleReceiptTickets";
 import { StationPrinterSettings } from "@/app/admin/print/sale/StationPrinterSettings";
 import { canSilentPrint, qzErrorMessage, silentPrintReceiptStations } from "@/app/lib/qzSilentPrint";
 import { hydrateReceiptPrintSettingsFromDb, persistSharedReceiptSettings } from "@/app/lib/receiptPrintDbSync";
+import { formalReceiptOrientation, isFormalReceiptTemplate } from "@/app/lib/receiptTemplates";
 
 function SaleReceiptPrintContent() {
   const router = useRouter();
@@ -34,17 +35,37 @@ function SaleReceiptPrintContent() {
   const autoPrintedRef = useRef(false);
   const directPrintMode = searchParams.get("direct") === "1";
   const listPrintMode = searchParams.get("list") === "1";
+  const proformaPrintMode = searchParams.get("proforma") === "1";
 
   const paperWidthMm = useMemo(() => resolvePaperWidthMm(settings), [settings]);
   const stations = useMemo(() => getEnabledReceiptPrintStations(settings), [settings]);
 
   useEffect(() => {
-    setSettings(listPrintMode ? readListReceiptPrintSettings() : readSaleReceiptPrintSettings());
-    setReceipt(readSaleReceiptPrintData());
+    const nextSettings = listPrintMode ? readListReceiptPrintSettings() : readSaleReceiptPrintSettings();
+    const nextReceipt = readSaleReceiptPrintData();
+    setSettings(nextSettings);
+    setReceipt(nextReceipt);
+    if (
+      !proformaPrintMode &&
+      isFormalReceiptTemplate(nextSettings.templateId) &&
+      nextReceipt?.purchaseId != null
+    ) {
+      const orientation = formalReceiptOrientation(nextSettings.templateId);
+      router.replace(
+        `/admin/print/sale/formal?id=${encodeURIComponent(String(nextReceipt.purchaseId))}&orientation=${orientation}&print=1`,
+      );
+    }
     void hydrateReceiptPrintSettingsFromDb().then((hydrated) => {
-      setSettings(listPrintMode ? readListReceiptPrintSettings() : hydrated);
+      const next = listPrintMode ? readListReceiptPrintSettings() : hydrated;
+      setSettings(next);
+      if (!proformaPrintMode && isFormalReceiptTemplate(next.templateId) && nextReceipt?.purchaseId != null) {
+        const orientation = formalReceiptOrientation(next.templateId);
+        router.replace(
+          `/admin/print/sale/formal?id=${encodeURIComponent(String(nextReceipt.purchaseId))}&orientation=${orientation}&print=1`,
+        );
+      }
     });
-  }, [listPrintMode]);
+  }, [listPrintMode, proformaPrintMode, router]);
 
   const handlePrint = useCallback(async () => {
     if (printing || !receipt) return;
@@ -65,6 +86,20 @@ function SaleReceiptPrintContent() {
       setPrinting(false);
     }
   }, [printing, receipt, settings]);
+
+  useEffect(() => {
+    if (!proformaPrintMode || !receipt) return;
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      if (cancelled || autoPrintedRef.current) return;
+      autoPrintedRef.current = true;
+      void printReceiptStationsSequentially(["hall"]);
+    }, 450);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [proformaPrintMode, receipt]);
 
   useEffect(() => {
     if (!receipt || !settings.autoPrint || !directPrintMode || autoPrintedRef.current) return;

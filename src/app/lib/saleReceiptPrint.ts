@@ -1,5 +1,8 @@
 import { dailyTicketFromRecord } from "@/app/lib/dailyTicketNumber";
+import { openFormalInvoicePrint } from "@/app/lib/formalInvoice";
 import {
+  formalReceiptOrientation,
+  isFormalReceiptTemplate,
   normalizeReceiptTemplateId,
   type ReceiptTemplateId,
 } from "@/app/lib/receiptTemplates";
@@ -551,6 +554,17 @@ export function formatReceiptTimeOnly(iso: string): string {
   }
 }
 
+/** فاکتور رسمی A5 همان صفحه و API فعلی را باز می‌کند. */
+export function tryOpenFormalSaleReceipt(
+  data: SaleReceiptData | null | undefined,
+  settings: SaleReceiptPrintSettings,
+): "opened" | "missing-id" | "skip" {
+  if (!isFormalReceiptTemplate(settings.templateId)) return "skip";
+  if (data?.purchaseId == null || data.purchaseId === "") return "missing-id";
+  openFormalInvoicePrint(data.purchaseId, formalReceiptOrientation(settings.templateId), true);
+  return "opened";
+}
+
 export function openSaleReceiptPrintPage(
   basePath = "/admin/print/sale",
   data?: SaleReceiptData | null,
@@ -576,6 +590,10 @@ async function dispatchReceiptPrintWithSettings(
   if (receipt) {
     saveSaleReceiptPrintData(receipt);
   }
+
+  const formalRoute = tryOpenFormalSaleReceipt(receipt, settings);
+  if (formalRoute === "opened") return "dialog";
+  if (formalRoute === "missing-id") return "failed";
 
   if (receipt && settings.silentPrint !== false && !settings.singlePrinterNoQz) {
     try {
@@ -605,9 +623,18 @@ async function dispatchReceiptPrintWithSettings(
 export async function silentPrintSaleReceiptOrFail(
   data: SaleReceiptData,
   settings?: SaleReceiptPrintSettings,
+  options?: { skipFormal?: boolean },
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const resolved = settings ?? readSaleReceiptPrintSettings();
   saveSaleReceiptPrintData(data);
+
+  if (!options?.skipFormal) {
+    const formalRoute = tryOpenFormalSaleReceipt(data, resolved);
+    if (formalRoute === "opened") return { ok: true };
+    if (formalRoute === "missing-id") {
+      return { ok: false, message: "شناسه فروش برای چاپ فاکتور رسمی پیدا نشد." };
+    }
+  }
 
   if (resolved.singlePrinterNoQz) {
     openSaleReceiptPrintPage("/admin/print/sale", data);

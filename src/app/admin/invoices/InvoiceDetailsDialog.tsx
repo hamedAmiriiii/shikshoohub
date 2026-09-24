@@ -39,6 +39,10 @@ import { beneficiaryFromRecord, formatBeneficiaryLabel } from "@/app/lib/benefic
 import { DocumentPaymentBreakdownView, documentNeedsSettle } from "@/app/admin/DocumentPaymentBadge";
 import DocumentPaymentSettleDialog from "@/app/admin/DocumentPaymentSettleDialog";
 import { documentCreditRemaining, type DocumentPaymentFields } from "@/app/lib/documentPayments";
+import {
+  ADMIN_POS_SETTINGS_CHANGED_EVENT,
+  readAdminPosSettings,
+} from "@/app/lib/adminPosSettings";
 
 export type InvoiceItem = {
   id?: number;
@@ -76,11 +80,20 @@ export function invoiceUsesItemAmount(invoice?: InvoiceRecord | null): boolean {
   return (Number(invoice.items_count) || 0) > 0;
 }
 
+type RegisteredProduct = {
+  id?: number;
+  name: string;
+  barcode: string;
+};
+
 type DraftItem = {
   key: string;
   title: string;
   unitPrice: string;
   quantity: string;
+  barcode: string;
+  purchasePrice: string;
+  registered?: RegisteredProduct | null;
 };
 
 const fieldSx = {
@@ -127,7 +140,7 @@ function newDraftKey() {
 }
 
 function emptyDraft(): DraftItem {
-  return { key: newDraftKey(), title: "", unitPrice: "", quantity: "" };
+  return { key: newDraftKey(), title: "", unitPrice: "", quantity: "", barcode: "", purchasePrice: "" };
 }
 
 function parseQuantityInput(value: string): number {
@@ -171,6 +184,8 @@ function draftsFromInvoice(invoice: InvoiceRecord): DraftItem[] {
       title: String(item.title ?? ""),
       unitPrice: unitPrice > 0 ? formatAmountNumber(unitPrice) : "",
       quantity: quantity > 0 ? String(quantity) : "",
+      barcode: "",
+      purchasePrice: unitPrice > 0 ? formatAmountNumber(unitPrice) : "",
     };
   });
 }
@@ -196,6 +211,15 @@ export default function InvoiceDetailsDialog({
   const [confirmMismatchOpen, setConfirmMismatchOpen] = useState(false);
   const [record, setRecord] = useState<InvoiceRecord | null>(null);
   const [settleOpen, setSettleOpen] = useState(false);
+  const [productEntryEnabled, setProductEntryEnabled] = useState(false);
+  const [afterMismatch, setAfterMismatch] = useState<"save" | "register">("save");
+
+  useEffect(() => {
+    const sync = () => setProductEntryEnabled(Boolean(readAdminPosSettings().invoiceProductEntryEnabled));
+    sync();
+    window.addEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, sync);
+    return () => window.removeEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, sync);
+  }, []);
 
   useEffect(() => {
     if (!open || !invoice) return;
@@ -313,10 +337,77 @@ export default function InvoiceDetailsDialog({
     const items = collectItems();
     if (!items) return;
     if (items.length > 0 && Math.round(itemsTotal) !== Math.round(invoiceAmount)) {
+      setAfterMismatch("save");
       setConfirmMismatchOpen(true);
       return;
     }
     await saveItems(items);
+  };
+
+  const registerProducts = async (rows: DraftItem[]) => {
+    const token = tokenCode();
+    if (!token) {
+      toast.error("لطفاً وارد شوید");
+      return false;
+    }
+    const pending = rows.filter((row) => row.title.trim() && !row.registered);
+    for (const row of pending) {
+      const barcode = row.barcode.trim();
+      const purchasePrice = parseAmountInput(row.purchasePrice) || parseAmountInput(row.unitPrice);
+      const quantity = parseQuantityInput(row.quantity);
+      if (!barcode) {
+        toast.error(`بارکد «${row.title.trim()}» را وارد کنید`);
+        return false;
+      }
+      if (purchasePrice <= 0 || quantity <= 0) {
+        toast.error(`قیمت خرید و تعداد «${row.title.trim()}» باید معتبر باشد`);
+        return false;
+      }
+      const res = await FetchWithJwtClient("POST", "/api/product", {
+        name: row.title.trim(),
+        barcode,
+        purchase_price: purchasePrice,
+        sale_price: purchasePrice,
+        quantity,
+      });
+      if (!res || res.hasError) {
+        toast.error(getApiErrorMessage(res, `ثبت کالای «${row.title.trim()}» انجام نشد`));
+        return false;
+      }
+      const payload = res?.data && typeof res.data === "object" ? res.data : res;
+      const registered: RegisteredProduct = {
+        id: payload?.id ?? payload?.product?.id,
+        name: String(payload?.name || row.title.trim()),
+        barcode: String(payload?.barcode || barcode),
+      };
+      setDrafts((prev) => prev.map((item) => (item.key === row.key ? { ...item, registered } : item)));
+    }
+    if (pending.length > 0) {
+      toast.success(pending.length === 1 ? "کالا ثبت شد" : `${pending.length} کالا ثبت شد`);
+    }
+    return true;
+  };
+
+  const handleRegisterAndSave = async () => {
+    const items = collectItems();
+    if (!items) return;
+    if (items.length === 0) {
+      toast.error("ردیفی برای ثبت کالا نیست");
+      return;
+    }
+    if (Math.round(itemsTotal) !== Math.round(invoiceAmount)) {
+      setAfterMismatch("register");
+      setConfirmMismatchOpen(true);
+      return;
+    }
+    setSaving(true);
+    try {
+      const ok = await registerProducts(drafts);
+      if (!ok) return;
+      await saveItems(items);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -324,7 +415,7 @@ export default function InvoiceDetailsDialog({
     <Dialog
       open={open}
       onClose={saving || confirmMismatchOpen ? undefined : onClose}
-      maxWidth="md"
+      maxWidth={productEntryEnabled ? "lg" : "md"}
       fullWidth
       PaperProps={{
         sx: {
@@ -409,6 +500,8 @@ export default function InvoiceDetailsDialog({
                       <StyledTableCell align="center">عنوان</StyledTableCell>
                       <StyledTableCell align="center">فی</StyledTableCell>
                       <StyledTableCell align="center">تعداد</StyledTableCell>
+                      {productEntryEnabled ? <StyledTableCell align="center">بارکد</StyledTableCell> : null}
+                      {productEntryEnabled ? <StyledTableCell align="center">قیمت خرید</StyledTableCell> : null}
                       <StyledTableCell align="center">کل</StyledTableCell>
                       <StyledTableCell align="center">عملیات</StyledTableCell>
                     </TableRow>
@@ -439,9 +532,13 @@ export default function InvoiceDetailsDialog({
                               type="text"
                               inputMode="numeric"
                               value={row.unitPrice}
-                              onChange={(e) =>
-                                updateDraft(row.key, { unitPrice: formatAmountInput(e.target.value) })
-                              }
+                              onChange={(e) => {
+                                const unitPrice = formatAmountInput(e.target.value);
+                                updateDraft(row.key, {
+                                  unitPrice,
+                                  ...(row.purchasePrice ? {} : { purchasePrice: unitPrice }),
+                                });
+                              }}
                               fullWidth
                               sx={{
                                 ...fieldSx,
@@ -464,6 +561,43 @@ export default function InvoiceDetailsDialog({
                               }}
                             />
                           </StyledTableCell>
+                          {productEntryEnabled ? (
+                            <StyledTableCell align="center" sx={{ width: 120 }}>
+                              <TextField
+                                size="small"
+                                placeholder="بارکد"
+                                value={row.barcode}
+                                onChange={(e) => updateDraft(row.key, { barcode: e.target.value })}
+                                fullWidth
+                                sx={fieldSx}
+                              />
+                              {row.registered ? (
+                                <Typography sx={{ color: "var(--admin-success, #2e7d32)", fontSize: 11, mt: 0.4 }}>
+                                  ثبت شد: {row.registered.name}
+                                  {row.registered.barcode ? ` — ${row.registered.barcode}` : ""}
+                                </Typography>
+                              ) : null}
+                            </StyledTableCell>
+                          ) : null}
+                          {productEntryEnabled ? (
+                            <StyledTableCell align="center" sx={{ width: 120 }}>
+                              <TextField
+                                size="small"
+                                placeholder="قیمت خرید"
+                                type="text"
+                                inputMode="numeric"
+                                value={row.purchasePrice}
+                                onChange={(e) =>
+                                  updateDraft(row.key, { purchasePrice: formatAmountInput(e.target.value) })
+                                }
+                                fullWidth
+                                sx={{
+                                  ...fieldSx,
+                                  "& .MuiInputBase-input": { ...fieldSx["& .MuiInputBase-input"], textAlign: "center" },
+                                }}
+                              />
+                            </StyledTableCell>
+                          ) : null}
                           <StyledTableCell align="center" sx={{ whiteSpace: "nowrap" }}>
                             <Typography sx={{ color: "var(--admin-accent)", fontWeight: 700, fontSize: 12 }}>
                               {formatAmountNumber(lineTotal) || "۰"}
@@ -520,6 +654,19 @@ export default function InvoiceDetailsDialog({
         <Button onClick={onClose} disabled={saving} sx={{ color: "var(--admin-text-muted)" }}>
           انصراف
         </Button>
+        {productEntryEnabled ? (
+          <Button
+            onClick={() => void handleRegisterAndSave()}
+            variant="contained"
+            disabled={loading || saving}
+            sx={{
+              backgroundColor: "var(--admin-success, #2e7d32)",
+              "&:hover": { backgroundColor: "#1b5e20" },
+            }}
+          >
+            {saving ? "در حال ثبت..." : "ثبت کالا و ذخیره فاکتور"}
+          </Button>
+        ) : null}
         <Button
           onClick={handleSave}
           variant="contained"
@@ -543,7 +690,21 @@ export default function InvoiceDetailsDialog({
         loading={saving}
         onConfirm={() => {
           const items = collectItems();
-          if (items) void saveItems(items);
+          if (!items) return;
+          if (afterMismatch === "register") {
+            setSaving(true);
+            void (async () => {
+              try {
+                const ok = await registerProducts(drafts);
+                if (!ok) return;
+                await saveItems(items);
+              } finally {
+                setSaving(false);
+              }
+            })();
+            return;
+          }
+          void saveItems(items);
         }}
         onCancel={() => !saving && setConfirmMismatchOpen(false)}
       />

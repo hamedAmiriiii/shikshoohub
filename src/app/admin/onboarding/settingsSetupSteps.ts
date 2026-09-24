@@ -103,7 +103,7 @@ export const SETTINGS_SETUP_STEPS: SettingsSetupStep[] = [
   {
     id: "classicPosMode",
     kind: "toggle",
-    title: "تم کلاسیک فاکتور",
+    title: "تم کلاسیک ",
     body: "ظاهر فاکتور ستونی نام، تعداد، قیمت و جمع. با حالت منو هم قابل ترکیب است.",
     settingKey: "classicPosMode",
     enableLabel: "تم کلاسیک",

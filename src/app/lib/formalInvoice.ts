@@ -183,7 +183,16 @@ export function mapPurchaseLines(purchase: any): FormalInvoiceLine[] {
 
 export const FORMAL_INVOICE_PURCHASE_KEY = "formal_invoice_purchase_id";
 
-export function openFormalInvoicePrint(purchaseId: number | string): void {
+export function openFormalInvoicePrint(
+  purchaseId: number | string,
+  orientation: "portrait" | "landscape" = "landscape",
+  autoPrint = false,
+): void {
   if (typeof window === "undefined") return;
-  window.open(`/admin/print/sale/formal?id=${encodeURIComponent(String(purchaseId))}`, "_blank", "noopener,noreferrer");
+  const params = new URLSearchParams({
+    id: String(purchaseId),
+    orientation,
+  });
+  if (autoPrint) params.set("print", "1");
+  window.open(`/admin/print/sale/formal?${params.toString()}`, "_blank", "noopener,noreferrer");
 }

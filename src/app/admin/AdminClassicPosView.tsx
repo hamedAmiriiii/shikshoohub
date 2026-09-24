@@ -32,6 +32,7 @@ import persian from "react-date-object/calendars/persian";
 import persian_fa from "react-date-object/locales/persian_fa";
 import { CHEQUE_DATE_PICKER_Z, chequeDatePickerBoxSx } from "@/app/admin/cheques/ChequeFormSheet";
 import { todayJalaliDateObject } from "@/app/lib/cheques";
+import SaleChequePicker from "@/app/admin/SaleChequePicker";
 
 type SettlementMode = "split" | "card_all" | "cash_all";
 
@@ -130,6 +131,9 @@ export default function AdminClassicPosView({
     paymentFieldsValid,
     isSubmitting,
     onConfirm,
+    proformaEnabled = false,
+    onSaveProforma,
+    savingProforma = false,
     calculatingInstallments,
     installmentCreditError,
     installmentCalculation,
@@ -137,7 +141,8 @@ export default function AdminClassicPosView({
     debtPaymentEnabled = false,
     chequePaymentEnabled = false,
     selectedChequeId,
-    onSelectedChequeChange,
+    selectedChequeIds,
+    onSelectedChequeIdsChange,
     matchingCheques,
     loadingAvailableCheques = false,
     salePayableAmount,
@@ -746,47 +751,17 @@ export default function AdminClassicPosView({
                 />
               </Box>
               {chequePaymentEnabled && (
-                <Box sx={{ display: "flex", gap: 0.5, alignItems: "center" }}>
-                  <TextField
-                    select
-                    size="small"
-                    value={selectedChequeId ?? ""}
-                    onChange={(e) =>
-                      onSelectedChequeChange(e.target.value ? Number(e.target.value) : null)
-                    }
-                    SelectProps={{ native: true }}
-                    disabled={loadingAvailableCheques}
-                    sx={{ ...compactFieldSx, flex: 1 }}
-                  >
-                    <option value="">{loadingAvailableCheques ? "بارگذاری…" : "چک (اختیاری)"}</option>
-                    {matchingCheques.map((cheque) => (
-                      <option key={cheque.id} value={cheque.id}>
-                        {[
-                          cheque.cheque_number ? `چک ${cheque.cheque_number}` : `#${cheque.id}`,
-                          cheque.bank_name,
-                          cheque.amount != null ? formatNumber(Number(cheque.amount)) : null,
-                        ]
-                          .filter(Boolean)
-                          .join(" — ")}
-                      </option>
-                    ))}
-                  </TextField>
-                  {onOpenCreateCheque && (
-                    <IconButton
-                      size="small"
-                      onClick={onOpenCreateCheque}
-                      aria-label="ثبت چک جدید"
-                      sx={{
-                        p: 0.4,
-                        border: "1px solid var(--admin-border)",
-                        borderRadius: "6px",
-                        color: "var(--admin-accent)",
-                      }}
-                    >
-                      <AddIcon sx={{ fontSize: 18 }} />
-                    </IconButton>
-                  )}
-                </Box>
+                <SaleChequePicker
+                  dense
+                  selectedIds={selectedChequeIds}
+                  onChange={onSelectedChequeIdsChange}
+                  options={matchingCheques}
+                  loading={loadingAvailableCheques}
+                  payableAmount={salePayableAmount}
+                  onCreate={onOpenCreateCheque}
+                  formatAmount={formatNumber}
+                  fieldSx={compactFieldSx}
+                />
               )}
               <Typography sx={{ fontSize: "11px", fontWeight: 700, color: "var(--admin-accent)" }}>
                 مانده نسیه: {formatNumber(mixedDebtResidual)}
@@ -835,51 +810,21 @@ export default function AdminClassicPosView({
               </Typography>
               <Typography sx={{ fontSize: "10px", color: "var(--admin-text-muted)" }}>
                 فاکتور: {formatNumber(salePayableAmount)}
-                {selectedChequeId
-                  ? ` · چک: ${formatNumber(selectedChequeAmount)} · باقی: ${formatNumber(chequeRemainder)}`
+                {selectedChequeIds.length > 0
+                  ? ` · جمع چک: ${formatNumber(selectedChequeAmount)} · باقی: ${formatNumber(chequeRemainder)}`
                   : " · چک را انتخاب کنید"}
               </Typography>
-              <Box sx={{ display: "flex", gap: 0.5, alignItems: "center" }}>
-                <TextField
-                  select
-                  size="small"
-                  value={selectedChequeId ?? ""}
-                  onChange={(e) =>
-                    onSelectedChequeChange(e.target.value ? Number(e.target.value) : null)
-                  }
-                  SelectProps={{ native: true }}
-                  disabled={loadingAvailableCheques}
-                  sx={{ ...compactFieldSx, flex: 1 }}
-                >
-                  <option value="">{loadingAvailableCheques ? "بارگذاری…" : "انتخاب چک"}</option>
-                  {matchingCheques.map((cheque) => (
-                    <option key={cheque.id} value={cheque.id}>
-                      {[
-                        cheque.cheque_number ? `چک ${cheque.cheque_number}` : `#${cheque.id}`,
-                        cheque.bank_name,
-                        cheque.amount != null ? formatNumber(Number(cheque.amount)) : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" — ")}
-                    </option>
-                  ))}
-                </TextField>
-                {onOpenCreateCheque && (
-                  <IconButton
-                    size="small"
-                    onClick={onOpenCreateCheque}
-                    aria-label="ثبت چک جدید"
-                    sx={{
-                      p: 0.4,
-                      border: "1px solid var(--admin-border)",
-                      borderRadius: "6px",
-                      color: "var(--admin-accent)",
-                    }}
-                  >
-                    <AddIcon sx={{ fontSize: 18 }} />
-                  </IconButton>
-                )}
-              </Box>
+              <SaleChequePicker
+                dense
+                selectedIds={selectedChequeIds}
+                onChange={onSelectedChequeIdsChange}
+                options={matchingCheques}
+                loading={loadingAvailableCheques}
+                payableAmount={salePayableAmount}
+                onCreate={onOpenCreateCheque}
+                formatAmount={formatNumber}
+                fieldSx={compactFieldSx}
+              />
               {!loadingAvailableCheques && matchingCheques.length === 0 && (
                 <Typography sx={{ fontSize: "10px", color: "var(--admin-error-soft)" }}>
                   چک مناسب نیست — با + ثبت کنید (مبلغ می‌تواند کمتر از فاکتور باشد)
@@ -966,6 +911,17 @@ export default function AdminClassicPosView({
             </Typography>
           )}
 
+          <Box sx={{ display: "flex", gap: 0.5 }}>
+          {proformaEnabled ? (
+            <Button
+              variant="outlined"
+              disabled={!total || isSubmitting || savingProforma}
+              onClick={onSaveProforma}
+              sx={{ flex: 1, fontSize: "11px", borderColor: "var(--admin-accent)", color: "var(--admin-accent)" }}
+            >
+              {savingProforma ? "..." : "پیش فاکتور"}
+            </Button>
+          ) : null}
           <Button
             fullWidth
             variant="contained"
@@ -979,6 +935,7 @@ export default function AdminClassicPosView({
               )
             }
             sx={{
+              flex: 1.4,
               fontSize: "12px",
               fontWeight: 700,
               py: 0.85,
@@ -994,6 +951,7 @@ export default function AdminClassicPosView({
           >
             {isSubmitting ? "در حال ثبت…" : "ثبت فروش"}
           </Button>
+          </Box>
         </Box>
       </Box>
     </Box>

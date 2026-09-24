@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Box,
@@ -136,6 +136,9 @@ function FormalInvoiceContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const purchaseId = searchParams.get("id");
+  const orientation = searchParams.get("orientation") === "portrait" ? "portrait" : "landscape";
+  const autoPrint = searchParams.get("print") === "1";
+  const autoPrintedRef = useRef(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -181,6 +184,13 @@ function FormalInvoiceContent() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!autoPrint || loading || !purchase || autoPrintedRef.current) return;
+    autoPrintedRef.current = true;
+    const timer = window.setTimeout(() => window.print(), 450);
+    return () => window.clearTimeout(timer);
+  }, [autoPrint, loading, purchase]);
 
   const lookupBuyer = useCallback(
     async (phone: string) => {
@@ -290,7 +300,7 @@ function FormalInvoiceContent() {
   return (
     <>
       <style>{`
-        @page { size: A5 landscape; margin: 6mm; }
+        @page { size: A5 ${orientation}; margin: 6mm; }
         @media print {
           html, body { background: #fff !important; color: #111 !important; }
           .no-print { display: none !important; }
@@ -329,6 +339,7 @@ function FormalInvoiceContent() {
         }
         .fi-table th { background: #d9d9d9 !important; font-weight: 800; }
         .fi-table td.name { text-align: right; padding-right: 4px; }
+        .fi-portrait .fi-table th, .fi-portrait .fi-table td { font-size: 7.5px; padding: 2px 1px; }
       `}</style>
 
       <Box
@@ -405,9 +416,9 @@ function FormalInvoiceContent() {
         </Box>
 
         <Box
-          className="fi-sheet print-preview"
+          className={`fi-sheet print-preview${orientation === "portrait" ? " fi-portrait" : ""}`}
           sx={{
-            maxWidth: 980,
+            maxWidth: orientation === "portrait" ? 560 : 980,
             mx: "auto",
             border: "1px solid #ccc",
             boxShadow: "0 2px 10px rgba(0,0,0,0.08)",

@@ -34,6 +34,12 @@ export type AdminPosSettings = {
   showDailyTicketNumber: boolean;
   /** نمایش فیلد اولویت/ترتیب نمایش در ثبت و ویرایش کالا */
   productDisplayOrderEnabled: boolean;
+  /** بعد از ثبت کالا، بارکد بعدی روی همین دستگاه پر شود */
+  sequentialProductBarcodeEnabled: boolean;
+  /** دکمه پیش‌فاکتور کنار ثبت فروش */
+  proformaEnabled: boolean;
+  /** ثبت کالا از ردیف فاکتور خرید */
+  invoiceProductEntryEnabled: boolean;
 };
 
 const DEFAULT_SETTINGS: AdminPosSettings = {
@@ -55,7 +61,40 @@ const DEFAULT_SETTINGS: AdminPosSettings = {
   askCustomerName: false,
   showDailyTicketNumber: false,
   productDisplayOrderEnabled: false,
+  sequentialProductBarcodeEnabled: false,
+  proformaEnabled: false,
+  invoiceProductEntryEnabled: false,
 };
+
+const SEQUENTIAL_BARCODE_KEY = "admin_sequential_product_barcode";
+
+export function nextSequentialBarcode(raw: string): string | null {
+  const value = raw.trim();
+  const match = value.match(/^(.*?)(\d+)$/);
+  if (!match) return null;
+  const prefix = match[1];
+  const digits = match[2];
+  const next = (BigInt(digits) + 1n).toString();
+  const padded = next.length < digits.length ? next.padStart(digits.length, "0") : next;
+  const result = `${prefix}${padded}`;
+  return result.length <= 255 ? result : null;
+}
+
+export function readLastSequentialBarcode(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    return localStorage.getItem(SEQUENTIAL_BARCODE_KEY) || "";
+  } catch {
+    return "";
+  }
+}
+
+export function writeLastSequentialBarcode(barcode: string): void {
+  if (typeof window === "undefined") return;
+  const value = barcode.trim();
+  if (!value) return;
+  localStorage.setItem(SEQUENTIAL_BARCODE_KEY, value);
+}
 
 export function readAdminPosSettings(): AdminPosSettings {
   if (typeof window === "undefined") return DEFAULT_SETTINGS;

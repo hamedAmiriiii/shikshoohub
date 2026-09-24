@@ -154,6 +154,7 @@ export default function AdminHamburgerSidebar({
   const financialChildren: NavLeaf[] = useMemo(
     () => [
       { id: "reports", label: "گزارش فروش", href: "/admin/reports", icon: <AssessmentIcon />, permission: "reports" },
+      { id: "proformas", label: "لیست پیش فاکتور", href: "/admin/proformas", icon: <ReceiptLongIcon />, permission: "pos" },
       { id: "inventory", label: "موجودی انبار", href: "/admin/inventory", icon: <InventoryIcon />, permission: "products" },
       { id: "expenses", label: "لیست هزینه‌ها", href: "/admin/expenses", icon: <AttachMoneyIcon />, permission: "expenses" },
       {
