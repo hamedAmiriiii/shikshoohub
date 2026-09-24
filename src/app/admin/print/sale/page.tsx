@@ -17,6 +17,7 @@ import {
   DEFAULT_SALE_RECEIPT_PRINT_SETTINGS,
   getEnabledReceiptPrintStations,
   printReceiptStationsSequentially,
+  formatReceiptNumber,
 } from "@/app/lib/saleReceiptPrint";
 import { ReceiptTicketsBlock } from "@/app/admin/print/sale/SaleReceiptTickets";
 import { StationPrinterSettings } from "@/app/admin/print/sale/StationPrinterSettings";
@@ -38,6 +39,8 @@ function SaleReceiptPrintContent() {
   const proformaPrintMode = searchParams.get("proforma") === "1";
 
   const paperWidthMm = useMemo(() => resolvePaperWidthMm(settings), [settings]);
+  const formalPrint = isFormalReceiptTemplate(settings.templateId);
+  const formalOrientation = formalReceiptOrientation(settings.templateId);
   const stations = useMemo(() => getEnabledReceiptPrintStations(settings), [settings]);
 
   useEffect(() => {
@@ -141,12 +144,12 @@ function SaleReceiptPrintContent() {
   const printStyles = useMemo(
     () => `
       @page {
-        size: ${paperWidthMm}mm auto;
-        margin: 0;
+        size: ${formalPrint ? `A5 ${formalOrientation}` : `${paperWidthMm}mm auto`};
+        margin: ${formalPrint ? "6mm" : "0"};
       }
       @media print {
         html, body {
-          width: ${paperWidthMm}mm;
+          width: ${formalPrint ? "auto" : `${paperWidthMm}mm`};
           margin: 0 !important;
           padding: 0 !important;
           background: #fff !important;
@@ -175,7 +178,7 @@ function SaleReceiptPrintContent() {
         }
       }
     `,
-    [paperWidthMm],
+    [paperWidthMm, formalPrint, formalOrientation],
   );
 
   if (!receipt) {
@@ -265,10 +268,72 @@ function SaleReceiptPrintContent() {
               }}
             >
               <Typography className="no-print" sx={{ fontSize: 12, color: "var(--admin-text-secondary)", textAlign: "center" }}>
-                پیش‌نمایش — عرض {paperWidthMm}mm
-                {stations.length > 1 ? ` — ${stations.length} فیش` : ""}
+                {formalPrint
+                  ? `پیش‌نمایش — A5 ${formalOrientation === "portrait" ? "عمودی" : "عرضی"}`
+                  : `پیش‌نمایش — عرض ${paperWidthMm}mm`}
+                {!formalPrint && stations.length > 1 ? ` — ${stations.length} فیش` : ""}
               </Typography>
-              <ReceiptTicketsBlock receipt={receipt} settings={settings} paperWidthMm={paperWidthMm} />
+              {formalPrint ? (
+                <Box
+                  className="print-ticket print-ticket-hall"
+                  sx={{
+                    width: formalOrientation === "portrait" ? "148mm" : "210mm",
+                    minHeight: formalOrientation === "portrait" ? "210mm" : "148mm",
+                    mx: "auto",
+                    bgcolor: "#fff",
+                    color: "#111",
+                    border: "1px solid #111",
+                    p: 1.25,
+                    direction: "rtl",
+                    fontFamily: "Tahoma, Arial, sans-serif",
+                  }}
+                >
+                  <Typography align="center" sx={{ fontWeight: 900, fontSize: 20, color: "#111" }}>
+                    {proformaPrintMode ? "پیش‌فاکتور" : "فاکتور فروش"}
+                  </Typography>
+                  {settings.hallTitle ? (
+                    <Typography align="center" sx={{ fontSize: 12, color: "#111" }}>
+                      {settings.hallTitle}
+                    </Typography>
+                  ) : null}
+                  <Typography align="center" sx={{ fontSize: 12, mb: 1, color: "#111" }}>
+                    {settings.shopTitle || receipt.shopName || ""}
+                  </Typography>
+                  {receipt.footerNote ? (
+                    <Typography sx={{ fontSize: 12, mb: 0.5, color: "#111" }}>{receipt.footerNote}</Typography>
+                  ) : null}
+                  <Box component="table" sx={{ width: "100%", borderCollapse: "collapse", fontSize: 11, color: "#111" }}>
+                    <Box component="thead">
+                      <Box component="tr">
+                        {["شرح", "تعداد", "فی", "مبلغ"].map((label) => (
+                          <Box component="th" key={label} sx={{ border: "1px solid #111", p: 0.4, bgcolor: "#d9d9d9" }}>
+                            {label}
+                          </Box>
+                        ))}
+                      </Box>
+                    </Box>
+                    <Box component="tbody">
+                      {receipt.items.map((item, index) => (
+                        <Box component="tr" key={`${item.name}-${index}`}>
+                          <Box component="td" sx={{ border: "1px solid #111", p: 0.4, textAlign: "right" }}>{item.name}</Box>
+                          <Box component="td" sx={{ border: "1px solid #111", p: 0.4, textAlign: "center" }}>{formatReceiptNumber(item.quantity)}</Box>
+                          <Box component="td" sx={{ border: "1px solid #111", p: 0.4, textAlign: "center" }}>{formatReceiptNumber(item.unitPrice)}</Box>
+                          <Box component="td" sx={{ border: "1px solid #111", p: 0.4, textAlign: "center" }}>{formatReceiptNumber(item.lineTotal)}</Box>
+                        </Box>
+                      ))}
+                    </Box>
+                  </Box>
+                  <Typography sx={{ fontSize: 12, mt: 1, fontWeight: 800, color: "#111" }}>
+                    قابل پرداخت: {formatReceiptNumber(receipt.payableNow || receipt.finalTotal)} تومان
+                  </Typography>
+                </Box>
+              ) : (
+                <ReceiptTicketsBlock
+                  receipt={receipt}
+                  settings={proformaPrintMode ? { ...settings, printKitchen: false, printExtra: false } : settings}
+                  paperWidthMm={paperWidthMm}
+                />
+              )}
             </Box>
           </Box>
         </Box>

@@ -134,9 +134,11 @@ function ClassicHallTicket({
       <Typography align="center" sx={{ fontWeight: 800, fontSize: `${settings.titleFontSize}px`, mb: 0.5 }}>
         {shopTitle}
       </Typography>
-      <Typography align="center" sx={{ fontWeight: 700, fontSize: `${settings.fontSize - 1}px`, mb: 0.5 }}>
-        فیش سالن
-      </Typography>
+      {settings.hallTitle ? (
+        <Typography align="center" sx={{ fontWeight: 700, fontSize: `${settings.fontSize - 1}px`, mb: 0.5 }}>
+          {settings.hallTitle}
+        </Typography>
+      ) : null}
       {dailyTicketLabel(receipt) ? (
         <Typography align="center" sx={{ fontWeight: 800, fontSize: `${settings.titleFontSize}px`, mb: 0.5 }}>
           {dailyTicketLabel(receipt)}

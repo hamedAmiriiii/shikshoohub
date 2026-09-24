@@ -145,7 +145,12 @@ function draftFromSettings(settings: SaleReceiptPrintSettings, station: ReceiptP
     enabled,
     printer: getStationPrinterName(settings, station),
     layout: getStationLayout(settings, station),
-    title: station === "kitchen" ? settings.kitchenTitle : station === "extra" ? settings.extraTitle : "فیش سالن",
+    title:
+      station === "kitchen"
+        ? settings.kitchenTitle
+        : station === "extra"
+          ? settings.extraTitle
+          : settings.hallTitle || "",
     shopTitle: settings.shopTitle,
     shopAddress: settings.shopAddress || "",
     shopPhone: settings.shopPhone || "",
@@ -202,6 +207,7 @@ function StationSettingsDialog({
     if (station === "hall") {
       Object.assign(partial, {
         printHall: draft.enabled,
+        hallTitle: draft.title,
         paperPreset: draft.layout.paperPreset,
         customPaperWidthMm: draft.layout.customPaperWidthMm,
         fontSize: draft.layout.fontSize,
@@ -239,7 +245,9 @@ function StationSettingsDialog({
       maxWidth="xs"
       PaperProps={{ sx: dialogPaperSx }}
     >
-      <DialogTitle sx={{ fontSize: 16, fontWeight: 700, pb: 1 }}>تنظیمات {STATION_LABEL[station]}</DialogTitle>
+      <DialogTitle sx={{ fontSize: 16, fontWeight: 700, pb: 1 }}>
+        تنظیمات {draft.title.trim() || STATION_LABEL[station]}
+      </DialogTitle>
       <DialogContent sx={{ display: "grid", gap: 1.25, pt: "8px !important" }}>
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <Typography sx={{ fontSize: 13 }}>فعال</Typography>
@@ -251,15 +259,14 @@ function StationSettingsDialog({
           />
         </Box>
 
-        {station !== "hall" && (
-          <TextField
-            size="small"
-            label="عنوان فیش"
-            value={draft.title}
-            onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-            sx={fieldSx}
-          />
-        )}
+        <TextField
+          size="small"
+          label="عنوان روی فیش"
+          placeholder="مثلاً فاکتور، صندوق، آشپزخانه"
+          value={draft.title}
+          onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+          sx={fieldSx}
+        />
 
         {!hidePrinterSelect ? (
           <Select
@@ -484,6 +491,7 @@ export function StationPrinterSettings({
         partial.showPaymentMethod !== undefined ||
         partial.showItemUnitPrice !== undefined ||
         partial.compactItems !== undefined ||
+        partial.hallTitle !== undefined ||
         partial.kitchenTitle !== undefined ||
         partial.extraTitle !== undefined;
       if (touchesShared) {
@@ -559,7 +567,7 @@ export function StationPrinterSettings({
 
       {listMode ? (
         <Typography sx={{ fontSize: 12, color: "var(--admin-text-secondary)", lineHeight: 1.7 }}>
-          فقط یک فیش سالن — بدون ارسال به آشپزخانه یا بار
+          فقط فیش اصلی — بخش‌های اضافه مثل آشپزخانه را خودتان نام و فعال می‌کنید
         </Typography>
       ) : null}
 
@@ -604,7 +612,14 @@ export function StationPrinterSettings({
           >
             <Box sx={{ minWidth: 0, flex: 1 }}>
               <Typography sx={{ fontSize: 13, fontWeight: 700 }}>
-                {listMode ? "پرینتر لیست فروش" : STATION_LABEL[station]}
+                {listMode
+                  ? "پرینتر لیست فروش"
+                  : (station === "hall"
+                      ? settings.hallTitle
+                      : station === "kitchen"
+                        ? settings.kitchenTitle
+                        : settings.extraTitle
+                    ).trim() || STATION_LABEL[station]}
               </Typography>
               <Typography sx={{ fontSize: 11, color: "var(--admin-text-secondary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {STATION_HINT[station]} · {paperLabel(layout)}

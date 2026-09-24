@@ -115,6 +115,7 @@ export function previewSettingsForTemplate(
     printHall: true,
     printKitchen: false,
     printExtra: false,
+    hallTitle: "",
     kitchenTitle: "آشپزخانه",
     extraTitle: "بار",
     singlePrinterNoQz: false,

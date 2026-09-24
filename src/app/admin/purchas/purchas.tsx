@@ -548,26 +548,38 @@ export default function purchas(props: any) {
               />
             )}
 
-            {isCheque && data?.cheque && (
-              <>
-                <PurchaseInfoRow
-                  label="شماره چک"
-                  value={data.cheque.cheque_number || "—"}
-                />
-                {data.cheque.bank_name ? (
-                  <PurchaseInfoRow label="بانک" value={data.cheque.bank_name} />
-                ) : null}
-                {data.cheque.payee ? (
-                  <PurchaseInfoRow label="پرداخت‌کننده" value={data.cheque.payee} />
-                ) : null}
-                {(data.cheque.due_date_jalali || data.cheque.due_date) ? (
-                  <PurchaseInfoRow
-                    label="سررسید چک"
-                    value={data.cheque.due_date_jalali || data.cheque.due_date}
-                  />
-                ) : null}
-              </>
-            )}
+            {isCheque &&
+              (Array.isArray(data?.received_cheques) && data.received_cheques.length
+                ? data.received_cheques
+                : data?.cheque
+                  ? [data.cheque]
+                  : []
+              ).map((cheque: any, index: number, list: any[]) => {
+                const prefix = list.length > 1 ? `چک ${index + 1} — ` : "";
+                return (
+                  <Box key={cheque.id ?? index} sx={{ display: "contents" }}>
+                    <PurchaseInfoRow
+                      label={`${prefix}شماره چک`}
+                      value={cheque.cheque_number || "—"}
+                    />
+                    {cheque.amount != null ? (
+                      <PurchaseInfoRow label={`${prefix}مبلغ چک`} value={`${formatNumber(cheque.amount)} تومان`} />
+                    ) : null}
+                    {cheque.bank_name ? (
+                      <PurchaseInfoRow label={`${prefix}بانک`} value={cheque.bank_name} />
+                    ) : null}
+                    {cheque.payee ? (
+                      <PurchaseInfoRow label={`${prefix}پرداخت‌کننده`} value={cheque.payee} />
+                    ) : null}
+                    {(cheque.due_date_jalali || cheque.due_date) ? (
+                      <PurchaseInfoRow
+                        label={`${prefix}سررسید`}
+                        value={cheque.due_date_jalali || cheque.due_date}
+                      />
+                    ) : null}
+                  </Box>
+                );
+              })}
 
             {isCheque && (
               <PurchaseInfoRow

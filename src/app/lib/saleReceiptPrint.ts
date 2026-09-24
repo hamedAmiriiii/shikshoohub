@@ -99,6 +99,8 @@ export type SaleReceiptPrintSettings = {
   printHall: boolean;
   printKitchen: boolean;
   printExtra: boolean;
+  /** عنوان دلخواه فیش اصلی؛ خالی یعنی بدون عنوان دوم */
+  hallTitle: string;
   kitchenTitle: string;
   extraTitle: string;
   /** یک پرینتر فیزیکی — گفتگوی چاپ مرورگر/ویندوز، بدون QZ */
@@ -128,6 +130,7 @@ export type ReceiptPrintSharedConfig = {
   showPaymentMethod: boolean;
   showItemUnitPrice: boolean;
   compactItems: boolean;
+  hallTitle: string;
   kitchenTitle: string;
   extraTitle: string;
 };
@@ -153,8 +156,9 @@ export const DEFAULT_SALE_RECEIPT_PRINT_SETTINGS: SaleReceiptPrintSettings = {
   compactItems: false,
   autoPrint: false,
   printHall: true,
-  printKitchen: true,
+  printKitchen: false,
   printExtra: false,
+  hallTitle: "",
   kitchenTitle: "آشپزخانه",
   extraTitle: "بار",
   singlePrinterNoQz: false,
@@ -218,7 +222,8 @@ function normalizeSaleReceiptPrintSettings(
   merged.printHall = merged.printHall !== false;
   merged.printKitchen = Boolean(merged.printKitchen);
   merged.printExtra = Boolean(merged.printExtra);
-  merged.kitchenTitle = String(merged.kitchenTitle || "آشپزخانه").slice(0, 40);
+  merged.hallTitle = String(merged.hallTitle ?? "").slice(0, 40);
+  merged.kitchenTitle = String(merged.kitchenTitle ?? "آشپزخانه").slice(0, 40);
   merged.extraTitle = String(merged.extraTitle || "بار").slice(0, 40);
   merged.singlePrinterNoQz = Boolean(merged.singlePrinterNoQz);
   merged.silentPrint = merged.silentPrint !== false;
@@ -250,6 +255,7 @@ export function extractReceiptPrintSharedConfig(
     showPaymentMethod: settings.showPaymentMethod !== false,
     showItemUnitPrice: settings.showItemUnitPrice !== false,
     compactItems: Boolean(settings.compactItems),
+    hallTitle: settings.hallTitle || "",
     kitchenTitle: settings.kitchenTitle || "آشپزخانه",
     extraTitle: settings.extraTitle || "بار",
   };
@@ -296,6 +302,7 @@ export function parseReceiptPrintSharedConfig(raw: unknown): ReceiptPrintSharedC
       showPaymentMethod: obj.showPaymentMethod !== false,
       showItemUnitPrice: obj.showItemUnitPrice !== false,
       compactItems: Boolean(obj.compactItems),
+      hallTitle: String(obj.hallTitle ?? ""),
       kitchenTitle: String(obj.kitchenTitle ?? "آشپزخانه"),
       extraTitle: String(obj.extraTitle ?? "بار"),
     }),

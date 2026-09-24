@@ -173,7 +173,7 @@ function classicHallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSe
 
   return `
     <h1>${shopTitle}</h1>
-    <div class="sub">فیش سالن</div>
+    ${settings.hallTitle ? `<div class="sub">${escapeHtml(settings.hallTitle)}</div>` : ""}
     ${dailyTicketHtml(receipt)}
     ${settings.showDate ? `<div class="muted">${ltr(formatReceiptDate(receipt.createdAt))}</div>` : ""}
     <table class="row">
