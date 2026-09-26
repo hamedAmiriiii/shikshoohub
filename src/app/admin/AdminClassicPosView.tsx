@@ -116,6 +116,11 @@ export default function AdminClassicPosView({
     onDiscountBlur,
     onDiscountPercentChange,
     onDiscountPercentBlur,
+    manualCartQuantityEnabled = false,
+    cartProfitEnabled = false,
+    profitPercentDisplay = "",
+    onProfitPercentChange,
+    onProfitPercentBlur,
     paymentType,
     onPaymentTypeChange,
     installmentCount,
@@ -428,6 +433,20 @@ export default function AdminClassicPosView({
                 sx={{ ...compactFieldSx, width: 110 }}
                 inputMode="numeric"
               />
+              {cartProfitEnabled ? (
+                <>
+                  <Typography sx={{ fontSize: "11px", fontWeight: 700, flexShrink: 0 }}>سود</Typography>
+                  <TextField
+                    size="small"
+                    placeholder="٪"
+                    value={profitPercentDisplay}
+                    onChange={(e) => onProfitPercentChange?.(e.target.value)}
+                    onBlur={(e) => onProfitPercentBlur?.(e.target.value)}
+                    sx={{ ...compactFieldSx, width: 56 }}
+                    inputMode="decimal"
+                  />
+                </>
+              ) : null}
             </Box>
           )}
         </Box>
@@ -506,6 +525,7 @@ export default function AdminClassicPosView({
                         kgSalesEnabled={kgSalesEnabled}
                         onChange={onSetQuantity}
                         compact
+                        manualEntry={manualCartQuantityEnabled}
                       />
                     </TableCell>
                     <TableCell align="center" sx={bodyCellSx}>

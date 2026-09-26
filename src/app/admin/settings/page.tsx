@@ -27,6 +27,8 @@ import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import PersonIcon from "@mui/icons-material/Person";
 import ConfirmationNumberOutlinedIcon from "@mui/icons-material/ConfirmationNumberOutlined";
 import PriceChangeIcon from "@mui/icons-material/PriceChange";
+import PinOutlinedIcon from "@mui/icons-material/PinOutlined";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
 import ImageOutlinedIcon from "@mui/icons-material/ImageOutlined";
 import SortIcon from "@mui/icons-material/Sort";
@@ -284,6 +286,8 @@ export default function SettingsPage() {
   const [chequePaymentEnabled, setChequePaymentEnabled] = useState(false);
   const [kgSalesEnabled, setKgSalesEnabled] = useState(false);
   const [salePriceEditEnabled, setSalePriceEditEnabled] = useState(false);
+  const [manualCartQuantityEnabled, setManualCartQuantityEnabled] = useState(false);
+  const [cartProfitEnabled, setCartProfitEnabled] = useState(false);
   const [saleDateEditEnabled, setSaleDateEditEnabled] = useState(false);
   const [classicPosMode, setClassicPosMode] = useState(false);
   const [askCustomerName, setAskCustomerName] = useState(false);
@@ -322,6 +326,8 @@ export default function SettingsPage() {
       setChequePaymentEnabled(settings.chequePaymentEnabled);
       setKgSalesEnabled(settings.kgSalesEnabled);
       setSalePriceEditEnabled(settings.salePriceEditEnabled);
+      setManualCartQuantityEnabled(Boolean(settings.manualCartQuantityEnabled));
+      setCartProfitEnabled(Boolean(settings.cartProfitEnabled));
       setSaleDateEditEnabled(Boolean(settings.saleDateEditEnabled));
       setClassicPosMode(settings.classicPosMode);
       setAskCustomerName(settings.askCustomerName);
@@ -502,6 +508,28 @@ export default function SettingsPage() {
       enabled
         ? "تغییر قیمت هنگام خرید فعال شد"
         : "تغییر قیمت هنگام خرید غیرفعال شد",
+    );
+  };
+
+  const handleToggleManualCartQuantity = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setManualCartQuantityEnabled(enabled);
+    writeAdminPosSettings({ manualCartQuantityEnabled: enabled });
+    toast.success(
+      enabled
+        ? "ورود دستی تعداد در سبد فعال شد"
+        : "ورود دستی تعداد در سبد غیرفعال شد",
+    );
+  };
+
+  const handleToggleCartProfit = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setCartProfitEnabled(enabled);
+    writeAdminPosSettings({ cartProfitEnabled: enabled });
+    toast.success(
+      enabled
+        ? "محاسبه سود در سبد فعال شد — کنار تخفیف درصد سود را بزنید"
+        : "محاسبه سود در سبد غیرفعال شد",
     );
   };
 
@@ -1015,6 +1043,20 @@ export default function SettingsPage() {
             hint="ویرایش قیمت فروش در سبد"
             checked={salePriceEditEnabled}
             onChange={handleToggleSalePriceEdit}
+          />
+          <SettingsToggleRow
+            icon={<PinOutlinedIcon sx={{ fontSize: 18 }} />}
+            title="ورود دستی تعداد در سبد"
+            hint="تعداد هر کالا را تایپ کنید؛ دکمه‌های کم و زیاد هم می‌مانند"
+            checked={manualCartQuantityEnabled}
+            onChange={handleToggleManualCartQuantity}
+          />
+          <SettingsToggleRow
+            icon={<TrendingUpIcon sx={{ fontSize: 18 }} />}
+            title="محاسبه سود در سبد"
+            hint="کنار تخفیف فیلد سود می‌آید؛ مثلاً ۵٪ به قیمت همه کالاها اضافه و رند می‌شود"
+            checked={cartProfitEnabled}
+            onChange={handleToggleCartProfit}
           />
           <SettingsToggleRow
             icon={<ReceiptLongIcon sx={{ fontSize: 18 }} />}

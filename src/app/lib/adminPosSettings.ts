@@ -24,6 +24,10 @@ export type AdminPosSettings = {
   menuTableOrdersPopupEnabled: boolean;
   /** امکان تغییر قیمت فروش هنگام ثبت خرید */
   salePriceEditEnabled: boolean;
+  /** تایپ مستقیم تعداد در سبد، علاوه بر دکمه‌های کم و زیاد */
+  manualCartQuantityEnabled: boolean;
+  /** فیلد درصد سود کنار تخفیف؛ به قیمت همه کالاهای سبد اضافه و رند می‌شود */
+  cartProfitEnabled: boolean;
   /** امکان انتخاب/تغییر تاریخ فروش هنگام ثبت */
   saleDateEditEnabled: boolean;
   /** ظاهر کلاسیک فاکتور در صفحه فروش */
@@ -56,6 +60,8 @@ const DEFAULT_SETTINGS: AdminPosSettings = {
   roomServicesEnabled: false,
   menuTableOrdersPopupEnabled: false,
   salePriceEditEnabled: false,
+  manualCartQuantityEnabled: false,
+  cartProfitEnabled: false,
   saleDateEditEnabled: false,
   classicPosMode: false,
   askCustomerName: false,

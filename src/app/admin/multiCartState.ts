@@ -10,6 +10,7 @@ export type CartSlotSnapshot = {
   useCreditAmount: number;
   discounttype: number;
   discountDisplay: string;
+  profitPercentDisplay?: string;
   discountError: string;
   backPrice: number;
   paymentType: PaymentType;
@@ -33,6 +34,7 @@ export function createEmptyCartSlot(): CartSlotSnapshot {
     useCreditAmount: 0,
     discounttype: 0,
     discountDisplay: "",
+    profitPercentDisplay: "",
     discountError: "",
     backPrice: 0,
     paymentType: "cash",

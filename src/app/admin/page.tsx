@@ -80,6 +80,7 @@ import {
   readAdminPosSettings,
   ADMIN_POS_SETTINGS_CHANGED_EVENT,
 } from '@/app/lib/adminPosSettings';
+import { applyProfitToCartLines, parseProfitPercent, salePriceWithProfit } from '@/app/lib/cartProfit';
 import { formatAmountInput, parseAmountInput as parseMoneyAmount } from '@/app/lib/amountInput';
 import type { PaymentType } from '@/app/lib/paymentTypes';
 import SaleProductListPanel from '@/app/admin/SaleProductListPanel';
@@ -217,6 +218,10 @@ export default function ShoppingPage() {
   const [discounttype, setDiscounttype] = useState(0);
   const [discountDisplay, setDiscountDisplay] = useState('');
   const [discountPercentDisplay, setDiscountPercentDisplay] = useState('');
+  const [profitPercentDisplay, setProfitPercentDisplay] = useState('');
+  const profitPercentRef = useRef(0);
+  const cartProfitEnabledRef = useRef(false);
+  const prevCartProfitEnabledRef = useRef<boolean | null>(null);
   const [discountError, setDiscountError] = useState('');
   const [isDiscountFocused, setIsDiscountFocused] = useState(false);
   const [useCreditAmount, setUseCreditAmount] = useState(0);
@@ -259,6 +264,8 @@ export default function ShoppingPage() {
   const [chequeCreateOpen, setChequeCreateOpen] = useState(false);
   const [kgSalesEnabled, setKgSalesEnabled] = useState(false);
   const [salePriceEditEnabled, setSalePriceEditEnabled] = useState(false);
+  const [manualCartQuantityEnabled, setManualCartQuantityEnabled] = useState(false);
+  const [cartProfitEnabled, setCartProfitEnabled] = useState(false);
   const [saleDateEditEnabled, setSaleDateEditEnabled] = useState(false);
   const [saleDate, setSaleDate] = useState<DateObject>(() => todayJalaliDateObject());
   const [saleSuccessOpen, setSaleSuccessOpen] = useState(false);
@@ -457,6 +464,7 @@ export default function ShoppingPage() {
     useCreditAmount,
     discounttype,
     discountDisplay,
+    profitPercentDisplay,
     discountError,
     backPrice,
     paymentType,
@@ -477,6 +485,7 @@ export default function ShoppingPage() {
     useCreditAmount,
     discounttype,
     discountDisplay,
+    profitPercentDisplay,
     discountError,
     backPrice,
     paymentType,
@@ -499,6 +508,11 @@ export default function ShoppingPage() {
     setUseCreditAmount(slot.useCreditAmount ?? 0);
     setDiscounttype(slot.discounttype ?? 0);
     setDiscountDisplay(slot.discountDisplay ?? "");
+    {
+      const profit = slot.profitPercentDisplay ?? "";
+      setProfitPercentDisplay(profit);
+      profitPercentRef.current = parseProfitPercent(profit);
+    }
     {
       const amt = slot.discounttype ?? 0;
       const tot = slot.total ?? 0;
@@ -1128,6 +1142,20 @@ export default function ShoppingPage() {
       setProformaEnabled(Boolean(settings.proformaEnabled));
       setKgSalesEnabled(settings.kgSalesEnabled);
       setSalePriceEditEnabled(settings.salePriceEditEnabled);
+      setManualCartQuantityEnabled(Boolean(settings.manualCartQuantityEnabled));
+      const profitOn = Boolean(settings.cartProfitEnabled);
+      setCartProfitEnabled(profitOn);
+      cartProfitEnabledRef.current = profitOn;
+      if (prevCartProfitEnabledRef.current === true && !profitOn) {
+        profitPercentRef.current = 0;
+        setProfitPercentDisplay("");
+        setCart((prevCart) => {
+          const next = applyProfitToCartLines(prevCart, 0);
+          setTotal(next.reduce((sum, item) => sum + Number(item.sale_price) * item.quantity, 0));
+          return next;
+        });
+      }
+      prevCartProfitEnabledRef.current = profitOn;
       setSaleDateEditEnabled(Boolean(settings.saleDateEditEnabled));
       void savePosSettingsCache(settings);
     };
@@ -1320,7 +1348,10 @@ export default function ShoppingPage() {
             {
               ...item,
               quantity: addQty,
-              sale_price: parseMoneyAmount(item.sale_price),
+              sale_price: cartProfitEnabledRef.current
+                ? salePriceWithProfit(parseMoneyAmount(item.sale_price), profitPercentRef.current)
+                : parseMoneyAmount(item.sale_price),
+              profit_base_price: parseMoneyAmount(item.sale_price),
               ...(salePriceEditEnabled
                 ? { default_sale_price: parseMoneyAmount(item.sale_price) }
                 : {}),
@@ -2506,6 +2537,19 @@ export default function ShoppingPage() {
     });
   }, [cart, savingProforma, phone, discounttype, clearOrRemoveActiveCart, getShopNameFromUser]);
 
+  const applyCartProfitPercent = useCallback((raw: string, commit = false) => {
+    if (!cartProfitEnabledRef.current && parseProfitPercent(raw) > 0) return;
+    const cleaned = raw.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1");
+    const percent = cartProfitEnabledRef.current ? parseProfitPercent(cleaned) : 0;
+    profitPercentRef.current = percent;
+    setProfitPercentDisplay(commit ? (percent > 0 ? String(percent) : "") : cleaned);
+    setCart((prevCart) => {
+      const next = applyProfitToCartLines(prevCart, percent);
+      setTotal(next.reduce((sum, item) => sum + Number(item.sale_price) * Number(item.quantity), 0));
+      return next;
+    });
+  }, []);
+
   const posCartPanel = useMemo((): AdminMenuModeCartPanelProps => ({
     cart,
     total,
@@ -2560,6 +2604,11 @@ export default function ShoppingPage() {
       }
       applyDiscountFromPercent(cleaned);
     },
+    manualCartQuantityEnabled,
+    cartProfitEnabled,
+    profitPercentDisplay,
+    onProfitPercentChange: (value: string) => applyCartProfitPercent(value),
+    onProfitPercentBlur: (value: string) => applyCartProfitPercent(value, true),
     paymentType,
     onPaymentTypeChange: handlePaymentTypeChange,
     installmentCount,
@@ -2662,6 +2711,10 @@ export default function ShoppingPage() {
     mixedDebtResidual,
     mixedPaymentInvalid,
     salePriceEditEnabled,
+    manualCartQuantityEnabled,
+    cartProfitEnabled,
+    profitPercentDisplay,
+    applyCartProfitPercent,
     setCartItemSalePrice,
     saleDateEditEnabled,
     saleDate,
@@ -2973,6 +3026,7 @@ export default function ShoppingPage() {
                           item={item}
                           kgSalesEnabled={kgSalesEnabled}
                           onChange={setCartItemQuantity}
+                          manualEntry={manualCartQuantityEnabled}
                         />
                       </StyledTableCell>
                       <StyledTableCell align="right" sx={{ padding: { xs: "8px 12px", md: "16px 24px" } }}>
@@ -3538,16 +3592,17 @@ export default function ShoppingPage() {
                       </Box>
                     )}
                   </CardContent>
-                  {paymentType !== 'installment' && (
+                  {(paymentType !== 'installment' || cartProfitEnabled) && (
                     <CardContent sx={{ padding: { xs: "4px 8px", md: "5px 12px" } }}>
                       <Box
                         sx={{
                           display: "flex",
                           alignItems: "center",
                           gap: { xs: 0.75, md: 1 },
-                          flexWrap: "nowrap",
+                          flexWrap: "wrap",
                         }}
                       >
+                        {paymentType !== "installment" ? (
                         <Typography
                           sx={{
                             color: "var(--admin-text)",
@@ -3558,6 +3613,8 @@ export default function ShoppingPage() {
                         >
                           تخفیف
                         </Typography>
+                        ) : null}
+                        {paymentType !== "installment" ? (
                         <TextField
                           value={discountPercentDisplay}
                           onChange={(e) => applyDiscountFromPercent(e.target.value)}
@@ -3657,6 +3714,46 @@ export default function ShoppingPage() {
                             }
                           }}
                         />
+                        ) : null}
+                        {cartProfitEnabled ? (
+                          <>
+                            <Typography
+                              sx={{
+                                color: "var(--admin-text)",
+                                fontSize: { xs: "12px", md: "13px" },
+                                fontWeight: 600,
+                                flexShrink: 0,
+                              }}
+                            >
+                              سود
+                            </Typography>
+                            <TextField
+                              value={profitPercentDisplay}
+                              onChange={(e) => applyCartProfitPercent(e.target.value)}
+                              onBlur={(e) => applyCartProfitPercent(e.target.value, true)}
+                              placeholder="٪"
+                              type="text"
+                              size="small"
+                              inputMode="decimal"
+                              sx={{
+                                flex: "0 0 72px",
+                                width: 72,
+                                "& .MuiOutlinedInput-root": {
+                                  backgroundColor: "var(--admin-surface-alt)",
+                                  color: "var(--admin-text)",
+                                  "& fieldset": { borderColor: "var(--admin-border)" },
+                                },
+                                "& .MuiInputBase-input": {
+                                  color: "var(--admin-text)",
+                                  fontSize: { xs: "12px", md: "13px" },
+                                  padding: { xs: "8px 10px", md: "10px 12px" },
+                                  textAlign: "center",
+                                  direction: "ltr",
+                                },
+                              }}
+                            />
+                          </>
+                        ) : null}
                       </Box>
                     </CardContent>
                   )}

@@ -21,6 +21,8 @@ type CartQuantityControlProps = {
   onChange: (itemId: number | string, quantity: number) => void;
   compact?: boolean;
   fontBoost?: number;
+  /** عدد تعداد قابل تایپ باشد */
+  manualEntry?: boolean;
 };
 
 export default function CartQuantityControl({
@@ -29,8 +31,10 @@ export default function CartQuantityControl({
   onChange,
   compact = false,
   fontBoost = 0,
+  manualEntry = false,
 }: CartQuantityControlProps) {
   const isKg = kgSalesEnabled && isMeasuredProduct(item);
+  const typedQuantity = isKg || manualEntry;
   const [draft, setDraft] = useState<string | null>(null);
 
   const displayQty = draft ?? formatProductQuantity(item.quantity, item);
@@ -51,7 +55,7 @@ export default function CartQuantityControl({
     setDraft(null);
   };
 
-  if (!isKg) {
+  if (!typedQuantity) {
     const iconSize = compact ? 12 : 16;
     const btnSize = compact ? 18 : { xs: 24, md: 32 };
     return (
@@ -98,7 +102,7 @@ export default function CartQuantityControl({
 
   return (
     <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, justifyContent: "flex-end" }}>
-      <IconButton size="small" onClick={() => bump(-step)} sx={{ p: compact ? 0.15 : 0.5 }}>
+      <IconButton size="small" onClick={() => bump(isKg ? -step : -1)} sx={{ p: compact ? 0.15 : 0.5 }}>
         <RemoveIcon sx={{ fontSize: compact ? 12 : 16 }} />
       </IconButton>
       <TextField
@@ -107,7 +111,7 @@ export default function CartQuantityControl({
         onChange={(e) => setDraft(e.target.value)}
         onBlur={() => {
           if (draft !== null) {
-            const parsed = parseQuantityInput(draft, item);
+            const parsed = parseQuantityInput(draft, isKg ? item : { unit_type: "piece" });
             if (parsed !== null) applyQuantity(parsed);
           }
           setDraft(null);
@@ -127,7 +131,7 @@ export default function CartQuantityControl({
           },
         }}
       />
-      <IconButton size="small" onClick={() => bump(step)} sx={{ p: compact ? 0.15 : 0.5 }}>
+      <IconButton size="small" onClick={() => bump(isKg ? step : 1)} sx={{ p: compact ? 0.15 : 0.5 }}>
         <AddIcon sx={{ fontSize: compact ? 12 : 16 }} />
       </IconButton>
     </Box>

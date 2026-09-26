@@ -103,6 +103,11 @@ export type AdminMenuModeCartPanelProps = {
   onDiscountBlur: (value: string) => void;
   onDiscountPercentChange?: (value: string) => void;
   onDiscountPercentBlur?: (value: string) => void;
+  manualCartQuantityEnabled?: boolean;
+  cartProfitEnabled?: boolean;
+  profitPercentDisplay?: string;
+  onProfitPercentChange?: (value: string) => void;
+  onProfitPercentBlur?: (value: string) => void;
   paymentType: PaymentType;
   onPaymentTypeChange: (type: PaymentType) => void;
   installmentCount: number;
@@ -188,6 +193,11 @@ export default function AdminMenuModeCartPanel({
   onDiscountBlur,
   onDiscountPercentChange,
   onDiscountPercentBlur,
+  manualCartQuantityEnabled = false,
+  cartProfitEnabled = false,
+  profitPercentDisplay = "",
+  onProfitPercentChange,
+  onProfitPercentBlur,
   paymentType,
   onPaymentTypeChange,
   installmentCount,
@@ -397,6 +407,7 @@ export default function AdminMenuModeCartPanel({
                 onChange={onSetQuantity}
                 compact
                 fontBoost={fontBoost}
+                manualEntry={manualCartQuantityEnabled}
               />
             </Box>
           </Box>
@@ -479,8 +490,10 @@ export default function AdminMenuModeCartPanel({
           </Typography>
         )}
 
-        {(!installmentPaymentEnabled || paymentType !== "installment") && (
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+        {(!installmentPaymentEnabled || paymentType !== "installment" || cartProfitEnabled) && (
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexWrap: "wrap" }}>
+            {(!installmentPaymentEnabled || paymentType !== "installment") ? (
+            <>
             <Typography sx={{ fontSize: fs(9), fontWeight: 700, color: "var(--admin-text)", flexShrink: 0 }}>
               تخفیف
             </Typography>
@@ -534,6 +547,39 @@ export default function AdminMenuModeCartPanel({
               }}
               inputMode="numeric"
             />
+            </>
+            ) : null}
+            {cartProfitEnabled ? (
+              <>
+                <Typography sx={{ fontSize: fs(9), fontWeight: 700, color: "var(--admin-text)", flexShrink: 0 }}>
+                  سود
+                </Typography>
+                <TextField
+                  size="small"
+                  placeholder="٪"
+                  value={profitPercentDisplay}
+                  onChange={(e) => onProfitPercentChange?.(e.target.value)}
+                  onBlur={(e) => onProfitPercentBlur?.(e.target.value)}
+                  sx={{
+                    ...fieldSx,
+                    width: 52,
+                    flex: "0 0 52px",
+                    "& .MuiOutlinedInput-root": {
+                      ...fieldSx["& .MuiOutlinedInput-root"],
+                      fontSize: fs(11),
+                      minHeight: 30,
+                    },
+                    "& .MuiInputBase-input": {
+                      ...fieldSx["& .MuiInputBase-input"],
+                      fontSize: fs(11),
+                      py: 0.6,
+                      textAlign: "center",
+                    },
+                  }}
+                  inputMode="decimal"
+                />
+              </>
+            ) : null}
           </Box>
         )}
 
