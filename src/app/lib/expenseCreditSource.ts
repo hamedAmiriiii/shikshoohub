@@ -24,7 +24,7 @@ export function expenseCreditSource(expense: {
   return null;
 }
 
-/** برگشت در فروش خالص کم شده؛ دوباره در سود به‌عنوان هزینه نمی‌آید. */
+/** برگشت خرید نوع جداست و در سود به‌عنوان هزینه نمی‌آید. */
 export function creditSourceCountsInProfit(source: ExpenseCreditSource): boolean {
   return source !== "purchase_return";
 }

@@ -506,7 +506,7 @@ export default function ExpensesPage() {
               )}
               {creditSourceFilter === "purchase_return" ? (
                 <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, mt: 0.5 }}>
-                  برگشت خرید در فروش خالص کم شده و دوباره در سود به‌عنوان هزینه نمی‌آید.
+                  برگشت خرید نوع جداست و در جمع هزینه‌ها و سود نمی‌آید.
                 </Typography>
               ) : null}
             </CardContent>
@@ -612,7 +612,7 @@ export default function ExpensesPage() {
                         {expense.type ? (
                           <Chip
                             size="small"
-                            label={expense.type}
+                            label={creditSource === "purchase_return" ? "برگشت" : expense.type}
                             sx={{
                               height: 20,
                               fontSize: 11,
@@ -1090,13 +1090,13 @@ export default function ExpensesPage() {
                 </StyledTableRow>
                 <StyledTableRow>
                   <StyledTableCell align="right">برگشت خرید</StyledTableCell>
-                  <StyledTableCell align="right">اعتبار مشتری — برگشت خرید #…</StyledTableCell>
+                  <StyledTableCell align="right">نوع برگشت — خارج از لیست هزینه‌ها</StyledTableCell>
                   <StyledTableCell align="right">خیر</StyledTableCell>
                 </StyledTableRow>
               </TableBody>
             </Table>
             <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, mt: 1.5 }}>
-              برگشت خرید در فروش خالص از قبل کم می‌شود؛ همان مبلغ دوباره به‌عنوان هزینه در سود نمی‌آید. هزینهٔ وفاداری همان فاکتور هم به نسبت اعتبار برگشتی کم می‌شود تا دو بار نماند.
+              برگشت خرید و اعتباری که از همان برگشت شارژ شده، هزینه نیست. فروش برگشتی از قبل از فروش خالص کم شده و خرج دوبارهٔ آن اعتبار از سود کم نمی‌شود.
             </Typography>
           </DialogContent>
           <DialogActions sx={{ px: 2, pb: 1.5 }}>
