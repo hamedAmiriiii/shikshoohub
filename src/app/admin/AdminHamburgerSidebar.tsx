@@ -540,6 +540,12 @@ export default function AdminHamburgerSidebar({
         href: "/admin/desktop-licenses/logs",
         icon: <WifiIcon />,
       },
+      {
+        id: "site-stats",
+        label: "آمار سایت",
+        href: "/admin/site-stats",
+        icon: <AssessmentIcon />,
+      },
     ],
     [],
   );

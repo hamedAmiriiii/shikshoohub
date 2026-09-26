@@ -76,3 +76,6 @@ Running
 *.tmp
 *.temp
 *.bak
+
+# شمارنده بازدید سایت
+data/site-page-views.json

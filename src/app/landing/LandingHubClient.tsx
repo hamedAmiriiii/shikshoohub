@@ -21,6 +21,7 @@ import {
   Zap,
 } from "lucide-react";
 import LandingChrome from "./LandingChrome";
+import RecordSiteView from "@/app/components/RecordSiteView";
 import {
   LANDING_FAQS,
   LANDING_PRODUCTS,
@@ -79,6 +80,7 @@ export default function LandingHubClient() {
 
   return (
     <LandingChrome onStartFree={startFree}>
+      <RecordSiteView page="landing" />
       <section className="relative overflow-hidden pt-12 pb-20 md:pt-16 md:pb-28">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(139,92,246,0.25),_transparent_50%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(6,182,212,0.15),_transparent_45%)]" />

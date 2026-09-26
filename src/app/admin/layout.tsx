@@ -68,6 +68,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/agency-requests': 'نمایندگی‌ها',
     '/admin/desktop-licenses': 'لایسنس دسکتاپ',
     '/admin/desktop-licenses/logs': 'لاگ اتصال دسکتاپ',
+    '/admin/site-stats': 'آمار سایت',
     '/admin/installments': 'اقساط',
     '/admin/installment-credits': 'اعتبار اقساطی',
     '/admin/profit-loss': 'سود و ضرر',
