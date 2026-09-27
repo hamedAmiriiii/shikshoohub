@@ -33,6 +33,7 @@ import React, { useEffect, useState } from "react";
 import LabelCustom from "@/app/coponent/labelCustom";
 import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
 import { Chip, Divider, TextField } from "@mui/material";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   formatProductQuantity,
@@ -63,7 +64,16 @@ const formatNumber = (num: number | string) => {
   return new Intl.NumberFormat('fa-IR').format(numValue);
 };
 
-function PurchaseInfoRow({ label, value }: { label: string; value: string }) {
+function PurchaseInfoRow({ label, value, href }: { label: string; value: string; href?: string }) {
+  const valueSx = {
+    fontSize: 13,
+    fontWeight: 700,
+    color: href ? "var(--admin-accent)" : "var(--admin-text)",
+    textAlign: "left",
+    direction: "ltr",
+    textDecoration: href ? "underline" : "none",
+    cursor: href ? "pointer" : "default",
+  } as const;
   return (
     <Box
       sx={{
@@ -79,17 +89,13 @@ function PurchaseInfoRow({ label, value }: { label: string; value: string }) {
       <Typography sx={{ fontSize: 13, color: "var(--admin-text-muted)", flexShrink: 0 }}>
         {label}:
       </Typography>
-      <Typography
-        sx={{
-          fontSize: 13,
-          fontWeight: 700,
-          color: "var(--admin-text)",
-          textAlign: "left",
-          direction: "ltr",
-        }}
-      >
-        {value}
-      </Typography>
+      {href ? (
+        <Typography component={Link} href={href} sx={valueSx}>
+          {value}
+        </Typography>
+      ) : (
+        <Typography sx={valueSx}>{value}</Typography>
+      )}
     </Box>
   );
 }
@@ -538,8 +544,20 @@ export default function purchas(props: any) {
             {data?.total_amount !== undefined && (
               <PurchaseInfoRow label="مجموع مبلغ" value={`${formatNumber(data.total_amount)} تومان`} />
             )}
-            {data?.customer_name && <PurchaseInfoRow label="نام مشتری" value={data.customer_name} />}
-            {data?.phone && <PurchaseInfoRow label="شماره تلفن" value={data.phone} />}
+            {data?.customer_name && (
+              <PurchaseInfoRow
+                label="نام مشتری"
+                value={data.customer_name}
+                href={isIranMobile(purchasePhone) ? `/admin/purchas/customer/${purchasePhone}` : undefined}
+              />
+            )}
+            {data?.phone && (
+              <PurchaseInfoRow
+                label="شماره تلفن"
+                value={data.phone}
+                href={isIranMobile(purchasePhone) ? `/admin/purchas/customer/${purchasePhone}` : undefined}
+              />
+            )}
 
             {(data?.payment_type_label || data?.payment_type) && (
               <PurchaseInfoRow

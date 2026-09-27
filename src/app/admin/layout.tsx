@@ -94,6 +94,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
   };
   
   if (pathname.startsWith("/admin/beneficiaries")) return "ذینفعان خرید";
+  if (pathname.startsWith("/admin/purchas/customer/")) return "سابقه مشتری";
   if (pathname.startsWith("/admin/accounting/vouchers/new")) return "سند دستی";
   if (pathname.startsWith("/admin/accounting/vouchers/")) return "جزئیات سند";
   return titleMap[pathname];
@@ -103,6 +104,9 @@ const getPageTitle = (pathname: string | null): string | undefined => {
 const getAdminBackUrl = (pathname: string | null): string => {
   if (pathname && /^\/admin\/beneficiaries\/\d+$/.test(pathname)) {
     return "/admin/beneficiaries";
+  }
+  if (pathname && /^\/admin\/purchas\/customer\/[^/]+$/.test(pathname)) {
+    return "/admin/purchas";
   }
   return getFirstAllowedAdminPath();
 };
