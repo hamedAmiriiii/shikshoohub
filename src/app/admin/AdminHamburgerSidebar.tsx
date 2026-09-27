@@ -65,6 +65,7 @@ import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
 import CampaignOutlinedIcon from "@mui/icons-material/CampaignOutlined";
 import { useShopPermissionGate, type ShopPermissionKey } from "@/app/lib/shopPermissions";
 import { readShopFeatures, SHOP_FEATURES_CHANGED_EVENT } from "@/app/lib/shopFeatures";
+import { ADMIN_POS_SETTINGS_CHANGED_EVENT, readAdminPosSettings } from "@/app/lib/adminPosSettings";
 
 export const ADMIN_SIDEBAR_WIDTH = 200;
 
@@ -133,6 +134,7 @@ export default function AdminHamburgerSidebar({
   const [producedGoodsMenuEnabled, setProducedGoodsMenuEnabled] = useState(false);
   const [accountingEnabled, setAccountingEnabled] = useState(false);
   const [customerClubEnabled, setCustomerClubEnabled] = useState(false);
+  const [proformaEnabled, setProformaEnabled] = useState(() => Boolean(readAdminPosSettings().proformaEnabled));
 
   useEffect(() => {
     const sync = () => {
@@ -151,10 +153,23 @@ export default function AdminHamburgerSidebar({
       window.removeEventListener("storage", sync);
     };
   }, []);
+
+  useEffect(() => {
+    const sync = () => setProformaEnabled(Boolean(readAdminPosSettings().proformaEnabled));
+    sync();
+    window.addEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
   const financialChildren: NavLeaf[] = useMemo(
     () => [
       { id: "reports", label: "گزارش فروش", href: "/admin/reports", icon: <AssessmentIcon />, permission: "reports" },
-      { id: "proformas", label: "لیست پیش فاکتور", href: "/admin/proformas", icon: <ReceiptLongIcon />, permission: "pos" },
+      ...(proformaEnabled
+        ? [{ id: "proformas", label: "لیست پیش فاکتور", href: "/admin/proformas", icon: <ReceiptLongIcon />, permission: "pos" as const }]
+        : []),
       { id: "inventory", label: "موجودی انبار", href: "/admin/inventory", icon: <InventoryIcon />, permission: "products" },
       { id: "expenses", label: "لیست هزینه‌ها", href: "/admin/expenses", icon: <AttachMoneyIcon />, permission: "expenses" },
       {
@@ -244,7 +259,7 @@ export default function AdminHamburgerSidebar({
         permission: "reports",
       },
     ],
-    [],
+    [proformaEnabled],
   );
 
   const accountingChildren: NavLeaf[] = useMemo(

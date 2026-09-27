@@ -1012,7 +1012,7 @@ export default function SettingsPage() {
           <SettingsToggleRow
             icon={<ReceiptLongIcon sx={{ fontSize: 18 }} />}
             title="پیش فاکتور"
-            hint="کنار ثبت فروش، سبد بدون کم شدن موجودی ذخیره می‌شود"
+            hint="کنار ثبت فروش ذخیره می‌شود و لیست پیش‌فاکتور در منو می‌آید"
             checked={proformaEnabled}
             onChange={handleToggleProforma}
           />
