@@ -1201,14 +1201,14 @@ export default function ExpensesPage() {
               </TableHead>
               <TableBody>
                 <StyledTableRow>
-                  <StyledTableCell align="right">اعتبار وفاداری خرید</StyledTableCell>
-                  <StyledTableCell align="right">اعتبار مشتری — وفاداری خرید #…</StyledTableCell>
+                  <StyledTableCell align="right">خرج شدن اعتبار در خرید</StyledTableCell>
+                  <StyledTableCell align="right">اعتبار مشتری — مصرف اعتبار در خرید #…</StyledTableCell>
                   <StyledTableCell align="right">بله (هزینه جاری)</StyledTableCell>
                 </StyledTableRow>
                 <StyledTableRow>
                   <StyledTableCell align="right">افزایش دستی اعتبار</StyledTableCell>
-                  <StyledTableCell align="right">اعتبار مشتری — افزایش دستی — …</StyledTableCell>
-                  <StyledTableCell align="right">بله</StyledTableCell>
+                  <StyledTableCell align="right">تا خرج شدن در خرید، در لیست نیست</StyledTableCell>
+                  <StyledTableCell align="right">خیر</StyledTableCell>
                 </StyledTableRow>
                 <StyledTableRow>
                   <StyledTableCell align="right">برگشت خرید</StyledTableCell>
@@ -1218,7 +1218,7 @@ export default function ExpensesPage() {
               </TableBody>
             </Table>
             <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, mt: 1.5 }}>
-              برگشت خرید و اعتباری که از همان برگشت شارژ شده، هزینه نیست. فروش برگشتی از قبل از فروش خالص کم شده و خرج دوبارهٔ آن اعتبار از سود کم نمی‌شود.
+              افزایش دستی و برگشت خرید تا وقتی در یک خرید خرج نشوند هزینه نیستند. همان لحظهٔ استفاده، ردیف مصرف اعتبار در این لیست می‌آید و از سود کم می‌شود. اعتباری که از برگشت شارژ شده روش پرداخت است و از سود کم نمی‌شود.
             </Typography>
           </DialogContent>
           <DialogActions sx={{ px: 2, pb: 1.5 }}>
