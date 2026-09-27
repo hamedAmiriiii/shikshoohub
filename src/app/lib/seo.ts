@@ -11,7 +11,7 @@ export const SITE_NAME_EN = "Webino";
 export const SITE_EMAIL = "info@webinoo-plus.ir";
 export const SITE_PHONE = "09399166196";
 export const SITE_PHONE_INTL = "+989399166196";
-export const DEFAULT_OG_IMAGE = "/icon-512.png";
+export const DEFAULT_OG_IMAGE = "/pic/icon.png";
 
 export const DEFAULT_TITLE =
   "وبینو | نرم‌افزار حسابداری فروشگاهی، تعویض روغن، طلا و فروشگاه آنلاین";
@@ -49,11 +49,9 @@ export const ORGANIZATION = {
 } as const;
 
 const APP_ICONS: NonNullable<Metadata["icons"]> = {
-  icon: [
-    { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-    { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
-  ],
-  apple: [{ url: "/icon-192.png", sizes: "192x192", type: "image/png" }],
+  icon: [{ url: "/pic/icon.png", type: "image/png" }],
+  shortcut: ["/pic/icon.png"],
+  apple: [{ url: "/pic/icon.png", type: "image/png" }],
 };
 
 const NOINDEX_PREFIXES = [

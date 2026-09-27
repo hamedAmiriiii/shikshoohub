@@ -1,10 +1,9 @@
-const CACHE_NAME = "oil-pwa-v3";
+const CACHE_NAME = "oil-pwa-v4";
 const PRECACHE_URLS = [
   "/oil",
   "/oil/new",
   "/manifest-oil.json",
-  "/icon-192.png",
-  "/icon-512.png",
+  "/pic/icon.png",
 ];
 
 async function cacheUrls(cache, urls) {

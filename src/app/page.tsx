@@ -32,7 +32,7 @@ const homeJsonLd = [
       addressCountry: "IR",
     },
     sameAs: [...ORGANIZATION.sameAs],
-    logo: `${SITE_URL}/icon-512.png`,
+    logo: `${SITE_URL}/pic/icon.png`,
   },
   {
     "@context": "https://schema.org",

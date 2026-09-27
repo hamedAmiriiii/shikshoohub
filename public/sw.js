@@ -1,12 +1,11 @@
-const CACHE_NAME = "webino-pwa-v9";
-const ADMIN_CACHE_NAME = "webino-admin-shell-v6";
+const CACHE_NAME = "webino-pwa-v10";
+const ADMIN_CACHE_NAME = "webino-admin-shell-v7";
 const OFFLINE_URL = "/offline.html";
 const PRECACHE_URLS = [
   OFFLINE_URL,
   "/manifest.json",
   "/manifest-admin.json",
-  "/icon-192.png",
-  "/icon-512.png",
+  "/pic/icon.png",
 ];
 
 async function cacheUrls(cache, urls) {

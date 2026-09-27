@@ -24,7 +24,7 @@ export default function PWAHead() {
       appleTouch.rel = "apple-touch-icon";
       document.head.appendChild(appleTouch);
     }
-    appleTouch.href = "/icon-192.png";
+    appleTouch.href = "/pic/icon.png";
 
     let themeColor = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
     if (!themeColor) {

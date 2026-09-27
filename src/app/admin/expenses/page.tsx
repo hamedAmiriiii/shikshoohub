@@ -701,15 +701,17 @@ export default function ExpensesPage() {
                                 color: "var(--admin-text)",
                               }}
                             />
-                            <Chip
-                              size="small"
-                              label="نسیه"
-                              sx={{
-                                ...chipSx,
-                                backgroundColor: "rgba(230, 162, 60, 0.18)",
-                                color: "#e6a23c",
-                              }}
-                            />
+                            {creditSource !== "loyalty_purchase" ? (
+                              <Chip
+                                size="small"
+                                label="نسیه"
+                                sx={{
+                                  ...chipSx,
+                                  backgroundColor: "rgba(230, 162, 60, 0.18)",
+                                  color: "#e6a23c",
+                                }}
+                              />
+                            ) : null}
                             {creditSourceCountsInProfit(creditSource) ? (
                               <Chip
                                 size="small"
@@ -756,7 +758,7 @@ export default function ExpensesPage() {
                         </Typography>
                       </StyledTableCell>
                       <StyledTableCell align="right">
-                        {creditSource ? (
+                        {creditSource && creditSource !== "loyalty_purchase" ? (
                           <Chip
                             size="small"
                             label="نسیه"
@@ -764,6 +766,16 @@ export default function ExpensesPage() {
                               ...chipSx,
                               backgroundColor: "rgba(230, 162, 60, 0.18)",
                               color: "#e6a23c",
+                            }}
+                          />
+                        ) : creditSource ? (
+                          <Chip
+                            size="small"
+                            label="خرج‌شده"
+                            sx={{
+                              ...chipSx,
+                              backgroundColor: "rgba(120, 181, 104, 0.18)",
+                              color: "var(--admin-accent)",
                             }}
                           />
                         ) : (
