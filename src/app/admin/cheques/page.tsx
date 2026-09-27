@@ -1,9 +1,10 @@
 ﻿"use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Box,
   Button,
+  Chip,
   CircularProgress,
   Dialog,
   DialogActions,
@@ -12,15 +13,27 @@ import {
   DialogTitle,
   FormControlLabel,
   IconButton,
+  Paper,
   Radio,
   RadioGroup,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   TextField,
   Typography,
 } from "@mui/material";
+import { styled } from "@mui/material/styles";
+import { tableCellClasses } from "@mui/material/TableCell";
 import AddIcon from "@mui/icons-material/Add";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import DeleteIcon from "@mui/icons-material/Delete";
+import DoneAllIcon from "@mui/icons-material/DoneAll";
+import EditIcon from "@mui/icons-material/Edit";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import UndoIcon from "@mui/icons-material/Undo";
 import DatePicker from "react-multi-date-picker";
 import DateObject from "react-date-object";
 import persian from "react-date-object/calendars/persian";
@@ -34,7 +47,6 @@ import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
 import { adminButtonStartIconSx, adminPageSx } from "@/app/admin/theme/adminTheme";
 import BottomSheetModal from "@/app/coponent/BottomSheetModal";
 import ShopAccountSelect from "@/app/admin/ShopAccountSelect";
-import ChequeCard from "./ChequeCard";
 import ChequeFormSheet, {
   CHEQUE_DATE_PICKER_Z,
   chequeDatePickerBoxSx,
@@ -45,14 +57,70 @@ import {
   CHEQUE_TYPE_OPTIONS,
   TIME_FILTER_OPTIONS,
   buildChequesUrl,
+  chequeStatusLabel,
+  chequeTypeLabel,
   dateObjectToPayload,
   extractChequeList,
   formatNumber,
+  isChequeCleared,
+  isChequePending,
   parseAmount,
   todayJalaliDateObject,
   type Cheque,
   type ChequeType,
 } from "@/app/lib/cheques";
+
+const StyledTableCell = styled(TableCell)({
+  [`&.${tableCellClasses.head}`]: {
+    backgroundColor: "var(--admin-surface-alt)",
+    color: "var(--admin-text)",
+    fontWeight: 600,
+    fontSize: 12,
+    padding: "8px 10px",
+    whiteSpace: "nowrap",
+  },
+  [`&.${tableCellClasses.body}`]: {
+    color: "var(--admin-text)",
+    fontSize: 12,
+    padding: "7px 10px",
+    whiteSpace: "nowrap",
+  },
+});
+
+const StyledTableRow = styled(TableRow)({
+  backgroundColor: "var(--admin-surface)",
+  "&:nth-of-type(even)": { backgroundColor: "var(--admin-surface-alt)" },
+  "&:hover": { backgroundColor: "var(--admin-menu-hover)" },
+  "&:last-child td, &:last-child th": { border: 0 },
+});
+
+function ChequeActionButton({
+  title,
+  onClick,
+  color,
+  bgcolor,
+  hover,
+  children,
+}: {
+  title: string;
+  onClick: () => void;
+  color: string;
+  bgcolor: string;
+  hover: string;
+  children: ReactNode;
+}) {
+  return (
+    <IconButton
+      size="small"
+      title={title}
+      aria-label={title}
+      onClick={onClick}
+      sx={{ color, bgcolor, "&:hover": { bgcolor: hover } }}
+    >
+      {children}
+    </IconButton>
+  );
+}
 
 export default function ChequesPage() {
   const [loading, setLoading] = useState(true);
@@ -333,29 +401,132 @@ export default function ChequesPage() {
           چکی یافت نشد
         </Box>
       ) : (
-        <Box
+        <TableContainer
+          component={Paper}
           sx={{
-            display: "grid",
-            gridTemplateColumns: {
-              xs: "1fr",
-              sm: "repeat(2, 1fr)",
-              md: "repeat(3, 1fr)",
-            },
-            gap: 1.5,
-            alignItems: "stretch",
+            backgroundColor: "var(--admin-surface)",
+            borderRadius: "10px",
+            border: "1px solid var(--admin-border)",
+            boxShadow: "none",
+            overflowX: "auto",
           }}
         >
-          {cheques.map((cheque) => (
-            <ChequeCard
-              key={cheque.id}
-              cheque={cheque}
-              onEdit={openEdit}
-              onDelete={setDeleteTarget}
-              onClear={openClear}
-              onUnclear={setUnclearTarget}
-            />
-          ))}
-        </Box>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <StyledTableCell align="right">شماره</StyledTableCell>
+                <StyledTableCell align="right">نوع</StyledTableCell>
+                <StyledTableCell align="right">بانک</StyledTableCell>
+                <StyledTableCell align="right">طرف</StyledTableCell>
+                <StyledTableCell align="right">مبلغ</StyledTableCell>
+                <StyledTableCell align="right">وضعیت</StyledTableCell>
+                <StyledTableCell align="right">سررسید</StyledTableCell>
+                <StyledTableCell align="right">عملیات</StyledTableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {cheques.map((cheque) => {
+                const pending = isChequePending(cheque);
+                const cleared = isChequeCleared(cheque);
+                const isIssued = cheque.type === "issued";
+                return (
+                  <StyledTableRow key={cheque.id}>
+                    <StyledTableCell align="right">
+                      <Typography sx={{ fontWeight: 700, color: "var(--admin-text)", fontSize: 12 }}>
+                        {cheque.cheque_number || "—"}
+                      </Typography>
+                      {cheque.title ? (
+                        <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11 }}>{cheque.title}</Typography>
+                      ) : null}
+                    </StyledTableCell>
+                    <StyledTableCell align="right">
+                      <Chip
+                        size="small"
+                        label={chequeTypeLabel(cheque.type)}
+                        sx={{
+                          height: 20,
+                          fontSize: 11,
+                          bgcolor: isIssued ? "rgba(33, 150, 243, 0.2)" : "rgba(120, 181, 104, 0.2)",
+                          color: "var(--admin-text)",
+                        }}
+                      />
+                    </StyledTableCell>
+                    <StyledTableCell align="right">{cheque.bank_name || "—"}</StyledTableCell>
+                    <StyledTableCell align="right" sx={{ whiteSpace: "normal" }}>
+                      {cheque.payee || "—"}
+                    </StyledTableCell>
+                    <StyledTableCell align="right">
+                      <Typography sx={{ color: "var(--admin-accent)", fontWeight: 700, fontSize: 12 }}>
+                        {formatNumber(parseAmount(cheque.amount))}
+                      </Typography>
+                    </StyledTableCell>
+                    <StyledTableCell align="right">
+                      <Chip
+                        size="small"
+                        label={chequeStatusLabel(cheque.status)}
+                        sx={{
+                          height: 20,
+                          fontSize: 11,
+                          bgcolor: cleared ? "rgba(5, 150, 105, 0.25)" : "rgba(255, 152, 0, 0.25)",
+                          color: "var(--admin-text)",
+                        }}
+                      />
+                    </StyledTableCell>
+                    <StyledTableCell align="right">{cheque.due_date_jalali || cheque.due_date || "—"}</StyledTableCell>
+                    <StyledTableCell align="right">
+                      <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.4 }}>
+                        {pending ? (
+                          <ChequeActionButton
+                            title="وصول"
+                            onClick={() => openClear(cheque)}
+                            color="var(--admin-accent)"
+                            bgcolor="rgba(120, 181, 104, 0.15)"
+                            hover="rgba(120, 181, 104, 0.3)"
+                          >
+                            <DoneAllIcon sx={{ fontSize: 16 }} />
+                          </ChequeActionButton>
+                        ) : null}
+                        {pending ? (
+                          <ChequeActionButton
+                            title="ویرایش"
+                            onClick={() => openEdit(cheque)}
+                            color="var(--admin-text)"
+                            bgcolor="var(--admin-icon-bg)"
+                            hover="var(--admin-icon-bg-hover)"
+                          >
+                            <EditIcon sx={{ fontSize: 16 }} />
+                          </ChequeActionButton>
+                        ) : null}
+                        {cleared ? (
+                          <ChequeActionButton
+                            title="برگشت وصول"
+                            onClick={() => setUnclearTarget(cheque)}
+                            color="var(--admin-warning)"
+                            bgcolor="rgba(255, 152, 0, 0.15)"
+                            hover="rgba(255, 152, 0, 0.3)"
+                          >
+                            <UndoIcon sx={{ fontSize: 16 }} />
+                          </ChequeActionButton>
+                        ) : null}
+                        {!cleared ? (
+                          <ChequeActionButton
+                            title="حذف"
+                            onClick={() => setDeleteTarget(cheque)}
+                            color="var(--admin-error)"
+                            bgcolor="rgba(255, 68, 68, 0.15)"
+                            hover="rgba(255, 68, 68, 0.3)"
+                          >
+                            <DeleteIcon sx={{ fontSize: 16 }} />
+                          </ChequeActionButton>
+                        ) : null}
+                      </Box>
+                    </StyledTableCell>
+                  </StyledTableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
 
       <BottomSheetModal open={filterSheetOpen} onClose={() => setFilterSheetOpen(false)}>

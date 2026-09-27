@@ -74,7 +74,9 @@ export function parseAmount(value: string | number | null | undefined): number {
 }
 
 export function formatInputWithSeparator(value: string): string {
-  const digitsOnly = String(value ?? "").replace(/[^\d۰-۹٠-٩]/g, "");
+  const raw = String(value ?? "");
+  const withoutFraction = raw.replace(/[.\u066B][0-9۰-۹٠-٩]*$/, "");
+  const digitsOnly = withoutFraction.replace(/[^\d۰-۹٠-٩]/g, "");
   if (!digitsOnly) return "";
   return formatNumber(parseAmount(digitsOnly));
 }

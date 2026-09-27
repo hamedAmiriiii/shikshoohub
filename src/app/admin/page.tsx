@@ -3615,6 +3615,7 @@ export default function ShoppingPage() {
                         </Typography>
                         ) : null}
                         {paymentType !== "installment" ? (
+                        <>
                         <TextField
                           value={discountPercentDisplay}
                           onChange={(e) => applyDiscountFromPercent(e.target.value)}
@@ -3714,6 +3715,7 @@ export default function ShoppingPage() {
                             }
                           }}
                         />
+                        </>
                         ) : null}
                         {cartProfitEnabled ? (
                           <>

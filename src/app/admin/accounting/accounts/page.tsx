@@ -14,6 +14,7 @@ import {
   DialogTitle,
   FormControlLabel,
   IconButton,
+  InputAdornment,
   Switch,
   TextField,
   Typography,
@@ -24,6 +25,7 @@ import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import SearchIcon from "@mui/icons-material/Search";
 import { toast } from "react-toastify";
 import {
   createAccountingAccount,
@@ -52,19 +54,49 @@ function linkedLabel(account: AccountingAccount): string | null {
   return null;
 }
 
+function normalizeAccountSearch(value: string): string {
+  const persian = "۰۱۲۳۴۵۶۷۸۹";
+  const arabic = "٠١٢٣٤٥٦٧٨٩";
+  return value
+    .replace(/[۰-۹]/g, (digit) => String(persian.indexOf(digit)))
+    .replace(/[٠-٩]/g, (digit) => String(arabic.indexOf(digit)))
+    .trim()
+    .toLowerCase();
+}
+
+function accountMatches(account: AccountingAccount, query: string): boolean {
+  return account.code.toLowerCase().includes(query) || account.name.toLowerCase().includes(query);
+}
+
+function filterAccountTree(nodes: AccountingAccount[], query: string): AccountingAccount[] {
+  if (!query) return nodes;
+  return nodes.flatMap((node) => {
+    const matched = accountMatches(node, query);
+    const children = filterAccountTree(node.children, query);
+    if (!matched && children.length === 0) return [];
+    return [{ ...node, children: matched ? node.children : children }];
+  });
+}
+
 function AccountNode({
   account,
   depth,
+  forceOpen,
   onCreate,
   onEdit,
 }: {
   account: AccountingAccount;
   depth: number;
+  forceOpen: boolean;
   onCreate: (parent: AccountingAccount, level: "moein" | "tafsili") => void;
   onEdit: (account: AccountingAccount) => void;
 }) {
   const hasChildren = account.children.length > 0;
-  const [open, setOpen] = useState(depth < 2);
+  const [open, setOpen] = useState(depth < 2 || forceOpen);
+
+  useEffect(() => {
+    if (forceOpen && hasChildren) setOpen(true);
+  }, [forceOpen, hasChildren]);
   const linked = linkedLabel(account);
   const canCreateMoein = account.level === "kol";
   const canCreateTafsili = account.level === "moein";
@@ -176,6 +208,7 @@ function AccountNode({
               key={child.id}
               account={child}
               depth={depth + 1}
+              forceOpen={forceOpen}
               onCreate={onCreate}
               onEdit={onEdit}
             />
@@ -188,6 +221,7 @@ function AccountNode({
 
 export default function AccountingAccountsPage() {
   const [tree, setTree] = useState<AccountingAccount[]>([]);
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [includeInactive, setIncludeInactive] = useState(false);
   const [createParent, setCreateParent] = useState<AccountingAccount | null>(null);
@@ -277,6 +311,8 @@ export default function AccountingAccountsPage() {
 
   const createLevelLabel = createLevel === "moein" ? "معین" : "تفصیلی";
 
+  const query = normalizeAccountSearch(search);
+  const visibleTree = useMemo(() => filterAccountTree(tree, query), [tree, query]);
   const empty = useMemo(() => !loading && tree.length === 0, [loading, tree.length]);
 
   return (
@@ -307,6 +343,21 @@ export default function AccountingAccountsPage() {
         </>
       }
     >
+      <TextField
+        fullWidth
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="جستجوی کد یا نام حساب"
+        sx={{ ...accountingFieldSx, mb: 1.5 }}
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <SearchIcon sx={{ color: "var(--admin-text-muted)", fontSize: 20 }} />
+            </InputAdornment>
+          ),
+        }}
+      />
+
       {loading ? (
         <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
           <CircularProgress sx={{ color: "var(--admin-accent)" }} />
@@ -314,17 +365,22 @@ export default function AccountingAccountsPage() {
       ) : empty ? (
         <Alert severity="warning">درختی برنگشت. اگر جدول حسابداری روی دیتابیس نیست، پیام سرور را در اعلان ببینید.</Alert>
       ) : (
+        visibleTree.length === 0 ? (
+          <Alert severity="info">حسابی با این کد یا نام پیدا نشد.</Alert>
+        ) : (
         <Box>
-          {tree.map((node) => (
+          {visibleTree.map((node) => (
             <AccountNode
               key={node.id}
               account={node}
               depth={0}
+              forceOpen={query.length > 0}
               onCreate={openCreate}
               onEdit={openEdit}
             />
           ))}
         </Box>
+        )
       )}
 
       <Dialog open={!!createParent} onClose={() => setCreateParent(null)} fullWidth maxWidth="xs">

@@ -21,9 +21,12 @@ import {
   TableHead,
   TableRow,
   Paper,
+  TextField,
   Typography,
 } from "@mui/material";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
+import SearchIcon from "@mui/icons-material/Search";
+import InputAdornment from "@mui/material/InputAdornment";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import CloseIcon from "@mui/icons-material/Close";
@@ -33,6 +36,7 @@ import tokenCode from "@/app/coponent/tokenCode";
 import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
 import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
 import { adminPageSx } from "@/app/admin/theme/adminTheme";
+import PurchaseDebtCreateDialog from "./PurchaseDebtCreateDialog";
 import PurchaseDebtSettleDialog from "./PurchaseDebtSettleDialog";
 import {
   extractDebtGridMeta,
@@ -53,6 +57,15 @@ import {
 } from "@/app/lib/purchaseDebts";
 
 const formatNumber = (n: number) => new Intl.NumberFormat("fa-IR").format(n);
+
+function normalizeDebtSearch(value: string): string {
+  const persian = "۰۱۲۳۴۵۶۷۸۹";
+  const arabic = "٠١٢٣٤٥٦٧٨٩";
+  return value
+    .replace(/[۰-۹]/g, (digit) => String(persian.indexOf(digit)))
+    .replace(/[٠-٩]/g, (digit) => String(arabic.indexOf(digit)))
+    .trim();
+}
 
 function formatDate(value?: string): string {
   if (!value) return "—";
@@ -86,6 +99,14 @@ export default function PurchaseDebtsPage() {
   const [invoiceDetails, setInvoiceDetails] = useState<Record<number, PurchaseDebtInvoice>>({});
   const [detailsLoading, setDetailsLoading] = useState<number | null>(null);
   const [settleInvoice, setSettleInvoice] = useState<PurchaseDebtInvoice | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSearch(normalizeDebtSearch(searchInput)), 300);
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
 
   const loadDebtors = useCallback(async () => {
     const token = tokenCode();
@@ -96,7 +117,14 @@ export default function PurchaseDebtsPage() {
 
     setLoading(true);
     try {
-      const res = await FetchWithJwtClient("GET", "/api/purchase-debts/grid", token);
+      const params = new URLSearchParams();
+      if (search) params.set("searchFilterModel", JSON.stringify(search));
+      const query = params.toString();
+      const res = await FetchWithJwtClient(
+        "GET",
+        `/api/purchase-debts/grid${query ? `?${query}` : ""}`,
+        token,
+      );
       if (res?.hasError) {
         toast.error(getApiErrorMessage(res, "خطا در دریافت لیست بدهکاران"));
         return;
@@ -106,7 +134,7 @@ export default function PurchaseDebtsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [search]);
 
   const loadInvoices = useCallback(async (phone: string, status: string) => {
     const token = tokenCode();
@@ -191,9 +219,12 @@ export default function PurchaseDebtsPage() {
     <Box sx={{ ...adminPageSx, p: 2, pb: 12 }}>
       <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
         <AccountBalanceWalletIcon sx={{ color: "var(--admin-accent)", fontSize: 30 }} />
-        <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: "20px" }}>
+        <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: "20px", flex: 1 }}>
           بدهکاران (نسیه)
         </Typography>
+        <Button variant="contained" onClick={() => setCreateOpen(true)} sx={{ bgcolor: "var(--admin-accent)" }}>
+          ثبت بدهی
+        </Button>
       </Box>
 
       <Grid container spacing={1.5} sx={{ mb: 2 }}>
@@ -215,13 +246,39 @@ export default function PurchaseDebtsPage() {
         ))}
       </Grid>
 
+      <TextField
+        fullWidth
+        size="small"
+        value={searchInput}
+        onChange={(e) => setSearchInput(e.target.value)}
+        placeholder="جستجو با نام یا شماره"
+        sx={{
+          mb: 1.5,
+          "& .MuiOutlinedInput-root": {
+            color: "var(--admin-text)",
+            bgcolor: "var(--admin-surface)",
+            borderRadius: "10px",
+            "& fieldset": { borderColor: "var(--admin-border)" },
+            "&:hover fieldset": { borderColor: "var(--admin-accent)" },
+            "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
+          },
+        }}
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <SearchIcon sx={{ color: "var(--admin-text-muted)", fontSize: 20 }} />
+            </InputAdornment>
+          ),
+        }}
+      />
+
       {loading ? (
         <Box sx={{ py: 6, display: "flex", justifyContent: "center" }}>
           <CircularProgress sx={{ color: "var(--admin-accent)" }} />
         </Box>
       ) : debtors.length === 0 ? (
         <Typography sx={{ color: "var(--admin-text-muted)", textAlign: "center", py: 4 }}>
-          بدهکاری ثبت نشده است
+          {search ? "بدهکاری با این نام یا شماره پیدا نشد" : "بدهکاری ثبت نشده است"}
         </Typography>
       ) : (
         <TableContainer
@@ -410,6 +467,16 @@ export default function PurchaseDebtsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <PurchaseDebtCreateDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onSuccess={(phone) => {
+          loadDebtors();
+          setSelectedPhone(phone);
+          setInvoiceStatus("pending");
+        }}
+      />
 
       <PurchaseDebtSettleDialog
         open={Boolean(settleInvoice)}

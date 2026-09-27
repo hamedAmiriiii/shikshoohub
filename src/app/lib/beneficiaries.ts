@@ -97,22 +97,35 @@ export function extractBeneficiaryList(res: unknown): Beneficiary[] {
 
 export function extractBeneficiaryDetail(res: unknown): BeneficiaryDetail | null {
   const rec = asRecord(res);
-  const candidate = rec?.data ?? rec?.beneficiary ?? rec;
+  const data = asRecord(rec?.data);
+  const candidate = data?.beneficiary ?? rec?.beneficiary ?? data ?? rec;
   const parsed = parseBeneficiary(candidate);
   if (!parsed) return null;
   const body = asRecord(candidate) ?? rec;
+  const totals = asRecord(rec?.totals) ?? asRecord(data?.totals);
   const invoicesRaw = Array.isArray(body?.invoices)
     ? body.invoices
     : Array.isArray(rec?.invoices)
       ? rec!.invoices
-      : [];
+      : Array.isArray(data?.invoices)
+        ? data!.invoices
+        : [];
   const expensesRaw = Array.isArray(body?.expenses)
     ? body.expenses
     : Array.isArray(rec?.expenses)
       ? rec!.expenses
-      : [];
+      : Array.isArray(data?.expenses)
+        ? data!.expenses
+        : [];
   return {
     ...parsed,
+    purchased_total: totals
+      ? asNumber(totals.purchased_total ?? totals.purchase_total)
+      : parsed.purchased_total,
+    unpaid_total: totals
+      ? asNumber(totals.unpaid_total ?? totals.debt_total)
+      : parsed.unpaid_total,
+    paid_total: totals ? asNumber(totals.paid_total) : parsed.paid_total,
     invoices: invoicesRaw as BeneficiaryDoc[],
     expenses: expensesRaw as BeneficiaryDoc[],
   };

@@ -17,6 +17,7 @@ import {
   IconButton,
   Pagination,
   Paper,
+  MenuItem,
   Radio,
   RadioGroup,
   Table,
@@ -32,6 +33,7 @@ import { styled } from "@mui/material/styles";
 import { tableCellClasses } from "@mui/material/TableCell";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
+import DoneAllIcon from "@mui/icons-material/DoneAll";
 import EditIcon from "@mui/icons-material/Edit";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import PaymentsIcon from "@mui/icons-material/Payments";
@@ -40,6 +42,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Link from "next/link";
 import DatePicker from "react-multi-date-picker";
+import DateObject from "react-date-object";
 import persian from "react-date-object/calendars/persian";
 import persian_fa from "react-date-object/locales/persian_fa";
 import "react-multi-date-picker/styles/layouts/mobile.css";
@@ -51,6 +54,9 @@ import BeneficiarySelect from "@/app/admin/BeneficiarySelect";
 import DocumentPaymentFields from "@/app/admin/DocumentPaymentFields";
 import { DocumentPaymentChips, documentNeedsSettle } from "@/app/admin/DocumentPaymentBadge";
 import DocumentPaymentSettleDialog from "@/app/admin/DocumentPaymentSettleDialog";
+import ShopAccountSelect from "@/app/admin/ShopAccountSelect";
+import { CHEQUE_DATE_PICKER_Z, chequeDatePickerBoxSx } from "@/app/admin/cheques/ChequeFormSheet";
+import { dateObjectToPayload, parseAmount, todayJalaliDateObject } from "@/app/lib/cheques";
 import BottomSheet from "@/app/coponent/BottomSheet";
 import { adminButtonStartIconSx } from "@/app/admin/theme/adminTheme";
 import {
@@ -127,6 +133,18 @@ type Expense = DocumentPaymentInfo & {
   beneficiary_id?: number | null;
   user_shiksho_id?: number | null;
   beneficiary?: { id?: number | null; name?: string | null; phone?: string | null } | null;
+  cheque_id?: number | null;
+  cheque?: LinkedCheque | null;
+};
+
+type LinkedCheque = {
+  id: number;
+  status?: string | null;
+  type?: string | null;
+  cheque_number?: string | null;
+  amount?: number | string | null;
+  shop_account_id?: number | null;
+  bank_name?: string | null;
 };
 
 const formatNumber = (num: number | string) => {
@@ -142,6 +160,70 @@ function expenseAmount(expense: Expense): number {
 
 function expenseDate(expense: Expense): string {
   return expense.date || expense.created_at || "-";
+}
+
+function asLinkedCheque(value: unknown): LinkedCheque | null {
+  if (!value || typeof value !== "object") return null;
+  const rec = value as Record<string, unknown>;
+  const id = Number(rec.id);
+  if (!Number.isFinite(id) || id <= 0) return null;
+  return {
+    id,
+    status: rec.status != null ? String(rec.status) : null,
+    type: rec.type != null ? String(rec.type) : null,
+    cheque_number: rec.cheque_number != null ? String(rec.cheque_number) : null,
+    amount: (rec.amount as number | string | null) ?? null,
+    shop_account_id: rec.shop_account_id != null ? Number(rec.shop_account_id) : null,
+    bank_name: rec.bank_name != null ? String(rec.bank_name) : null,
+  };
+}
+
+function pendingExpenseCheques(expense: Expense): LinkedCheque[] {
+  const seen = new Set<number>();
+  const out: LinkedCheque[] = [];
+  const docStatus = String(expense.payment_status || "").toLowerCase();
+  const docUnsettled = docStatus === "unpaid" || docStatus === "partial";
+  const add = (cheque: LinkedCheque | null) => {
+    if (!cheque || seen.has(cheque.id)) return;
+    const status = String(cheque.status || "").toLowerCase();
+    if (status === "cleared" || status === "cancelled") return;
+    if (status !== "pending" && !docUnsettled) return;
+    seen.add(cheque.id);
+    out.push(cheque);
+  };
+
+  add(asLinkedCheque(expense.cheque));
+  for (const row of expense.payments || []) {
+    if (String(row?.method || "") !== "cheque") continue;
+    const nested = asLinkedCheque(row.cheque);
+    if (nested) {
+      add(nested);
+      continue;
+    }
+    const id = Number(row.cheque_id);
+    if (docUnsettled && Number.isFinite(id) && id > 0) {
+      add({
+        id,
+        status: "pending",
+        amount: row.amount ?? expense.amount,
+        shop_account_id: expense.shop_account_id,
+      });
+    }
+  }
+  if (!out.length && docUnsettled) {
+    const method = String(expense.payment_method || "").toLowerCase();
+    const id = Number(expense.cheque_id);
+    if ((method === "cheque" || method === "mixed") && Number.isFinite(id) && id > 0) {
+      add({
+        id,
+        status: "pending",
+        amount: expense.amount,
+        shop_account_id: expense.shop_account_id ?? null,
+        cheque_number: expense.cheque?.cheque_number ?? null,
+      });
+    }
+  }
+  return out;
 }
 
 function currentUserNames(): string[] {
@@ -175,6 +257,45 @@ function resolveShopAccountId(item: Expense): number | "" {
   return "";
 }
 
+function FilterChipRow({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: readonly (readonly [string, string])[];
+  onChange: (value: string) => void;
+}) {
+  return (
+    <Box sx={{ mb: 1 }}>
+      <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, mb: 0.4 }}>{label}</Typography>
+      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+        {options.map(([optionValue, optionLabel]) => {
+          const selected = value === optionValue;
+          return (
+            <Chip
+              key={optionValue}
+              size="small"
+              label={optionLabel}
+              onClick={() => onChange(optionValue)}
+              sx={{
+                height: 26,
+                fontSize: 12,
+                bgcolor: selected ? "var(--admin-accent)" : "var(--admin-surface-alt)",
+                color: selected ? "#fff" : "var(--admin-text)",
+                border: "1px solid",
+                borderColor: selected ? "var(--admin-accent)" : "var(--admin-border)",
+              }}
+            />
+          );
+        })}
+      </Box>
+    </Box>
+  );
+}
+
 export default function ExpensesPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -197,6 +318,11 @@ export default function ExpensesPage() {
   const [userName, setUserName] = useState("");
   const [paymentForm, setPaymentForm] = useState<DocumentPaymentFormState>(emptyDocumentPaymentForm);
   const [settleExpense, setSettleExpense] = useState<Expense | null>(null);
+  const [clearCheques, setClearCheques] = useState<LinkedCheque[]>([]);
+  const [clearChequeId, setClearChequeId] = useState<number | "">("");
+  const [clearAccountId, setClearAccountId] = useState<number | "">("");
+  const [clearDate, setClearDate] = useState<DateObject | null>(null);
+  const [clearingCheque, setClearingCheque] = useState(false);
   const [beneficiaryId, setBeneficiaryId] = useState<number | "">("");
   const [beneficiaryOption, setBeneficiaryOption] = useState<Beneficiary | null>(null);
 
@@ -670,7 +796,29 @@ export default function ExpensesPage() {
                         </Typography>
                       </StyledTableCell>
                       <StyledTableCell align="right">
-                        {mutable ? (
+                        {(() => {
+                          const pendingCheques = pendingExpenseCheques(expense);
+                          if (!mutable && pendingCheques.length === 0) return null;
+                          return (
+                          <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.25, alignItems: "center", flexWrap: "wrap" }}>
+                            {pendingCheques.length > 0 ? (
+                              <IconButton
+                                size="small"
+                                title="وصول چک"
+                                aria-label="وصول چک"
+                                onClick={() => {
+                                  setClearCheques(pendingCheques);
+                                  setClearChequeId(pendingCheques[0].id);
+                                  const account = Number(pendingCheques[0].shop_account_id || expense.shop_account_id);
+                                  setClearAccountId(Number.isFinite(account) && account > 0 ? account : "");
+                                  setClearDate(todayJalaliDateObject());
+                                }}
+                                sx={{ color: "var(--admin-accent)" }}
+                              >
+                                <DoneAllIcon sx={{ fontSize: 16 }} />
+                              </IconButton>
+                            ) : null}
+                            {mutable ? (
                           <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.25, alignItems: "center", flexWrap: "wrap" }}>
                             {documentNeedsSettle(expense) ? (
                               <Button
@@ -704,7 +852,10 @@ export default function ExpensesPage() {
                               <DeleteIcon sx={{ fontSize: 16 }} />
                             </IconButton>
                           </Box>
-                        ) : null}
+                            ) : null}
+                          </Box>
+                          );
+                        })()}
                       </StyledTableCell>
                     </StyledTableRow>
                   );
@@ -885,19 +1036,20 @@ export default function ExpensesPage() {
           }
           onClose={() => setOpenFilterSheet(false)}
         >
-          <Box sx={{ p: 1.5 }}>
+          <Box sx={{ px: 1.5, pt: 1, pb: 1.5 }}>
             <TextField
               size="small"
-              label="جستجو (عنوان، ثبت‌کننده)"
+              label="جستجو"
+              placeholder="عنوان یا ثبت‌کننده"
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
                 setCurrentPage(1);
               }}
               fullWidth
-              sx={{ ...fieldSx, mb: 1.5 }}
+              sx={{ ...fieldSx, mb: 1 }}
             />
-            <Box sx={{ mb: 1.5 }}>
+            <Box sx={{ mb: 1 }}>
               <BeneficiarySelect
                 value={filterBeneficiaryId}
                 initialOption={filterBeneficiaryOption}
@@ -907,88 +1059,58 @@ export default function ExpensesPage() {
                   setCurrentPage(1);
                 }}
                 label="ذینفع"
-                helperText="فقط هزینه‌های این طرف‌حساب"
                 allowRegister={false}
               />
             </Box>
-            <Typography sx={{ color: "var(--admin-text)", fontSize: 12, mb: 0.5 }}>نوع هزینه</Typography>
-            <RadioGroup
+            <FilterChipRow
+              label="نوع"
               value={expenseTypeFilter}
-              onChange={(e) => {
-                setExpenseTypeFilter(e.target.value as "all" | "جاری" | "سرمایه");
-                setCurrentPage(1);
-              }}
-              sx={{ mb: 1.5 }}
-            >
-              {[
+              options={[
                 ["all", "همه"],
                 ["جاری", "جاری"],
                 ["سرمایه", "سرمایه"],
-              ].map(([value, label]) => (
-                <FormControlLabel
-                  key={value}
-                  value={value}
-                  control={<Radio size="small" sx={{ color: "var(--admin-accent)", "&.Mui-checked": { color: "var(--admin-accent)" } }} />}
-                  label={<Typography sx={{ fontSize: 13, color: "var(--admin-text)" }}>{label}</Typography>}
-                />
-              ))}
-            </RadioGroup>
-            <Typography sx={{ color: "var(--admin-text)", fontSize: 12, mb: 0.5 }}>منبع اعتبار مشتری</Typography>
-            <RadioGroup
-              value={creditSourceFilter}
-              onChange={(e) => {
-                const value = e.target.value as ExpenseCreditSource | "all";
-                setCreditSourceFilter(value);
+              ]}
+              onChange={(value) => {
+                setExpenseTypeFilter(value as "all" | "جاری" | "سرمایه");
                 setCurrentPage(1);
               }}
-              sx={{ mb: 1.5 }}
-            >
-              {[
+            />
+            <FilterChipRow
+              label="اعتبار"
+              value={creditSourceFilter}
+              options={[
                 ["all", "همه"],
                 ["loyalty_purchase", EXPENSE_CREDIT_SOURCE_LABELS.loyalty_purchase],
                 ["purchase_return", EXPENSE_CREDIT_SOURCE_LABELS.purchase_return],
                 ["manual", EXPENSE_CREDIT_SOURCE_LABELS.manual],
-              ].map(([value, label]) => (
-                <FormControlLabel
-                  key={value}
-                  value={value}
-                  control={<Radio size="small" sx={{ color: "var(--admin-accent)", "&.Mui-checked": { color: "var(--admin-accent)" } }} />}
-                  label={<Typography sx={{ fontSize: 13, color: "var(--admin-text)" }}>{label}</Typography>}
-                />
-              ))}
-            </RadioGroup>
-            <Typography sx={{ color: "var(--admin-text)", fontSize: 12, mb: 0.5 }}>فیلتر تاریخ</Typography>
-            <RadioGroup
+              ]}
+              onChange={(value) => {
+                setCreditSourceFilter(value as ExpenseCreditSource | "all");
+                setCurrentPage(1);
+              }}
+            />
+            <FilterChipRow
+              label="تاریخ"
               value={filterMode || "all"}
-              onChange={(e) => {
-                const value = e.target.value as "today" | "week" | "month" | "year" | "range" | "all";
+              options={[
+                ["all", "همه"],
+                ["today", "امروز"],
+                ["week", "هفته"],
+                ["month", "ماه"],
+                ["year", "سال"],
+                ["range", "بازه"],
+              ]}
+              onChange={(value) => {
                 setCurrentPage(1);
                 if (value === "all") {
                   setFilterMode(null);
                   setDateRange([]);
                 } else {
-                  setFilterMode(value);
+                  setFilterMode(value as "today" | "week" | "month" | "year" | "range");
                   if (value !== "range") setDateRange([]);
                 }
               }}
-              sx={{ mb: 1.5 }}
-            >
-              {[
-                ["all", "همه"],
-                ["today", "امروز"],
-                ["week", "هفته جاری"],
-                ["month", "ماه جاری"],
-                ["year", "سال جاری"],
-                ["range", "بازه تاریخ"],
-              ].map(([value, label]) => (
-                <FormControlLabel
-                  key={value}
-                  value={value}
-                  control={<Radio size="small" sx={{ color: "var(--admin-accent)", "&.Mui-checked": { color: "var(--admin-accent)" } }} />}
-                  label={<Typography sx={{ fontSize: 13, color: "var(--admin-text)" }}>{label}</Typography>}
-                />
-              ))}
-            </RadioGroup>
+            />
             {filterMode === "range" && (
               <Box sx={{ mb: 1.5 }}>
                 <DatePicker
@@ -1106,6 +1228,136 @@ export default function ExpensesPage() {
               sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}
             >
               بستن
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog
+          open={clearCheques.length > 0}
+          onClose={() => {
+            if (clearingCheque) return;
+            setClearCheques([]);
+            setClearChequeId("");
+          }}
+          maxWidth="xs"
+          fullWidth
+          PaperProps={{
+            sx: {
+              backgroundColor: "var(--admin-surface)",
+              borderRadius: "12px",
+              border: "1px solid var(--admin-border)",
+              direction: "rtl",
+            },
+          }}
+        >
+          <DialogTitle sx={{ color: "var(--admin-text)", textAlign: "center", fontSize: 16 }}>
+            وصول چک
+          </DialogTitle>
+          <DialogContent>
+            {(() => {
+              const selected = clearCheques.find((item) => item.id === clearChequeId) ?? clearCheques[0];
+              if (!selected) return null;
+              return (
+                <>
+                  <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 13, textAlign: "center", mb: 1.5 }}>
+                    چک {selected.cheque_number || selected.id} به مبلغ {formatNumber(parseAmount(selected.amount))} تومان
+                    وصول شود و از حساب انتخاب‌شده کسر گردد.
+                  </Typography>
+                  {clearCheques.length > 1 ? (
+                    <TextField
+                      select
+                      fullWidth
+                      size="small"
+                      label="چک"
+                      value={selected.id}
+                      onChange={(e) => {
+                        const nextId = Number(e.target.value);
+                        setClearChequeId(nextId);
+                        const next = clearCheques.find((item) => item.id === nextId);
+                        const account = Number(next?.shop_account_id);
+                        if (Number.isFinite(account) && account > 0) setClearAccountId(account);
+                      }}
+                      sx={{ ...fieldSx, mb: 1.5 }}
+                    >
+                      {clearCheques.map((item) => (
+                        <MenuItem key={item.id} value={item.id}>
+                          {item.cheque_number || item.id}
+                          {item.bank_name ? ` — ${item.bank_name}` : ""}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  ) : null}
+                  <Box sx={{ mb: 1.5 }}>
+                    <ShopAccountSelect
+                      value={clearAccountId}
+                      onChange={setClearAccountId}
+                      required
+                      label="حساب برداشت"
+                      helperText="حساب بانکی، تنخواه یا صندوق"
+                    />
+                  </Box>
+                  <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, mb: 0.5 }}>
+                    تاریخ وصول
+                  </Typography>
+                  <Box sx={chequeDatePickerBoxSx}>
+                    <DatePicker
+                      value={clearDate}
+                      onChange={(d) => setClearDate(d && !Array.isArray(d) ? (d as DateObject) : null)}
+                      calendar={persian}
+                      locale={persian_fa}
+                      calendarPosition="bottom-center"
+                      zIndex={CHEQUE_DATE_PICKER_Z}
+                      portal
+                      placeholder="تاریخ وصول"
+                      className="rmdp-mobile"
+                      containerStyle={{ width: "100%" }}
+                      style={{ width: "100%", height: 40, borderRadius: 8 }}
+                    />
+                  </Box>
+                </>
+              );
+            })()}
+          </DialogContent>
+          <DialogActions sx={{ justifyContent: "center", gap: 1, pb: 2 }}>
+            <Button
+              onClick={() => {
+                setClearCheques([]);
+                setClearChequeId("");
+              }}
+              disabled={clearingCheque}
+              sx={{ color: "var(--admin-text)" }}
+            >
+              انصراف
+            </Button>
+            <Button
+              variant="contained"
+              disabled={clearingCheque || clearAccountId === "" || clearChequeId === ""}
+              onClick={() => {
+                void (async () => {
+                  if (clearChequeId === "" || clearAccountId === "") return;
+                  setClearingCheque(true);
+                  try {
+                    const body: Record<string, unknown> = { shop_account_id: clearAccountId };
+                    const payload = dateObjectToPayload(clearDate);
+                    if (payload) body.clear_date = payload;
+                    const res = await FetchWithJwtClient("POST", `/api/cheques/${clearChequeId}/clear`, body);
+                    if (res?.hasError) {
+                      toast.error(getApiErrorMessage(res, "خطا در وصول چک"));
+                      return;
+                    }
+                    toast.success(typeof res?.message === "string" ? res.message : "چک وصول شد و از حساب کسر شد");
+                    setClearCheques([]);
+                    setClearChequeId("");
+                    await fetchExpenses();
+                  } finally {
+                    setClearingCheque(false);
+                  }
+                })();
+              }}
+              sx={{ bgcolor: "var(--admin-accent)", "&:hover": { bgcolor: "var(--admin-accent-hover)" } }}
+              startIcon={clearingCheque ? <CircularProgress size={16} color="inherit" /> : undefined}
+            >
+              تایید وصول
             </Button>
           </DialogActions>
         </Dialog>

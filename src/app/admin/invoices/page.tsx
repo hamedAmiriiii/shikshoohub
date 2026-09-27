@@ -887,7 +887,7 @@ export default function InvoicesPage() {
           }}
         >
           <DialogTitle sx={{ color: 'var(--admin-text)', fontWeight: 700, fontSize: 14, py: 1, px: 2 }}>
-            ثبت فاکتور جدید
+            ثبت فاکتور خرید جدید
           </DialogTitle>
           <DialogContent sx={{ px: 2, pb: 1, pt: '8px !important' }}>
             <Box

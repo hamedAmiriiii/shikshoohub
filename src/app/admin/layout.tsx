@@ -100,6 +100,13 @@ const getPageTitle = (pathname: string | null): string | undefined => {
 };
 
 // Check if page should show back button
+const getAdminBackUrl = (pathname: string | null): string => {
+  if (pathname && /^\/admin\/beneficiaries\/\d+$/.test(pathname)) {
+    return "/admin/beneficiaries";
+  }
+  return getFirstAllowedAdminPath();
+};
+
 const shouldShowBack = (pathname: string | null): boolean => {
   if (!pathname) return false;
   // Show back button for all pages except main shikshoo admin page
@@ -201,7 +208,7 @@ export default function ShikshooLayout({
                 <Header
                   title={pageTitle}
                   showBack={showBack}
-                  backUrl={getFirstAllowedAdminPath()}
+                  backUrl={getAdminBackUrl(pathname)}
                 />
               </Box>
             )}
