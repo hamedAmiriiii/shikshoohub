@@ -36,13 +36,28 @@ function emptyStore(): Store {
   };
 }
 
+/** تاریخ میلادی تهران. ایران از ۱۴۰۱ دیگر ساعت تابستانی ندارد؛ همیشه ‎+03:30‎. */
 export function tehranToday(now = new Date()): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Tehran",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(now);
+  const tehran = new Date(now.getTime() + (3 * 60 + 30) * 60 * 1000);
+  const year = tehran.getUTCFullYear();
+  const month = String(tehran.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(tehran.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export function shiftYmd(ymd: string, deltaDays: number): string {
+  const [year, month, day] = ymd.split("-").map(Number);
+  const shifted = new Date(Date.UTC(year, month - 1, day + deltaDays));
+  const y = shifted.getUTCFullYear();
+  const m = String(shifted.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(shifted.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+export function visitDay(at: string): string {
+  const time = new Date(at).getTime();
+  if (Number.isNaN(time)) return "";
+  return tehranToday(new Date(time));
 }
 
 let chain: Promise<unknown> = Promise.resolve();
@@ -99,15 +114,32 @@ async function readStore(): Promise<Store> {
   }
 }
 
-function pruneDays(days: Record<string, number>, today: string): Record<string, number> {
-  const cutoff = new Date(`${today}T12:00:00+03:30`);
-  cutoff.setDate(cutoff.getDate() - (KEEP_DAYS - 1));
-  const min = tehranToday(cutoff);
-  const next: Record<string, number> = {};
-  for (const [day, count] of Object.entries(days)) {
-    if (day >= min && count > 0) next[day] = count;
+function isSampleIp(ip: string): boolean {
+  return /^(192\.0\.2\.|198\.51\.100\.|203\.0\.113\.)/.test(ip);
+}
+
+/** جمع کل همان جمع روزهای ۳۰ روز اخیر است تا با جدول روزانه یکی بماند. */
+function reconcileBucket(bucket: Bucket, today: string): Bucket {
+  const min = shiftYmd(today, -(KEEP_DAYS - 1));
+  const days: Record<string, number> = {};
+  for (const [day, count] of Object.entries(bucket.days)) {
+    if (day >= min && day <= today && count > 0) days[day] = count;
   }
-  return next;
+  const visits = bucket.visits.filter((item) => {
+    if (isSampleIp(item.ip)) return false;
+    const day = visitDay(item.at);
+    return day >= min && day <= today;
+  });
+  const listed: Record<string, number> = {};
+  for (const item of visits) {
+    const day = visitDay(item.at);
+    listed[day] = (listed[day] || 0) + 1;
+  }
+  for (const [day, count] of Object.entries(listed)) {
+    if (!days[day] || days[day] < count) days[day] = count;
+  }
+  const total = Object.values(days).reduce((sum, count) => sum + count, 0);
+  return { total, days, visits: visits.slice(0, MAX_VISITS) };
 }
 
 export function isSitePageKey(value: unknown): value is SitePageKey {
@@ -131,16 +163,22 @@ export async function recordSitePageView(
   await withLock(async () => {
     const store = await readStore();
     const today = tehranToday();
-    const bucket = store[page];
     const at = new Date().toISOString();
-    bucket.total += 1;
-    bucket.days = pruneDays(bucket.days, today);
+    const ip = cleanVisitorIp(visitor.ip);
+    const name = cleanVisitorName(visitor.name);
+    const bucket = reconcileBucket(store[page], today);
+    const latest = bucket.visits[0];
+    const latestAt = latest ? new Date(latest.at).getTime() : 0;
+    if (latest && latest.ip === ip && Number.isFinite(latestAt) && Date.now() - latestAt < 3000) {
+      store[page] = bucket;
+      await fs.mkdir(path.dirname(FILE), { recursive: true });
+      await fs.writeFile(FILE, JSON.stringify(store), "utf8");
+      return;
+    }
     bucket.days[today] = (bucket.days[today] || 0) + 1;
-    const min = tehranToday(new Date(Date.now() - (KEEP_DAYS - 1) * 86400000));
-    bucket.visits = [
-      { at, ip: cleanVisitorIp(visitor.ip), name: cleanVisitorName(visitor.name) },
-      ...bucket.visits.filter((item) => item.at.slice(0, 10) >= min),
-    ].slice(0, MAX_VISITS);
+    bucket.visits = [{ at, ip, name }, ...bucket.visits].slice(0, MAX_VISITS);
+    bucket.total = Object.values(bucket.days).reduce((sum, count) => sum + count, 0);
+    store[page] = bucket;
     await fs.mkdir(path.dirname(FILE), { recursive: true });
     await fs.writeFile(FILE, JSON.stringify(store), "utf8");
   });
@@ -160,10 +198,9 @@ export async function readSitePageStats(): Promise<SitePageStat[]> {
   const store = await readStore();
   const today = tehranToday();
   return SITE_PAGE_KEYS.map((key) => {
-    const bucket = store[key];
+    const bucket = reconcileBucket(store[key], today);
     const days = Object.entries(bucket.days)
       .sort((a, b) => (a[0] < b[0] ? 1 : -1))
-      .slice(0, 14)
       .map(([date, count]) => ({ date, count }));
     return {
       key,

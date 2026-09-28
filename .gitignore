@@ -79,3 +79,4 @@ Running
 
 # شمارنده بازدید سایت
 data/site-page-views.json
+data/api-call-counts.json

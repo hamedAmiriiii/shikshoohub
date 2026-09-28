@@ -1,6 +1,7 @@
 'use client';
 
 import { notifyShopAccessIfExpired } from '@/app/lib/shopAccess';
+import { trackApiCall } from '@/app/lib/trackApiCall';
 import tokenCode from './tokenCode';
 
 const baseURL = process.env.NEXT_PUBLIC_BASE_URL || 'https://api.webinoo-plus.ir';
@@ -44,6 +45,18 @@ export async function FetchWithJwtClient(
   session: string | Record<string, unknown> | null = null,
   params: Record<string, string | number | boolean> = {},
   options: RequestInit = {},
+): Promise<any> {
+  const result = await sendRequest(method, url, session, params, options);
+  trackApiCall(method, url, result);
+  return result;
+}
+
+async function sendRequest(
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  url: string,
+  session: string | Record<string, unknown> | null,
+  params: Record<string, string | number | boolean>,
+  options: RequestInit,
 ): Promise<any> {
   try {
     const token = resolveToken(session);

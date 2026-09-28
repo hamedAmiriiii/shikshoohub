@@ -246,6 +246,7 @@ export default function ProductEditSheet({
                 onChange={onPurchasePriceChange}
                 name="purchase_price"
                 type="number"
+                liveSeparator
               />
             </Box>
           </Grid>
@@ -257,6 +258,7 @@ export default function ProductEditSheet({
                 onChange={onSalePriceChange}
                 name="sale_price"
                 type="number"
+                liveSeparator
               />
             </Box>
           </Grid>

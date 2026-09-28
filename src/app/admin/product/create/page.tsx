@@ -805,6 +805,7 @@ export default function Page() {
                   value={barcode}
                   onChange={(e) => setBarcode(e.target.value.slice(0, 255))}
                   placeholder="ورود دستی — یکتا در فروشگاه"
+                  focused
                   fullWidth
                   size="small"
                   inputProps={{ maxLength: 255 }}
@@ -837,12 +838,61 @@ export default function Page() {
                   }}
                 />
               </Grid>
-              <Grid item xs={12}>
+              {kgSalesEnabled && (
+                <Grid item xs={12} sm={3}>
+                  <FormControl component="fieldset" sx={{ width: "100%" }}>
+                    <FormLabel sx={colLabelSx}>
+                      واحد
+                    </FormLabel>
+                    <ToggleButtonGroup
+                      exclusive
+                      value={unitType}
+                      onChange={(_, val: ProductUnitType | null) => {
+                        if (val) setUnitType(val);
+                      }}
+                      size="small"
+                      fullWidth
+                      sx={{
+                        borderRadius: "10px",
+                        overflow: "hidden",
+                        border: "2px solid var(--admin-accent)",
+                        backgroundColor: "var(--admin-input-bg)",
+                        "&& .MuiToggleButtonGroup-grouped": {
+                          border: 0,
+                          borderRadius: 0,
+                          m: 0,
+                        },
+                        "&& .MuiToggleButtonGroup-grouped:not(:first-of-type)": {
+                          borderInlineStart: "1px solid var(--admin-accent)",
+                        },
+                        "& .MuiToggleButton-root": {
+                          color: "var(--admin-text)",
+                          minHeight: 34,
+                          py: 0.4,
+                          fontSize: "11px",
+                          "&:hover": { bgcolor: "var(--admin-menu-hover)" },
+                          "&.Mui-selected": {
+                            bgcolor: "var(--admin-accent)",
+                            color: "var(--admin-on-accent)",
+                            "&:hover": { bgcolor: "var(--admin-accent-hover)" },
+                          },
+                        },
+                      }}
+                    >
+                      <ToggleButton value="piece">عدد</ToggleButton>
+                      <ToggleButton value="kg">کیلو</ToggleButton>
+                      <ToggleButton value="meter">متر</ToggleButton>
+                    </ToggleButtonGroup>
+                  </FormControl>
+                </Grid>
+              )}
+              <Grid item xs={12} sm={kgSalesEnabled ? 9 : 12}>
                 <Typography sx={colLabelSx}>توضیحات (اختیاری)</Typography>
                 <TextField
                   value={description}
                   onChange={(e) => setDescription(e.target.value.slice(0, 500))}
                   placeholder="مثلاً مواد، حجم یا توضیح کوتاه منو — در منوی میز نمایش داده می‌شود"
+                  focused
                   fullWidth
                   size="small"
                   multiline
@@ -901,6 +951,7 @@ export default function Page() {
                     onChange={(e) => handlePurchasePriceChange(e)}
                     name="purchase_price"
                     type="number"
+                    liveSeparator
                   />
                 </Box>
               </Grid>
@@ -920,21 +971,11 @@ export default function Page() {
                     onChange={(e) => setPale_price(e)}
                     name="sale_price"
                     type="number"
+                    liveSeparator
                   />
                 </Box>
               </Grid>
-              <Grid item xs={6} sm={kgSalesEnabled ? 2 : 3}>
-                <Box sx={fieldWrapSx}>
-                  <TextInput
-                    value={discountPercent}
-                    label="درصد تخفیف (اختیاری)"
-                    onChange={(e) => setDiscountPercent(e)}
-                    name="discountPercent"
-                    type="number"
-                  />
-                </Box>
-              </Grid>
-              <Grid item xs={kgSalesEnabled ? 6 : 12} sm={kgSalesEnabled ? 2 : 3}>
+              <Grid item xs={6} sm={3}>
                 <Box sx={fieldWrapSx}>
                   <TextInput
                     value={quantity}
@@ -951,41 +992,17 @@ export default function Page() {
                   />
                 </Box>
               </Grid>
-              {kgSalesEnabled && (
-                <Grid item xs={6} sm={2}>
-                  <FormControl component="fieldset" sx={{ width: "100%" }}>
-                    <FormLabel sx={colLabelSx}>
-                      واحد
-                    </FormLabel>
-                    <ToggleButtonGroup
-                      exclusive
-                      value={unitType}
-                      onChange={(_, val: ProductUnitType | null) => {
-                        if (val) setUnitType(val);
-                      }}
-                      size="small"
-                      fullWidth
-                      sx={{
-                        "& .MuiToggleButton-root": {
-                          color: "var(--admin-text)",
-                          borderColor: "var(--admin-border)",
-                          py: 0.4,
-                          fontSize: "11px",
-                          "&.Mui-selected": {
-                            bgcolor: "var(--admin-accent)",
-                            color: "var(--admin-on-accent)",
-                            "&:hover": { bgcolor: "var(--admin-accent-hover)" },
-                          },
-                        },
-                      }}
-                    >
-                      <ToggleButton value="piece">عدد</ToggleButton>
-                      <ToggleButton value="kg">کیلو</ToggleButton>
-                      <ToggleButton value="meter">متر</ToggleButton>
-                    </ToggleButtonGroup>
-                  </FormControl>
-                </Grid>
-              )}
+              <Grid item xs={12} sm={3}>
+                <Box sx={fieldWrapSx}>
+                  <TextInput
+                    value={discountPercent}
+                    label="درصد تخفیف (اختیاری)"
+                    onChange={(e) => setDiscountPercent(e)}
+                    name="discountPercent"
+                    type="number"
+                  />
+                </Box>
+              </Grid>
             </Grid>
 
             <Grid container spacing={1} sx={{ mt: 1 }} alignItems="stretch">

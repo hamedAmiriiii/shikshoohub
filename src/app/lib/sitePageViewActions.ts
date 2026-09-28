@@ -1,26 +1,15 @@
 "use server";
 
-import { headers } from "next/headers";
 import {
-  cleanVisitorIp,
   cleanVisitorName,
   isSitePageKey,
   readSitePageStats,
   recordSitePageView,
   type SitePageStat,
 } from "./sitePageViews";
+import { requestIp } from "./requestIp";
 
 const recent = new Map<string, number>();
-
-function requestIp(): string {
-  const h = headers();
-  const raw =
-    h.get("x-forwarded-for")?.split(",")[0] ||
-    h.get("x-real-ip") ||
-    h.get("cf-connecting-ip") ||
-    "";
-  return cleanVisitorIp(raw);
-}
 
 export async function recordSitePageViewAction(page: string, visitorName?: string): Promise<{ ok: boolean }> {
   if (!isSitePageKey(page)) return { ok: false };

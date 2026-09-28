@@ -2821,18 +2821,21 @@ export default function ShoppingPage() {
               {!effectiveOnline && (
                 <Button
                   size="small"
-                  variant="contained"
+                  variant="text"
                   onClick={checkNetworkSpeed}
                   disabled={isCheckingNetworkSpeed}
                   sx={{
                     minWidth: 0,
                     px: { xs: 1, md: 1.5 },
                     py: 0.35,
-                    bgcolor: "var(--admin-on-accent)",
-                    color: "var(--admin-warning)",
+                    bgcolor: "#ffffff",
+                    color: "#b45309",
+                    fontWeight: 700,
                     fontSize: { xs: "10px", md: "12px" },
                     whiteSpace: "nowrap",
-                    "&:hover": { bgcolor: "var(--admin-surface-alt)" },
+                    boxShadow: "0 1px 3px rgba(15, 23, 42, 0.18)",
+                    "&:hover": { bgcolor: "rgba(255, 255, 255, 0.88)" },
+                    "&.Mui-disabled": { bgcolor: "rgba(255, 255, 255, 0.7)", color: "#b45309" },
                   }}
                 >
                   {isCheckingNetworkSpeed ? "..." : "بررسی شبکه"}
@@ -2842,17 +2845,19 @@ export default function ShoppingPage() {
               {pendingPurchases.length > 0 && (
                 <Button
                   size="small"
-                  variant="contained"
+                  variant="text"
                   onClick={() => router.push("/admin/pending-purchases")}
                   sx={{
                     minWidth: 0,
                     px: { xs: 1, md: 1.5 },
                     py: 0.35,
-                    bgcolor: "var(--admin-on-accent)",
-                    color: !effectiveOnline ? "var(--admin-warning)" : "var(--admin-primary-blue-hover)",
+                    bgcolor: "#ffffff",
+                    color: !effectiveOnline ? "#b45309" : "#1565c0",
+                    fontWeight: 700,
                     fontSize: { xs: "10px", md: "12px" },
                     whiteSpace: "nowrap",
-                    "&:hover": { bgcolor: "var(--admin-surface-alt)" },
+                    boxShadow: "0 1px 3px rgba(15, 23, 42, 0.18)",
+                    "&:hover": { bgcolor: "rgba(255, 255, 255, 0.88)" },
                   }}
                 >
                   مشاهده صف
