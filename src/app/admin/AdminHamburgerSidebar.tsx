@@ -43,6 +43,7 @@ import ShoppingCartCheckoutIcon from "@mui/icons-material/ShoppingCartCheckout";
 import CardMembershipIcon from "@mui/icons-material/CardMembership";
 import VpnKeyIcon from "@mui/icons-material/VpnKey";
 import WifiIcon from "@mui/icons-material/Wifi";
+import PasswordIcon from "@mui/icons-material/Password";
 import BadgeIcon from "@mui/icons-material/Badge";
 import PaymentsIcon from "@mui/icons-material/Payments";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
@@ -512,6 +513,12 @@ export default function AdminHamburgerSidebar({
         label: "درخواست‌های بسته پیامک",
         href: "/admin/sms-package-orders",
         icon: <ReceiptLongIcon />,
+      },
+      {
+        id: "two-factor-codes",
+        label: "کدهای دوعاملی",
+        href: "/admin/two-factor-codes",
+        icon: <PasswordIcon />,
       },
       {
         id: "shop-plans-admin",

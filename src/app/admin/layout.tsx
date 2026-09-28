@@ -65,6 +65,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/product-plans/orders': 'خریداران یادینو',
     '/admin/product-plans': 'پلن‌های یادینو',
     '/admin/sms-package-orders': 'درخواست‌های بسته پیامک',
+    '/admin/two-factor-codes': 'کدهای دوعاملی',
     '/admin/agency-requests': 'نمایندگی‌ها',
     '/admin/desktop-licenses': 'لایسنس دسکتاپ',
     '/admin/desktop-licenses/logs': 'لاگ اتصال دسکتاپ',
