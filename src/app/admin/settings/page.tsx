@@ -281,6 +281,7 @@ export default function SettingsPage() {
   const [typedSaleListMode, setTypedSaleListMode] = useState(false);
   const [menuMode, setMenuMode] = useState(false);
   const [menuModeShowProductImages, setMenuModeShowProductImages] = useState(true);
+  const [showProductStockOnSale, setShowProductStockOnSale] = useState(false);
   const [installmentPaymentEnabled, setInstallmentPaymentEnabled] = useState(true);
   const [debtPaymentEnabled, setDebtPaymentEnabled] = useState(false);
   const [chequePaymentEnabled, setChequePaymentEnabled] = useState(false);
@@ -321,6 +322,7 @@ export default function SettingsPage() {
       setTypedSaleListMode(Boolean(settings.typedSaleListMode));
       setMenuMode(settings.menuMode);
       setMenuModeShowProductImages(settings.menuModeShowProductImages);
+      setShowProductStockOnSale(Boolean(settings.showProductStockOnSale));
       setInstallmentPaymentEnabled(settings.installmentPaymentEnabled);
       setDebtPaymentEnabled(settings.debtPaymentEnabled);
       setChequePaymentEnabled(settings.chequePaymentEnabled);
@@ -409,6 +411,19 @@ export default function SettingsPage() {
       enabled
         ? "نمایش عکس کالا در حالت منو فعال شد"
         : "کارت‌های حالت منو بدون عکس نمایش داده می‌شوند",
+    );
+  };
+
+  const handleToggleShowProductStockOnSale = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const enabled = event.target.checked;
+    setShowProductStockOnSale(enabled);
+    writeAdminPosSettings({ showProductStockOnSale: enabled });
+    toast.success(
+      enabled
+        ? "موجودی کالا روی کارت‌های صفحه فروش نمایش داده می‌شود"
+        : "موجودی کالا از کارت‌های صفحه فروش پنهان شد",
     );
   };
 
@@ -973,6 +988,14 @@ export default function SettingsPage() {
             checked={menuModeShowProductImages}
             onChange={handleToggleMenuModeShowProductImages}
             disabled={!menuMode}
+          />
+          <SettingsToggleRow
+            icon={<Inventory2Icon sx={{ fontSize: 18 }} />}
+            title="نمایش موجودی کالا در فروش"
+            hint="عدد موجودی داخل دایره روی کارت کالا در حالت منو و لیست فروش تایپی"
+            checked={showProductStockOnSale}
+            onChange={handleToggleShowProductStockOnSale}
+            disabled={!menuMode && !typedSaleListMode}
           />
           <SettingsToggleRow
             icon={<PointOfSaleIcon sx={{ fontSize: 18 }} />}

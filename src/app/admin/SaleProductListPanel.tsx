@@ -24,6 +24,10 @@ import {
   type CachedProduct,
 } from "@/app/lib/productsCache";
 import { catalogItemKey, isProducedGoodItem } from "@/app/lib/catalogItems";
+import {
+  ADMIN_POS_SETTINGS_CHANGED_EVENT,
+  readAdminPosSettings,
+} from "@/app/lib/adminPosSettings";
 
 function normalizeSearchText(value: string): string {
   const persianDigits = "۰۱۲۳۴۵۶۷۸۹";
@@ -51,11 +55,19 @@ export default function SaleProductListPanel({
   const [expanded, setExpanded] = useState(true);
   const [search, setSearch] = useState("");
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [showProductStock, setShowProductStock] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const activeIndexRef = useRef<number | null>(null);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const resultLimit = variant === "typed" ? 240 : 80;
+
+  useEffect(() => {
+    const sync = () => setShowProductStock(Boolean(readAdminPosSettings().showProductStockOnSale));
+    sync();
+    window.addEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, sync);
+    return () => window.removeEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, sync);
+  }, []);
 
   const filteredProducts = useMemo(() => {
     const query = normalizeSearchText(search);
@@ -526,6 +538,28 @@ export default function SaleProductListPanel({
                       ) : null}
                     </Box>
                   </Box>
+                  {showProductStock && !outOfStock ? (
+                    <Box
+                      sx={{
+                        flexShrink: 0,
+                        minWidth: 26,
+                        height: 26,
+                        px: 0.6,
+                        borderRadius: "999px",
+                        bgcolor: "var(--admin-accent)",
+                        color: "var(--admin-on-accent)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "12px",
+                        fontWeight: 800,
+                        lineHeight: 1,
+                        boxSizing: "border-box",
+                      }}
+                    >
+                      {formatNumber(Number(product.quantity) || 0)}
+                    </Box>
+                  ) : null}
                   <IconButton
                     disabled={outOfStock}
                     onClick={(e) => {

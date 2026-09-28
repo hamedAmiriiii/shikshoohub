@@ -8,6 +8,8 @@ export type AdminPosSettings = {
   menuMode: boolean;
   /** در حالت منو، تصویر کالا روی کارت نشان داده شود */
   menuModeShowProductImages: boolean;
+  /** نمایش عدد موجودی روی کارت کالا در صفحه فروش */
+  showProductStockOnSale: boolean;
   installmentPaymentEnabled: boolean;
   debtPaymentEnabled: boolean;
   /** فروش با چک دریافتی ثبت‌شده */
@@ -51,6 +53,7 @@ const DEFAULT_SETTINGS: AdminPosSettings = {
   typedSaleListMode: false,
   menuMode: false,
   menuModeShowProductImages: true,
+  showProductStockOnSale: false,
   installmentPaymentEnabled: true,
   debtPaymentEnabled: false,
   chequePaymentEnabled: false,

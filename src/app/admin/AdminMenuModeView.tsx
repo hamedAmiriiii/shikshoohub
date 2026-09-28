@@ -281,6 +281,7 @@ export default function AdminMenuModeView({
   const [selectedCategoryId, setSelectedCategoryId] = useState(MENU_ALL_CATEGORY_ID);
   const [search, setSearch] = useState("");
   const [showProductImages, setShowProductImages] = useState(true);
+  const [showProductStock, setShowProductStock] = useState(false);
   const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
   const [menuProduct, setMenuProduct] = useState<CachedProduct | null>(null);
   const [editDialog, setEditDialog] = useState<MenuEditDialogState | null>(null);
@@ -291,7 +292,9 @@ export default function AdminMenuModeView({
 
   useEffect(() => {
     const apply = () => {
-      setShowProductImages(readAdminPosSettings().menuModeShowProductImages);
+      const settings = readAdminPosSettings();
+      setShowProductImages(settings.menuModeShowProductImages);
+      setShowProductStock(Boolean(settings.showProductStockOnSale));
     };
     apply();
     window.addEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, apply);
@@ -594,6 +597,7 @@ export default function AdminMenuModeView({
               <Grid item xs={4} sm={3} md={2} lg={2} key={catalogItemKey(product)}>
                 <Card
                   sx={{
+                    position: "relative",
                     height: "100%",
                     borderRadius: "8px",
                     border: outOfStock
@@ -614,6 +618,32 @@ export default function AdminMenuModeView({
                     "&:hover": { borderColor: outOfStock ? "var(--admin-border)" : "var(--admin-accent)" },
                   }}
                 >
+                  {showProductStock && !outOfStock ? (
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        top: 3,
+                        left: 3,
+                        zIndex: 1,
+                        minWidth: 18,
+                        height: 18,
+                        px: 0.4,
+                        borderRadius: "999px",
+                        bgcolor: "var(--admin-accent)",
+                        color: "var(--admin-on-accent)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "9px",
+                        fontWeight: 800,
+                        lineHeight: 1,
+                        boxSizing: "border-box",
+                        pointerEvents: "none",
+                      }}
+                    >
+                      {formatNumber(Number(product.quantity) || 0)}
+                    </Box>
+                  ) : null}
                   <CardActionArea
                     onContextMenu={(e) => {
                       e.preventDefault();
