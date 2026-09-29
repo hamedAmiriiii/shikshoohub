@@ -321,6 +321,13 @@ export default function AdminHamburgerSidebar({
         icon: <EventAvailableIcon />,
         permission: "accounting",
       },
+      {
+        id: "accounting-moadian",
+        label: "سامانه مؤدیان",
+        href: "/admin/accounting/moadian",
+        icon: <FactCheckIcon />,
+        permission: "accounting",
+      },
     ],
     [],
   );
