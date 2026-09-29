@@ -67,8 +67,24 @@ function normalizeDebtSearch(value: string): string {
     .trim();
 }
 
+const JALALI_MONTHS = [
+  "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
+  "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند",
+];
+
 function formatDate(value?: string): string {
   if (!value) return "—";
+  const jalali = normalizeDebtSearch(value).match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?/);
+  if (jalali && Number(jalali[1]) < 1700) {
+    const [, y, m, d, hh, mm] = jalali;
+    const fa = (n: number, pad = false) =>
+      new Intl.NumberFormat("fa-IR", { useGrouping: false, minimumIntegerDigits: pad ? 2 : 1 }).format(n);
+    const monthName = JALALI_MONTHS[Number(m) - 1] ?? m;
+    const datePart = `${fa(Number(d))} ${monthName} ${fa(Number(y))}`;
+    return hh !== undefined && mm !== undefined
+      ? `${datePart}، ${fa(Number(hh), true)}:${fa(Number(mm), true)}`
+      : datePart;
+  }
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return new Intl.DateTimeFormat("fa-IR", {
