@@ -344,7 +344,7 @@ export default function MoadianSettingsTab({ onSaved }: { onSaved: () => void })
           </Alert>
         ) : null}
         <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)" }}>
-          اعتبار باشگاه مشتریان روش پرداخت حساب می‌شود و مبلغ مشمول مالیات را کم نمی‌کند؛ تخفیف فاکتور از مبلغ مشمول مالیات کم می‌شود.
+          تخفیف فاکتور و اعتبار باشگاه مشتریان هر دو تخفیف حساب می‌شوند و از مبلغ مشمول مالیات کم می‌شوند.
         </Typography>
         <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap" }}>
           <TextField
