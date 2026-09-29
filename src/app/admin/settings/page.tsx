@@ -82,6 +82,22 @@ const settingsCardSx = {
   overflow: "hidden",
 };
 
+const settingsTwoColumnSx = {
+  display: "grid",
+  gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+  columnGap: 1,
+} as const;
+
+const settingsToggleGridSx = {
+  display: "grid",
+  gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+  columnGap: 2.5,
+  "& > *:last-of-type": { borderBottom: "none" },
+  "@media (min-width: 600px)": {
+    "& > *:nth-last-of-type(2)": { borderBottom: "none" },
+  },
+} as const;
+
 const switchSx = {
   transform: "scale(0.85)",
   "& .MuiSwitch-switchBase.Mui-checked": { color: "var(--admin-accent)" },
@@ -893,6 +909,7 @@ export default function SettingsPage() {
           </Box>
         </CardContent>
       </Card>
+      <Box sx={settingsTwoColumnSx}>
       <Card
         sx={{
           ...settingsCardSx,
@@ -942,6 +959,7 @@ export default function SettingsPage() {
           </Box>
         </CardContent>
       </Card>
+      </Box>
 
       {restaurantCafeEnabled ? (
       <Card sx={settingsCardSx}>
@@ -958,7 +976,7 @@ export default function SettingsPage() {
       ) : null}
 
       <Card sx={settingsCardSx}>
-        <CardContent sx={{ py: 0.5, px: 1.25, "&:last-child": { pb: 0.5 } }}>
+        <CardContent sx={{ py: 0.5, px: 1.25, "&:last-child": { pb: 0.5 }, ...settingsToggleGridSx }}>
           <SettingsToggleRow
             icon={<ViewListIcon sx={{ fontSize: 18 }} />}
             title="لیست فروش تایپی"
@@ -1026,13 +1044,6 @@ export default function SettingsPage() {
             onChange={handleToggleChequePayment}
           />
           <SettingsToggleRow
-            icon={<ScaleIcon sx={{ fontSize: 18 }} />}
-            title="فروش کیلویی و متری"
-            hint="واحد کیلو یا متر و مقدار اعشاری"
-            checked={kgSalesEnabled}
-            onChange={handleToggleKgSales}
-          />
-          <SettingsToggleRow
             icon={<ReceiptLongIcon sx={{ fontSize: 18 }} />}
             title="پیش فاکتور"
             hint="کنار ثبت فروش ذخیره می‌شود و لیست پیش‌فاکتور در منو می‌آید"
@@ -1052,6 +1063,13 @@ export default function SettingsPage() {
             hint="بعد از ثبت، بارکد بعدی روی همین دستگاه خودکار پر می‌شود"
             checked={sequentialProductBarcodeEnabled}
             onChange={handleToggleSequentialBarcode}
+          />
+          <SettingsToggleRow
+            icon={<ScaleIcon sx={{ fontSize: 18 }} />}
+            title="فروش کیلویی و متری"
+            hint="واحد کیلو یا متر و مقدار اعشاری"
+            checked={kgSalesEnabled}
+            onChange={handleToggleKgSales}
           />
           <SettingsToggleRow
             icon={<SortIcon sx={{ fontSize: 18 }} />}
@@ -1101,7 +1119,6 @@ export default function SettingsPage() {
             hint="هر فروش از ۱؛ هر روز از نو — در لیست فروش هم دیده می‌شود"
             checked={showDailyTicketNumber}
             onChange={handleToggleShowDailyTicketNumber}
-            last
           />
         </CardContent>
       </Card>

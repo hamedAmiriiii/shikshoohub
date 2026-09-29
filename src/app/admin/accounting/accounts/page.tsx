@@ -48,6 +48,24 @@ const KIND_LABEL: Record<string, string> = {
   expense: "هزینه",
 };
 
+const KIND_COLOR: Record<string, string> = {
+  asset: "#1e88e5",
+  liability: "#fb8c00",
+  equity: "#8e24aa",
+  revenue: "#43a047",
+  cogs: "#6d4c41",
+  expense: "#e53935",
+};
+
+const DEFAULT_TREE_COLOR = "#607d8b";
+
+const LEVEL_ROW: Record<string, { stripe: number; alpha: string; bg: "tint" | "surface" | "alt"; fontSize: number; weight: number }> = {
+  group: { stripe: 5, alpha: "", bg: "tint", fontSize: 14, weight: 800 },
+  kol: { stripe: 4, alpha: "", bg: "surface", fontSize: 13.5, weight: 700 },
+  moein: { stripe: 3, alpha: "b3", bg: "surface", fontSize: 13, weight: 600 },
+  tafsili: { stripe: 2, alpha: "80", bg: "alt", fontSize: 12.5, weight: 500 },
+};
+
 function linkedLabel(account: AccountingAccount): string | null {
   if (account.linked_type === "shop_account") return "حساب نقد فروشگاه";
   if (account.linked_type === "till") return "صندوق فروش";
@@ -81,58 +99,95 @@ function filterAccountTree(nodes: AccountingAccount[], query: string): Accountin
 function AccountNode({
   account,
   depth,
+  parentColor,
   forceOpen,
   onCreate,
   onEdit,
 }: {
   account: AccountingAccount;
   depth: number;
+  parentColor?: string;
   forceOpen: boolean;
   onCreate: (parent: AccountingAccount, level: "moein" | "tafsili") => void;
   onEdit: (account: AccountingAccount) => void;
 }) {
   const hasChildren = account.children.length > 0;
-  const [open, setOpen] = useState(depth < 2 || forceOpen);
+  const [open, setOpen] = useState(forceOpen);
 
   useEffect(() => {
-    if (forceOpen && hasChildren) setOpen(true);
+    setOpen(forceOpen && hasChildren);
   }, [forceOpen, hasChildren]);
   const linked = linkedLabel(account);
   const canCreateMoein = account.level === "kol";
   const canCreateTafsili = account.level === "moein";
+  const color = KIND_COLOR[account.kind] ?? parentColor ?? DEFAULT_TREE_COLOR;
+  const style = LEVEL_ROW[account.level] ?? LEVEL_ROW.tafsili;
+  const rowBg =
+    style.bg === "tint" ? `${color}1f` : style.bg === "surface" ? "var(--admin-surface)" : "var(--admin-surface-alt)";
 
   return (
     <Box sx={{ opacity: account.is_active ? 1 : 0.55 }}>
       <Box
         sx={{
+          position: "relative",
           display: "flex",
           alignItems: "center",
           gap: 0.75,
-          py: 0.75,
+          py: account.level === "group" ? 1 : 0.6,
           px: 1,
-          mr: depth * 1.5,
           borderRadius: "8px",
-          bgcolor: depth === 0 ? "var(--admin-surface)" : "transparent",
-          border: "1px solid var(--admin-border)",
+          bgcolor: rowBg,
+          border: `1px solid ${account.level === "group" ? `${color}66` : "var(--admin-border)"}`,
+          borderInlineStart: `${style.stripe}px solid ${color}${style.alpha}`,
           mb: 0.5,
+          transition: "background-color .15s",
+          "&:hover": { bgcolor: `${color}14` },
+          ...(depth > 0
+            ? {
+                "&::before": {
+                  content: '""',
+                  position: "absolute",
+                  insetInlineStart: -14,
+                  top: "50%",
+                  width: 14,
+                  borderTop: `2px solid ${color}59`,
+                },
+              }
+            : {}),
         }}
       >
         <IconButton
           size="small"
           onClick={() => hasChildren && setOpen((v) => !v)}
           disabled={!hasChildren}
-          sx={{ color: "var(--admin-text-muted)", visibility: hasChildren ? "visible" : "hidden" }}
+          sx={{ color, visibility: hasChildren ? "visible" : "hidden", p: 0.25 }}
         >
           {open ? <ExpandMoreIcon fontSize="small" /> : <ChevronLeftIcon fontSize="small" />}
         </IconButton>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexWrap: "wrap" }}>
-            <Typography sx={{ color: "var(--admin-accent)", fontWeight: 700, fontSize: 13, fontFamily: "monospace" }}>
+            <Typography
+              sx={{
+                color,
+                fontWeight: 700,
+                fontSize: style.fontSize - 0.5,
+                fontFamily: "monospace",
+                bgcolor: `${color}14`,
+                px: 0.75,
+                borderRadius: "6px",
+                direction: "ltr",
+              }}
+            >
               {account.code}
             </Typography>
-            <Typography sx={{ color: "var(--admin-text)", fontWeight: 600, fontSize: 13 }}>
+            <Typography sx={{ color: "var(--admin-text)", fontWeight: style.weight, fontSize: style.fontSize }}>
               {account.name}
             </Typography>
+            {hasChildren ? (
+              <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)" }}>
+                ({new Intl.NumberFormat("fa-IR").format(account.children.length)})
+              </Typography>
+            ) : null}
             {account.is_system ? (
               <LockOutlinedIcon sx={{ fontSize: 14, color: "var(--admin-text-muted)" }} />
             ) : null}
@@ -141,18 +196,18 @@ function AccountNode({
             <Chip
               size="small"
               label={account.level_label || account.level}
-              sx={{ height: 20, fontSize: 10, bgcolor: "var(--admin-icon-bg)", color: "var(--admin-text-muted)" }}
+              sx={{ height: 20, fontSize: 10, fontWeight: 600, bgcolor: `${color}24`, color }}
             />
             <Chip
               size="small"
               label={account.nature_label || account.nature}
               sx={{ height: 20, fontSize: 10, bgcolor: "var(--admin-icon-bg)", color: "var(--admin-text-muted)" }}
             />
-            {KIND_LABEL[account.kind] ? (
+            {depth === 0 && KIND_LABEL[account.kind] ? (
               <Chip
                 size="small"
                 label={KIND_LABEL[account.kind]}
-                sx={{ height: 20, fontSize: 10, bgcolor: "var(--admin-icon-bg)", color: "var(--admin-text-muted)" }}
+                sx={{ height: 20, fontSize: 10, bgcolor: color, color: "#fff" }}
               />
             ) : null}
             {linked ? (
@@ -203,16 +258,26 @@ function AccountNode({
       </Box>
       {hasChildren ? (
         <Collapse in={open} unmountOnExit>
-          {account.children.map((child) => (
-            <AccountNode
-              key={child.id}
-              account={child}
-              depth={depth + 1}
-              forceOpen={forceOpen}
-              onCreate={onCreate}
-              onEdit={onEdit}
-            />
-          ))}
+          <Box
+            sx={{
+              marginInlineStart: "20px",
+              paddingInlineStart: "14px",
+              borderInlineStart: `2px solid ${color}59`,
+              mb: 0.75,
+            }}
+          >
+            {account.children.map((child) => (
+              <AccountNode
+                key={child.id}
+                account={child}
+                depth={depth + 1}
+                parentColor={color}
+                forceOpen={forceOpen}
+                onCreate={onCreate}
+                onEdit={onEdit}
+              />
+            ))}
+          </Box>
         </Collapse>
       ) : null}
     </Box>
@@ -369,6 +434,14 @@ export default function AccountingAccountsPage() {
           <Alert severity="info">حسابی با این کد یا نام پیدا نشد.</Alert>
         ) : (
         <Box>
+          <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap", mb: 1.5 }}>
+            {Object.entries(KIND_LABEL).map(([kind, label]) => (
+              <Box key={kind} sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                <Box sx={{ width: 10, height: 10, borderRadius: "3px", bgcolor: KIND_COLOR[kind] }} />
+                <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)" }}>{label}</Typography>
+              </Box>
+            ))}
+          </Box>
           {visibleTree.map((node) => (
             <AccountNode
               key={node.id}
