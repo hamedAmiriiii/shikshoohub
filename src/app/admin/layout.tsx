@@ -13,7 +13,13 @@ import { useEffect, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import { ADMIN_SIDEBAR_WIDTH } from './AdminHamburgerSidebar';
 import { ADMIN_MENU_CART_WIDTH_VAR } from './adminMenuCartLayout';
-import { canAccessAdminPath, getFirstAllowedAdminPath, isPublicAdminPath } from '@/app/lib/shopPermissions';
+import {
+  AUDITOR_SELECT_SHOP_PATH,
+  auditorNeedsShopSelection,
+  canAccessAdminPath,
+  getFirstAllowedAdminPath,
+  isPublicAdminPath,
+} from '@/app/lib/shopPermissions';
 import { persistShopFeaturesFromPayload } from '@/app/lib/shopFeatures';
 import tokenCode from '@/app/coponent/tokenCode';
 import { FetchWithJwtClient } from '@/app/coponent/fetchWithJwtClient';
@@ -91,6 +97,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/purchase-debts': 'بدهکاران (نسیه)',
     '/admin/payroll': 'حقوق',
     '/admin/payroll/employees': 'کارمندها',
+    '/admin/auditors': 'حسابرس‌ها',
     '/admin/payroll/settings': 'تنظیمات حقوق',
     '/admin/production': 'قیمت تمام‌شده تولید',
   };
@@ -135,7 +142,8 @@ export default function ShikshooLayout({
   /** صفحاتی که بدون توکن ادمین قابل دسترسی‌اند */
   const isPublicAdminPage =
     pathname?.includes('/admin/login') ||
-    pathname?.includes('/admin/register-shop');
+    pathname?.includes('/admin/register-shop') ||
+    pathname?.includes(AUDITOR_SELECT_SHOP_PATH);
   const [isChecking, setIsChecking] = useState(true);
   const shopFeaturesSyncedRef = useRef(false);
 
@@ -155,6 +163,10 @@ export default function ShikshooLayout({
       router.push('/admin/login');
       return;
     }
+    if (token && !isPublicAdminPage && auditorNeedsShopSelection()) {
+      router.replace(AUDITOR_SELECT_SHOP_PATH);
+      return;
+    }
     if (token && !isPublicAdminPath(pathname) && !canAccessAdminPath(pathname)) {
       router.replace(getFirstAllowedAdminPath());
       return;
@@ -170,6 +182,9 @@ export default function ShikshooLayout({
       ]).then(([userRes, settingsRes]) => {
         if (userRes && !userRes.hasError) {
           persistShopFeaturesFromPayload(userRes as Record<string, unknown>);
+          if (userRes.shop_is_auditor && userRes.requires_shop_selection) {
+            router.replace(AUDITOR_SELECT_SHOP_PATH);
+          }
         }
         if (settingsRes && !settingsRes.hasError) {
           persistShopFeaturesFromPayload(settingsRes as Record<string, unknown>);

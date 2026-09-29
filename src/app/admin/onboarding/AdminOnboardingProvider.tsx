@@ -37,8 +37,9 @@ import {
   SALE_ADD_CART_STEP_ID,
 } from "./adminSaleCartCheck";
 import { toast } from "react-toastify";
+import { isShopAuditor } from "@/app/lib/shopPermissions";
 
-const PUBLIC_PATHS = ["/admin/login", "/admin/register-shop"];
+const PUBLIC_PATHS = ["/admin/login", "/admin/register-shop", "/admin/select-shop"];
 
 function isPublicAdminPath(pathname: string | null) {
   if (!pathname) return true;
@@ -127,6 +128,7 @@ export default function AdminOnboardingProvider({
     const token = localStorage.getItem("token");
     if (!token) return;
     if (settingsSetupOpen) return;
+    if (isShopAuditor()) return;
 
     const settingsDone = isSettingsSetupCompleted();
     const onboardingDone = isOnboardingCompleted();

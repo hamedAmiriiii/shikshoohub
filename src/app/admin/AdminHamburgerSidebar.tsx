@@ -64,7 +64,7 @@ import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import BoltOutlinedIcon from "@mui/icons-material/BoltOutlined";
 import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
 import CampaignOutlinedIcon from "@mui/icons-material/CampaignOutlined";
-import { useShopPermissionGate, type ShopPermissionKey } from "@/app/lib/shopPermissions";
+import { isShopAuditor, useShopPermissionGate, type ShopPermissionKey } from "@/app/lib/shopPermissions";
 import { readShopFeatures, SHOP_FEATURES_CHANGED_EVENT } from "@/app/lib/shopFeatures";
 import { ADMIN_POS_SETTINGS_CHANGED_EVENT, readAdminPosSettings } from "@/app/lib/adminPosSettings";
 
@@ -76,6 +76,7 @@ type NavLeaf = {
   href: string;
   icon: ReactNode;
   permission?: ShopPermissionKey | ShopPermissionKey[];
+  ownerOnly?: boolean;
 };
 
 type NavGroup = {
@@ -129,7 +130,8 @@ export default function AdminHamburgerSidebar({
 }: AdminHamburgerSidebarProps) {
   const { count: pendingTableOrders } = useTableOrdersPending();
   const { count: pendingServiceRequests } = useServiceRequestsPending();
-  const { can } = useShopPermissionGate();
+  const { can, isOwner, ready: permissionsReady } = useShopPermissionGate();
+  const isRealOwner = isOwner && !(permissionsReady && isShopAuditor());
   const [restaurantCafeEnabled, setRestaurantCafeEnabled] = useState(false);
   const [roomServicesEnabled, setRoomServicesEnabled] = useState(false);
   const [producedGoodsMenuEnabled, setProducedGoodsMenuEnabled] = useState(false);
@@ -327,6 +329,13 @@ export default function AdminHamburgerSidebar({
         href: "/admin/accounting/moadian",
         icon: <FactCheckIcon />,
         permission: "accounting",
+      },
+      {
+        id: "auditors",
+        label: "حسابرس‌ها",
+        href: "/admin/auditors",
+        icon: <FactCheckIcon />,
+        ownerOnly: true,
       },
     ],
     [],
@@ -637,7 +646,7 @@ export default function AdminHamburgerSidebar({
 
   const groups: NavGroup[] = useMemo(() => {
     const filterLeaves = (children: NavLeaf[]) =>
-      children.filter((child) => can(child.permission));
+      children.filter((child) => can(child.permission) && (!child.ownerOnly || isRealOwner));
     const base: NavGroup[] = [
       {
         id: "financial",
@@ -693,7 +702,7 @@ export default function AdminHamburgerSidebar({
       });
     }
     return base;
-  }, [accountingChildren, accountingEnabled, adminChildren, can, customerClubEnabled, financialChildren, isSuperAdmin, payrollChildren, productChildren, smartClubChildren, smsChildren]);
+  }, [accountingChildren, accountingEnabled, adminChildren, can, customerClubEnabled, financialChildren, isRealOwner, isSuperAdmin, payrollChildren, productChildren, smartClubChildren, smsChildren]);
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
 

@@ -45,6 +45,9 @@ import {
 import EventAvailableIcon from "@mui/icons-material/EventAvailable";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import CardMembershipIcon from "@mui/icons-material/CardMembership";
+import FactCheckIcon from "@mui/icons-material/FactCheck";
+import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
+import { AUDITOR_SELECT_SHOP_PATH } from "@/app/lib/shopPermissions";
 import AdminHamburgerSidebar, {
   ADMIN_SIDEBAR_WIDTH,
 } from "@/app/admin/AdminHamburgerSidebar";
@@ -155,6 +158,14 @@ export default function Header({
     user?.shop_name ||
     user?.name ||
     "فروشگاه";
+
+  const isAuditor = Boolean(user?.shop_is_auditor);
+  const auditorShopCount = Array.isArray(user?.auditor_shops) ? user.auditor_shops.length : 0;
+
+  const handleSwitchShop = () => {
+    setProfileMenuAnchor(null);
+    router.push(AUDITOR_SELECT_SHOP_PATH);
+  };
 
   const handleBuySubscription = () => {
     handleMenuClose();
@@ -446,6 +457,48 @@ export default function Header({
           </Box>
         )}
 
+        {isAuditor && (
+          <Box
+            sx={{
+              mb: 1,
+              px: { xs: 1.25, md: 2 },
+              py: 0.75,
+              borderRadius: "10px",
+              backgroundColor: "var(--admin-info-bg)",
+              border: "1px solid var(--admin-info-border)",
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              minWidth: 0,
+            }}
+          >
+            <FactCheckIcon sx={{ color: "var(--admin-info-icon)", fontSize: 18, flexShrink: 0 }} />
+            <Typography
+              sx={{
+                flex: 1,
+                minWidth: 0,
+                fontSize: { xs: "11px", md: "13px" },
+                color: "var(--admin-text)",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              حالت حسابرسی — فروشگاه: <strong>{shopDisplayName}</strong>
+            </Typography>
+            {auditorShopCount > 1 && (
+              <Button
+                size="small"
+                startIcon={<SwapHorizIcon sx={{ fontSize: 16 }} />}
+                onClick={handleSwitchShop}
+                sx={{ flexShrink: 0, fontSize: "12px", color: "var(--admin-accent)", textTransform: "none" }}
+              >
+                تغییر فروشگاه
+              </Button>
+            )}
+          </Box>
+        )}
+
         <Box
           sx={{
             backgroundColor: "var(--admin-surface)",
@@ -676,6 +729,14 @@ export default function Header({
                     </ListItemIcon>
                     <ListItemText primary="تغییر رمز عبور" />
                   </MenuItem>
+                  {isAuditor && auditorShopCount > 1 && (
+                    <MenuItem onClick={handleSwitchShop} sx={{ fontSize: 13, gap: 0.5 }}>
+                      <ListItemIcon sx={{ minWidth: 32, color: "var(--admin-accent)" }}>
+                        <SwapHorizIcon fontSize="small" />
+                      </ListItemIcon>
+                      <ListItemText primary="تغییر فروشگاه" />
+                    </MenuItem>
+                  )}
                   <Divider sx={{ borderColor: "var(--admin-border)" }} />
                   <MenuItem
                     onClick={() => {

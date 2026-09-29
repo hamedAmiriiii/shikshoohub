@@ -46,7 +46,12 @@ const TITLE_BY_KEY: Record<string, string> = Object.fromEntries(
   SHOP_PERMISSION_CATALOG.map((item) => [item.key, item.title]),
 );
 
-const PUBLIC_ADMIN_PATHS = ["/admin/login", "/admin/register-shop"];
+const PUBLIC_ADMIN_PATHS = ["/admin/login", "/admin/register-shop", "/admin/select-shop"];
+
+export const AUDITOR_SELECT_SHOP_PATH = "/admin/select-shop";
+
+/** فقط صاحب اصلی فروشگاه، نه حسابرس */
+const OWNER_ONLY_PATHS = ["/admin/auditors"];
 
 const SUPER_ADMIN_PATHS = [
   "/admin/shop-sms-quota",
@@ -264,6 +269,18 @@ export function mergeUserWithShopPermissions(
   };
 }
 
+export function isShopAuditor(user?: Record<string, unknown> | null): boolean {
+  const u = user ?? getStoredUser();
+  return asBool(u?.shop_is_auditor) === true;
+}
+
+/** حسابرسی که هنوز فروشگاهی انتخاب نکرده */
+export function auditorNeedsShopSelection(user?: Record<string, unknown> | null): boolean {
+  const u = user ?? getStoredUser();
+  if (!u || !isShopAuditor(u)) return false;
+  return asBool(u.requires_shop_selection) === true || !u.atelier_id;
+}
+
 export function isShopOwner(user?: Record<string, unknown> | null): boolean {
   const u = user ?? getStoredUser();
   if (!u) return false;
@@ -322,6 +339,9 @@ export function canAccessAdminPath(
     return isSuperAdminUser();
   }
   if (isSuperAdminUser()) return true;
+  if (OWNER_ONLY_PATHS.some((path) => pathMatches(pathname, path))) {
+    return isShopOwner(user) && !isShopAuditor(user);
+  }
   if (!shopFeatureAllowsPath(pathname, user)) return false;
   if (isShopOwner(user)) return true;
   const keys = getRequiredPermissionKeys(pathname);
@@ -337,6 +357,7 @@ export function canAccessAdminPath(
 }
 
 export function getFirstAllowedAdminPath(user?: Record<string, unknown> | null): string {
+  if (auditorNeedsShopSelection(user)) return AUDITOR_SELECT_SHOP_PATH;
   if (isSuperAdminUser() || isShopOwner(user)) return "/admin";
   for (const item of FIRST_ALLOWED_PATHS) {
     if (hasAnyShopPermission(item.keys, user)) return item.path;
