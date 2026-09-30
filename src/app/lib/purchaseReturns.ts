@@ -17,7 +17,35 @@ export function isIranMobile(value: string): boolean {
   return /^09\d{9}$/.test(normalizeIranMobile(value));
 }
 
-export type CardRefundDestination = "customer_credit" | "shop_account";
+export type CardRefundDestination = "customer_credit" | "shop_account" | "pos_terminal";
+
+export type PosTerminalRefundAvailability = {
+  available: boolean;
+  reason: string | null;
+  date: string;
+  date_jalali: string | null;
+  pending_card_amount: number;
+};
+
+/** برگشت از کارتخوانِ روزِ فاکتور، وقتی تطبیق آن روز هنوز ثبت نشده. */
+export async function fetchPosTerminalRefundAvailability(
+  purchaseId: number,
+): Promise<PosTerminalRefundAvailability | null> {
+  const res = await FetchWithJwtClient(
+    "GET",
+    `/api/purchased-products/${purchaseId}/return-options`,
+    tokenCode(),
+  );
+  if (!res || res.hasError || !res.pos_terminal || typeof res.pos_terminal !== "object") return null;
+  const pos = res.pos_terminal as Record<string, unknown>;
+  return {
+    available: Boolean(pos.available),
+    reason: typeof pos.reason === "string" ? pos.reason : null,
+    date: String(pos.date ?? ""),
+    date_jalali: typeof pos.date_jalali === "string" ? pos.date_jalali : null,
+    pending_card_amount: Number(pos.pending_card_amount) || 0,
+  };
+}
 
 export type PurchaseReturnPayload = {
   phone?: string;
@@ -91,6 +119,11 @@ export function purchaseReturnCreditMessage(res: unknown): string {
   if (card > 0 && destination === "shop_account") {
     parts.push(
       `مبلغ کارت از حساب فروشگاه برداشت شد (${new Intl.NumberFormat("fa-IR").format(Math.floor(card))} تومان).`,
+    );
+  }
+  if (card > 0 && destination === "pos_terminal") {
+    parts.push(
+      `مبلغ کارت از کارتخوان روز فاکتور برگشت و از جمع کارتخوان آن روز کم شد (${new Intl.NumberFormat("fa-IR").format(Math.floor(card))} تومان).`,
     );
   }
   if (credit > 0) {

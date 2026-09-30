@@ -46,12 +46,14 @@ import {
 import { paymentTypeLabel } from "@/app/lib/paymentTypes";
 import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
 import {
+  fetchPosTerminalRefundAvailability,
   isIranMobile,
   normalizeIranMobile,
   purchaseReturnCreditMessage,
   returnFullPurchase,
   returnPurchaseItem,
   type CardRefundDestination,
+  type PosTerminalRefundAvailability,
 } from "@/app/lib/purchaseReturns";
 import { canReplacePurchase, navigateToPurchaseEdit } from "@/app/lib/purchaseEdit";
 import ShopAccountSelect from "@/app/admin/ShopAccountSelect";
@@ -152,6 +154,8 @@ export default function purchas(props: any) {
   const [cardRefundDestination, setCardRefundDestination] =
     useState<CardRefundDestination>("customer_credit");
   const [refundShopAccountId, setRefundShopAccountId] = useState<number | "">("");
+  const [posTerminalRefund, setPosTerminalRefund] = useState<PosTerminalRefundAvailability | null>(null);
+  const [refundFromPosTerminal, setRefundFromPosTerminal] = useState(false);
   const [adjustedQuantities, setAdjustedQuantities] = useState<Record<number, number>>({});
   const [deleting, setDeleting] = useState(false);
   const [totalDeleting, setTotalDeleting] = useState(0);
@@ -183,7 +187,43 @@ export default function purchas(props: any) {
   const resetRefundOptions = () => {
     setCardRefundDestination("customer_credit");
     setRefundShopAccountId("");
+    setRefundFromPosTerminal(false);
   };
+
+  useEffect(() => {
+    if (!deleteDialogOpen || !hasCardPayment || !data?.id) {
+      setPosTerminalRefund(null);
+      return;
+    }
+    let cancelled = false;
+    void fetchPosTerminalRefundAvailability(Number(data.id)).then((availability) => {
+      if (!cancelled) setPosTerminalRefund(availability);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [deleteDialogOpen, hasCardPayment, data?.id]);
+
+  useEffect(() => {
+    if (refundFromPosTerminal && !posTerminalRefund?.available) {
+      setRefundFromPosTerminal(false);
+    }
+  }, [refundFromPosTerminal, posTerminalRefund]);
+
+  const posTerminalLeadingOption = !hasCardPayment
+    ? undefined
+    : posTerminalRefund?.available
+      ? {
+          label: `کارتخوان فروش روز ${posTerminalRefund.date_jalali ?? ""} (تطبیق‌نشده) — مبلغ: ${formatNumber(
+            posTerminalRefund.pending_card_amount,
+          )} تومان`,
+        }
+      : {
+          label: posTerminalRefund
+            ? `کارتخوان فروش روز — ${posTerminalRefund.reason ?? "در دسترس نیست"}`
+            : "کارتخوان فروش روز — در حال بررسی یا در دسترس نیست",
+          disabled: true,
+        };
 
   const handleOpenDeleteDialog = (item: any) => {
     setReturnMode("item");
@@ -228,6 +268,9 @@ export default function purchas(props: any) {
     card_refund_destination: CardRefundDestination;
     shop_account_id?: number;
   } | null => {
+    if (hasCardPayment && cardRefundDestination === "shop_account" && refundFromPosTerminal) {
+      return { card_refund_destination: "pos_terminal" };
+    }
     if (
       hasCardPayment &&
       cardRefundDestination === "shop_account" &&
@@ -913,11 +956,24 @@ export default function purchas(props: any) {
                       <Box sx={{ mt: 1 }}>
                         <ShopAccountSelect
                           value={refundShopAccountId}
-                          onChange={setRefundShopAccountId}
+                          onChange={(accountId) => {
+                            setRefundFromPosTerminal(false);
+                            setRefundShopAccountId(accountId);
+                          }}
                           label="حساب برداشت"
                           required
                           excludeTill
-                          helperText="حساب بانکی یا تنخواه (نه صندوق نقد)"
+                          leadingOption={posTerminalLeadingOption}
+                          leadingSelected={refundFromPosTerminal}
+                          onLeadingSelect={() => {
+                            setRefundFromPosTerminal(true);
+                            setRefundShopAccountId("");
+                          }}
+                          helperText={
+                            refundFromPosTerminal
+                              ? `مبلغ کارت این برگشت از جمع کارتخوان روز ${posTerminalRefund?.date_jalali ?? ""} کم می‌شود و در تطبیق همان روز، واریز کارتخوان کمتر انتظار می‌رود.`
+                              : "کارتخوان روزِ تطبیق‌نشده، حساب بانکی یا تنخواه (نه صندوق نقد)"
+                          }
                         />
                       </Box>
                     )}

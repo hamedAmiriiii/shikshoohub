@@ -27,7 +27,13 @@ type ShopAccountSelectProps = {
   excludeTill?: boolean;
   /** اگر خالی باشد همه حساب‌های فعال لود می‌شوند */
   accounts?: ShopAccount[];
+  /** ردیف اولِ غیرحسابی (مثلاً کارتخوان روز)؛ انتخابش onLeadingSelect را صدا می‌زند */
+  leadingOption?: { label: string; disabled?: boolean };
+  leadingSelected?: boolean;
+  onLeadingSelect?: () => void;
 };
+
+const LEADING_OPTION_VALUE = "__leading__";
 
 const selectSx = {
   "& .MuiOutlinedInput-root": {
@@ -61,6 +67,9 @@ export default function ShopAccountSelect({
   compact,
   excludeTill = false,
   accounts: accountsProp,
+  leadingOption,
+  leadingSelected = false,
+  onLeadingSelect,
 }: ShopAccountSelectProps) {
   const resolvedHelperText =
     helperText ?? (required ? "حساب اصلی یا تنخواه" : " حساب اصلی یا تنخواه");
@@ -107,9 +116,13 @@ export default function ShopAccountSelect({
           labelId="shop-account-select-label"
           label={label}
           required={required}
-          value={value === "" ? "" : String(value)}
+          value={leadingOption && leadingSelected ? LEADING_OPTION_VALUE : value === "" ? "" : String(value)}
           onChange={(e) => {
             const next = e.target.value;
+            if (next === LEADING_OPTION_VALUE) {
+              onLeadingSelect?.();
+              return;
+            }
             onChange(next === "" ? "" : Number(next));
           }}
           MenuProps={{
@@ -125,6 +138,11 @@ export default function ShopAccountSelect({
           }}
           sx={compact ? { "& .MuiSelect-select": { py: "6px", fontSize: 12 } } : undefined}
         >
+          {leadingOption ? (
+            <MenuItem value={LEADING_OPTION_VALUE} disabled={leadingOption.disabled}>
+              {leadingOption.label}
+            </MenuItem>
+          ) : null}
           {required ? null : (
             <MenuItem value="">
               <em>بدون انتخاب حساب</em>
