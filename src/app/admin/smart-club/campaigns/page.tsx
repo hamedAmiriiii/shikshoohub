@@ -14,6 +14,7 @@ import {
   Typography,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
+import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import Link from "next/link";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -32,6 +33,7 @@ import {
 } from "@/app/lib/smartCustomer";
 import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
 import CampaignReportDialog from "./CampaignReportDialog";
+import ProductCampaignDialog from "./ProductCampaignDialog";
 
 const panelSx = {
   boxShadow: "none",
@@ -101,6 +103,13 @@ function actionChips(actions: SmartCampaign["actions"]) {
       if (Number.isFinite(days) && days > 0) return `اعتبار ${amount} · ${toFaNum(days)} روز`;
       return `اعتبار ${amount}`;
     }
+    const productNames = a.config?.product_names;
+    if (a.type === "send_sms" && Array.isArray(productNames) && productNames.length) {
+      const first = String(productNames[0]);
+      return productNames.length > 1
+        ? `پیامک کالایی: ${first} و ${toFaNum(productNames.length - 1)} کالا`
+        : `پیامک کالایی: ${first}`;
+    }
     return ACTION_LABEL[a.type] || a.type;
   });
 }
@@ -147,6 +156,7 @@ export default function SmartClubCampaignsPage() {
   const [form, setForm] = useState(defaultForm);
   const [busy, setBusy] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [productOpen, setProductOpen] = useState(false);
   const [runTarget, setRunTarget] = useState<SmartCampaign | null>(null);
   const [reportTarget, setReportTarget] = useState<SmartCampaign | null>(null);
 
@@ -278,6 +288,15 @@ export default function SmartClubCampaignsPage() {
             sx={adminButtonStartIconSx}
           >
             ایجاد کمپین
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<Inventory2OutlinedIcon />}
+            onClick={() => setProductOpen(true)}
+            sx={adminButtonStartIconSx}
+          >
+            کمپین کالایی
           </Button>
           <Button component={Link} href="/admin/smart-club" size="small" variant="outlined">
             داشبورد
@@ -487,6 +506,7 @@ export default function SmartClubCampaignsPage() {
       )}
 
       <CampaignReportDialog campaign={reportTarget} onClose={() => setReportTarget(null)} />
+      <ProductCampaignDialog open={productOpen} onClose={() => setProductOpen(false)} onCreated={() => void load()} />
 
       <Dialog
         open={Boolean(runTarget)}

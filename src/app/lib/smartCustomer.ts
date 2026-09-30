@@ -201,6 +201,12 @@ export function previewSmartCampaign(id: number) {
 
 export type SmartCampaignReport = {
   campaign_id: number;
+  product_conversion?: {
+    buyers: number;
+    qty: number;
+    revenue: number;
+    products: { product_id: number; name: string; buyers: number; qty: number; revenue: number }[];
+  } | null;
   recipients: number;
   returned: number;
   conversion_pct: number;
@@ -221,6 +227,58 @@ export type SmartCampaignReport = {
     first_purchase_at: string;
   }[];
 };
+
+export type CampaignProduct = {
+  id: number;
+  name: string;
+  sale_price: number;
+  original_sale_price: number | null;
+  discount_pct: number;
+  quantity: number;
+  unit_type: string;
+  sold_qty: number;
+  buyers: number;
+};
+
+export type ProductAudienceMode = "bought" | "not_bought" | "repurchase_due";
+
+export type ProductAudienceCustomer = {
+  phone: string;
+  name?: string | null;
+  primary_segment?: string | null;
+  segment_label?: string | null;
+  recency_days: number;
+  frequency: number;
+  monetary: number;
+  orders: number;
+  qty: number;
+  last_bought_at: string | null;
+  due_product: string | null;
+  overdue_days: number | null;
+};
+
+export function fetchCampaignProducts(filter: "discounted" | "top" | "slow" | "all", search = "") {
+  const qs = new URLSearchParams({ filter });
+  if (search.trim()) qs.set("search", search.trim());
+  return api<{ products: CampaignProduct[]; sales_window_days: number }>(
+    "GET",
+    `/api/smart-customer/campaign-products?${qs.toString()}`,
+  );
+}
+
+export function fetchProductAudience(body: {
+  product_ids: number[];
+  mode: ProductAudienceMode;
+  days?: number | null;
+  exclude_product_ids?: number[];
+  segment?: string | null;
+}) {
+  return api<{ total: number; customers: ProductAudienceCustomer[] }>(
+    "POST",
+    "/api/smart-customer/campaign-products/audience",
+    body,
+  );
+}
 
 export function fetchSmartCampaignReport(id: number) {
   return api<SmartCampaignReport>("GET", `/api/smart-customer/campaigns/${id}/report`);

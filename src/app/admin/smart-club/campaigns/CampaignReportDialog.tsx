@@ -138,6 +138,33 @@ export default function CampaignReportDialog({
             />
           </Box>
 
+          {report.product_conversion ? (
+            <Box sx={{ mt: 1, border: "1px solid var(--admin-border)", borderRadius: "12px", p: 1.25 }}>
+              <Typography sx={{ fontSize: 12, fontWeight: 700 }}>
+                خرید همین کالاها بعد از پیامک
+              </Typography>
+              <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)", mt: 0.25 }}>
+                {toFaNum(report.product_conversion.buyers)} نفر ·{" "}
+                {toFaNum(report.product_conversion.qty)} عدد ·{" "}
+                <Box component="span" sx={{ color: "var(--admin-accent)", fontWeight: 800 }}>
+                  {toFaNum(report.product_conversion.revenue)} تومان
+                </Box>
+              </Typography>
+              {report.product_conversion.products.map((p) => (
+                <Box
+                  key={p.product_id}
+                  sx={{ display: "flex", gap: 1, mt: 0.5, fontSize: 11.5, color: "var(--admin-text-secondary)" }}
+                >
+                  <Box component="span" sx={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {p.name}
+                  </Box>
+                  <span>{toFaNum(p.buyers)} نفر</span>
+                  <span>{toFaNum(p.qty)} عدد</span>
+                </Box>
+              ))}
+            </Box>
+          ) : null}
+
           {roi != null ? (
             <Typography sx={{ fontSize: 12, mt: 1, color: "var(--admin-text-muted)" }}>
               هر ۱ تومان اعتبار ≈{" "}
