@@ -1,8 +1,10 @@
-/** قیمت فروش سبد بعد از درصد سود، رند به نزدیک‌ترین هزار تومان. */
-export function roundCartPrice(amount: number): number {
+import { readRoundSalePriceToThousand, roundSalePrice } from "@/app/lib/salePriceRounding";
+
+/** قیمت فروش سبد بعد از درصد سود، رند طبق تنظیم فروشگاه (هزار تومان یا فقط یکان صفر). */
+export function roundCartPrice(amount: number, toThousand = readRoundSalePriceToThousand()): number {
   if (!Number.isFinite(amount) || amount <= 0) return 0;
-  const toThousand = Math.round(amount / 1000) * 1000;
-  if (toThousand > 0) return toThousand;
+  const rounded = roundSalePrice(amount, toThousand);
+  if (rounded > 0) return rounded;
   return Math.round(amount);
 }
 
@@ -14,16 +16,17 @@ export function parseProfitPercent(raw: string): number {
 }
 
 /**
- * درصد روی قیمت پایه. اگر رند هزارتومانی اثر درصد را پاک کند، به صد تومان رند می‌شود
+ * درصد روی قیمت پایه. اگر رند هزارتومانی (در صورت فعال بودن) اثر درصد را پاک کند، به صد تومان رند می‌شود
  * تا روی قیمت‌های کوچک هم سود دیده شود.
  */
 export function salePriceWithProfit(base: number, percent: number): number {
   const origin = Number(base) || 0;
   if (!(percent > 0) || origin <= 0) return origin;
   const raw = origin * (1 + percent / 100);
-  const rounded = roundCartPrice(raw);
-  const originRounded = roundCartPrice(origin);
-  if (rounded !== originRounded) return rounded;
+  const toThousand = readRoundSalePriceToThousand();
+  const rounded = roundCartPrice(raw, toThousand);
+  const originRounded = roundCartPrice(origin, toThousand);
+  if (rounded !== originRounded || !toThousand) return rounded;
   const toHundred = Math.round(raw / 100) * 100;
   return toHundred > 0 ? toHundred : Math.round(raw);
 }

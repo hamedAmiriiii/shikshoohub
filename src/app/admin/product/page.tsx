@@ -26,6 +26,7 @@ import { mainColors, searchColors } from "../../liberari/colors";
 import { PRODUCTS_CACHE_KEY } from "@/app/lib/productsCache";
 import { catalogItemKey, isProducedGoodItem } from "@/app/lib/catalogItems";
 import { readAdminPosSettings } from "@/app/lib/adminPosSettings";
+import { readRoundSalePriceToThousand, roundToTen } from "@/app/lib/salePriceRounding";
 
 const PRODUCT_SORT_OPTIONS = [
     { value: "", label: "جدیدترین" },
@@ -491,6 +492,9 @@ export default function ListData() {
       if (!isNaN(value) && value > 0) {
         const profitDecimal = profitPercent / 100;
         let calculatedPrice = value + value * profitDecimal;
+        if (!readRoundSalePriceToThousand()) {
+          return roundToTen(calculatedPrice).toString();
+        }
         let roundedPrice = Math.round(calculatedPrice / 1000) * 1000;
         let thousandsDigit = Math.floor(roundedPrice / 1000) % 10;
         if (thousandsDigit % 2 === 0) {

@@ -1,3 +1,5 @@
+import { roundSalePrice } from "@/app/lib/salePriceRounding";
+
 export type RawMaterialLot = {
   id: number;
   quantity_kg: number;
@@ -224,5 +226,5 @@ export function roundSalePriceToThousand(price: number): number {
 
 export function applySalePriceRounding(price: number, round: boolean): number {
   const n = Math.round(Number(price) || 0);
-  return round ? roundSalePriceToThousand(n) : n;
+  return round ? roundSalePrice(n) : n;
 }

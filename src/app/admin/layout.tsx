@@ -21,6 +21,7 @@ import {
   isPublicAdminPath,
 } from '@/app/lib/shopPermissions';
 import { persistShopFeaturesFromPayload } from '@/app/lib/shopFeatures';
+import { persistSalePriceRoundingFromSettings } from '@/app/lib/salePriceRounding';
 import tokenCode from '@/app/coponent/tokenCode';
 import { FetchWithJwtClient } from '@/app/coponent/fetchWithJwtClient';
 import WebinoChatbot from '@/app/coponent/WebinoChatbot';
@@ -192,6 +193,7 @@ export default function ShikshooLayout({
         }
         if (settingsRes && !settingsRes.hasError) {
           persistShopFeaturesFromPayload(settingsRes as Record<string, unknown>);
+          persistSalePriceRoundingFromSettings(settingsRes);
         }
       });
     }

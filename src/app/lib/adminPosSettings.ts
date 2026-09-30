@@ -48,6 +48,8 @@ export type AdminPosSettings = {
   proformaEnabled: boolean;
   /** ثبت کالا از ردیف فاکتور خرید */
   invoiceProductEntryEnabled: boolean;
+  /** رند قیمت فروش به هزار تومان؛ خاموش = فقط یکان صفر (۷۵۶ → ۷۶۰). منبع اصلی: تنظیمات سرور */
+  roundSalePriceToThousand: boolean;
 };
 
 const DEFAULT_SETTINGS: AdminPosSettings = {
@@ -76,6 +78,7 @@ const DEFAULT_SETTINGS: AdminPosSettings = {
   sequentialProductBarcodeEnabled: false,
   proformaEnabled: false,
   invoiceProductEntryEnabled: false,
+  roundSalePriceToThousand: true,
 };
 
 const SEQUENTIAL_BARCODE_KEY = "admin_sequential_product_barcode";

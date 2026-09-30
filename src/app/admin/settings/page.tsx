@@ -72,7 +72,12 @@ import {
   saveShopBrowserSettingsToServer,
 } from "@/app/lib/shopBrowserSettingsSync";
 import { useShopPermissionGate } from "@/app/lib/shopPermissions";
+import {
+  ROUND_SALE_PRICE_TO_THOUSAND_KEY,
+  parseRoundSalePriceSetting,
+} from "@/app/lib/salePriceRounding";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
+import SavingsOutlinedIcon from "@mui/icons-material/SavingsOutlined";
 
 const settingsCardSx = {
   backgroundColor: "var(--admin-surface)",
@@ -307,6 +312,8 @@ export default function SettingsPage() {
   const [salePriceEditEnabled, setSalePriceEditEnabled] = useState(false);
   const [manualCartQuantityEnabled, setManualCartQuantityEnabled] = useState(false);
   const [cartProfitEnabled, setCartProfitEnabled] = useState(false);
+  const [roundSalePriceToThousand, setRoundSalePriceToThousand] = useState(true);
+  const [isSavingSalePriceRounding, setIsSavingSalePriceRounding] = useState(false);
   const [saleDateEditEnabled, setSaleDateEditEnabled] = useState(false);
   const [classicPosMode, setClassicPosMode] = useState(false);
   const [askCustomerName, setAskCustomerName] = useState(false);
@@ -349,6 +356,7 @@ export default function SettingsPage() {
       setSalePriceEditEnabled(settings.salePriceEditEnabled);
       setManualCartQuantityEnabled(Boolean(settings.manualCartQuantityEnabled));
       setCartProfitEnabled(Boolean(settings.cartProfitEnabled));
+      setRoundSalePriceToThousand(settings.roundSalePriceToThousand !== false);
       setSaleDateEditEnabled(Boolean(settings.saleDateEditEnabled));
       setClassicPosMode(settings.classicPosMode);
       setAskCustomerName(settings.askCustomerName);
@@ -374,6 +382,24 @@ export default function SettingsPage() {
       setListReceiptPrintSettings(readListReceiptPrintSettings());
     });
     window.addEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, syncPosSettings);
+    const token = tokenCode();
+    if (token) {
+      void apiRequestError(
+        "Get",
+        {},
+        {},
+        `/api/settings/${ROUND_SALE_PRICE_TO_THOUSAND_KEY}`,
+        true,
+        true,
+        token,
+      ).then((res) => {
+        if (!res || res.hasError) return;
+        const enabled = parseRoundSalePriceSetting((res as { value?: unknown }).value);
+        if (enabled !== (readAdminPosSettings().roundSalePriceToThousand !== false)) {
+          writeAdminPosSettings({ roundSalePriceToThousand: enabled });
+        }
+      });
+    }
     return () => window.removeEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, syncPosSettings);
   }, []);
 
@@ -576,6 +602,41 @@ export default function SettingsPage() {
         ? "محاسبه سود در سبد فعال شد — کنار تخفیف درصد سود را بزنید"
         : "محاسبه سود در سبد غیرفعال شد",
     );
+  };
+
+  const handleToggleRoundSalePrice = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    const token = tokenCode();
+    if (!token) return;
+    setIsSavingSalePriceRounding(true);
+    setRoundSalePriceToThousand(enabled);
+    try {
+      const res = await apiRequestError(
+        "Put",
+        {},
+        { value: enabled ? "1" : "0" },
+        `/api/settings/${ROUND_SALE_PRICE_TO_THOUSAND_KEY}`,
+        true,
+        true,
+        token,
+      );
+      if (res?.hasError) {
+        setRoundSalePriceToThousand(!enabled);
+        toast.error(typeof res.message === "string" ? res.message : "ذخیره تنظیم رند قیمت ناموفق بود");
+        return;
+      }
+      writeAdminPosSettings({ roundSalePriceToThousand: enabled });
+      toast.success(
+        enabled
+          ? "رند قیمت فروش به هزار تومان فعال شد"
+          : "رند هزار تومانی خاموش شد — فقط رقم آخر قیمت صفر می‌شود (۷۵۶ → ۷۶۰)",
+      );
+    } catch {
+      setRoundSalePriceToThousand(!enabled);
+      toast.error("خطا در ذخیره تنظیم رند قیمت");
+    } finally {
+      setIsSavingSalePriceRounding(false);
+    }
   };
 
   const handleToggleSaleDateEdit = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1120,6 +1181,14 @@ export default function SettingsPage() {
             hint="کنار تخفیف فیلد سود می‌آید؛ مثلاً ۵٪ به قیمت همه کالاها اضافه و رند می‌شود"
             checked={cartProfitEnabled}
             onChange={handleToggleCartProfit}
+          />
+          <SettingsToggleRow
+            icon={<SavingsOutlinedIcon sx={{ fontSize: 18 }} />}
+            title="رند کردن قیمت‌های فروش به ۱۰۰۰"
+            hint="روشن: سه رقم آخر صفر می‌شود — خاموش: هر قیمتی مجاز است و فقط رقم آخر صفر می‌شود (۷۵۶ → ۷۶۰)"
+            checked={roundSalePriceToThousand}
+            onChange={(event) => void handleToggleRoundSalePrice(event)}
+            disabled={isSavingSalePriceRounding}
           />
           <SettingsToggleRow
             icon={<ReceiptLongIcon sx={{ fontSize: 18 }} />}

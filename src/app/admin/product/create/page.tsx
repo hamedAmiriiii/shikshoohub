@@ -52,6 +52,7 @@ import {
   writeLastSequentialBarcode,
 } from "@/app/lib/adminPosSettings";
 import { isMeasuredProduct, type ProductUnitType } from "@/app/lib/productUnits";
+import { readRoundSalePriceToThousand, roundToTen } from "@/app/lib/salePriceRounding";
 import { ToggleButton, ToggleButtonGroup, FormControl, FormLabel } from "@mui/material";
 
 const PROFIT_STORAGE_KEY = "admin_product_profit_percent";
@@ -375,6 +376,9 @@ export default function Page() {
       // تبدیل درصد به اعشار (45 -> 0.45)
       const profitDecimal = profitPercent / 100;
       let calculatedPrice = value + value * profitDecimal;
+      if (!readRoundSalePriceToThousand()) {
+        return roundToTen(calculatedPrice).toString();
+      }
       let roundedPrice = Math.round(calculatedPrice / 1000) * 1000;
       let thousandsDigit = Math.floor(roundedPrice / 1000) % 10;
       if (thousandsDigit % 2 === 0) {
