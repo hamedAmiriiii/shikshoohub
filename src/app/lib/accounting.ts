@@ -58,6 +58,44 @@ export type AccountingVoucher = {
   debit_total: number;
   credit_total: number;
   lines: AccountingVoucherLine[];
+  locked: boolean;
+};
+
+export type AccountingPeriod = {
+  from: string | null;
+  to: string | null;
+  closed: boolean;
+  close_voucher_id: number | null;
+  label: string;
+};
+
+export type AccountingPeriodsInfo = {
+  periods: AccountingPeriod[];
+  closed_through: string | null;
+  today: string;
+  can_edit_closed: boolean;
+};
+
+export type AccountingAuditLogEntry = {
+  id: number;
+  action: string;
+  action_label: string;
+  user_name: string | null;
+  voucher_id: number | null;
+  voucher_number: number | null;
+  related_voucher_id: number | null;
+  related_voucher_number: number | null;
+  in_closed_period: boolean;
+  closed_through: string | null;
+  reason: string | null;
+  created_at: string | null;
+};
+
+export type AccountingAuditLogList = {
+  data: AccountingAuditLogEntry[];
+  current_page: number;
+  last_page: number;
+  total: number;
 };
 
 export type AccountingVoucherList = {
@@ -211,6 +249,8 @@ export const ACCOUNTING_SOURCE_TYPES = [
   { value: "account_transfer", label: "شارژ تنخواه" },
   { value: "opening", label: "افتتاحیه" },
   { value: "year_close", label: "بستن دوره" },
+  { value: "year_close_adjust", label: "تکمیل بستن دوره" },
+  { value: "prior_year_adjust", label: "تعدیلات سنواتی" },
   { value: "balance_adjust", label: "اصلاح مانده حساب" },
   { value: "invoice", label: "فاکتور خرید" },
   { value: "expense", label: "هزینه" },
@@ -317,6 +357,21 @@ export function canReverseVoucherFromUi(voucher: AccountingVoucher): boolean {
   );
 }
 
+const AUDITOR_EDITABLE_SOURCE_TYPES = new Set(["manual", "prior_year_adjust"]);
+
+/** حسابرس این سند را مستقیم برگشت می‌زند؛ سند سیستمی فقط سند اصلاحی می‌گیرد. */
+export function canAuditorReverseVoucher(voucher: AccountingVoucher): boolean {
+  return (
+    voucher.status === "posted" &&
+    voucher.reverses_voucher_id == null &&
+    AUDITOR_EDITABLE_SOURCE_TYPES.has(voucher.source_type)
+  );
+}
+
+export function canAuditorCorrectVoucher(voucher: AccountingVoucher): boolean {
+  return canAuditorReverseVoucher(voucher) && voucher.source_type === "manual";
+}
+
 export function isOperationalVoucher(voucher: Pick<AccountingVoucher, "source_type">): boolean {
   return OPERATIONAL_SOURCE_TYPES.has(voucher.source_type);
 }
@@ -351,6 +406,7 @@ export function voucherSourceHref(voucher: Pick<AccountingVoucher, "source_type"
     case "partner_settlement":
       return "/admin/partners";
     case "year_close":
+    case "year_close_adjust":
       return "/admin/accounting/period-close";
     case "balance_adjust":
       return "/admin/shop-accounts";
@@ -442,6 +498,7 @@ function parseVoucher(raw: unknown): AccountingVoucher | null {
     lines: linesRaw
       .map((line, index) => parseLine(line, index))
       .filter((item): item is AccountingVoucherLine => item != null),
+    locked: asBool(obj.locked, false),
   };
 }
 
@@ -500,6 +557,8 @@ export async function fetchAccountingVouchers(options?: {
   perPage?: number;
   sourceType?: string;
   status?: string;
+  from?: string;
+  to?: string;
 }): Promise<AccountingVoucherList> {
   const params: Record<string, string | number> = {
     per_page: options?.perPage ?? 20,
@@ -507,6 +566,8 @@ export async function fetchAccountingVouchers(options?: {
   };
   if (options?.sourceType) params.source_type = options.sourceType;
   if (options?.status) params.status = options.status;
+  if (options?.from) params.from = options.from;
+  if (options?.to) params.to = options.to;
   const res = await FetchWithJwtClient(
     "GET",
     "/api/accounting/vouchers",
@@ -567,6 +628,114 @@ export async function reverseAccountingVoucher(id: number): Promise<AccountingVo
   const parsed = parseVoucher(unwrapData(res));
   if (!parsed) throwApiError(res, "برگشت سند انجام شد ولی پاسخ نامعتبر بود.");
   return parsed;
+}
+
+export async function fetchAccountingPeriods(): Promise<AccountingPeriodsInfo> {
+  const res = await FetchWithJwtClient("GET", "/api/accounting/periods", authToken());
+  const obj = asRecord(unwrapData(res)) ?? {};
+  const periods = Array.isArray(obj.periods) ? obj.periods : [];
+  return {
+    periods: periods.map((raw) => {
+      const p = asRecord(raw) ?? {};
+      return {
+        from: p.from == null ? null : asString(p.from),
+        to: p.to == null ? null : asString(p.to),
+        closed: asBool(p.closed, false),
+        close_voucher_id: p.close_voucher_id == null ? null : asNumber(p.close_voucher_id, 0) || null,
+        label: asString(p.label),
+      };
+    }),
+    closed_through: obj.closed_through == null ? null : asString(obj.closed_through),
+    today: asString(obj.today),
+    can_edit_closed: asBool(obj.can_edit_closed, false),
+  };
+}
+
+export type AuditorVoucherBody = {
+  date?: string;
+  description?: string;
+  reason?: string;
+  lines: AccountingVoucherLineInput[];
+};
+
+async function postAuditorVoucher(path: string, body: AuditorVoucherBody | { reason?: string }, fallback: string) {
+  const res = await FetchWithJwtClient("POST", path, authToken(), {}, { body: JSON.stringify(body) });
+  const parsed = parseVoucher(unwrapData(res));
+  if (!parsed) throwApiError(res, fallback);
+  return parsed;
+}
+
+export function auditorCreateVoucher(body: AuditorVoucherBody): Promise<AccountingVoucher> {
+  return postAuditorVoucher("/api/accounting/auditor/vouchers", body, "سند ثبت شد ولی پاسخ نامعتبر بود.");
+}
+
+export function auditorCorrectVoucher(id: number, body: AuditorVoucherBody): Promise<AccountingVoucher> {
+  return postAuditorVoucher(
+    `/api/accounting/auditor/vouchers/${id}/correct`,
+    body,
+    "اصلاح انجام شد ولی پاسخ نامعتبر بود.",
+  );
+}
+
+export function auditorReverseVoucher(id: number, reason?: string): Promise<AccountingVoucher> {
+  return postAuditorVoucher(
+    `/api/accounting/auditor/vouchers/${id}/reverse`,
+    { reason },
+    "برگشت سند انجام شد ولی پاسخ نامعتبر بود.",
+  );
+}
+
+export function auditorPriorYearAdjust(body: AuditorVoucherBody): Promise<AccountingVoucher> {
+  return postAuditorVoucher(
+    "/api/accounting/auditor/prior-year-adjust",
+    body,
+    "تعدیلات سنواتی ثبت شد ولی پاسخ نامعتبر بود.",
+  );
+}
+
+function parseAuditLogEntry(raw: unknown): AccountingAuditLogEntry | null {
+  const obj = asRecord(raw);
+  if (!obj) return null;
+  const id = asNumber(obj.id, 0);
+  if (!id) return null;
+  const optNumber = (value: unknown) => (value == null ? null : asNumber(value, 0) || null);
+  return {
+    id,
+    action: asString(obj.action),
+    action_label: asString(obj.action_label),
+    user_name: obj.user_name == null ? null : asString(obj.user_name),
+    voucher_id: optNumber(obj.voucher_id),
+    voucher_number: optNumber(obj.voucher_number),
+    related_voucher_id: optNumber(obj.related_voucher_id),
+    related_voucher_number: optNumber(obj.related_voucher_number),
+    in_closed_period: asBool(obj.in_closed_period, false),
+    closed_through: obj.closed_through == null ? null : asString(obj.closed_through),
+    reason: obj.reason == null ? null : asString(obj.reason),
+    created_at: obj.created_at == null ? null : asString(obj.created_at),
+  };
+}
+
+export async function fetchAccountingAuditLog(options?: {
+  page?: number;
+  voucherId?: number;
+  closedOnly?: boolean;
+}): Promise<AccountingAuditLogList> {
+  const params: Record<string, string | number> = { page: options?.page ?? 1, per_page: 20 };
+  if (options?.voucherId) params.voucher_id = options.voucherId;
+  if (options?.closedOnly) params.closed_only = 1;
+  const res = await FetchWithJwtClient("GET", "/api/accounting/audit-log", authToken(), params);
+  const obj = asRecord(res);
+  if (obj?.hasError) throwApiError(obj, "خطا در دریافت لاگ حسابرس");
+  const nested = asRecord(obj?.data);
+  const listRaw = Array.isArray(obj?.data) ? obj!.data : Array.isArray(nested?.data) ? nested!.data : [];
+  return {
+    data: (listRaw as unknown[])
+      .map(parseAuditLogEntry)
+      .filter((item): item is AccountingAuditLogEntry => item != null),
+    current_page: asNumber(obj?.current_page ?? nested?.current_page, 1),
+    last_page: asNumber(obj?.last_page ?? nested?.last_page, 1),
+    total: asNumber(obj?.total ?? nested?.total, 0),
+  };
 }
 
 function parseTrialBalance(raw: unknown): TrialBalanceReport {

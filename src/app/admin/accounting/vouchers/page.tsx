@@ -21,14 +21,19 @@ import {
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
+import HistoryIcon from "@mui/icons-material/History";
+import EventRepeatIcon from "@mui/icons-material/EventRepeat";
 import { toast } from "react-toastify";
 import {
   ACCOUNTING_SOURCE_TYPES,
   accountingSourceLabel,
   accountingVoucherStatusLabel,
+  fetchAccountingPeriods,
   fetchAccountingVouchers,
   formatAccountingMoney,
   isReversalVoucher,
+  type AccountingPeriodsInfo,
   type AccountingVoucher,
 } from "@/app/lib/accounting";
 import {
@@ -74,6 +79,17 @@ function AccountingVouchersPage() {
   const [total, setTotal] = useState(0);
   const [sourceType, setSourceType] = useState(initialSource);
   const [status, setStatus] = useState("");
+  const [periodsInfo, setPeriodsInfo] = useState<AccountingPeriodsInfo | null>(null);
+  const [periodIndex, setPeriodIndex] = useState("");
+
+  useEffect(() => {
+    fetchAccountingPeriods()
+      .then(setPeriodsInfo)
+      .catch(() => setPeriodsInfo(null));
+  }, []);
+
+  const selectedPeriod = periodIndex === "" ? null : periodsInfo?.periods[Number(periodIndex)] ?? null;
+  const canEditClosed = Boolean(periodsInfo?.can_edit_closed);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -83,6 +99,8 @@ function AccountingVouchersPage() {
         perPage: 20,
         sourceType: sourceType || undefined,
         status: status || undefined,
+        from: selectedPeriod?.from || undefined,
+        to: selectedPeriod?.to || undefined,
       });
       setRows(res.data);
       setLastPage(Math.max(1, res.last_page));
@@ -93,7 +111,7 @@ function AccountingVouchersPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, sourceType, status]);
+  }, [page, sourceType, status, selectedPeriod?.from, selectedPeriod?.to]);
 
   useEffect(() => {
     load();
@@ -115,6 +133,24 @@ function AccountingVouchersPage() {
             بروزرسانی
           </Button>
           <Button
+            variant="outlined"
+            startIcon={<HistoryIcon />}
+            onClick={() => router.push("/admin/accounting/audit-log")}
+            sx={{ color: "var(--admin-text)", borderColor: "var(--admin-border)" }}
+          >
+            لاگ حسابرس
+          </Button>
+          {canEditClosed && periodsInfo?.closed_through ? (
+            <Button
+              variant="outlined"
+              startIcon={<EventRepeatIcon />}
+              onClick={() => router.push("/admin/accounting/vouchers/new?mode=prior_year_adjust")}
+              sx={{ color: "var(--admin-text)", borderColor: "var(--admin-border)" }}
+            >
+              تعدیلات سنواتی
+            </Button>
+          ) : null}
+          <Button
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => router.push("/admin/accounting/vouchers/new")}
@@ -126,6 +162,28 @@ function AccountingVouchersPage() {
       }
     >
       <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap", mb: 2 }}>
+        {periodsInfo && periodsInfo.periods.length > 1 ? (
+          <FormControl size="small" sx={{ minWidth: 240, ...accountingFieldSx }}>
+            <InputLabel>دورهٔ مالی</InputLabel>
+            <Select
+              label="دورهٔ مالی"
+              value={periodIndex}
+              onChange={(e) => {
+                setPeriodIndex(e.target.value);
+                setPage(1);
+              }}
+            >
+              <MenuItem value="">همهٔ دوره‌ها</MenuItem>
+              {periodsInfo.periods.map((item, index) => (
+                <MenuItem key={`${item.from}-${item.to}`} value={String(index)}>
+                  {item.closed ? "🔒 " : ""}
+                  {item.label}
+                  {item.from || item.to ? ` (${item.from || "ابتدا"} تا ${item.to || "امروز"})` : ""}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        ) : null}
         <FormControl size="small" sx={{ minWidth: 180, ...accountingFieldSx }}>
           <InputLabel>منبع</InputLabel>
           <Select
@@ -191,7 +249,14 @@ function AccountingVouchersPage() {
                   onClick={() => router.push(`/admin/accounting/vouchers/${row.id}`)}
                 >
                   <AccountingTableCell>{row.number}</AccountingTableCell>
-                  <AccountingTableCell>{row.date}</AccountingTableCell>
+                  <AccountingTableCell>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                      {row.date}
+                      {row.locked ? (
+                        <LockOutlinedIcon titleAccess="دورهٔ بسته" sx={{ fontSize: 14, color: "var(--admin-text-muted)" }} />
+                      ) : null}
+                    </Box>
+                  </AccountingTableCell>
                   <AccountingTableCell>
                     <Typography sx={{ fontSize: 12, maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis" }}>
                       {row.description || "—"}

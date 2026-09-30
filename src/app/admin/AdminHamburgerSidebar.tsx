@@ -52,6 +52,7 @@ import BalanceIcon from "@mui/icons-material/Balance";
 import CalculateIcon from "@mui/icons-material/Calculate";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
 import EventAvailableIcon from "@mui/icons-material/EventAvailable";
+import HistoryIcon from "@mui/icons-material/History";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import AddBoxIcon from "@mui/icons-material/AddBox";
 import ListAltIcon from "@mui/icons-material/ListAlt";
@@ -321,6 +322,13 @@ export default function AdminHamburgerSidebar({
         label: "بستن سال / دوره",
         href: "/admin/accounting/period-close",
         icon: <EventAvailableIcon />,
+        permission: "accounting",
+      },
+      {
+        id: "accounting-audit-log",
+        label: "لاگ حسابرس",
+        href: "/admin/accounting/audit-log",
+        icon: <HistoryIcon />,
         permission: "accounting",
       },
       {

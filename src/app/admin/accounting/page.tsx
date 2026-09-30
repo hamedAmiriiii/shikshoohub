@@ -26,6 +26,7 @@ import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import EventAvailableIcon from "@mui/icons-material/EventAvailable";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import HistoryIcon from "@mui/icons-material/History";
 import DateObject from "react-date-object";
 import { toast } from "react-toastify";
 import {
@@ -49,6 +50,7 @@ const LINKS = [
   { href: "/admin/accounting/profit-loss", title: "سود و زیان دفتر", desc: "مبنای تعهدی از آرتیکل سند", icon: <TrendingUpIcon /> },
   { href: "/admin/accounting/balance-sheet", title: "ترازنامه", desc: "دارایی، بدهی، سرمایه و تطبیق نقد", icon: <AccountBalanceIcon /> },
   { href: "/admin/accounting/period-close", title: "بستن سال / میان‌دوره", desc: "صفر کردن درآمد و هزینه و انتقال به سود انباشته", icon: <EventAvailableIcon /> },
+  { href: "/admin/accounting/audit-log", title: "لاگ حسابرس", desc: "اسنادی که حسابرس زده، اصلاح یا برگشت کرده — با دلیل", icon: <HistoryIcon /> },
   { href: "/admin/accounting/moadian", title: "سامانه مؤدیان", desc: "ارسال صورتحساب فروش به سازمان امور مالیاتی", icon: <FactCheckIcon /> },
 ];
 
