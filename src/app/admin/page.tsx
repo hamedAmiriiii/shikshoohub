@@ -267,7 +267,13 @@ export default function ShoppingPage() {
   const [salePriceEditEnabled, setSalePriceEditEnabled] = useState(false);
   const [manualCartQuantityEnabled, setManualCartQuantityEnabled] = useState(false);
   const [quantityPromptOnAddEnabled, setQuantityPromptOnAddEnabled] = useState(false);
-  const [quantityPromptProduct, setQuantityPromptProduct] = useState<any | null>(null);
+  const [quantityPrompt, setQuantityPrompt] = useState<{
+    product: any;
+    max: number;
+    inCart: number;
+    price: number;
+  } | null>(null);
+  const [quantityPromptOpen, setQuantityPromptOpen] = useState(false);
   const [cartProfitEnabled, setCartProfitEnabled] = useState(false);
   const [saleDateEditEnabled, setSaleDateEditEnabled] = useState(false);
   const [saleDate, setSaleDate] = useState<DateObject>(() => todayJalaliDateObject());
@@ -1321,7 +1327,7 @@ export default function ShoppingPage() {
     });
   }, [salePriceEditEnabled]);
 
-  const addProductToCart = useCallback((item: any, quantityOverride?: number) => {
+  const addProductToCart = useCallback((item: any, quantityOverride?: number, priceOverride?: number) => {
     const bonus = editStockBonus[catalogItemKey(item)] || 0;
     const available = Number(item.quantity) + bonus;
     if (!Number.isFinite(available) || available <= 0) {
@@ -1348,6 +1354,7 @@ export default function ShoppingPage() {
                     cartItem.quantity + addQty,
                     kgSalesEnabled ? item : { unit_type: "piece" },
                   ),
+                  ...(priceOverride != null ? { sale_price: priceOverride } : {}),
                 }
               : cartItem,
           )
@@ -1356,7 +1363,9 @@ export default function ShoppingPage() {
             {
               ...item,
               quantity: addQty,
-              sale_price: cartProfitEnabledRef.current
+              sale_price: priceOverride != null
+                ? priceOverride
+                : cartProfitEnabledRef.current
                 ? salePriceWithProfit(parseMoneyAmount(item.sale_price), profitPercentRef.current)
                 : parseMoneyAmount(item.sale_price),
               profit_base_price: parseMoneyAmount(item.sale_price),
@@ -1409,10 +1418,17 @@ export default function ShoppingPage() {
       );
       return;
     }
-    setQuantityPromptProduct(item);
-  }, [quantityPromptOnAddEnabled, addProductToCart, getAddableQuantity]);
-
-  const quantityPromptInfo = quantityPromptProduct ? getAddableQuantity(quantityPromptProduct) : null;
+    const key = catalogItemKey(item);
+    const existingLine: any = cart.find((cartItem: any) => catalogItemKey(cartItem) === key);
+    const basePrice = parseMoneyAmount(item.sale_price);
+    const price = existingLine
+      ? Number(existingLine.sale_price)
+      : cartProfitEnabledRef.current
+      ? salePriceWithProfit(basePrice, profitPercentRef.current)
+      : basePrice;
+    setQuantityPrompt({ product: item, max, inCart, price });
+    setQuantityPromptOpen(true);
+  }, [quantityPromptOnAddEnabled, addProductToCart, getAddableQuantity, cart]);
 
   const addProductByBarcode = useCallback((barcode: string) => {
     if (!barcode || barcode.length < 3) return;
@@ -4428,15 +4444,17 @@ export default function ShoppingPage() {
       </Container>
 
       <AddToCartQuantityDialog
-        open={Boolean(quantityPromptProduct)}
-        productName={quantityPromptProduct?.name || ""}
-        unitItem={kgSalesEnabled && quantityPromptProduct ? quantityPromptProduct : { unit_type: "piece" }}
-        maxQuantity={quantityPromptInfo?.max ?? 0}
-        inCartQuantity={quantityPromptInfo?.inCart ?? 0}
-        onClose={() => setQuantityPromptProduct(null)}
-        onConfirm={(quantity) => {
-          if (quantityPromptProduct) addProductToCart(quantityPromptProduct, quantity);
-          setQuantityPromptProduct(null);
+        open={quantityPromptOpen}
+        productName={quantityPrompt?.product?.name || ""}
+        unitItem={kgSalesEnabled && quantityPrompt ? quantityPrompt.product : { unit_type: "piece" }}
+        maxQuantity={quantityPrompt?.max ?? 0}
+        inCartQuantity={quantityPrompt?.inCart ?? 0}
+        priceEditEnabled={salePriceEditEnabled}
+        defaultPrice={quantityPrompt?.price ?? 0}
+        onClose={() => setQuantityPromptOpen(false)}
+        onConfirm={(quantity, price) => {
+          if (quantityPrompt) addProductToCart(quantityPrompt.product, quantity, price);
+          setQuantityPromptOpen(false);
         }}
       />
 
