@@ -2947,6 +2947,7 @@ export default function ShoppingPage() {
           <AdminTypedSaleListView
             products={items}
             onAddProduct={addProductFromSaleGrid}
+            onProductUpdated={handleMenuProductUpdated}
             formatNumber={formatNumber}
             cartPanel={posCartPanel}
           />

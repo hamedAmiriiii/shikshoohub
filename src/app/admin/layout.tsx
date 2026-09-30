@@ -118,6 +118,9 @@ const getAdminBackUrl = (pathname: string | null): string => {
   if (pathname && /^\/admin\/purchas\/customer\/[^/]+$/.test(pathname)) {
     return "/admin/purchas";
   }
+  if (pathname?.startsWith("/admin/smart-club/")) {
+    return "/admin/smart-club";
+  }
   return getFirstAllowedAdminPath();
 };
 

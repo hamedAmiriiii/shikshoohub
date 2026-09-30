@@ -12,8 +12,10 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
+import CampaignOutlinedIcon from "@mui/icons-material/CampaignOutlined";
 import { useSearchParams } from "next/navigation";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -27,6 +29,7 @@ import {
   type SmartCustomerRow,
 } from "@/app/lib/smartCustomer";
 import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
+import CreateCampaignDialog from "./CreateCampaignDialog";
 
 const fieldSx = {
   minWidth: 180,
@@ -78,6 +81,20 @@ export default function SmartClubCustomersPage() {
   }, [labels]);
 
   const selectedGroup = segment ? smartSegmentLabel(segment, labels) : "";
+  const [campaignOpen, setCampaignOpen] = useState(false);
+
+  const campaignConditions = useMemo(() => {
+    const rules: { field: string; op: string; value: unknown }[] = [];
+    if (segment) rules.push({ field: "primary_segment", op: "=", value: segment });
+    if (tag) rules.push({ field: "tags", op: "contains", value: tag });
+    if (search.trim()) rules.push({ field: "phone", op: "in", value: rows.map((r) => r.phone) });
+    return rules;
+  }, [segment, tag, search, rows]);
+
+  const campaignRecipients = search.trim() ? rows.length : total;
+  const campaignName = ["کمپین", selectedGroup, tag ? SMART_TAG_LABELS[tag] || tag : ""]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <Box sx={{ ...adminPageSx, p: 1.5, pb: 10 }}>
@@ -130,7 +147,29 @@ export default function SmartClubCustomersPage() {
         <Button variant="contained" onClick={() => void load()}>
           نمایش
         </Button>
+        <Tooltip
+          title={campaignConditions.length === 0 ? "اول گروه، وضعیت یا جستجو را انتخاب کن" : ""}
+        >
+          <span>
+            <Button
+              variant="outlined"
+              startIcon={<CampaignOutlinedIcon />}
+              disabled={loading || campaignConditions.length === 0 || campaignRecipients === 0}
+              onClick={() => setCampaignOpen(true)}
+              sx={{ height: "100%" }}
+            >
+              ایجاد کمپین
+            </Button>
+          </span>
+        </Tooltip>
       </Box>
+      <CreateCampaignDialog
+        open={campaignOpen}
+        onClose={() => setCampaignOpen(false)}
+        conditions={campaignConditions}
+        recipientsCount={campaignRecipients}
+        defaultName={campaignName}
+      />
       <Typography sx={{ fontSize: 13, color: "var(--admin-text)", mb: 1 }}>
         {toFaNum(total)} مشتری
       </Typography>

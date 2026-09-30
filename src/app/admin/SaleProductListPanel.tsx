@@ -28,6 +28,7 @@ import {
   ADMIN_POS_SETTINGS_CHANGED_EVENT,
   readAdminPosSettings,
 } from "@/app/lib/adminPosSettings";
+import { useProductQuickActions } from "@/app/admin/ProductQuickActions";
 
 function normalizeSearchText(value: string): string {
   const persianDigits = "۰۱۲۳۴۵۶۷۸۹";
@@ -42,6 +43,8 @@ function normalizeSearchText(value: string): string {
 type SaleProductListPanelProps = {
   products: CachedProduct[];
   onAddProduct: (product: CachedProduct) => void;
+  /** فقط در حالت typed: منوی راست‌کلیک کالا فعال می‌شود */
+  onProductUpdated?: (product: CachedProduct) => void;
   formatNumber: (num: number) => string;
   variant?: "embedded" | "floating" | "typed";
 };
@@ -49,9 +52,19 @@ type SaleProductListPanelProps = {
 export default function SaleProductListPanel({
   products,
   onAddProduct,
+  onProductUpdated,
   formatNumber,
   variant = "floating",
 }: SaleProductListPanelProps) {
+  const { openContextMenu, quickActionsUi } = useProductQuickActions(onProductUpdated);
+  const suppressClickRef = useRef(false);
+  const longPressRef = useRef<number | null>(null);
+  const clearLongPress = () => {
+    if (longPressRef.current != null) {
+      window.clearTimeout(longPressRef.current);
+      longPressRef.current = null;
+    }
+  };
   const [expanded, setExpanded] = useState(true);
   const [search, setSearch] = useState("");
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -128,7 +141,7 @@ export default function SaleProductListPanel({
     if (variant !== "typed") return;
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
-      if (target?.closest?.("[role='dialog']")) return;
+      if (target?.closest?.("[role='dialog'], [role='menu']")) return;
 
       if (event.key === "F2") {
         event.preventDefault();
@@ -437,7 +450,29 @@ export default function SaleProductListPanel({
                   ref={(node: HTMLDivElement | null) => {
                     itemRefs.current[index] = node;
                   }}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    clearLongPress();
+                    openContextMenu({ top: e.clientY, left: e.clientX }, product);
+                  }}
+                  onTouchStart={(e) => {
+                    clearLongPress();
+                    const touch = e.touches[0];
+                    if (!touch) return;
+                    longPressRef.current = window.setTimeout(() => {
+                      suppressClickRef.current = true;
+                      openContextMenu({ top: touch.clientY, left: touch.clientX }, product);
+                    }, 550);
+                  }}
+                  onTouchEnd={clearLongPress}
+                  onTouchMove={clearLongPress}
+                  onTouchCancel={clearLongPress}
                   onClick={() => {
+                    if (suppressClickRef.current) {
+                      suppressClickRef.current = false;
+                      return;
+                    }
                     if (outOfStock) return;
                     addProductAndReset(product);
                   }}
@@ -584,6 +619,7 @@ export default function SaleProductListPanel({
             })
           )}
         </Box>
+        {quickActionsUi}
       </Box>
     );
   }

@@ -199,6 +199,33 @@ export function previewSmartCampaign(id: number) {
   );
 }
 
+export type SmartCampaignReport = {
+  campaign_id: number;
+  recipients: number;
+  returned: number;
+  conversion_pct: number;
+  orders: number;
+  revenue: number;
+  avg_order_value: number;
+  avg_days_to_return: number | null;
+  credit_given: number;
+  credit_used: number | null;
+  runs: number;
+  first_run_at: string | null;
+  last_run_at: string | null;
+  top_customers: {
+    phone: string;
+    orders: number;
+    revenue: number;
+    first_sent_at: string;
+    first_purchase_at: string;
+  }[];
+};
+
+export function fetchSmartCampaignReport(id: number) {
+  return api<SmartCampaignReport>("GET", `/api/smart-customer/campaigns/${id}/report`);
+}
+
 export function runSmartCampaign(id: number) {
   return api("POST", `/api/smart-customer/campaigns/${id}/run`);
 }

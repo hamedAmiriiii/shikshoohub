@@ -13,6 +13,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
 import Link from "next/link";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -23,11 +24,14 @@ import {
   fetchSmartCampaigns,
   previewSmartCampaign,
   runSmartCampaign,
+  SMART_TAG_LABELS,
+  smartSegmentLabel,
   toFaNum,
   updateSmartCampaign,
   type SmartCampaign,
 } from "@/app/lib/smartCustomer";
 import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
+import CampaignReportDialog from "./CampaignReportDialog";
 
 const panelSx = {
   boxShadow: "none",
@@ -73,6 +77,15 @@ function formatValue(value: unknown) {
 }
 
 function formatRule(rule: { field: string; op: string; value: unknown }) {
+  if (rule.field === "primary_segment") return `گروه: ${smartSegmentLabel(String(rule.value ?? ""))}`;
+  if (rule.field === "tags") {
+    const key = String(rule.value ?? "");
+    return `وضعیت: ${SMART_TAG_LABELS[key] || key}`;
+  }
+  if (rule.field === "phone") {
+    const count = Array.isArray(rule.value) ? rule.value.length : 1;
+    return `${toFaNum(count)} مشتری انتخابی`;
+  }
   const value = formatValue(rule.value);
   const builder = FIELD_CHIP[rule.field];
   if (builder) return builder(rule.op, value);
@@ -118,7 +131,7 @@ function Chip({ children, tone }: { children: ReactNode; tone?: "status" | "mute
 const defaultForm = {
   name: "بازگشت مشتریان غیرفعال",
   status: "draft",
-  cooldown_days: 4,
+  cooldown_days: 1000,
   max_recipients_per_run: 50,
   description: "",
   recency_days: 45,
@@ -133,7 +146,9 @@ export default function SmartClubCampaignsPage() {
   const [campaigns, setCampaigns] = useState<SmartCampaign[]>([]);
   const [form, setForm] = useState(defaultForm);
   const [busy, setBusy] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [runTarget, setRunTarget] = useState<SmartCampaign | null>(null);
+  const [reportTarget, setReportTarget] = useState<SmartCampaign | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -173,6 +188,7 @@ export default function SmartClubCampaignsPage() {
       });
       toast.success("کمپین ساخته شد");
       setForm(defaultForm);
+      setCreateOpen(false);
       await load();
     } catch (e) {
       toast.error(getApiErrorMessage(e, "ساخت کمپین ناموفق"));
@@ -253,103 +269,144 @@ export default function SmartClubCampaignsPage() {
           <Typography sx={{ fontWeight: 800, fontSize: 17 }}>کمپین‌ها</Typography>
           <Typography sx={{ fontSize: 12, opacity: 0.7 }}>اعتبار و پیامک برای مشتری‌هایی که مدتی نیامده‌اند</Typography>
         </Box>
-        <Button component={Link} href="/admin/smart-club" size="small" variant="outlined">
-          داشبورد
-        </Button>
+        <Box sx={{ display: "flex", gap: 0.75 }}>
+          <Button
+            size="small"
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setCreateOpen(true)}
+            sx={adminButtonStartIconSx}
+          >
+            ایجاد کمپین
+          </Button>
+          <Button component={Link} href="/admin/smart-club" size="small" variant="outlined">
+            داشبورد
+          </Button>
+        </Box>
       </Box>
 
-      <Box sx={panelSx}>
-        <Typography fontWeight={700} mb={0.5}>
-          کمپین جدید
-        </Typography>
-        <Typography variant="body2" color="text.secondary" mb={1.5}>
-          مشتریانی را انتخاب می‌کنی که مدتی خرید نکرده‌اند؛ بعد خودت دکمه اجرا را می‌زنی تا اعتبار و پیامک برود.
-        </Typography>
-        <Box sx={{ display: "grid", gap: 1, gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" } }}>
-          <TextField
-            size="small"
-            label="نام کمپین"
-            value={form.name}
-            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-          />
-          <TextField
-            select
-            size="small"
-            label="وضعیت"
-            helperText="پیش‌نویس یعنی ذخیره شود ولی اجرا نشود"
-            value={form.status}
-            onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
+      <Dialog
+        open={createOpen}
+        onClose={() => {
+          if (!busy) setCreateOpen(false);
+        }}
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{
+          sx: {
+            bgcolor: "var(--admin-surface)",
+            color: "var(--admin-text)",
+            border: "1px solid var(--admin-border)",
+            borderRadius: "16px",
+            direction: "rtl",
+          },
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 800, fontSize: 14, pb: 0.5 }}>کمپین جدید</DialogTitle>
+        <DialogContent>
+          {/* <Typography variant="body2" sx={{ color: "var(--admin-text-muted)", mb: 1.5 }}>
+            مشتریانی را انتخاب می‌کنی که مدتی خرید نکرده‌اند؛ بعد خودت دکمه اجرا را می‌زنی تا اعتبار و پیامک برود.
+          </Typography> */}
+          <Box
+            sx={{
+              display: "grid",
+              gap: 1,
+              pt: 0.5,
+              gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+              "& .MuiInputBase-input": { fontSize: 12 },
+              "& .MuiInputLabel-root": { fontSize: 12 },
+              "& .MuiInputLabel-shrink": { fontSize: 13 },
+              "& .MuiFormHelperText-root": { fontSize: 10.5 },
+            }}
           >
-            <MenuItem value="draft">پیش‌نویس</MenuItem>
-            <MenuItem value="active">فعال</MenuItem>
-            <MenuItem value="paused">متوقف</MenuItem>
-          </TextField>
-          <TextField
-            size="small"
-            type="number"
-            label="چند روز از آخرین خرید گذشته باشد"
-            helperText="مثلاً ۴۵ یعنی حداقل یک ماه و نیم خرید نکرده"
-            value={form.recency_days}
-            onChange={(e) => setForm((f) => ({ ...f, recency_days: Number(e.target.value) }))}
-          />
-          <TextField
-            size="small"
-            type="number"
-            label="حداقل چند بار قبلاً خرید کرده باشد"
-            helperText="تا مشتری تازه‌وارد بی‌دلیل پیام نگیرد"
-            value={form.frequency}
-            onChange={(e) => setForm((f) => ({ ...f, frequency: Number(e.target.value) }))}
-          />
-          <TextField
-            size="small"
-            type="number"
-            label="اعتبار هدیه (تومان)"
-            value={form.credit}
-            onChange={(e) => setForm((f) => ({ ...f, credit: Number(e.target.value) }))}
-          />
-          <TextField
-            size="small"
-            type="number"
-            label="مهلت استفاده اعتبار (روز)"
-            helperText="بعد از این مدت اگر خرید نکند، این اعتبار دیگر تعلق نمی‌گیرد"
-            value={form.credit_expires_days}
-            onChange={(e) => setForm((f) => ({ ...f, credit_expires_days: Number(e.target.value) }))}
-          />
-          <TextField
-            size="small"
-            type="number"
-            label="حداکثر نفر در هر اجرا"
-            value={form.max_recipients_per_run}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, max_recipients_per_run: Number(e.target.value) }))
-            }
-          />
-          <TextField
-            size="small"
-            type="number"
-            label="فاصله زمانی بین دو پیام به یک مشتری (روز)"
-            helperText="اگر اخیراً پیام گرفته، تا این تعداد روز دوباره برایش اجرا نمی‌شود"
-            value={form.cooldown_days}
-            onChange={(e) => setForm((f) => ({ ...f, cooldown_days: Number(e.target.value) }))}
-            sx={{ gridColumn: { md: "1 / -1" } }}
-          />
-          <TextField
-            size="small"
-            label="متن پیامک"
-            value={form.sms_message}
-            onChange={(e) => setForm((f) => ({ ...f, sms_message: e.target.value }))}
-            sx={{ gridColumn: { md: "1 / -1" } }}
-          />
-        </Box>
-        <Button
-          sx={{ mt: 1.5, ...adminButtonStartIconSx }}
-          variant="contained"
-          disabled={busy}
-          onClick={() => void onCreate()}
-        >
-          ذخیره کمپین
-        </Button>
-      </Box>
+            <TextField
+              size="small"
+              label="نام کمپین"
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+            />
+            <TextField
+              select
+              size="small"
+              label="وضعیت"
+              helperText=""
+              value={form.status}
+              onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
+              SelectProps={{
+                MenuProps: { PaperProps: { sx: { "& .MuiMenuItem-root": { fontSize: 12 } } } },
+              }}
+            >
+              <MenuItem value="draft">پیش‌نویس</MenuItem>
+              <MenuItem value="active">فعال</MenuItem>
+              <MenuItem value="paused">متوقف</MenuItem>
+            </TextField>
+            <TextField
+              size="small"
+              type="number"
+              label="چند روز از آخرین خرید گذشته باشد"
+              helperText=""
+              value={form.recency_days}
+              onChange={(e) => setForm((f) => ({ ...f, recency_days: Number(e.target.value) }))}
+            />
+            <TextField
+              size="small"
+              type="number"
+              label="حداقل چند بار قبلاً خرید کرده باشد"
+              helperText=""
+              value={form.frequency}
+              onChange={(e) => setForm((f) => ({ ...f, frequency: Number(e.target.value) }))}
+            />
+            <TextField
+              size="small"
+              type="number"
+              label="اعتبار هدیه (تومان)"
+              value={form.credit}
+              onChange={(e) => setForm((f) => ({ ...f, credit: Number(e.target.value) }))}
+            />
+            <TextField
+              size="small"
+              type="number"
+              label="مهلت استفاده اعتبار (روز)"
+              helperText=""
+              value={form.credit_expires_days}
+              onChange={(e) => setForm((f) => ({ ...f, credit_expires_days: Number(e.target.value) }))}
+            />
+            <TextField
+              size="small"
+              type="number"
+              label="حداکثر نفر در هر اجرا"
+              value={form.max_recipients_per_run}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, max_recipients_per_run: Number(e.target.value) }))
+              }
+            />
+            <TextField
+              size="small"
+              label="متن پیامک"
+              value={form.sms_message}
+              onChange={(e) => setForm((f) => ({ ...f, sms_message: e.target.value }))}
+              sx={{ gridColumn: { md: "1 / -1" } }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, gap: 1, justifyContent: "flex-start", "& .MuiButton-root": { fontSize: 12 } }}>
+          <Button
+            variant="contained"
+            disabled={busy}
+            onClick={() => void onCreate()}
+            startIcon={busy ? <CircularProgress size={14} color="inherit" /> : undefined}
+          >
+            ذخیره کمپین
+          </Button>
+          <Button
+            onClick={() => setCreateOpen(false)}
+            disabled={busy}
+            sx={{ color: "var(--admin-text-secondary)" }}
+          >
+            انصراف
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {loading ? (
         <CircularProgress />
@@ -391,10 +448,11 @@ export default function SmartClubCampaignsPage() {
                   <Chip key={action}>{action}</Chip>
                 ))}
               </Box>
-              <Typography sx={{ fontSize: 11, opacity: 0.7, mb: 1 }}>
-                فاصله {toFaNum(c.cooldown_days)} روز
-                {c.max_recipients_per_run ? ` · حداکثر ${toFaNum(c.max_recipients_per_run)} نفر` : ""}
-              </Typography>
+              {c.max_recipients_per_run ? (
+                <Typography sx={{ fontSize: 11, opacity: 0.7, mb: 1 }}>
+                  حداکثر {toFaNum(c.max_recipients_per_run)} نفر
+                </Typography>
+              ) : null}
               <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap" }}>
                 <Button size="small" variant="outlined" onClick={() => void onPreview(c.id)} sx={{ fontSize: 12, py: 0.25 }}>
                   چند نفر؟
@@ -408,6 +466,14 @@ export default function SmartClubCampaignsPage() {
                 >
                   اجرا
                 </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={() => setReportTarget(c)}
+                  sx={{ fontSize: 12, py: 0.25 }}
+                >
+                  بررسی کمپین
+                </Button>
                 <Button size="small" onClick={() => void onToggleActive(c)} sx={{ fontSize: 12, py: 0.25 }}>
                   {c.status === "active" ? "توقف" : "فعال کن"}
                 </Button>
@@ -419,6 +485,8 @@ export default function SmartClubCampaignsPage() {
           );
         })
       )}
+
+      <CampaignReportDialog campaign={reportTarget} onClose={() => setReportTarget(null)} />
 
       <Dialog
         open={Boolean(runTarget)}

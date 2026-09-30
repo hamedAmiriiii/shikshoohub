@@ -32,6 +32,7 @@ import BoltOutlinedIcon from "@mui/icons-material/BoltOutlined";
 import CampaignOutlinedIcon from "@mui/icons-material/CampaignOutlined";
 import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
 import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
+import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import WorkspacePremiumOutlinedIcon from "@mui/icons-material/WorkspacePremiumOutlined";
 import TrendingUpOutlinedIcon from "@mui/icons-material/TrendingUpOutlined";
 import PersonAddAltOutlinedIcon from "@mui/icons-material/PersonAddAltOutlined";
@@ -320,7 +321,7 @@ export default function SmartClubDashboardPage() {
   const featured = data?.featured || [];
   const extra = (data?.extra_cards || []).filter((card) => (card.count || 0) > 0);
   const distribution = data?.distribution || [];
-  const ops = data?.ops || [];
+  const ops = (data?.ops || []).filter((item) => item.key !== "thresholds");
 
   const rfmRows = useMemo(
     () =>
@@ -362,6 +363,24 @@ export default function SmartClubDashboardPage() {
             <CalendarMonthOutlinedIcon sx={{ fontSize: 15, color: "var(--admin-text-muted)" }} />
             {data?.window_label || "کل دوره"}
           </Box>
+          <Tooltip title="تنظیم گروه‌بندی مشتری‌ها">
+            <IconButton
+              component={Link}
+              href="/admin/smart-club/thresholds"
+              size="small"
+              aria-label="تنظیم گروه‌بندی مشتری‌ها"
+              sx={{
+                border: "1px solid var(--admin-border)",
+                borderRadius: "8px",
+                bgcolor: "var(--admin-surface)",
+                color: "var(--admin-text-muted)",
+                p: 0.45,
+                "&:hover": { color: "var(--admin-accent)", borderColor: "var(--admin-accent)" },
+              }}
+            >
+              <SettingsOutlinedIcon sx={{ fontSize: 17 }} />
+            </IconButton>
+          </Tooltip>
           <Button
             size="small"
             variant="contained"

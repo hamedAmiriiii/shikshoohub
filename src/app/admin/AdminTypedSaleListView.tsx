@@ -11,6 +11,7 @@ import type { CachedProduct } from "@/app/lib/productsCache";
 type AdminTypedSaleListViewProps = {
   products: CachedProduct[];
   onAddProduct: (product: CachedProduct) => void;
+  onProductUpdated?: (product: CachedProduct) => void;
   formatNumber: (num: number) => string;
   cartPanel: AdminMenuModeCartPanelProps;
 };
@@ -18,6 +19,7 @@ type AdminTypedSaleListViewProps = {
 export default function AdminTypedSaleListView({
   products,
   onAddProduct,
+  onProductUpdated,
   formatNumber,
   cartPanel,
 }: AdminTypedSaleListViewProps) {
@@ -34,6 +36,7 @@ export default function AdminTypedSaleListView({
         variant="typed"
         products={products}
         onAddProduct={onAddProduct}
+        onProductUpdated={onProductUpdated}
         formatNumber={formatNumber}
       />
     </Box>
