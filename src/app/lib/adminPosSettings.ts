@@ -10,6 +10,8 @@ export type AdminPosSettings = {
   menuModeShowProductImages: boolean;
   /** نمایش عدد موجودی روی کارت کالا در صفحه فروش */
   showProductStockOnSale: boolean;
+  /** در حالت منو و لیست فروش تایپی، قبل از افزودن کالا تعداد پرسیده شود */
+  quantityPromptOnAddEnabled: boolean;
   installmentPaymentEnabled: boolean;
   debtPaymentEnabled: boolean;
   /** فروش با چک دریافتی ثبت‌شده */
@@ -54,6 +56,7 @@ const DEFAULT_SETTINGS: AdminPosSettings = {
   menuMode: false,
   menuModeShowProductImages: true,
   showProductStockOnSale: false,
+  quantityPromptOnAddEnabled: false,
   installmentPaymentEnabled: true,
   debtPaymentEnabled: false,
   chequePaymentEnabled: false,

@@ -86,6 +86,7 @@ import type { PaymentType } from '@/app/lib/paymentTypes';
 import SaleProductListPanel from '@/app/admin/SaleProductListPanel';
 import AdminTypedSaleListView from '@/app/admin/AdminTypedSaleListView';
 import AdminMenuModeView from '@/app/admin/AdminMenuModeView';
+import AddToCartQuantityDialog from '@/app/admin/AddToCartQuantityDialog';
 import AdminClassicPosView from '@/app/admin/AdminClassicPosView';
 import SaleChequePicker from '@/app/admin/SaleChequePicker';
 import type { AdminMenuModeCartPanelProps } from '@/app/admin/AdminMenuModeCartPanel';
@@ -265,6 +266,8 @@ export default function ShoppingPage() {
   const [kgSalesEnabled, setKgSalesEnabled] = useState(false);
   const [salePriceEditEnabled, setSalePriceEditEnabled] = useState(false);
   const [manualCartQuantityEnabled, setManualCartQuantityEnabled] = useState(false);
+  const [quantityPromptOnAddEnabled, setQuantityPromptOnAddEnabled] = useState(false);
+  const [quantityPromptProduct, setQuantityPromptProduct] = useState<any | null>(null);
   const [cartProfitEnabled, setCartProfitEnabled] = useState(false);
   const [saleDateEditEnabled, setSaleDateEditEnabled] = useState(false);
   const [saleDate, setSaleDate] = useState<DateObject>(() => todayJalaliDateObject());
@@ -1143,6 +1146,7 @@ export default function ShoppingPage() {
       setKgSalesEnabled(settings.kgSalesEnabled);
       setSalePriceEditEnabled(settings.salePriceEditEnabled);
       setManualCartQuantityEnabled(Boolean(settings.manualCartQuantityEnabled));
+      setQuantityPromptOnAddEnabled(Boolean(settings.quantityPromptOnAddEnabled));
       const profitOn = Boolean(settings.cartProfitEnabled);
       setCartProfitEnabled(profitOn);
       cartProfitEnabledRef.current = profitOn;
@@ -1317,7 +1321,7 @@ export default function ShoppingPage() {
     });
   }, [salePriceEditEnabled]);
 
-  const addProductToCart = useCallback((item: any) => {
+  const addProductToCart = useCallback((item: any, quantityOverride?: number) => {
     const bonus = editStockBonus[catalogItemKey(item)] || 0;
     const available = Number(item.quantity) + bonus;
     if (!Number.isFinite(available) || available <= 0) {
@@ -1325,11 +1329,15 @@ export default function ShoppingPage() {
       return;
     }
     setCart((prevCart) => {
-      const addQty = kgSalesEnabled && isMeasuredProduct(item)
-        ? getDefaultCartQuantity(item)
-        : 1;
       const incomingKey = catalogItemKey(item);
       const existing = prevCart.find((i) => catalogItemKey(i) === incomingKey);
+      const defaultQty = kgSalesEnabled && isMeasuredProduct(item)
+        ? getDefaultCartQuantity(item)
+        : 1;
+      const addQty = quantityOverride != null
+        ? Math.min(quantityOverride, Math.max(0, available - (Number(existing?.quantity) || 0)))
+        : defaultQty;
+      if (addQty <= 0) return prevCart;
 
       const newCart = existing
         ? prevCart.map((cartItem) =>
@@ -1373,6 +1381,38 @@ export default function ShoppingPage() {
       navigator.vibrate(70);
     }
   }, [kgSalesEnabled, salePriceEditEnabled, editStockBonus]);
+
+  const getAddableQuantity = useCallback((item: any) => {
+    const key = catalogItemKey(item);
+    const available = Number(item.quantity) + (editStockBonus[key] || 0);
+    const inCart = cart
+      .filter((cartItem: any) => catalogItemKey(cartItem) === key)
+      .reduce((sum: number, cartItem: any) => sum + (Number(cartItem.quantity) || 0), 0);
+    const unitItem = kgSalesEnabled ? item : { unit_type: "piece" };
+    return {
+      inCart,
+      max: Number.isFinite(available) ? normalizeQuantityValue(Math.max(0, available - inCart), unitItem) : 0,
+    };
+  }, [cart, editStockBonus, kgSalesEnabled]);
+
+  const addProductFromSaleGrid = useCallback((item: any) => {
+    if (!quantityPromptOnAddEnabled) {
+      addProductToCart(item);
+      return;
+    }
+    const { inCart, max } = getAddableQuantity(item);
+    if (max <= 0) {
+      toast.warning(
+        inCart > 0
+          ? "همه موجودی این کالا در سبد است"
+          : "این کالا ناموجود است و به سبد اضافه نمی‌شود",
+      );
+      return;
+    }
+    setQuantityPromptProduct(item);
+  }, [quantityPromptOnAddEnabled, addProductToCart, getAddableQuantity]);
+
+  const quantityPromptInfo = quantityPromptProduct ? getAddableQuantity(quantityPromptProduct) : null;
 
   const addProductByBarcode = useCallback((barcode: string) => {
     if (!barcode || barcode.length < 3) return;
@@ -2890,14 +2930,14 @@ export default function ShoppingPage() {
         {typedSaleListMode ? (
           <AdminTypedSaleListView
             products={items}
-            onAddProduct={addProductToCart}
+            onAddProduct={addProductFromSaleGrid}
             formatNumber={formatNumber}
             cartPanel={posCartPanel}
           />
         ) : menuMode ? (
           <AdminMenuModeView
             products={items}
-            onAddProduct={addProductToCart}
+            onAddProduct={addProductFromSaleGrid}
             onProductUpdated={handleMenuProductUpdated}
             formatNumber={formatNumber}
             cartPanel={posCartPanel}
@@ -4386,6 +4426,19 @@ export default function ShoppingPage() {
         </Grid>
         )}
       </Container>
+
+      <AddToCartQuantityDialog
+        open={Boolean(quantityPromptProduct)}
+        productName={quantityPromptProduct?.name || ""}
+        unitItem={kgSalesEnabled && quantityPromptProduct ? quantityPromptProduct : { unit_type: "piece" }}
+        maxQuantity={quantityPromptInfo?.max ?? 0}
+        inCartQuantity={quantityPromptInfo?.inCart ?? 0}
+        onClose={() => setQuantityPromptProduct(null)}
+        onConfirm={(quantity) => {
+          if (quantityPromptProduct) addProductToCart(quantityPromptProduct, quantity);
+          setQuantityPromptProduct(null);
+        }}
+      />
 
       {!menuMode && !typedSaleListMode && showProductListOnMainPage && (
         <Box sx={{ display: { xs: "none", md: "block" } }}>

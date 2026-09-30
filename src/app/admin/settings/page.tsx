@@ -28,6 +28,7 @@ import PersonIcon from "@mui/icons-material/Person";
 import ConfirmationNumberOutlinedIcon from "@mui/icons-material/ConfirmationNumberOutlined";
 import PriceChangeIcon from "@mui/icons-material/PriceChange";
 import PinOutlinedIcon from "@mui/icons-material/PinOutlined";
+import DialpadIcon from "@mui/icons-material/Dialpad";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
 import ImageOutlinedIcon from "@mui/icons-material/ImageOutlined";
@@ -298,6 +299,7 @@ export default function SettingsPage() {
   const [menuMode, setMenuMode] = useState(false);
   const [menuModeShowProductImages, setMenuModeShowProductImages] = useState(true);
   const [showProductStockOnSale, setShowProductStockOnSale] = useState(false);
+  const [quantityPromptOnAddEnabled, setQuantityPromptOnAddEnabled] = useState(false);
   const [installmentPaymentEnabled, setInstallmentPaymentEnabled] = useState(true);
   const [debtPaymentEnabled, setDebtPaymentEnabled] = useState(false);
   const [chequePaymentEnabled, setChequePaymentEnabled] = useState(false);
@@ -339,6 +341,7 @@ export default function SettingsPage() {
       setMenuMode(settings.menuMode);
       setMenuModeShowProductImages(settings.menuModeShowProductImages);
       setShowProductStockOnSale(Boolean(settings.showProductStockOnSale));
+      setQuantityPromptOnAddEnabled(Boolean(settings.quantityPromptOnAddEnabled));
       setInstallmentPaymentEnabled(settings.installmentPaymentEnabled);
       setDebtPaymentEnabled(settings.debtPaymentEnabled);
       setChequePaymentEnabled(settings.chequePaymentEnabled);
@@ -440,6 +443,17 @@ export default function SettingsPage() {
       enabled
         ? "موجودی کالا روی کارت‌های صفحه فروش نمایش داده می‌شود"
         : "موجودی کالا از کارت‌های صفحه فروش پنهان شد",
+    );
+  };
+
+  const handleToggleQuantityPromptOnAdd = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setQuantityPromptOnAddEnabled(enabled);
+    writeAdminPosSettings({ quantityPromptOnAddEnabled: enabled });
+    toast.success(
+      enabled
+        ? "ورود دستی تعداد فعال شد — قبل از افزودن کالا تعداد پرسیده می‌شود"
+        : "ورود دستی تعداد غیرفعال شد",
     );
   };
 
@@ -1013,6 +1027,14 @@ export default function SettingsPage() {
             hint="عدد موجودی داخل دایره روی کارت کالا در حالت منو و لیست فروش تایپی"
             checked={showProductStockOnSale}
             onChange={handleToggleShowProductStockOnSale}
+            disabled={!menuMode && !typedSaleListMode}
+          />
+          <SettingsToggleRow
+            icon={<DialpadIcon sx={{ fontSize: 18 }} />}
+            title="ورود دستی تعداد"
+            hint="در حالت منو و لیست فروش تایپی"
+            checked={quantityPromptOnAddEnabled}
+            onChange={handleToggleQuantityPromptOnAdd}
             disabled={!menuMode && !typedSaleListMode}
           />
           <SettingsToggleRow
