@@ -3,11 +3,14 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  Autocomplete,
   Box,
   Button,
   Chip,
   CircularProgress,
   FormControl,
+  InputAdornment,
+  TextField,
   InputLabel,
   MenuItem,
   Pagination,
@@ -24,19 +27,27 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import HistoryIcon from "@mui/icons-material/History";
 import EventRepeatIcon from "@mui/icons-material/EventRepeat";
+import SearchIcon from "@mui/icons-material/Search";
+import FilterAltOffIcon from "@mui/icons-material/FilterAltOff";
+import DateObject from "react-date-object";
 import { toast } from "react-toastify";
 import {
   ACCOUNTING_SOURCE_TYPES,
   accountingSourceLabel,
   accountingVoucherStatusLabel,
+  fetchAccountingAccounts,
   fetchAccountingPeriods,
   fetchAccountingVouchers,
+  flattenAccounts,
   formatAccountingMoney,
   isReversalVoucher,
+  jalaliYmd,
+  type AccountingAccount,
   type AccountingPeriodsInfo,
   type AccountingVoucher,
 } from "@/app/lib/accounting";
 import {
+  AccountingJalaliDateField,
   AccountingPageShell,
   AccountingTableCell,
   AccountingTableRow,
@@ -81,6 +92,14 @@ function AccountingVouchersPage() {
   const [status, setStatus] = useState("");
   const [periodsInfo, setPeriodsInfo] = useState<AccountingPeriodsInfo | null>(null);
   const [periodIndex, setPeriodIndex] = useState("");
+  const [accounts, setAccounts] = useState<AccountingAccount[]>([]);
+  const [account, setAccount] = useState<AccountingAccount | null>(null);
+  const [fromDate, setFromDate] = useState<DateObject | null>(null);
+  const [toDate, setToDate] = useState<DateObject | null>(null);
+  const [searchInput, setSearchInput] = useState("");
+  const [amountInput, setAmountInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [amount, setAmount] = useState("");
 
   useEffect(() => {
     fetchAccountingPeriods()
@@ -88,8 +107,40 @@ function AccountingVouchersPage() {
       .catch(() => setPeriodsInfo(null));
   }, []);
 
+  useEffect(() => {
+    fetchAccountingAccounts()
+      .then((tree) => setAccounts(flattenAccounts(tree)))
+      .catch(() => setAccounts([]));
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearch(searchInput.trim());
+      setAmount(amountInput.replace(/[^\d۰-۹٠-٩]/g, ""));
+      setPage(1);
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [searchInput, amountInput]);
+
   const selectedPeriod = periodIndex === "" ? null : periodsInfo?.periods[Number(periodIndex)] ?? null;
   const canEditClosed = Boolean(periodsInfo?.can_edit_closed);
+  const fromParam = jalaliYmd(fromDate) || selectedPeriod?.from || "";
+  const toParam = jalaliYmd(toDate) || selectedPeriod?.to || "";
+  const hasFilters = Boolean(
+    sourceType || status || periodIndex !== "" || account || fromDate || toDate || searchInput || amountInput,
+  );
+
+  const clearFilters = () => {
+    setSourceType("");
+    setStatus("");
+    setPeriodIndex("");
+    setAccount(null);
+    setFromDate(null);
+    setToDate(null);
+    setSearchInput("");
+    setAmountInput("");
+    setPage(1);
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -99,8 +150,11 @@ function AccountingVouchersPage() {
         perPage: 20,
         sourceType: sourceType || undefined,
         status: status || undefined,
-        from: selectedPeriod?.from || undefined,
-        to: selectedPeriod?.to || undefined,
+        from: fromParam || undefined,
+        to: toParam || undefined,
+        accountId: account?.id,
+        amount: amount || undefined,
+        q: search || undefined,
       });
       setRows(res.data);
       setLastPage(Math.max(1, res.last_page));
@@ -111,7 +165,7 @@ function AccountingVouchersPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, sourceType, status, selectedPeriod?.from, selectedPeriod?.to]);
+  }, [page, sourceType, status, fromParam, toParam, account?.id, amount, search]);
 
   useEffect(() => {
     load();
@@ -216,6 +270,87 @@ function AccountingVouchersPage() {
             <MenuItem value="reversed">برگشت‌خورده</MenuItem>
           </Select>
         </FormControl>
+      </Box>
+
+      <Box
+        sx={{
+          display: "grid",
+          gap: 1.5,
+          gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "2fr 2fr 1fr 1fr 1fr auto" },
+          alignItems: "end",
+          mb: 2,
+        }}
+      >
+        <TextField
+          size="small"
+          label="جستجو"
+          placeholder="شمارهٔ سند، شمارهٔ فاکتور یا شرح"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          sx={accountingFieldSx}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon sx={{ fontSize: 18, color: "var(--admin-text-muted)" }} />
+              </InputAdornment>
+            ),
+          }}
+        />
+        <Autocomplete
+          size="small"
+          options={accounts}
+          value={account}
+          onChange={(_e, value) => {
+            setAccount(value);
+            setPage(1);
+          }}
+          getOptionLabel={(option) => `${option.code} — ${option.name}`}
+          isOptionEqualToValue={(a, b) => a.id === b.id}
+          renderInput={(params) => <TextField {...params} label="حساب (با زیرحساب‌ها)" sx={accountingFieldSx} />}
+          slotProps={{
+            paper: { sx: { bgcolor: "var(--admin-surface)", color: "var(--admin-text)" } },
+          }}
+        />
+        <TextField
+          size="small"
+          label="مبلغ آرتیکل"
+          placeholder="مثلاً 250000"
+          value={amountInput}
+          onChange={(e) => setAmountInput(e.target.value)}
+          inputProps={{ inputMode: "numeric" }}
+          sx={accountingFieldSx}
+        />
+        <Box>
+          <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)", mb: 0.5 }}>از تاریخ</Typography>
+          <AccountingJalaliDateField
+            value={fromDate}
+            onChange={(value) => {
+              setFromDate(value);
+              setPage(1);
+            }}
+            placeholder={selectedPeriod?.from || "از ابتدا"}
+          />
+        </Box>
+        <Box>
+          <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)", mb: 0.5 }}>تا تاریخ</Typography>
+          <AccountingJalaliDateField
+            value={toDate}
+            onChange={(value) => {
+              setToDate(value);
+              setPage(1);
+            }}
+            placeholder={selectedPeriod?.to || "تا امروز"}
+          />
+        </Box>
+        <Button
+          variant="outlined"
+          startIcon={<FilterAltOffIcon />}
+          onClick={clearFilters}
+          disabled={!hasFilters}
+          sx={{ height: 40, color: "var(--admin-text)", borderColor: "var(--admin-border)", whiteSpace: "nowrap" }}
+        >
+          حذف فیلترها
+        </Button>
       </Box>
 
       {loading ? (

@@ -72,6 +72,7 @@ interface HeaderProps {
   rightAction?: React.ReactNode;
   showBack?: boolean;
   backUrl?: string;
+  onBack?: () => void;
 }
 
 export default function Header({
@@ -79,6 +80,7 @@ export default function Header({
   rightAction,
   showBack = false,
   backUrl = "/admin",
+  onBack,
 }: HeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -543,7 +545,7 @@ export default function Header({
 
             {showBack && (
               <IconButton
-                onClick={() => router.push(backUrl)}
+                onClick={() => (onBack ? onBack() : router.push(backUrl))}
                 sx={{
                   color: "var(--admin-text)",
                   backgroundColor: "rgba(255,255,255,0.1)",

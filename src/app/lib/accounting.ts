@@ -559,6 +559,9 @@ export async function fetchAccountingVouchers(options?: {
   status?: string;
   from?: string;
   to?: string;
+  accountId?: number;
+  amount?: string;
+  q?: string;
 }): Promise<AccountingVoucherList> {
   const params: Record<string, string | number> = {
     per_page: options?.perPage ?? 20,
@@ -568,6 +571,9 @@ export async function fetchAccountingVouchers(options?: {
   if (options?.status) params.status = options.status;
   if (options?.from) params.from = options.from;
   if (options?.to) params.to = options.to;
+  if (options?.accountId) params.account_id = options.accountId;
+  if (options?.amount) params.amount = options.amount;
+  if (options?.q) params.q = options.q;
   const res = await FetchWithJwtClient(
     "GET",
     "/api/accounting/vouchers",

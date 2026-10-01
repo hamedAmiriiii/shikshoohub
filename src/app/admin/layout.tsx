@@ -122,8 +122,18 @@ const getAdminBackUrl = (pathname: string | null): string => {
   if (pathname?.startsWith("/admin/smart-club/")) {
     return "/admin/smart-club";
   }
+  if (pathname?.startsWith("/admin/accounting/vouchers/")) {
+    return "/admin/accounting/vouchers";
+  }
+  if (pathname?.startsWith("/admin/accounting/")) {
+    return "/admin/accounting";
+  }
   return getFirstAllowedAdminPath();
 };
+
+/** جزئیات سند از دفتر، لیست اسناد یا سند دیگر باز می‌شود؛ بک باید به همان صفحهٔ قبلی برگردد */
+const prefersHistoryBack = (pathname: string | null): boolean =>
+  Boolean(pathname?.startsWith("/admin/accounting/vouchers/"));
 
 const shouldShowBack = (pathname: string | null): boolean => {
   if (!pathname) return false;
@@ -151,6 +161,12 @@ export default function ShikshooLayout({
     pathname?.includes(AUDITOR_SELECT_SHOP_PATH);
   const [isChecking, setIsChecking] = useState(true);
   const shopFeaturesSyncedRef = useRef(false);
+  const firstPathnameRef = useRef(pathname);
+  const [hasInAppHistory, setHasInAppHistory] = useState(false);
+
+  useEffect(() => {
+    if (pathname !== firstPathnameRef.current) setHasInAppHistory(true);
+  }, [pathname]);
 
   useEffect(() => {
     const stored = localStorage.getItem("admin_theme_mode");
@@ -236,6 +252,7 @@ export default function ShikshooLayout({
                   title={pageTitle}
                   showBack={showBack}
                   backUrl={getAdminBackUrl(pathname)}
+                  onBack={hasInAppHistory && prefersHistoryBack(pathname) ? () => router.back() : undefined}
                 />
               </Box>
             )}

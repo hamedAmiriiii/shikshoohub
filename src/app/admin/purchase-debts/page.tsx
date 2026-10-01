@@ -10,6 +10,7 @@ import {
   CircularProgress,
   Collapse,
   Dialog,
+  DialogActions,
   DialogContent,
   DialogTitle,
   Grid,
@@ -116,6 +117,8 @@ export default function PurchaseDebtsPage() {
   const [detailsLoading, setDetailsLoading] = useState<number | null>(null);
   const [settleInvoice, setSettleInvoice] = useState<PurchaseDebtInvoice | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [deleteInvoice, setDeleteInvoice] = useState<PurchaseDebtInvoice | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
 
@@ -229,6 +232,30 @@ export default function PurchaseDebtsPage() {
     setInvoiceDetails({});
     loadDebtors();
     if (selectedPhone) loadInvoices(selectedPhone, invoiceStatus);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteInvoice) return;
+    const token = tokenCode();
+    if (!token) return;
+
+    setDeleting(true);
+    try {
+      const res = await FetchWithJwtClient(
+        "DELETE",
+        `/api/purchase-debts/${getDebtInvoiceId(deleteInvoice)}`,
+        token,
+      );
+      if (res?.hasError) {
+        toast.error(getApiErrorMessage(res, "حذف بدهی انجام نشد"));
+        return;
+      }
+      toast.success(res?.message || "بدهی دستی حذف شد.");
+      setDeleteInvoice(null);
+      handleSettled();
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -432,6 +459,16 @@ export default function PurchaseDebtsPage() {
                               {partial ? "پرداخت" : "تسویه"}
                             </Button>
                           )}
+                          {invoice.can_delete && (
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="error"
+                              onClick={() => setDeleteInvoice(invoice)}
+                            >
+                              حذف
+                            </Button>
+                          )}
                           <IconButton size="small" onClick={() => handleToggleDetails(invoice)}>
                             {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                           </IconButton>
@@ -493,6 +530,25 @@ export default function PurchaseDebtsPage() {
           setInvoiceStatus("pending");
         }}
       />
+
+      <Dialog open={Boolean(deleteInvoice)} onClose={() => !deleting && setDeleteInvoice(null)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700 }}>حذف بدهی دستی</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ fontSize: "14px", color: "var(--admin-text)" }}>
+            بدهی فاکتور #{deleteInvoice ? getDebtInvoiceId(deleteInvoice) : ""} به مبلغ{" "}
+            {formatNumber(deleteInvoice ? getDebtInvoiceAmount(deleteInvoice) : 0)} تومان حذف و سند حسابداری آن برگشت
+            می‌خورد. ادامه می‌دهید؟
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteInvoice(null)} disabled={deleting}>
+            انصراف
+          </Button>
+          <Button variant="contained" color="error" onClick={handleConfirmDelete} disabled={deleting}>
+            {deleting ? <CircularProgress size={18} color="inherit" /> : "حذف"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <PurchaseDebtSettleDialog
         open={Boolean(settleInvoice)}

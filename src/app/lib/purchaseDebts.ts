@@ -34,6 +34,8 @@ export type PurchaseDebtProduct = {
 export type PurchaseDebtInvoice = {
   id: number;
   purchase_id?: number;
+  is_manual?: boolean;
+  can_delete?: boolean;
   phone?: string;
   name?: string | null;
   customer_name?: string | null;
