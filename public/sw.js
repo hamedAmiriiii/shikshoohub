@@ -1,5 +1,6 @@
 const CACHE_NAME = "webino-pwa-v10";
-const ADMIN_CACHE_NAME = "webino-admin-shell-v7";
+const ADMIN_CACHE_NAME = "webino-admin-shell-v8";
+const ADMIN_HOME = "/admin";
 const OFFLINE_URL = "/offline.html";
 const PRECACHE_URLS = [
   OFFLINE_URL,
@@ -51,7 +52,66 @@ self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SKIP_WAITING") {
     self.skipWaiting();
   }
+  if (event.data && event.data.type === "WARM_CACHE") {
+    event.waitUntil(warmCache(event.data));
+  }
 });
+
+/**
+ * صفحه فعلی و فایل‌های /_next/static که قبل از کنترل SW لود شده‌اند را کش می‌کند
+ * تا بار اول هم صفحه بدون اینترنت باز شود.
+ */
+async function warmCache(data) {
+  const urls = Array.isArray(data.urls) ? data.urls : [];
+  const staticCache = await caches.open(CACHE_NAME);
+  for (const raw of urls) {
+    try {
+      const url = new URL(raw, self.location.origin);
+      if (url.origin !== self.location.origin || !isNextStaticAsset(url)) continue;
+      if (await staticCache.match(url.href)) continue;
+      const response = await fetch(url.href);
+      if (isCacheableStaticResponse(response)) {
+        await staticCache.put(url.href, response);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  if (typeof data.page === "string") {
+    try {
+      const pageUrl = new URL(data.page, self.location.origin);
+      if (pageUrl.origin === self.location.origin && isAdminPath(pageUrl)) {
+        const response = await fetch(pageUrl.pathname, { cache: "no-store", credentials: "same-origin" });
+        await cacheAdminPage(pageUrl.pathname, response);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+function isHtmlResponse(response) {
+  const type = (response.headers.get("content-type") || "").toLowerCase();
+  return type.indexOf("text/html") !== -1;
+}
+
+function adminPageKey(pathname) {
+  const trimmed = pathname.replace(/\/+$/, "");
+  return trimmed === "" ? ADMIN_HOME : trimmed;
+}
+
+async function cacheAdminPage(pathname, response) {
+  if (!response || response.status !== 200 || response.type !== "basic" || response.redirected) return;
+  if (!isHtmlResponse(response)) return;
+  const cache = await caches.open(ADMIN_CACHE_NAME);
+  await cache.put(adminPageKey(pathname), response.clone());
+}
+
+async function cachedAdminPage(pathname) {
+  const cache = await caches.open(ADMIN_CACHE_NAME);
+  return cache.match(adminPageKey(pathname), { ignoreSearch: true, ignoreVary: true });
+}
 
 function isAdminPath(url) {
   return url.pathname === "/admin" || url.pathname.startsWith("/admin/");
@@ -76,10 +136,9 @@ function shouldBypassServiceWorker(url) {
 async function matchAdminShell(request) {
   const adminCache = await caches.open(ADMIN_CACHE_NAME);
   return (
-    (await adminCache.match(request, { ignoreSearch: true })) ||
-    (await caches.match(request, { ignoreSearch: true })) ||
-    (await caches.match("/admin")) ||
-    (await caches.match(OFFLINE_URL))
+    (await adminCache.match(request, { ignoreSearch: true, ignoreVary: true })) ||
+    (await caches.match(request, { ignoreSearch: true, ignoreVary: true })) ||
+    new Response("Offline", { status: 503, statusText: "Service Unavailable" })
   );
 }
 
@@ -90,31 +149,49 @@ function isCacheableStaticResponse(response) {
   return true;
 }
 
+const NAVIGATION_TIMEOUT_MS = 5000;
+
+/** وای‌فای وصل ولی بدون اینترنت: اگر نسخهٔ کش وجود دارد بیش از چند ثانیه منتظر شبکه نمانیم */
+async function fetchNavigation(request, pathname) {
+  const hasCached = Boolean(await cachedAdminPage(pathname)) || Boolean(await cachedAdminPage(ADMIN_HOME));
+  const fetching = fetch(request, { cache: "no-store" }).then((response) => {
+    if (hasCached && response.status >= 500) {
+      throw new Error("server error");
+    }
+    return response;
+  });
+  if (!hasCached) return fetching;
+  return Promise.race([
+    fetching,
+    new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), NAVIGATION_TIMEOUT_MS)),
+  ]);
+}
+
 async function networkThenAdminCache(request) {
   const url = new URL(request.url);
-  const path = url.pathname;
-  const isAdminHome = path === "/admin" || path === "/admin/";
   const isNavigate = request.mode === "navigate";
   try {
-    const response = await fetch(request, { cache: "no-store" });
-    if (
-      response &&
-      response.status === 200 &&
-      response.type === "basic" &&
-      !isNavigate
-    ) {
+    const response = isNavigate
+      ? await fetchNavigation(request, url.pathname)
+      : await fetch(request, { cache: "no-store" });
+    if (isNavigate) {
+      await cacheAdminPage(url.pathname, response);
+    } else if (response && response.status === 200 && response.type === "basic") {
       const cache = await caches.open(ADMIN_CACHE_NAME);
       await cache.put(request, response.clone());
-      if (isAdminHome) {
-        await cache.put("/admin", response.clone());
-      }
     }
     return response;
   } catch {
-    if (isNavigate) {
-      return (await caches.match(OFFLINE_URL)) || matchAdminShell(request);
+    if (!isNavigate) {
+      return matchAdminShell(request);
     }
-    return matchAdminShell(request);
+    // بدون اینترنت: نسخهٔ کش‌شدهٔ همان صفحه؛ وگرنه صفحه فروش؛ در آخر صفحهٔ آفلاین
+    const page = await cachedAdminPage(url.pathname);
+    if (page) return page;
+    if (adminPageKey(url.pathname) !== ADMIN_HOME && (await cachedAdminPage(ADMIN_HOME))) {
+      return Response.redirect(ADMIN_HOME, 302);
+    }
+    return (await caches.match(OFFLINE_URL)) || new Response("Offline", { status: 503 });
   }
 }
 
@@ -142,7 +219,7 @@ self.addEventListener("fetch", (event) => {
           }
           return response;
         } catch {
-          const cached = await cache.match(event.request);
+          const cached = await cache.match(event.request, { ignoreVary: true });
           return (
             cached ||
             new Response("Offline", {
@@ -188,7 +265,9 @@ self.addEventListener("fetch", (event) => {
             return cachedResponse;
           }
           if (event.request.mode === "navigate") {
-            return caches.match(OFFLINE_URL);
+            return cachedAdminPage(ADMIN_HOME).then((adminHome) =>
+              adminHome ? Response.redirect(ADMIN_HOME, 302) : caches.match(OFFLINE_URL),
+            );
           }
           return new Response("Offline", {
             status: 503,

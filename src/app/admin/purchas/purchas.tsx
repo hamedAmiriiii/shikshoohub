@@ -425,8 +425,8 @@ export default function purchas(props: any) {
         }
 
         const creditMsg = purchaseReturnCreditMessage(response);
-        toast.success(creditMsg || (returnedQty === 1 ? "برگشت کالا ثبت شد" : "برگشت کالا ثبت شد"));
         if (phone) setReturnPhone(phone);
+        finishReturn(creditMsg || "برگشت کالا ثبت شد", totalDeleting + returnAmount, phone || purchasePhone);
 
         if (onRefresh) {
           onRefresh();
@@ -474,7 +474,7 @@ export default function purchas(props: any) {
       if (phone) setReturnPhone(phone);
 
       const creditMsg = purchaseReturnCreditMessage(response);
-      toast.success(creditMsg || "فاکتور به‌طور کامل برگشت خورد");
+      finishReturn(creditMsg || "فاکتور به‌طور کامل برگشت خورد", returnedTotal, phone || purchasePhone);
       if (onRefresh) onRefresh();
     } catch (error) {
       console.error("Error returning purchase:", error);
@@ -484,12 +484,32 @@ export default function purchas(props: any) {
     }
   };
 
-  const goToNewPurchase = () => {
+  const goToNewPurchase = (price = totalDeleting, phoneInput = returnPhone || purchasePhone) => {
     const params = new URLSearchParams();
-    if (totalDeleting) params.set("price", String(totalDeleting));
-    const phone = normalizeIranMobile(returnPhone || purchasePhone);
+    if (price) params.set("price", String(price));
+    const phone = normalizeIranMobile(phoneInput);
     if (isIranMobile(phone)) params.set("phone", phone);
     router.push(`/admin?${params.toString()}`);
+  };
+
+  const finishReturn = (message: string, returnedTotal: number, phone: string) => {
+    handleCloseDeleteDialog();
+    toast.success(
+      <Box>
+        <Typography sx={{ fontSize: 13 }}>{message}</Typography>
+        {returnedTotal > 0 ? (
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={() => goToNewPurchase(returnedTotal, phone)}
+            sx={{ mt: 1, fontSize: 12 }}
+          >
+            ثبت خرید جدید با این مبلغ
+          </Button>
+        ) : null}
+      </Box>,
+      { autoClose: 6000 },
+    );
   };
 
   useEffect(() => {
@@ -1059,7 +1079,7 @@ export default function purchas(props: any) {
             {deleting ? "در حال ثبت..." : returnMode === "full" ? "برگشت کامل فاکتور" : "برگشت کالا"}
           </Button>
           <Button 
-            onClick={goToNewPurchase}
+            onClick={() => goToNewPurchase()}
             variant="contained"
             sx={{ 
               backgroundColor: "var(--admin-accent)",

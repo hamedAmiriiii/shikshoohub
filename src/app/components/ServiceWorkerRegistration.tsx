@@ -78,5 +78,25 @@ export default function ServiceWorkerRegistration() {
     };
   }, [isOil]);
 
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "production") return;
+    if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+    if (!pathname.startsWith("/admin") || !navigator.onLine) return;
+
+    const timer = window.setTimeout(() => {
+      void navigator.serviceWorker.ready.then((registration) => {
+        const worker = navigator.serviceWorker.controller || registration.active;
+        if (!worker) return;
+        const urls = performance
+          .getEntriesByType("resource")
+          .map((entry) => entry.name)
+          .filter((name) => name.includes("/_next/static/"));
+        worker.postMessage({ type: "WARM_CACHE", urls, page: pathname });
+      });
+    }, 3000);
+
+    return () => window.clearTimeout(timer);
+  }, [pathname]);
+
   return null;
 }
