@@ -37,6 +37,7 @@ import QrCode2Icon from "@mui/icons-material/QrCode2";
 import CloudDownloadIcon from "@mui/icons-material/CloudDownload";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import TuneIcon from "@mui/icons-material/Tune";
+import TableChartIcon from "@mui/icons-material/TableChart";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useRouter } from "next/navigation";
@@ -55,6 +56,7 @@ import {
 import { readShopFeatures } from "@/app/lib/shopFeatures";
 import LoyaltyCreditTiersSettings from "@/app/admin/settings/LoyaltyCreditTiersSettings";
 import ShopBackupSettings from "@/app/admin/settings/ShopBackupSettings";
+import ShopGoogleSheetSettings from "@/app/admin/settings/ShopGoogleSheetSettings";
 import {
   DEFAULT_LIST_RECEIPT_PRINT_SETTINGS,
   DEFAULT_SALE_RECEIPT_PRINT_SETTINGS,
@@ -1382,6 +1384,17 @@ export default function SettingsPage() {
         hint="دانلود و بازگردانی دادهٔ همین فروشگاه"
       >
         <ShopBackupSettings />
+      </SettingsSectionCard>
+      ) : null}
+
+      {can("backup") ? (
+      <SettingsSectionCard
+        id="shop-google-sheet"
+        icon={<TableChartIcon sx={{ fontSize: 18 }} />}
+        title="گوگل شیت"
+        hint="ارسال دادهٔ فروشگاه به گوگل شیت خودتان"
+      >
+        <ShopGoogleSheetSettings />
       </SettingsSectionCard>
       ) : null}
 
