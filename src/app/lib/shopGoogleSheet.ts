@@ -6,6 +6,10 @@ const ENDPOINT = "/api/shop-backup/google-sheet";
 
 export type ShopGoogleSheetStatus = {
   configured: boolean;
+  oauthEnabled: boolean;
+  googleConnected: boolean;
+  googleEmail: string | null;
+  serviceAccountEnabled: boolean;
   serviceAccountEmail: string | null;
   spreadsheetId: string | null;
   spreadsheetUrl: string | null;
@@ -20,7 +24,7 @@ export type ShopGoogleSheetExportResult = {
   spreadsheetUrl: string | null;
 };
 
-type Result<T> = ({ ok: true } & T) | { ok: false; message: string };
+type Result<T> = ({ ok: true; message?: string } & T) | { ok: false; message: string };
 
 function str(value: unknown): string | null {
   return typeof value === "string" && value !== "" ? value : null;
@@ -30,6 +34,10 @@ function parseStatus(res: any): ShopGoogleSheetStatus {
   const root = res?.data && typeof res.data === "object" ? res.data : res ?? {};
   return {
     configured: Boolean(root.configured),
+    oauthEnabled: Boolean(root.oauth_enabled),
+    googleConnected: Boolean(root.google_connected),
+    googleEmail: str(root.google_email),
+    serviceAccountEnabled: Boolean(root.service_account_enabled ?? root.configured),
     serviceAccountEmail: str(root.service_account_email),
     spreadsheetId: str(root.spreadsheet_id),
     spreadsheetUrl: str(root.spreadsheet_url),
@@ -46,6 +54,20 @@ export async function fetchShopGoogleSheetStatus(): Promise<Result<{ status: Sho
     return { ok: false, message: getApiErrorMessage(res, "خطا در دریافت وضعیت گوگل شیت") };
   }
   return { ok: true, status: parseStatus(res) };
+}
+
+/** آدرس صفحهٔ ورود گوگل؛ بعد از ورود، گوگل به returnUrl برمی‌گرداند. */
+export async function fetchShopGoogleOAuthUrl(returnUrl: string): Promise<Result<{ url: string }>> {
+  const token = tokenCode();
+  if (!token) return { ok: false, message: "لطفاً وارد شوید" };
+  const res = await FetchWithJwtClient("POST", `${ENDPOINT}/oauth-url`, token, {}, {
+    body: JSON.stringify({ return_url: returnUrl }),
+  });
+  const url = str(res?.url ?? res?.data?.url);
+  if (!res || res.hasError || !url) {
+    return { ok: false, message: getApiErrorMessage(res, "ورود با گوگل ممکن نشد") };
+  }
+  return { ok: true, url };
 }
 
 export async function connectShopGoogleSheet(
