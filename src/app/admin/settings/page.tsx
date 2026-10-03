@@ -57,6 +57,7 @@ import { readShopFeatures } from "@/app/lib/shopFeatures";
 import LoyaltyCreditTiersSettings from "@/app/admin/settings/LoyaltyCreditTiersSettings";
 import ShopBackupSettings from "@/app/admin/settings/ShopBackupSettings";
 import ShopGoogleSheetSettings from "@/app/admin/settings/ShopGoogleSheetSettings";
+import ShopGoogleSheetTablesButton from "@/app/admin/settings/ShopGoogleSheetTablesButton";
 import {
   DEFAULT_LIST_RECEIPT_PRINT_SETTINGS,
   DEFAULT_SALE_RECEIPT_PRINT_SETTINGS,
@@ -1393,6 +1394,7 @@ export default function SettingsPage() {
         icon={<TableChartIcon sx={{ fontSize: 18 }} />}
         title="گوگل شیت"
         hint="ارسال دادهٔ فروشگاه به گوگل شیت خودتان"
+        action={<ShopGoogleSheetTablesButton />}
       >
         <ShopGoogleSheetSettings />
       </SettingsSectionCard>

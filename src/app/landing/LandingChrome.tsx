@@ -229,6 +229,11 @@ export default function LandingChrome({
                   درخواست نمایندگی
                 </Link>
               </li>
+              <li>
+                <Link href="/privacy-policy" className="hover:text-cyan-400">
+                  حریم خصوصی
+                </Link>
+              </li>
             </ul>
           </div>
           <div>

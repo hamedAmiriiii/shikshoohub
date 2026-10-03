@@ -15,7 +15,22 @@ export type ShopGoogleSheetStatus = {
   spreadsheetUrl: string | null;
   lastExportAt: string | null;
   lastExportError: string | null;
+  tables: ShopGoogleSheetTable[];
+  selectedTables: string[];
 };
+
+export type ShopGoogleSheetTable = { name: string; label: string; group: string };
+
+/** همان پیش‌فرض بک‌اند: خرید، مشتریان، اعتبارات، چک‌ها و نسیه‌ها */
+export const DEFAULT_GOOGLE_SHEET_TABLES = [
+  "purchases",
+  "purchased_products",
+  "user_shiksho",
+  "customers",
+  "user_credit_grants",
+  "cheques",
+  "purchase_debt_payments",
+];
 
 export type ShopGoogleSheetExportResult = {
   message: string;
@@ -43,7 +58,29 @@ function parseStatus(res: any): ShopGoogleSheetStatus {
     spreadsheetUrl: str(root.spreadsheet_url),
     lastExportAt: str(root.last_export_at),
     lastExportError: str(root.last_export_error),
+    tables: Array.isArray(root.tables)
+      ? root.tables
+          .filter((t: any) => t && typeof t.name === "string")
+          .map((t: any) => ({ name: t.name, label: str(t.label) || t.name, group: str(t.group) || "سایر" }))
+      : [],
+    selectedTables: Array.isArray(root.selected_tables)
+      ? root.selected_tables.filter((t: unknown): t is string => typeof t === "string")
+      : [],
   };
+}
+
+export async function saveShopGoogleSheetTables(
+  tables: string[],
+): Promise<Result<{ status: ShopGoogleSheetStatus; message: string }>> {
+  const token = tokenCode();
+  if (!token) return { ok: false, message: "لطفاً وارد شوید" };
+  const res = await FetchWithJwtClient("PUT", `${ENDPOINT}/tables`, token, {}, {
+    body: JSON.stringify({ tables }),
+  });
+  if (!res || res.hasError) {
+    return { ok: false, message: getApiErrorMessage(res, "ذخیرهٔ جداول ناموفق بود") };
+  }
+  return { ok: true, status: parseStatus(res), message: str(res.message) || "جداول ارسالی ذخیره شد" };
 }
 
 export async function fetchShopGoogleSheetStatus(): Promise<Result<{ status: ShopGoogleSheetStatus }>> {
