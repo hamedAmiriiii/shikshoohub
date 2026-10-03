@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Alert, Button, Grid2 as Grid, Paper, Stack, Typography } from "@mui/material";
 import { formatFaNumber, formatToman, isRepairError, repairApi, type RepairDashboard } from "@/app/lib/repair/api";
 import { Loader, Section, StatusChip, useRequireRole } from "../ui";
+import { AppQrCard } from "./AppQr";
 
 export default function RepairAdminDashboard() {
   const { allowed } = useRequireRole(["admin"]);
@@ -73,6 +74,17 @@ export default function RepairAdminDashboard() {
               </Paper>
             </Grid>
           ))}
+        </Grid>
+      </Section>
+
+      <Section title="QR نصب اپ‌ها">
+        <Grid container spacing={1.5}>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <AppQrCard kind="customer" />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <AppQrCard kind="technician" />
+          </Grid>
         </Grid>
       </Section>
     </Stack>

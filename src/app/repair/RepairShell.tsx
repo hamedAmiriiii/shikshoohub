@@ -7,6 +7,7 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import BuildIcon from "@mui/icons-material/Build";
 import EngineeringIcon from "@mui/icons-material/Engineering";
 import { useRepairAuth } from "./RepairAuth";
+import { RepairInstallIconButton, useRepairPwa } from "./RepairInstall";
 import { isTechAppPath, repairLoginPathFor, type RepairRole } from "@/app/lib/repair/api";
 
 const NAV: Record<RepairRole, { href: string; label: string }[]> = {
@@ -50,6 +51,7 @@ export default function RepairShell({ children }: { children: React.ReactNode })
   const homeHref = techApp ? "/repair/tech" : "/repair";
   const loginHref = repairLoginPathFor(pathname);
   const nav = user ? NAV[user.role] : [];
+  useRepairPwa(pathname);
 
   const handleLogout = async () => {
     await logout();
@@ -70,6 +72,7 @@ export default function RepairShell({ children }: { children: React.ReactNode })
               {title}
             </Typography>
           </Box>
+          <RepairInstallIconButton />
           {user ? (
             <>
               <Typography variant="body2" color="text.secondary" sx={{ display: { xs: "none", sm: "block" } }}>

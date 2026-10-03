@@ -19,7 +19,7 @@ import HourglassTopIcon from "@mui/icons-material/HourglassTop";
 import { toast } from "react-toastify";
 import { isRepairError, repairApi, toLatinDigits, type RepairServiceOption } from "@/app/lib/repair/api";
 import { useRepairAuth } from "../../RepairAuth";
-import { TechInstallBanner } from "../../RepairInstall";
+import { RepairInstallBanner } from "../../RepairInstall";
 
 type Step = "phone" | "code" | "register" | "pending" | "rejected";
 
@@ -266,7 +266,7 @@ function TechLoginForm() {
         )}
       </Paper>
 
-      <TechInstallBanner />
+      <RepairInstallBanner app="technician" />
     </Stack>
   );
 }

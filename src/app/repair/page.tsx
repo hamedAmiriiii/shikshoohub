@@ -8,6 +8,7 @@ import PaymentsIcon from "@mui/icons-material/Payments";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import { repairHomeFor } from "@/app/lib/repair/api";
 import { useRepairAuth } from "./RepairAuth";
+import { RepairInstallBanner } from "./RepairInstall";
 
 const STEPS = [
   { icon: AssignmentIcon, title: "ثبت درخواست", text: "مشکل و آدرس را بنویسید؛ چند ثانیه بیشتر طول نمی‌کشد." },
@@ -54,6 +55,8 @@ export default function RepairLandingPage() {
           )}
         </Stack>
       </Paper>
+
+      <RepairInstallBanner app="customer" />
 
       <Grid container spacing={2}>
         {STEPS.map((step) => {

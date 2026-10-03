@@ -1,73 +1,118 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Alert, Button } from "@mui/material";
+import { useEffect, useReducer, useState } from "react";
+import { Alert, Button, IconButton, Tooltip } from "@mui/material";
 import InstallMobileIcon from "@mui/icons-material/InstallMobile";
+import { isTechAppPath } from "@/app/lib/repair/api";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 };
 
+export type RepairPwaApp = "customer" | "technician";
+
+const SERVICE_WORKERS: Record<RepairPwaApp, { url: string; scope: string }> = {
+  customer: { url: "/sw-repair.js", scope: "/repair" },
+  technician: { url: "/sw-repair-tech.js", scope: "/repair/tech" },
+};
+
+const APP_LABELS: Record<RepairPwaApp, string> = {
+  customer: "نصب اپ روی گوشی",
+  technician: "نصب اپ تعمیرکاران",
+};
+
+let deferredPrompt: BeforeInstallPromptEvent | null = null;
+let listening = false;
+const listeners = new Set<() => void>();
+const registered = new Set<RepairPwaApp>();
+
+function emit() {
+  listeners.forEach((fn) => fn());
+}
+
+function startListening() {
+  if (listening || typeof window === "undefined") return;
+  listening = true;
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    deferredPrompt = event as BeforeInstallPromptEvent;
+    emit();
+  });
+  window.addEventListener("appinstalled", () => {
+    deferredPrompt = null;
+    emit();
+  });
+}
+
+function registerServiceWorker(app: RepairPwaApp) {
+  if (registered.has(app) || !("serviceWorker" in navigator) || process.env.NODE_ENV !== "production") return;
+  registered.add(app);
+  const { url, scope } = SERVICE_WORKERS[app];
+  void navigator.serviceWorker.register(url, { scope }).catch(() => registered.delete(app));
+}
+
+export function repairPwaAppFor(pathname: string | null | undefined): RepairPwaApp {
+  return isTechAppPath(pathname) ? "technician" : "customer";
+}
+
 function isStandalone() {
-  const ios = Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone);
-  return window.matchMedia("(display-mode: standalone)").matches || ios;
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone)
+  );
 }
 
-function isIos() {
-  return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+/** باید زود (در شل اپ) صدا زده شود تا رویداد نصب از دست نرود. */
+export function useRepairPwa(pathname: string | null | undefined) {
+  const app = repairPwaAppFor(pathname);
+  useEffect(() => {
+    startListening();
+    registerServiceWorker(app);
+  }, [app]);
 }
 
-/** نصب اپ تعمیرکاران (PWA جدا با scope /repair/tech). */
-export function useTechAppInstall() {
-  const [promptEvent, setPromptEvent] = useState<BeforeInstallPromptEvent | null>(null);
-  const [installed, setInstalled] = useState(true);
+export function useRepairInstall() {
+  const [, rerender] = useReducer((x: number) => x + 1, 0);
+  const [standalone, setStandalone] = useState(true);
   const [ios, setIos] = useState(false);
 
   useEffect(() => {
-    setInstalled(isStandalone());
-    setIos(isIos());
-
-    if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
-      void navigator.serviceWorker.register("/sw-repair-tech.js", { scope: "/repair/tech" }).catch(() => undefined);
-    }
-
-    const onPrompt = (event: Event) => {
-      event.preventDefault();
-      setPromptEvent(event as BeforeInstallPromptEvent);
-    };
-    const onInstalled = () => {
-      setInstalled(true);
-      setPromptEvent(null);
-    };
-    window.addEventListener("beforeinstallprompt", onPrompt);
-    window.addEventListener("appinstalled", onInstalled);
+    startListening();
+    setStandalone(isStandalone());
+    setIos(/iphone|ipad|ipod/i.test(window.navigator.userAgent));
+    listeners.add(rerender);
     return () => {
-      window.removeEventListener("beforeinstallprompt", onPrompt);
-      window.removeEventListener("appinstalled", onInstalled);
+      listeners.delete(rerender);
     };
   }, []);
 
   const install = async () => {
-    if (!promptEvent) return;
+    if (!deferredPrompt) return;
+    const promptEvent = deferredPrompt;
     await promptEvent.prompt();
     const choice = await promptEvent.userChoice;
     if (choice.outcome === "accepted") {
-      setInstalled(true);
-      setPromptEvent(null);
+      deferredPrompt = null;
+      setStandalone(true);
+      emit();
     }
   };
 
-  return { installed, canInstall: Boolean(promptEvent) && !installed, showIosHint: ios && !installed, install };
+  return {
+    canInstall: !standalone && Boolean(deferredPrompt),
+    showIosHint: !standalone && ios,
+    install,
+  };
 }
 
-export function TechInstallBanner() {
-  const { canInstall, showIosHint, install } = useTechAppInstall();
+export function RepairInstallBanner({ app }: { app: RepairPwaApp }) {
+  const { canInstall, showIosHint, install } = useRepairInstall();
 
   if (canInstall) {
     return (
       <Button fullWidth variant="outlined" startIcon={<InstallMobileIcon />} onClick={() => void install()}>
-        نصب اپ تعمیرکاران روی گوشی
+        {APP_LABELS[app]}
       </Button>
     );
   }
@@ -79,4 +124,16 @@ export function TechInstallBanner() {
     );
   }
   return null;
+}
+
+export function RepairInstallIconButton() {
+  const { canInstall, install } = useRepairInstall();
+  if (!canInstall) return null;
+  return (
+    <Tooltip title="نصب اپ">
+      <IconButton size="small" color="primary" onClick={() => void install()}>
+        <InstallMobileIcon fontSize="small" />
+      </IconButton>
+    </Tooltip>
+  );
 }

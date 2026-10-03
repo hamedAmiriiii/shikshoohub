@@ -21,19 +21,18 @@ import {
   Typography,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
-import QrCode2Icon from "@mui/icons-material/QrCode2";
 import { toast } from "react-toastify";
 import {
   formatFaDate,
   formatToman,
   isRepairError,
-  qrImageUrl,
   repairApi,
   toLatinDigits,
   type RepairAdminService,
   type RepairTechnician,
 } from "@/app/lib/repair/api";
 import { EmptyState, Loader, Section, useRequireRole } from "../../ui";
+import { AppQrButton } from "../AppQr";
 
 type FormState = {
   id?: number;
@@ -97,52 +96,6 @@ function ServiceCheckboxes({
         ))}
       </FormGroup>
     </Box>
-  );
-}
-
-function TechAppQr() {
-  const [open, setOpen] = useState(false);
-  const [url, setUrl] = useState("");
-
-  useEffect(() => {
-    setUrl(`${window.location.origin}/repair/tech/login`);
-  }, []);
-
-  const copy = () => {
-    void navigator.clipboard?.writeText(url);
-    toast.info("لینک کپی شد.");
-  };
-
-  return (
-    <>
-      <Button variant="outlined" startIcon={<QrCode2Icon />} onClick={() => setOpen(true)}>
-        QR ثبت‌نام تعمیرکار
-      </Button>
-      <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="xs">
-        <DialogTitle>اپ ثبت‌نام و ورود تعمیرکاران</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} alignItems="center">
-            <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center" }}>
-              تعمیرکار این کد را با دوربین گوشی اسکن می‌کند، ثبت‌نام می‌کند و اپ را روی گوشی نصب می‌کند. بعد از تأیید شما وارد پنلش می‌شود.
-            </Typography>
-            {url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={qrImageUrl(url, 280)} alt="QR ثبت‌نام تعمیرکار" width={240} height={240} style={{ borderRadius: 8 }} />
-            )}
-            <Typography variant="body2" dir="ltr" sx={{ wordBreak: "break-all", textAlign: "center" }}>
-              {url}
-            </Typography>
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={copy}>کپی لینک</Button>
-          <Button component="a" href={url ? qrImageUrl(url, 600) : undefined} target="_blank" rel="noreferrer">
-            دانلود QR
-          </Button>
-          <Button onClick={() => setOpen(false)}>بستن</Button>
-        </DialogActions>
-      </Dialog>
-    </>
   );
 }
 
@@ -249,7 +202,7 @@ export default function RepairTechniciansPage() {
           تعمیرکاران
         </Typography>
         <Stack direction="row" spacing={1}>
-          <TechAppQr />
+          <AppQrButton kind="technician" label="QR ثبت‌نام تعمیرکار" />
           <Button variant="contained" startIcon={<AddIcon />} onClick={() => setForm(emptyForm(defaultShare))}>
             تعمیرکار جدید
           </Button>
