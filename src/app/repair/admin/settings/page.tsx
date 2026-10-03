@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button, FormControlLabel, MenuItem, Stack, Switch, TextField } from "@mui/material";
 import { toast } from "react-toastify";
-import { isRepairError, repairApi, type RepairLocationMode, type RepairSettings } from "@/app/lib/repair/api";
+import { isRepairError, repairApi, type RepairLocationMode, type RepairMapProviderSetting, type RepairSettings } from "@/app/lib/repair/api";
 import { Loader, Section, useRequireRole } from "../../ui";
 
 export default function RepairSettingsPage() {
@@ -75,11 +75,25 @@ export default function RepairSettingsPage() {
           onChange={(e) => setSettings({ ...settings, location_mode: e.target.value as RepairLocationMode })}
           fullWidth
           size="small"
-          helperText="نقشهٔ نشان در فرم درخواست تعمیر؛ برای نمایش نقشه NESHAN_MAP_KEY باید روی سرور تنظیم شده باشد."
+          helperText="نمایش نقشه در فرم درخواست تعمیر برای انتخاب محل دقیق."
         >
           <MenuItem value="off">نمایش داده نشود</MenuItem>
           <MenuItem value="optional">اختیاری</MenuItem>
           <MenuItem value="required">الزامی</MenuItem>
+        </TextField>
+        <TextField
+          select
+          label="سرویس نقشه"
+          value={settings.map_provider || "auto"}
+          onChange={(e) => setSettings({ ...settings, map_provider: e.target.value as RepairMapProviderSetting })}
+          fullWidth
+          size="small"
+          sx={{ mt: 2 }}
+          helperText="نشان دقیق‌تر است و کلید می‌خواهد (NESHAN_MAP_KEY روی سرور). OpenStreetMap رایگان و بدون کلید است و خیابان‌ها را فارسی نشان می‌دهد."
+        >
+          <MenuItem value="auto">خودکار (نشان اگر کلید داشت، وگرنه OpenStreetMap)</MenuItem>
+          <MenuItem value="neshan">نشان</MenuItem>
+          <MenuItem value="osm">OpenStreetMap (رایگان)</MenuItem>
         </TextField>
       </Section>
 

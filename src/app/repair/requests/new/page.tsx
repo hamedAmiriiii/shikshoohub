@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button, MenuItem, Stack, TextField, Typography } from "@mui/material";
 import { toast } from "react-toastify";
 import { isRepairError, repairApi, toLatinDigits, type LatLng } from "@/app/lib/repair/api";
-import { LocationPicker } from "../../NeshanMap";
+import { LocationPicker, mapSourceFrom } from "../../NeshanMap";
 import { useRepairAuth } from "../../RepairAuth";
 import { Loader, Section, useRequireRole } from "../../ui";
 
@@ -24,7 +24,11 @@ export default function NewRepairRequestPage() {
   const [location, setLocation] = useState<LatLng | null>(null);
   const [busy, setBusy] = useState(false);
   const locationMode = config?.location_mode || "off";
-  const services = (config?.services || []).filter((s) => s.id > 0);
+  const realServices = (config?.services || []).filter((s) => s.id > 0);
+  const useServiceIds = realServices.length > 0;
+  const serviceOptions = useServiceIds
+    ? realServices.map((s) => ({ value: String(s.id), label: s.name }))
+    : (config?.categories || []).map((name) => ({ value: name, label: name }));
 
   useEffect(() => {
     if (!user) return;
@@ -42,7 +46,7 @@ export default function NewRepairRequestPage() {
     setForm((f) => ({ ...f, [key]: e.target.value }));
 
   const submit = async () => {
-    if (services.length > 0 && !form.service_id) {
+    if (serviceOptions.length > 0 && !form.service_id) {
       toast.error("نوع خدمت را انتخاب کنید.");
       return;
     }
@@ -61,7 +65,8 @@ export default function NewRepairRequestPage() {
     setBusy(true);
     const withLocation = locationMode !== "off" && location;
     const res = await repairApi.createRequest({
-      service_id: form.service_id ? Number(form.service_id) : undefined,
+      service_id: useServiceIds && form.service_id ? Number(form.service_id) : undefined,
+      category: !useServiceIds && form.service_id ? form.service_id : undefined,
       description: form.description.trim(),
       address: form.address.trim(),
       latitude: withLocation ? location.lat : undefined,
@@ -86,11 +91,11 @@ export default function NewRepairRequestPage() {
       </Typography>
       <Section>
         <Stack spacing={2}>
-          {services.length > 0 && (
+          {serviceOptions.length > 0 && (
             <TextField select label="نوع خدمت" value={form.service_id} onChange={set("service_id")} fullWidth required>
-              {services.map((s) => (
-                <MenuItem key={s.id} value={String(s.id)}>
-                  {s.name}
+              {serviceOptions.map((s) => (
+                <MenuItem key={s.value} value={s.value}>
+                  {s.label}
                 </MenuItem>
               ))}
             </TextField>
@@ -107,7 +112,7 @@ export default function NewRepairRequestPage() {
           />
           {locationMode !== "off" && config && (
             <LocationPicker
-              mapKey={config.neshan_map_key}
+              source={mapSourceFrom(config)}
               value={location}
               onChange={setLocation}
               required={locationMode === "required"}

@@ -2,7 +2,7 @@
 
 import { Divider, Link as MuiLink, Stack, Step, StepLabel, Stepper, Typography } from "@mui/material";
 import { formatFaDate, formatToman, type RepairRequest } from "@/app/lib/repair/api";
-import { LocationView } from "./NeshanMap";
+import { LocationView, mapSourceFrom } from "./NeshanMap";
 import { useRepairAuth } from "./RepairAuth";
 import { InfoRow, Section, StatusChip } from "./ui";
 
@@ -52,7 +52,7 @@ export function RequestInfo({ request, showCustomer = false }: { request: Repair
       <InfoRow label="آدرس" value={request.address} />
       {point && config && (
         <Stack sx={{ my: 1 }}>
-          <LocationView mapKey={config.neshan_map_key} point={point} />
+          <LocationView source={mapSourceFrom(config)} point={point} />
         </Stack>
       )}
       <InfoRow

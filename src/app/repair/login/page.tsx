@@ -77,7 +77,7 @@ function LoginForm() {
         ورود / ثبت‌نام
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        مشتریان، تعمیرکاران و مدیر با شمارهٔ موبایل وارد می‌شوند.
+      با شمارهٔ موبایل وارد می‌شوند.
       </Typography>
 
       {step === "phone" ? (

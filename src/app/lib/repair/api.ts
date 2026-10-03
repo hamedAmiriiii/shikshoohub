@@ -75,6 +75,10 @@ export type RepairPaymentOptions = {
 
 export type RepairLocationMode = "off" | "optional" | "required";
 
+export type RepairMapProvider = "neshan" | "osm";
+
+export type RepairMapProviderSetting = "auto" | RepairMapProvider;
+
 export type RepairServiceOption = { id: number; name: string };
 
 export type RepairPublicConfig = {
@@ -85,6 +89,7 @@ export type RepairPublicConfig = {
   online_payment_enabled: boolean;
   card_payment_enabled: boolean;
   location_mode: RepairLocationMode;
+  map_provider?: RepairMapProvider;
   neshan_map_key: string;
 };
 
@@ -169,6 +174,7 @@ export type RepairSettings = {
   card_payment_enabled: string;
   default_labor_share_percent: string;
   location_mode: RepairLocationMode;
+  map_provider?: RepairMapProviderSetting;
 };
 
 export type RepairDashboard = {
@@ -317,6 +323,7 @@ export const repairApi = {
   myRequests: () => repairFetch<{ requests: RepairRequest[] }>("GET", "/requests"),
   createRequest: (body: {
     service_id?: number;
+    category?: string;
     description: string;
     address: string;
     latitude?: number;
