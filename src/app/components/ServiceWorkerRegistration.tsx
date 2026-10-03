@@ -4,7 +4,12 @@ import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 
 function isOilPath(pathname: string) {
-  return pathname === "/oil" || pathname.startsWith("/oil/");
+  return (
+    pathname === "/oil" ||
+    pathname.startsWith("/oil/") ||
+    pathname === "/repair" ||
+    pathname.startsWith("/repair/")
+  );
 }
 
 export default function ServiceWorkerRegistration() {

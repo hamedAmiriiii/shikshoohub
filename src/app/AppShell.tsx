@@ -17,6 +17,10 @@ function isOilPublicPath(pathname: string | null) {
   );
 }
 
+function isRepairPath(pathname: string | null) {
+  return pathname === "/repair" || Boolean(pathname?.startsWith("/repair/"));
+}
+
 function AppShellContent({ children }: { children: React.ReactNode }) {
   const { searchQuery, setSearchQuery } = useShopContext();
   const pathname = usePathname();
@@ -59,7 +63,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  if (isOilPath(pathname) || isOilPublicPath(pathname)) {
+  if (isOilPath(pathname) || isOilPublicPath(pathname) || isRepairPath(pathname)) {
     return <>{children}</>;
   }
   return (
