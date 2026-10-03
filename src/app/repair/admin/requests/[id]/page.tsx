@@ -10,8 +10,10 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
   MenuItem,
   Stack,
+  Switch,
   TextField,
   Typography,
 } from "@mui/material";
@@ -42,6 +44,7 @@ export default function AdminRepairRequestPage() {
   const [busy, setBusy] = useState(false);
   const [dialog, setDialog] = useState<null | "reject" | "cancel" | "paid">(null);
   const [dialogText, setDialogText] = useState("");
+  const [showAllTechnicians, setShowAllTechnicians] = useState(false);
 
   const load = useCallback(async () => {
     const res = await repairApi.adminRequest(id);
@@ -58,7 +61,9 @@ export default function AdminRepairRequestPage() {
     if (!allowed) return;
     void load();
     void repairApi.adminTechnicians().then((res) => {
-      if (!isRepairError(res)) setTechnicians(res.technicians.filter((t) => t.is_active));
+      if (!isRepairError(res)) {
+        setTechnicians(res.technicians.filter((t) => t.is_active && t.approval_status === "approved"));
+      }
     });
   }, [allowed, load]);
 
@@ -80,6 +85,13 @@ export default function AdminRepairRequestPage() {
   };
 
   const canAssign = ["pending", "assigned", "in_progress"].includes(request.status);
+  const matchingTechnicians = request.service_id
+    ? technicians.filter((t) => t.service_ids.includes(request.service_id as number))
+    : technicians;
+  const technicianOptions =
+    showAllTechnicians || !request.service_id
+      ? technicians
+      : technicians.filter((t) => matchingTechnicians.includes(t) || String(t.id) === technicianId);
   const canEditCost = Boolean(request.technician) && ["assigned", "in_progress", "invoiced", "payment_review"].includes(request.status);
   const awaitingPayment = request.status === "invoiced" || request.status === "payment_review";
   const isOpen = request.status !== "completed" && request.status !== "canceled";
@@ -105,9 +117,25 @@ export default function AdminRepairRequestPage() {
           {technicians.length === 0 ? (
             <Alert severity="warning">ابتدا از بخش «تعمیرکاران» تعمیرکار فعال اضافه کنید.</Alert>
           ) : (
+            <Stack spacing={1}>
+            {request.service_id && (
+              <FormControlLabel
+                control={<Switch size="small" checked={showAllTechnicians} onChange={(e) => setShowAllTechnicians(e.target.checked)} />}
+                label={
+                  <Typography variant="body2">
+                    نمایش همهٔ تعمیرکاران ({matchingTechnicians.length} نفر «{request.category}» را انجام می‌دهند)
+                  </Typography>
+                }
+              />
+            )}
             <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
               <TextField select label="تعمیرکار" value={technicianId} onChange={(e) => setTechnicianId(e.target.value)} fullWidth size="small">
-                {technicians.map((t) => (
+                {technicianOptions.length === 0 && (
+                  <MenuItem disabled value="">
+                    تعمیرکاری برای این خدمت ثبت نشده؛ «نمایش همه» را بزنید.
+                  </MenuItem>
+                )}
+                {technicianOptions.map((t) => (
                   <MenuItem key={t.id} value={String(t.id)}>
                     {t.name} {t.specialty ? `(${t.specialty})` : ""} — {t.open_requests ?? 0} کار باز
                   </MenuItem>
@@ -121,6 +149,7 @@ export default function AdminRepairRequestPage() {
               >
                 ارجاع و پیامک
               </Button>
+            </Stack>
             </Stack>
           )}
         </Section>

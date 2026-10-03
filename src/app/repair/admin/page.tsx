@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Grid2 as Grid, Paper, Stack, Typography } from "@mui/material";
+import { Alert, Button, Grid2 as Grid, Paper, Stack, Typography } from "@mui/material";
 import { formatFaNumber, formatToman, isRepairError, repairApi, type RepairDashboard } from "@/app/lib/repair/api";
 import { Loader, Section, StatusChip, useRequireRole } from "../ui";
 
@@ -28,6 +28,18 @@ export default function RepairAdminDashboard() {
 
   return (
     <Stack spacing={2}>
+      {(data.pending_technicians ?? 0) > 0 && (
+        <Alert
+          severity="warning"
+          action={
+            <Button component={Link} href="/repair/admin/technicians" color="inherit" size="small">
+              بررسی
+            </Button>
+          }
+        >
+          {formatFaNumber(data.pending_technicians)} تعمیرکار ثبت‌نام کرده و منتظر تأیید است.
+        </Alert>
+      )}
       <Grid container spacing={1.5}>
         {monthCards.map((card) => (
           <Grid key={card.label} size={{ xs: 6, sm: 3 }}>

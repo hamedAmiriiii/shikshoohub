@@ -3,13 +3,17 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
+  Alert,
+  Box,
   Button,
+  Checkbox,
   Chip,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   FormControlLabel,
+  FormGroup,
   Paper,
   Stack,
   Switch,
@@ -17,9 +21,19 @@ import {
   Typography,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
+import QrCode2Icon from "@mui/icons-material/QrCode2";
 import { toast } from "react-toastify";
-import { formatToman, isRepairError, repairApi, toLatinDigits, type RepairTechnician } from "@/app/lib/repair/api";
-import { EmptyState, Loader, useRequireRole } from "../../ui";
+import {
+  formatFaDate,
+  formatToman,
+  isRepairError,
+  qrImageUrl,
+  repairApi,
+  toLatinDigits,
+  type RepairAdminService,
+  type RepairTechnician,
+} from "@/app/lib/repair/api";
+import { EmptyState, Loader, Section, useRequireRole } from "../../ui";
 
 type FormState = {
   id?: number;
@@ -30,7 +44,10 @@ type FormState = {
   card_number: string;
   notes: string;
   is_active: boolean;
+  service_ids: number[];
 };
+
+type ApproveState = { technician: RepairTechnician; share: string; service_ids: number[] };
 
 const emptyForm = (share: number): FormState => ({
   name: "",
@@ -40,17 +57,108 @@ const emptyForm = (share: number): FormState => ({
   card_number: "",
   notes: "",
   is_active: true,
+  service_ids: [],
 });
+
+function ServiceCheckboxes({
+  services,
+  value,
+  onChange,
+}: {
+  services: RepairAdminService[];
+  value: number[];
+  onChange: (ids: number[]) => void;
+}) {
+  if (services.length === 0) {
+    return (
+      <Typography variant="body2" color="text.secondary">
+        ابتدا در بخش «نوع خدمات» خدمت تعریف کنید.
+      </Typography>
+    );
+  }
+  return (
+    <Box>
+      <Typography variant="body2" fontWeight={700} sx={{ mb: 0.5 }}>
+        خدماتی که انجام می‌دهد
+      </Typography>
+      <FormGroup row>
+        {services.map((s) => (
+          <FormControlLabel
+            key={s.id}
+            control={
+              <Checkbox
+                size="small"
+                checked={value.includes(s.id)}
+                onChange={(e) => onChange(e.target.checked ? [...value, s.id] : value.filter((id) => id !== s.id))}
+              />
+            }
+            label={s.name + (s.is_active ? "" : " (غیرفعال)")}
+          />
+        ))}
+      </FormGroup>
+    </Box>
+  );
+}
+
+function TechAppQr() {
+  const [open, setOpen] = useState(false);
+  const [url, setUrl] = useState("");
+
+  useEffect(() => {
+    setUrl(`${window.location.origin}/repair/tech/login`);
+  }, []);
+
+  const copy = () => {
+    void navigator.clipboard?.writeText(url);
+    toast.info("لینک کپی شد.");
+  };
+
+  return (
+    <>
+      <Button variant="outlined" startIcon={<QrCode2Icon />} onClick={() => setOpen(true)}>
+        QR ثبت‌نام تعمیرکار
+      </Button>
+      <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle>اپ ثبت‌نام و ورود تعمیرکاران</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} alignItems="center">
+            <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center" }}>
+              تعمیرکار این کد را با دوربین گوشی اسکن می‌کند، ثبت‌نام می‌کند و اپ را روی گوشی نصب می‌کند. بعد از تأیید شما وارد پنلش می‌شود.
+            </Typography>
+            {url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={qrImageUrl(url, 280)} alt="QR ثبت‌نام تعمیرکار" width={240} height={240} style={{ borderRadius: 8 }} />
+            )}
+            <Typography variant="body2" dir="ltr" sx={{ wordBreak: "break-all", textAlign: "center" }}>
+              {url}
+            </Typography>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={copy}>کپی لینک</Button>
+          <Button component="a" href={url ? qrImageUrl(url, 600) : undefined} target="_blank" rel="noreferrer">
+            دانلود QR
+          </Button>
+          <Button onClick={() => setOpen(false)}>بستن</Button>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
+}
 
 export default function RepairTechniciansPage() {
   const { allowed } = useRequireRole(["admin"]);
   const [rows, setRows] = useState<RepairTechnician[] | null>(null);
+  const [services, setServices] = useState<RepairAdminService[]>([]);
   const [defaultShare, setDefaultShare] = useState(70);
   const [form, setForm] = useState<FormState | null>(null);
+  const [approve, setApprove] = useState<ApproveState | null>(null);
+  const [reject, setReject] = useState<{ technician: RepairTechnician; reason: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
-    const res = await repairApi.adminTechnicians();
+    const [res, svc] = await Promise.all([repairApi.adminTechnicians(), repairApi.adminServices()]);
+    if (!isRepairError(svc)) setServices(svc.services);
     if (isRepairError(res)) {
       setRows([]);
       return;
@@ -65,6 +173,9 @@ export default function RepairTechniciansPage() {
 
   if (!allowed || rows === null) return <Loader />;
 
+  const pending = rows.filter((t) => t.approval_status === "pending");
+  const others = rows.filter((t) => t.approval_status !== "pending");
+
   const set = (key: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => (f ? { ...f, [key]: e.target.value } : f));
 
@@ -78,6 +189,7 @@ export default function RepairTechniciansPage() {
       card_number: toLatinDigits(form.card_number).replace(/[^\d-]/g, "") || null,
       notes: form.notes.trim() || null,
       is_active: form.is_active,
+      service_ids: form.service_ids,
     };
     if (!body.name || !/^09\d{9}$/.test(body.phone)) {
       toast.error("نام و شماره موبایل معتبر را وارد کنید.");
@@ -86,12 +198,34 @@ export default function RepairTechniciansPage() {
     setBusy(true);
     const res = form.id ? await repairApi.adminUpdateTechnician(form.id, body) : await repairApi.adminCreateTechnician(body);
     setBusy(false);
-    if (isRepairError(res)) {
-      toast.error(res.message);
-      return;
-    }
+    if (isRepairError(res)) return void toast.error(res.message);
     toast.success(res.message);
     setForm(null);
+    void load();
+  };
+
+  const submitApprove = async () => {
+    if (!approve) return;
+    setBusy(true);
+    const res = await repairApi.adminApproveTechnician(approve.technician.id, {
+      labor_share_percent: Number(toLatinDigits(approve.share)) || 0,
+      service_ids: approve.service_ids,
+    });
+    setBusy(false);
+    if (isRepairError(res)) return void toast.error(res.message);
+    toast.success(res.message);
+    setApprove(null);
+    void load();
+  };
+
+  const submitReject = async () => {
+    if (!reject) return;
+    setBusy(true);
+    const res = await repairApi.adminRejectTechnician(reject.technician.id, reject.reason.trim() || undefined);
+    setBusy(false);
+    if (isRepairError(res)) return void toast.error(res.message);
+    toast.success(res.message);
+    setReject(null);
     void load();
   };
 
@@ -105,27 +239,72 @@ export default function RepairTechniciansPage() {
       card_number: t.card_number || "",
       notes: t.notes || "",
       is_active: t.is_active,
+      service_ids: t.service_ids || [],
     });
 
   return (
     <Stack spacing={2}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center">
+      <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" useFlexGap spacing={1}>
         <Typography variant="h6" fontWeight={800}>
           تعمیرکاران
         </Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setForm(emptyForm(defaultShare))}>
-          تعمیرکار جدید
-        </Button>
+        <Stack direction="row" spacing={1}>
+          <TechAppQr />
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setForm(emptyForm(defaultShare))}>
+            تعمیرکار جدید
+          </Button>
+        </Stack>
       </Stack>
-      <Typography variant="body2" color="text.secondary">
-        تعمیرکار با همین شماره موبایل و کد پیامکی وارد پنل خودش می‌شود و هزینهٔ هر کار را ثبت می‌کند.
-      </Typography>
 
-      {rows.length === 0 ? (
-        <EmptyState text="هنوز تعمیرکاری معرفی نکرده‌اید." />
+      {pending.length > 0 && (
+        <Section title={`در انتظار تأیید (${pending.length})`}>
+          <Stack spacing={1.5}>
+            {pending.map((t) => (
+              <Paper key={t.id} variant="outlined" sx={{ p: 1.5, borderRadius: 2, borderColor: "warning.main" }}>
+                <Typography fontWeight={700}>
+                  {t.name}{" "}
+                  <Typography component="span" variant="body2" color="text.secondary" dir="ltr">
+                    {t.phone}
+                  </Typography>
+                </Typography>
+                {t.specialty && <Typography variant="body2">تخصص: {t.specialty}</Typography>}
+                {t.address && (
+                  <Typography variant="body2" color="text.secondary">
+                    {t.address}
+                  </Typography>
+                )}
+                <Stack direction="row" spacing={0.5} sx={{ my: 1, flexWrap: "wrap", rowGap: 0.5 }}>
+                  {t.services.map((name) => (
+                    <Chip key={name} size="small" label={name} />
+                  ))}
+                </Stack>
+                <Typography variant="caption" color="text.secondary" component="div" sx={{ mb: 1 }}>
+                  ثبت‌نام: {formatFaDate(t.created_at)}
+                </Typography>
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    color="success"
+                    onClick={() => setApprove({ technician: t, share: String(t.labor_share_percent || defaultShare), service_ids: t.service_ids })}
+                  >
+                    تأیید
+                  </Button>
+                  <Button size="small" color="error" onClick={() => setReject({ technician: t, reason: "" })}>
+                    رد
+                  </Button>
+                </Stack>
+              </Paper>
+            ))}
+          </Stack>
+        </Section>
+      )}
+
+      {others.length === 0 ? (
+        <EmptyState text="هنوز تعمیرکاری ندارید. QR ثبت‌نام را به تعمیرکاران بدهید یا خودتان اضافه کنید." />
       ) : (
-        rows.map((t) => (
-          <Paper key={t.id} variant="outlined" sx={{ p: 2, borderRadius: 3, opacity: t.is_active ? 1 : 0.6 }}>
+        others.map((t) => (
+          <Paper key={t.id} variant="outlined" sx={{ p: 2, borderRadius: 3, opacity: t.is_active && t.approval_status === "approved" ? 1 : 0.6 }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center">
               <div>
                 <Typography fontWeight={700}>
@@ -136,12 +315,29 @@ export default function RepairTechniciansPage() {
                 </Typography>
               </div>
               <Stack direction="row" spacing={1} alignItems="center">
+                {t.approval_status === "rejected" && <Chip size="small" color="error" variant="outlined" label="ردشده" />}
                 {!t.is_active && <Chip size="small" label="غیرفعال" />}
-                <Button size="small" onClick={() => edit(t)}>
-                  ویرایش
-                </Button>
+                {t.approval_status === "rejected" ? (
+                  <Button
+                    size="small"
+                    onClick={() => setApprove({ technician: t, share: String(t.labor_share_percent || defaultShare), service_ids: t.service_ids })}
+                  >
+                    تأیید
+                  </Button>
+                ) : (
+                  <Button size="small" onClick={() => edit(t)}>
+                    ویرایش
+                  </Button>
+                )}
               </Stack>
             </Stack>
+            {t.services.length > 0 && (
+              <Stack direction="row" spacing={0.5} sx={{ mt: 1, flexWrap: "wrap", rowGap: 0.5 }}>
+                {t.services.map((name) => (
+                  <Chip key={name} size="small" color="primary" variant="outlined" label={name} />
+                ))}
+              </Stack>
+            )}
             <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: "wrap", rowGap: 1 }}>
               <Chip size="small" variant="outlined" label={`سهم اجرت: ${t.labor_share_percent}٪`} />
               <Chip
@@ -180,6 +376,7 @@ export default function RepairTechniciansPage() {
                 slotProps={{ htmlInput: { dir: "ltr", maxLength: 11 } }}
               />
               <TextField label="تخصص" placeholder="مثلاً: یخچال و لباسشویی" value={form.specialty} onChange={set("specialty")} fullWidth size="small" />
+              <ServiceCheckboxes services={services} value={form.service_ids} onChange={(service_ids) => setForm({ ...form, service_ids })} />
               <TextField
                 label="درصد سهم از اجرت"
                 helperText="کل هزینهٔ قطعات هم به تعمیرکار تعلق می‌گیرد."
@@ -209,6 +406,58 @@ export default function RepairTechniciansPage() {
           <Button onClick={() => setForm(null)}>انصراف</Button>
           <Button variant="contained" onClick={() => void save()} disabled={busy}>
             ذخیره
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={approve !== null} onClose={() => setApprove(null)} fullWidth maxWidth="xs">
+        <DialogTitle>تأیید {approve?.technician.name}</DialogTitle>
+        {approve && (
+          <DialogContent>
+            <Stack spacing={2} sx={{ mt: 1 }}>
+              <TextField
+                label="درصد سهم از اجرت"
+                value={approve.share}
+                onChange={(e) => setApprove({ ...approve, share: e.target.value })}
+                fullWidth
+                size="small"
+                inputMode="decimal"
+              />
+              <ServiceCheckboxes
+                services={services}
+                value={approve.service_ids}
+                onChange={(service_ids) => setApprove({ ...approve, service_ids })}
+              />
+              <Alert severity="info">پس از تأیید، پیامک ورود به پنل برای تعمیرکار ارسال می‌شود.</Alert>
+            </Stack>
+          </DialogContent>
+        )}
+        <DialogActions>
+          <Button onClick={() => setApprove(null)}>انصراف</Button>
+          <Button variant="contained" color="success" onClick={() => void submitApprove()} disabled={busy}>
+            تأیید
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={reject !== null} onClose={() => setReject(null)} fullWidth maxWidth="xs">
+        <DialogTitle>رد ثبت‌نام {reject?.technician.name}</DialogTitle>
+        {reject && (
+          <DialogContent>
+            <TextField
+              label="علت (برای تعمیرکار پیامک می‌شود)"
+              value={reject.reason}
+              onChange={(e) => setReject({ ...reject, reason: e.target.value })}
+              fullWidth
+              size="small"
+              sx={{ mt: 1 }}
+            />
+          </DialogContent>
+        )}
+        <DialogActions>
+          <Button onClick={() => setReject(null)}>انصراف</Button>
+          <Button variant="contained" color="error" onClick={() => void submitReject()} disabled={busy}>
+            رد
           </Button>
         </DialogActions>
       </Dialog>

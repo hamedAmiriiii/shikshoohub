@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Button, FormControlLabel, MenuItem, Stack, Switch, TextField } from "@mui/material";
 import { toast } from "react-toastify";
 import { isRepairError, repairApi, type RepairLocationMode, type RepairSettings } from "@/app/lib/repair/api";
@@ -52,15 +53,9 @@ export default function RepairSettingsPage() {
             size="small"
             slotProps={{ htmlInput: { dir: "ltr" } }}
           />
-          <TextField
-            label="نوع خدمات (هر خط یک مورد)"
-            value={settings.categories}
-            onChange={set("categories")}
-            fullWidth
-            size="small"
-            multiline
-            minRows={4}
-          />
+          <Button component={Link} href="/repair/admin/services" variant="outlined" sx={{ alignSelf: "flex-start" }}>
+            مدیریت نوع خدمات
+          </Button>
           <TextField
             label="درصد پیش‌فرض سهم تعمیرکار از اجرت"
             value={settings.default_labor_share_percent}

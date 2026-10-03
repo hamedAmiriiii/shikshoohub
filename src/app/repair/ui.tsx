@@ -3,7 +3,14 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Box, Chip, CircularProgress, Paper, Stack, TextField, Typography, type TextFieldProps } from "@mui/material";
-import { formatFaNumber, parseAmount, repairHomeFor, type RepairRole, type RepairStatus } from "@/app/lib/repair/api";
+import {
+  formatFaNumber,
+  parseAmount,
+  repairHomeFor,
+  repairLoginPathFor,
+  type RepairRole,
+  type RepairStatus,
+} from "@/app/lib/repair/api";
 import { useRepairAuth } from "./RepairAuth";
 
 const STATUS_COLORS: Record<RepairStatus, "default" | "info" | "warning" | "success" | "error" | "primary" | "secondary"> = {
@@ -96,7 +103,7 @@ export function useRequireRole(roles: RepairRole[]) {
   useEffect(() => {
     if (!ready) return;
     if (!user) {
-      router.replace(`/repair/login?next=${encodeURIComponent(pathname || "/repair")}`);
+      router.replace(`${repairLoginPathFor(pathname)}?next=${encodeURIComponent(pathname || "/repair")}`);
     } else if (!rolesKey.split(",").includes(user.role)) {
       router.replace(repairHomeFor(user.role));
     }

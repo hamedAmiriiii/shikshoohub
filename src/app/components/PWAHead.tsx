@@ -8,6 +8,7 @@ export default function PWAHead() {
   const pathname = usePathname() || "";
   const isAdmin = pathname === "/admin" || pathname.startsWith("/admin/");
   const isOil = pathname === "/oil" || pathname.startsWith("/oil/");
+  const isRepairTech = pathname === "/repair/tech" || pathname.startsWith("/repair/tech/");
   const isReserv = isTableReservPath(pathname);
 
   useEffect(() => {
@@ -70,13 +71,20 @@ export default function PWAHead() {
       return;
     }
 
+    if (isRepairTech) {
+      manifestLink.href = "/manifest-repair-tech.json";
+      themeColor.content = "#2563eb";
+      appleTitle.content = "پنل تعمیرکاران";
+      return;
+    }
+
     manifestLink.href = "/manifest.json";
     themeColor.content = "#1f9ad1";
     // روی صفحه میز/اتاق عنوان از document.title (نام فروشگاه) می‌آید؛ وبینو را جایگزین نکن
     if (!isReserv) {
       appleTitle.content = "وبینو";
     }
-  }, [isAdmin, isOil, isReserv]);
+  }, [isAdmin, isOil, isRepairTech, isReserv]);
 
   return null;
 }

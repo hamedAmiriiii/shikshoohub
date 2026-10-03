@@ -5,8 +5,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { AppBar, Box, Button, Container, IconButton, Stack, Toolbar, Tooltip, Typography } from "@mui/material";
 import LogoutIcon from "@mui/icons-material/Logout";
 import BuildIcon from "@mui/icons-material/Build";
+import EngineeringIcon from "@mui/icons-material/Engineering";
 import { useRepairAuth } from "./RepairAuth";
-import type { RepairRole } from "@/app/lib/repair/api";
+import { isTechAppPath, repairLoginPathFor, type RepairRole } from "@/app/lib/repair/api";
 
 const NAV: Record<RepairRole, { href: string; label: string }[]> = {
   customer: [
@@ -21,6 +22,7 @@ const NAV: Record<RepairRole, { href: string; label: string }[]> = {
     { href: "/repair/admin", label: "داشبورد" },
     { href: "/repair/admin/requests", label: "درخواست‌ها" },
     { href: "/repair/admin/technicians", label: "تعمیرکاران" },
+    { href: "/repair/admin/services", label: "نوع خدمات" },
     { href: "/repair/admin/payouts", label: "سهم و تسویه" },
     { href: "/repair/admin/settings", label: "تنظیمات" },
   ],
@@ -31,7 +33,7 @@ const ROOTS = ["/repair/admin", "/repair/tech", "/repair/requests"];
 function isActive(href: string, pathname: string) {
   if (ROOTS.includes(href)) {
     if (href === "/repair/requests") {
-      return pathname === href || (/^\/repair\/requests\/\d+/.test(pathname));
+      return pathname === href || /^\/repair\/requests\/\d+/.test(pathname);
     }
     return pathname === href || (href === "/repair/tech" && pathname.startsWith("/repair/tech/requests"));
   }
@@ -42,12 +44,16 @@ export default function RepairShell({ children }: { children: React.ReactNode })
   const pathname = usePathname() || "/repair";
   const router = useRouter();
   const { user, config, logout } = useRepairAuth();
+  const techApp = isTechAppPath(pathname);
   const brand = config?.brand_name || "تعمیرکار";
+  const title = techApp ? `پنل تعمیرکاران ${brand}` : brand;
+  const homeHref = techApp ? "/repair/tech" : "/repair";
+  const loginHref = repairLoginPathFor(pathname);
   const nav = user ? NAV[user.role] : [];
 
   const handleLogout = async () => {
     await logout();
-    router.replace("/repair");
+    router.replace(techApp ? "/repair/tech/login" : "/repair");
   };
 
   return (
@@ -56,11 +62,13 @@ export default function RepairShell({ children }: { children: React.ReactNode })
         <Toolbar sx={{ gap: 1 }}>
           <Box
             component={Link}
-            href="/repair"
-            sx={{ display: "flex", alignItems: "center", gap: 1, color: "primary.main", textDecoration: "none", flexGrow: 1 }}
+            href={homeHref}
+            sx={{ display: "flex", alignItems: "center", gap: 1, color: "primary.main", textDecoration: "none", flexGrow: 1, minWidth: 0 }}
           >
-            <BuildIcon />
-            <Typography fontWeight={800}>{brand}</Typography>
+            {techApp ? <EngineeringIcon /> : <BuildIcon />}
+            <Typography fontWeight={800} noWrap>
+              {title}
+            </Typography>
           </Box>
           {user ? (
             <>
@@ -74,8 +82,8 @@ export default function RepairShell({ children }: { children: React.ReactNode })
               </Tooltip>
             </>
           ) : (
-            pathname !== "/repair/login" && (
-              <Button component={Link} href="/repair/login" variant="outlined" size="small">
+            pathname !== loginHref && (
+              <Button component={Link} href={loginHref} variant="outlined" size="small">
                 ورود
               </Button>
             )

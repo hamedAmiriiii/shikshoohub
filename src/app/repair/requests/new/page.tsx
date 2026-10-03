@@ -14,7 +14,7 @@ export default function NewRepairRequestPage() {
   const { allowed, user } = useRequireRole(["customer"]);
   const { config } = useRepairAuth();
   const [form, setForm] = useState({
-    category: "",
+    service_id: "",
     description: "",
     address: "",
     contact_name: "",
@@ -24,6 +24,7 @@ export default function NewRepairRequestPage() {
   const [location, setLocation] = useState<LatLng | null>(null);
   const [busy, setBusy] = useState(false);
   const locationMode = config?.location_mode || "off";
+  const services = (config?.services || []).filter((s) => s.id > 0);
 
   useEffect(() => {
     if (!user) return;
@@ -41,6 +42,10 @@ export default function NewRepairRequestPage() {
     setForm((f) => ({ ...f, [key]: e.target.value }));
 
   const submit = async () => {
+    if (services.length > 0 && !form.service_id) {
+      toast.error("نوع خدمت را انتخاب کنید.");
+      return;
+    }
     if (form.description.trim().length < 5) {
       toast.error("مشکل را کمی کامل‌تر توضیح دهید.");
       return;
@@ -56,7 +61,7 @@ export default function NewRepairRequestPage() {
     setBusy(true);
     const withLocation = locationMode !== "off" && location;
     const res = await repairApi.createRequest({
-      category: form.category || undefined,
+      service_id: form.service_id ? Number(form.service_id) : undefined,
       description: form.description.trim(),
       address: form.address.trim(),
       latitude: withLocation ? location.lat : undefined,
@@ -74,8 +79,6 @@ export default function NewRepairRequestPage() {
     router.replace(`/repair/requests/${res.request.id}`);
   };
 
-  const categories = config?.categories || [];
-
   return (
     <Stack spacing={2}>
       <Typography variant="h6" fontWeight={800}>
@@ -83,11 +86,11 @@ export default function NewRepairRequestPage() {
       </Typography>
       <Section>
         <Stack spacing={2}>
-          {categories.length > 0 && (
-            <TextField select label="نوع خدمت" value={form.category} onChange={set("category")} fullWidth>
-              {categories.map((c) => (
-                <MenuItem key={c} value={c}>
-                  {c}
+          {services.length > 0 && (
+            <TextField select label="نوع خدمت" value={form.service_id} onChange={set("service_id")} fullWidth required>
+              {services.map((s) => (
+                <MenuItem key={s.id} value={String(s.id)}>
+                  {s.name}
                 </MenuItem>
               ))}
             </TextField>

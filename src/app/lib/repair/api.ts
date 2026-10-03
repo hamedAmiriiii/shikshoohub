@@ -27,6 +27,7 @@ export type RepairStatus =
 
 export type RepairRequest = {
   id: number;
+  service_id: number | null;
   category: string | null;
   description: string;
   address: string;
@@ -74,9 +75,12 @@ export type RepairPaymentOptions = {
 
 export type RepairLocationMode = "off" | "optional" | "required";
 
+export type RepairServiceOption = { id: number; name: string };
+
 export type RepairPublicConfig = {
   brand_name: string;
   support_phone: string;
+  services: RepairServiceOption[];
   categories: string[];
   online_payment_enabled: boolean;
   card_payment_enabled: boolean;
@@ -86,6 +90,8 @@ export type RepairPublicConfig = {
 
 export type LatLng = { lat: number; lng: number };
 
+export type RepairApprovalStatus = "approved" | "pending" | "rejected";
+
 export type RepairTechnician = {
   id: number;
   name: string | null;
@@ -93,11 +99,37 @@ export type RepairTechnician = {
   specialty: string | null;
   labor_share_percent: number;
   card_number: string | null;
+  address?: string | null;
   notes: string | null;
   is_active: boolean;
+  approval_status: RepairApprovalStatus;
+  approval_note: string | null;
+  service_ids: number[];
+  services: string[];
   last_login_at: string | null;
+  created_at?: string;
   open_requests?: number;
   balance?: number;
+};
+
+export type RepairTechnicianInput = {
+  name?: string;
+  phone?: string;
+  specialty?: string | null;
+  labor_share_percent?: number;
+  card_number?: string | null;
+  notes?: string | null;
+  is_active?: boolean;
+  service_ids?: number[];
+};
+
+export type RepairAdminService = {
+  id: number;
+  name: string;
+  is_active: boolean;
+  sort_order: number;
+  technicians_count: number;
+  requests_count: number;
 };
 
 export type RepairPayout = {
@@ -136,7 +168,6 @@ export type RepairSettings = {
   online_payment_enabled: string;
   card_payment_enabled: string;
   default_labor_share_percent: string;
-  categories: string;
   location_mode: RepairLocationMode;
 };
 
@@ -144,7 +175,13 @@ export type RepairDashboard = {
   counts: { status: RepairStatus; label: string; count: number }[];
   month: { jobs: number; revenue: number; platform_share: number; technician_share: number };
   technicians_balance: number;
+  pending_technicians?: number;
 };
+
+export type RepairTechVerifyResult =
+  | { status: "ok"; token: string; user: RepairSessionUser }
+  | { status: "pending" | "rejected"; message: string }
+  | { status: "needs_registration"; registration_token: string; phone: string; services: RepairServiceOption[] };
 
 export type RepairApiError = { hasError: true; statusCode: number; message: string; retry_after_seconds?: number };
 
@@ -183,6 +220,14 @@ export function repairHomeFor(role: RepairRole | undefined | null) {
   return "/repair/requests";
 }
 
+export function isTechAppPath(pathname: string | null | undefined) {
+  return pathname === "/repair/tech" || Boolean(pathname?.startsWith("/repair/tech/"));
+}
+
+export function repairLoginPathFor(pathname: string | null | undefined) {
+  return isTechAppPath(pathname) ? "/repair/tech/login" : "/repair/login";
+}
+
 type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 async function repairFetch<T>(
@@ -219,9 +264,10 @@ async function repairFetch<T>(
     if (!response.ok) {
       if (response.status === 401 && auth && typeof window !== "undefined") {
         clearRepairSession();
-        if (!window.location.pathname.startsWith("/repair/login")) {
+        const loginPath = repairLoginPathFor(window.location.pathname);
+        if (!window.location.pathname.startsWith(loginPath)) {
           const next = encodeURIComponent(window.location.pathname + window.location.search);
-          window.location.replace(`/repair/login?next=${next}`);
+          window.location.replace(`${loginPath}?next=${next}`);
         }
       }
       const errors = json.errors as Record<string, string[]> | undefined;
@@ -251,6 +297,16 @@ export const repairApi = {
       auth: false,
       body: { phone, code, name: name || undefined },
     }),
+  techVerify: (phone: string, code: string) =>
+    repairFetch<RepairTechVerifyResult>("POST", "/tech-auth/verify", { auth: false, body: { phone, code } }),
+  techRegister: (body: {
+    registration_token: string;
+    name: string;
+    specialty?: string;
+    service_ids: number[];
+    card_number?: string;
+    address?: string;
+  }) => repairFetch<{ status: string; message: string }>("POST", "/tech-auth/register", { auth: false, body }),
   me: () => repairFetch<{ user: RepairSessionUser }>("GET", "/me"),
   updateProfile: (body: { name?: string; address?: string | null }) =>
     repairFetch<{ user: RepairSessionUser }>("PATCH", "/me", { body }),
@@ -260,7 +316,7 @@ export const repairApi = {
 
   myRequests: () => repairFetch<{ requests: RepairRequest[] }>("GET", "/requests"),
   createRequest: (body: {
-    category?: string;
+    service_id?: number;
     description: string;
     address: string;
     latitude?: number;
@@ -321,10 +377,22 @@ export const repairApi = {
     repairFetch<{ request: RepairRequest }>("PATCH", `/admin/requests/${id}/note`, { body: { admin_note: adminNote } }),
   adminTechnicians: () =>
     repairFetch<{ technicians: RepairTechnician[]; default_share_percent: number }>("GET", "/admin/technicians"),
-  adminCreateTechnician: (body: Partial<RepairTechnician>) =>
+  adminCreateTechnician: (body: RepairTechnicianInput) =>
     repairFetch<{ message: string; technician: RepairTechnician }>("POST", "/admin/technicians", { body }),
-  adminUpdateTechnician: (id: number, body: Partial<RepairTechnician>) =>
+  adminUpdateTechnician: (id: number, body: RepairTechnicianInput) =>
     repairFetch<{ message: string; technician: RepairTechnician }>("PATCH", `/admin/technicians/${id}`, { body }),
+  adminApproveTechnician: (id: number, body: { labor_share_percent?: number; service_ids?: number[] }) =>
+    repairFetch<{ message: string; technician: RepairTechnician }>("POST", `/admin/technicians/${id}/approve`, { body }),
+  adminRejectTechnician: (id: number, reason?: string) =>
+    repairFetch<{ message: string; technician: RepairTechnician }>("POST", `/admin/technicians/${id}/reject`, {
+      body: { reason },
+    }),
+  adminServices: () => repairFetch<{ services: RepairAdminService[] }>("GET", "/admin/services"),
+  adminCreateService: (body: { name: string; is_active?: boolean; sort_order?: number }) =>
+    repairFetch<{ message: string }>("POST", "/admin/services", { body }),
+  adminUpdateService: (id: number, body: { name?: string; is_active?: boolean; sort_order?: number }) =>
+    repairFetch<{ message: string }>("PATCH", `/admin/services/${id}`, { body }),
+  adminDeleteService: (id: number) => repairFetch<{ message: string }>("DELETE", `/admin/services/${id}`),
   adminPayouts: (technicianId?: number | string) =>
     repairFetch<{ payouts: RepairPayout[] }>("GET", "/admin/payouts", { params: { technician_id: technicianId } }),
   adminCreatePayout: (body: { technician_id: number; amount: number; paid_on?: string; method?: string; note?: string }) =>
@@ -376,4 +444,8 @@ export function readFileAsDataUrl(file: File): Promise<string> {
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(file);
   });
+}
+
+export function qrImageUrl(data: string, size = 280) {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=8&format=png&data=${encodeURIComponent(data)}`;
 }
