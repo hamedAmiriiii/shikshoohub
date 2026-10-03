@@ -25,7 +25,20 @@ export function RequestTimeline({ request }: { request: RepairRequest }) {
   const active = FLOW.reduce((acc, step, index) => (request[step.key] ? index : acc), 0);
 
   return (
-    <Stepper activeStep={request.status === "completed" ? FLOW.length : active + 1} alternativeLabel sx={{ "& .MuiStepLabel-label": { fontSize: 12 } }}>
+    <Stepper
+      activeStep={request.status === "completed" ? FLOW.length : active + 1}
+      alternativeLabel
+      sx={{
+        "& .MuiStepLabel-label": { fontSize: 12 },
+        // MUI بدون پلاگین RTL خط را با left/right می‌گذارد و در راست‌به‌چپ یک مرحله جابه‌جا می‌شود
+        "& .MuiStepConnector-root": {
+          left: "auto",
+          right: "auto",
+          insetInlineStart: "calc(-50% + 20px)",
+          insetInlineEnd: "calc(50% + 20px)",
+        },
+      }}
+    >
       {FLOW.map((step) => (
         <Step key={step.label}>
           <StepLabel optional={request[step.key] ? <Typography variant="caption">{formatFaDate(request[step.key] as string, false)}</Typography> : undefined}>

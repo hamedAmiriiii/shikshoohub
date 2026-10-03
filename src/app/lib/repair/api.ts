@@ -14,6 +14,7 @@ export type RepairSessionUser = {
   phone: string;
   specialty?: string | null;
   address?: string | null;
+  card_number?: string | null;
 };
 
 export type RepairStatus =
@@ -314,7 +315,7 @@ export const repairApi = {
     address?: string;
   }) => repairFetch<{ status: string; message: string }>("POST", "/tech-auth/register", { auth: false, body }),
   me: () => repairFetch<{ user: RepairSessionUser }>("GET", "/me"),
-  updateProfile: (body: { name?: string; address?: string | null }) =>
+  updateProfile: (body: { name?: string; address?: string | null; specialty?: string | null; card_number?: string | null }) =>
     repairFetch<{ user: RepairSessionUser }>("PATCH", "/me", { body }),
   logout: () => repairFetch<{ message: string }>("POST", "/logout"),
   reverseGeocode: (point: LatLng) =>
