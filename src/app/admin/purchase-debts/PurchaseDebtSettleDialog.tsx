@@ -27,6 +27,7 @@ import {
 } from "@/app/lib/purchaseDebts";
 import { toast } from "react-toastify";
 import { formatAmountInput, formatAmountNumber, parseAmountInput } from "@/app/lib/amountInput";
+import ShopAccountSelect from "@/app/admin/ShopAccountSelect";
 
 const inputSx = {
   "& .MuiOutlinedInput-root": {
@@ -67,6 +68,7 @@ export default function PurchaseDebtSettleDialog({
   const [cardAmount, setCardAmount] = useState("");
   const [cashAmount, setCashAmount] = useState("");
   const [note, setNote] = useState("");
+  const [accountId, setAccountId] = useState<number | "">("");
   const [loading, setLoading] = useState(false);
 
   const remaining = invoice ? getDebtInvoiceAmount(invoice) : 0;
@@ -83,6 +85,7 @@ export default function PurchaseDebtSettleDialog({
     setCardAmount("");
     setCashAmount(remaining > 0 ? formatAmountNumber(remaining) : "");
     setNote("");
+    setAccountId("");
   }, [open, invoice, remaining]);
 
   const applyModeAmounts = (nextMode: SettlementMode, amountText: string) => {
@@ -124,10 +127,16 @@ export default function PurchaseDebtSettleDialog({
       }
     }
 
+    if (accountId === "") {
+      toast.error("حساب مقصد وصول را انتخاب کنید");
+      return;
+    }
+
     const body: Record<string, unknown> = {
       amount: pay,
       card_amount: card,
       cash_amount: cash,
+      shop_account_id: accountId,
     };
     if (note.trim()) body.note = note.trim();
 
@@ -194,6 +203,7 @@ export default function PurchaseDebtSettleDialog({
             {previousPayments.map((payment) => (
               <Typography key={payment.id ?? `${payment.paid_at}-${payment.amount}`} sx={{ fontSize: "12px", color: "var(--admin-text)" }}>
                 {formatNumber(Number(payment.amount || 0))} تومان — {paymentMethodLabel(Number(payment.card_amount || 0), Number(payment.cash_amount || 0))}
+                {payment.shop_account_name ? ` — ${payment.shop_account_name}` : ""}
                 {payment.paid_at ? ` — ${payment.paid_at}` : ""}
               </Typography>
             ))}
@@ -253,6 +263,16 @@ export default function PurchaseDebtSettleDialog({
           </Box>
         )}
 
+        <Box sx={{ mb: 2 }}>
+          <ShopAccountSelect
+            value={accountId}
+            onChange={setAccountId}
+            required
+            label="حساب مقصد"
+            helperText="پول وصول‌شده فقط به همین حساب می‌رود و در فروش نقد و کارت امروز حساب نمی‌شود"
+          />
+        </Box>
+
         <TextField
           label="یادداشت (اختیاری)"
           value={note}
@@ -270,7 +290,7 @@ export default function PurchaseDebtSettleDialog({
         </Button>
         <Button
           variant="contained"
-          disabled={loading}
+          disabled={loading || accountId === ""}
           onClick={handleSubmit}
           sx={{ bgcolor: "var(--admin-accent)", "&:hover": { bgcolor: "var(--admin-accent-hover)" } }}
         >

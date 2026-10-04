@@ -16,6 +16,8 @@ export type PurchaseDebtPayment = {
   amount?: number;
   note?: string | null;
   paid_at?: string | null;
+  shop_account_id?: number | null;
+  shop_account_name?: string | null;
 };
 
 export type PurchaseDebtProduct = {

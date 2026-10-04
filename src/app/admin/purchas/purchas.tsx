@@ -174,8 +174,21 @@ export default function purchas(props: any) {
   const isCheque = data?.payment_type === 'cheque';
 
   const purchasePhone = typeof data?.phone === "string" ? normalizeIranMobile(data.phone) : "";
-  const purchaseCashAmount = Math.max(0, Number(data?.cash_amount) || 0);
-  const purchaseCardAmount = Math.max(0, Number(data?.card_amount) || 0);
+  const invoiceCardAmount = Math.max(0, Number(data?.card_amount) || 0);
+  const purchaseCashAmount = Math.max(
+    0,
+    Number(
+      data?.refundable_cash_amount ??
+        (Number(data?.cash_amount) || 0) + (Number(data?.debt_settled_cash_amount) || 0),
+    ) || 0,
+  );
+  const purchaseCardAmount = Math.max(
+    0,
+    Number(
+      data?.refundable_card_amount ??
+        (Number(data?.card_amount) || 0) + (Number(data?.debt_settled_card_amount) || 0),
+    ) || 0,
+  );
   const hasCardPayment = purchaseCardAmount > 0.01;
   const hasCashPayment = purchaseCashAmount > 0.01;
   const willTouchCustomerCredit =
@@ -210,7 +223,7 @@ export default function purchas(props: any) {
     }
   }, [refundFromPosTerminal, posTerminalRefund]);
 
-  const posTerminalLeadingOption = !hasCardPayment
+  const posTerminalLeadingOption = !hasCardPayment || invoiceCardAmount <= 0.01
     ? undefined
     : posTerminalRefund?.available
       ? {
