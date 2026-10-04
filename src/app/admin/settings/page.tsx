@@ -741,17 +741,16 @@ export default function SettingsPage() {
     if (!token) return;
     setLoyaltyLoading(true);
     try {
-      const loyaltyRes = await apiRequestError(
-        "Get",
-        {},
-        {},
-        `/api/settings/loyalty-credit`,
-        true,
-        true,
-        token,
-      );
+      const [loyaltyRes, expiryRes] = await Promise.all([
+        apiRequestError("Get", {}, {}, `/api/settings/loyalty-credit`, true, true, token),
+        apiRequestError("Get", {}, {}, `/api/settings/credit-expiry-days`, true, true, token),
+      ]);
       if (!loyaltyRes.hasError) {
         applyLoyaltyResponse(loyaltyRes as Record<string, unknown> | boolean);
+      }
+      if (!expiryRes.hasError) {
+        const days = Number((expiryRes as { days?: unknown }).days);
+        if (Number.isFinite(days) && days >= 1) setCreditExpiryDays(days);
       }
       setLoyaltyLoaded(true);
     } finally {
@@ -1422,7 +1421,54 @@ export default function SettingsPage() {
         }
       >
         {loyaltyOpen && !loyaltyLoading ? (
-          <LoyaltyCreditTiersSettings disabled={!loyaltyCreditEnabled} />
+          <>
+            <LoyaltyCreditTiersSettings disabled={!loyaltyCreditEnabled} />
+            <Box
+              sx={{
+                mt: 1.5,
+                pt: 1.5,
+                borderTop: "1px dashed var(--admin-border)",
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                flexWrap: "wrap",
+              }}
+            >
+              <Box sx={{ flex: 1, minWidth: 180 }}>
+                <Typography sx={{ fontSize: "13px", fontWeight: 700, color: "var(--admin-text)" }}>
+                  مهلت انقضای اعتبار
+                </Typography>
+                <Typography sx={{ fontSize: "11.5px", color: "var(--admin-text-muted)", mt: 0.25 }}>
+                  اگر مشتری در این مدت خرید نکند، اعتبارش صفر می‌شود (۷ روز قبل پیامک یادآوری می‌گیرد). با هر خرید جدید، مهلت از نو شروع می‌شود.
+                </Typography>
+              </Box>
+              <TextField
+                size="small"
+                value={creditExpiryDays ? String(creditExpiryDays) : ""}
+                onChange={(e) => {
+                  const digits = e.target.value
+                    .replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)))
+                    .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)))
+                    .replace(/\D/g, "")
+                    .slice(0, 3);
+                  setCreditExpiryDays(digits ? Number(digits) : 0);
+                }}
+                disabled={!loyaltyCreditEnabled || isSavingExpiry}
+                inputProps={{ inputMode: "numeric", "aria-label": "مهلت انقضای اعتبار (روز)" }}
+                sx={fieldSx}
+              />
+              <Typography sx={{ fontSize: "12px", color: "var(--admin-text-muted)" }}>روز</Typography>
+              <Button
+                size="small"
+                variant="contained"
+                disabled={!loyaltyCreditEnabled || isSavingExpiry}
+                onClick={() => void handleSaveExpiryDays()}
+                sx={saveBtnSx}
+              >
+                {isSavingExpiry ? "…" : "ذخیره"}
+              </Button>
+            </Box>
+          </>
         ) : null}
       </SettingsSectionCard>
 

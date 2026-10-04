@@ -123,6 +123,12 @@ const SMS_TYPE_LABELS: Record<string, string> = {
   warning: "هشدار",
   customer_register: "ثبت مشتری",
   broadcast: "پیامک گروهی",
+  campaign: "کمپین",
+  installment_credit: "اعتبار اقساطی",
+  installment_reminder: "یادآوری قسط",
+  stock_notify: "اطلاع موجودی",
+  oil_welcome: "خوش‌آمد تعویض روغن",
+  oil_reminder: "یادآوری تعویض روغن",
 };
 
 const SMS_TYPE_COLORS: Record<string, string> = {
@@ -131,6 +137,12 @@ const SMS_TYPE_COLORS: Record<string, string> = {
   warning: "var(--admin-warning-strong)",
   customer_register: "#7c4dff",
   broadcast: "#5c6bc0",
+  campaign: "#e91e63",
+  installment_credit: "#00897b",
+  installment_reminder: "#f57c00",
+  stock_notify: "#0288d1",
+  oil_welcome: "#6d4c41",
+  oil_reminder: "#8d6e63",
 };
 
 const getSmsTypeLabel = (type: string) => {
@@ -865,6 +877,10 @@ export default function ShopSmsLogsPage() {
                   <MenuItem value="warning">هشدار</MenuItem>
                   <MenuItem value="customer_register">ثبت مشتری</MenuItem>
                   <MenuItem value="broadcast">پیامک گروهی</MenuItem>
+                  <MenuItem value="campaign">کمپین</MenuItem>
+                  <MenuItem value="installment_credit">اعتبار اقساطی</MenuItem>
+                  <MenuItem value="installment_reminder">یادآوری قسط</MenuItem>
+                  <MenuItem value="stock_notify">اطلاع موجودی</MenuItem>
                 </Select>
               </FormControl>
             </Box> */}

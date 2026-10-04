@@ -43,7 +43,7 @@ const fieldSx = {
   "& .MuiFormHelperText-root": { color: "var(--admin-text-muted)", mx: 0.5 },
 } as const;
 
-const DEFAULT_SMS = "دلمون براتون تنگ شده! {credit} تومان اعتبار هدیه منتظر شماست.";
+const DEFAULT_SMS = "{greeting}، دلمون براتون تنگ شده! {credit} تومان اعتبار هدیه منتظر شماست.";
 
 export default function CreateCampaignDialog({
   open,
@@ -192,7 +192,7 @@ export default function CreateCampaignDialog({
           onChange={(e) => setSmsMessage(e.target.value)}
           multiline
           minRows={2}
-          helperText="{credit} = مبلغ اعتبار · خالی = بدون پیامک"
+          helperText="{greeting} = «نام مشتری عزیز» یا «مشتری گرامی» · {credit} = مبلغ اعتبار · خالی = بدون پیامک"
           sx={fieldSx}
         />
       </Box>
