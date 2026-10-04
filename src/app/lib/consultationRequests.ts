@@ -56,6 +56,7 @@ const STATUS_LABELS: Record<string, string> = {
 const SOURCE_LABELS: Record<string, string> = {
   digital_menu: "منوی دیجیتال",
   accounting: "حسابداری و فروش",
+  smart_club: "باشگاه مشتریان هوشمند",
 };
 
 export function formatConsultationStatus(status?: string): string {

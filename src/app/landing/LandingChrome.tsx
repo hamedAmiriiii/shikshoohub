@@ -62,6 +62,9 @@ export default function LandingChrome({
             <Link href="/landing/shop" className="hover:text-cyan-400 transition">
               حسابداری
             </Link>
+            <Link href="/landing/club" className="hover:text-cyan-400 transition">
+              باشگاه مشتریان
+            </Link>
             <Link href="/landing/menu" className="hover:text-cyan-400 transition">
               منوی دیجیتال
             </Link>
@@ -117,6 +120,9 @@ export default function LandingChrome({
             </Link>
             <Link href="/landing/shop" onClick={() => setNavOpen(false)}>
               حسابداری
+            </Link>
+            <Link href="/landing/club" onClick={() => setNavOpen(false)}>
+              باشگاه مشتریان
             </Link>
             <Link href="/landing/menu" onClick={() => setNavOpen(false)}>
               منوی دیجیتال

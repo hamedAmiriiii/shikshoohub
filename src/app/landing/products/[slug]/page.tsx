@@ -9,7 +9,11 @@ type Props = { params: { slug: string } };
 
 export function generateStaticParams() {
   return [
-    ...LANDING_PRODUCTS.filter((p) => p.slug !== "accounting").map((p) => ({ slug: p.slug })),
+    ...LANDING_PRODUCTS.filter((p) => p.slug !== "accounting" && p.slug !== "menu" && p.slug !== "club").map((p) => ({
+      slug: p.slug,
+    })),
+    { slug: "menu" },
+    { slug: "club" },
     { slug: "class" },
   ];
 }
@@ -29,6 +33,14 @@ export function generateMetadata({ params }: Props): Metadata {
       description:
         "منوی دیجیتال وبینو: اسکن QR روی میز، سفارش روی گوشی و پرداخت آنلاین متصل به نرم‌افزار فروش.",
       path: "/landing/menu",
+    });
+  }
+  if (params.slug === "club") {
+    return pageMetadata({
+      title: "باشگاه مشتریان هوشمند وبینو",
+      description:
+        "باشگاه مشتریان متصل به نرم‌افزار فروش و حسابداری: گروه‌بندی RFM، کمپین هدفمند، اعتبار خرید و گزارش اثر کمپین.",
+      path: "/landing/club",
     });
   }
   if (params.slug === "class") {
@@ -62,6 +74,9 @@ export default function ProductPage({ params }: Props) {
   }
   if (params.slug === "menu") {
     redirect("/landing/menu");
+  }
+  if (params.slug === "club") {
+    redirect("/landing/club");
   }
   if (params.slug === "class") {
     redirect("/landing/products/yadino");

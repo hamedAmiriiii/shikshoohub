@@ -29,6 +29,7 @@ import WebinoChatbot from "@/app/coponent/WebinoChatbot";
 import ConsultationRequestForm from "../ConsultationRequestForm";
 
 const LOGIN_URL = "/admin/login";
+const SMART_CLUB_URL = "/landing/club";
 const AGENCY_REQUEST_URL = "/agency-request";
 const SUPPORT_PHONE = "09399166196";
 const SUPPORT_TEL = "tel:09399166196";
@@ -261,6 +262,7 @@ export default function LandingShopClient() {
           <nav className="hidden md:flex items-center gap-8 text-sm text-slate-300">
             <Link href="/" className="hover:text-cyan-400 transition">همه محصولات</Link>
             <a href="#features" className="hover:text-cyan-400 transition">امکانات</a>
+            <Link href={SMART_CLUB_URL} className="hover:text-cyan-400 transition">باشگاه مشتریان</Link>
             <a href="#screenshots" className="hover:text-cyan-400 transition">گالری</a>
             <a href="#pricing" className="hover:text-cyan-400 transition">پکیج‌ها</a>
             <a href="#consult" className="hover:text-cyan-400 transition">تماس</a>
@@ -295,6 +297,7 @@ export default function LandingShopClient() {
           <div className="md:hidden border-t border-white/10 bg-[#0b0f1a] px-4 py-3 flex flex-col gap-2 text-sm text-slate-300">
             <Link href="/" onClick={() => setNavOpen(false)}>همه محصولات</Link>
             <a href="#features" onClick={() => setNavOpen(false)}>امکانات</a>
+            <Link href={SMART_CLUB_URL} onClick={() => setNavOpen(false)}>باشگاه مشتریان هوشمند</Link>
             <a href="#screenshots" onClick={() => setNavOpen(false)}>گالری</a>
             <a href="#pricing" onClick={() => setNavOpen(false)}>پکیج‌ها</a>
             <a href="#consult" onClick={() => setNavOpen(false)}>تماس</a>
@@ -468,6 +471,52 @@ export default function LandingShopClient() {
         </div>
       </section>
 
+      {/* Smart customer club */}
+      <section id="smart-club" className="pb-16 md:pb-24">
+        <div className="max-w-6xl mx-auto px-4">
+          <motion.div
+            {...fadeUp()}
+            className="relative overflow-hidden rounded-3xl border border-fuchsia-500/25 bg-gradient-to-l from-violet-950/60 via-fuchsia-950/30 to-[#0b0f1a] p-6 md:p-10"
+          >
+            <div className="absolute -top-20 -left-20 w-72 h-72 bg-fuchsia-600/20 blur-[90px] rounded-full" />
+            <div className="relative grid lg:grid-cols-[1.4fr_1fr] gap-8 items-center">
+              <div>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-fuchsia-500/15 border border-fuchsia-400/25 text-fuchsia-200 text-xs font-semibold">
+                  <Sparkles size={13} /> متصل به همین نرم‌افزار فروش و حسابداری
+                </span>
+                <h2 className="mt-4 text-2xl md:text-3xl font-bold text-white leading-tight">
+                  باشگاه مشتریان هوشمند؛ مشتری‌ها را برگردانید و بیشتر بفروشید
+                </h2>
+                <p className="mt-3 text-slate-300 leading-8">
+                  هر فاکتوری که ثبت می‌کنید، به شناخت مشتری تبدیل می‌شود: چه کسی آماده خرید است، چه کسی در حال رفتن است
+                  و چه کسی به VIP شدن نزدیک است — با پیشنهاد اقدام، کمپین هدفمند، کش‌بک و گزارش فروش حاصل از کمپین.
+                </p>
+                <Link
+                  href={SMART_CLUB_URL}
+                  className="mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-l from-violet-600 to-fuchsia-600 text-white font-semibold hover:opacity-90 transition shadow-lg shadow-fuchsia-900/30"
+                >
+                  آشنایی با باشگاه مشتریان هوشمند
+                  <ChevronLeft size={18} />
+                </Link>
+              </div>
+              <ul className="grid grid-cols-2 gap-3">
+                {["گروه‌بندی هوشمند RFM", "هشدار ریزش مشتری", "پیشنهاد اقدام خودکار", "کمپین کالایی و مکمل", "اعتبار و کش‌بک پلکانی", "گزارش اثر کمپین"].map(
+                  (item) => (
+                    <li
+                      key={item}
+                      className="flex items-start gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-slate-200"
+                    >
+                      <CheckCircle2 size={15} className="text-fuchsia-300 shrink-0 mt-0.5" />
+                      {item}
+                    </li>
+                  ),
+                )}
+              </ul>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
       {/* Steps */}
       <section id="steps" className="py-16 md:py-20 border-y border-white/5 bg-white/[0.02]">
         <div className="max-w-6xl mx-auto px-4 text-center">
@@ -632,6 +681,15 @@ export default function LandingShopClient() {
                     </li>
                   ))}
                 </ul>
+                {plan.name === "باشگاه مشتریان" || plan.name === "هوشمند و حسابداری" ? (
+                  <Link
+                    href={SMART_CLUB_URL}
+                    className="mb-3 inline-flex items-center justify-center gap-1 text-sm font-semibold text-fuchsia-300 hover:text-fuchsia-200 transition"
+                  >
+                    آشنایی با باشگاه مشتریان هوشمند
+                    <ChevronLeft size={16} />
+                  </Link>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => scrollToConsult(`${plan.name} — ${plan.price}`)}
