@@ -8,6 +8,7 @@ import { isRepairError, repairApi, toLatinDigits, type LatLng } from "@/app/lib/
 import { LocationPicker, mapSourceFrom } from "../../NeshanMap";
 import { useRepairAuth } from "../../RepairAuth";
 import { Loader, Section, useRequireRole } from "../../ui";
+import VisitTimePicker, { formatVisitTime, type VisitTime } from "../../VisitTimePicker";
 
 export default function NewRepairRequestPage() {
   const router = useRouter();
@@ -19,8 +20,8 @@ export default function NewRepairRequestPage() {
     address: "",
     contact_name: "",
     contact_phone: "",
-    preferred_time: "",
   });
+  const [visit, setVisit] = useState<VisitTime>({ day: null, slot: null });
   const [location, setLocation] = useState<LatLng | null>(null);
   const [busy, setBusy] = useState(false);
   const locationMode = config?.location_mode || "off";
@@ -62,6 +63,14 @@ export default function NewRepairRequestPage() {
       toast.error("موقعیت را روی نقشه انتخاب کنید.");
       return;
     }
+    if (!visit.day) {
+      toast.error("روز مراجعه را انتخاب کنید.");
+      return;
+    }
+    if (visit.slot === null) {
+      toast.error("ساعت مراجعه را انتخاب کنید.");
+      return;
+    }
     setBusy(true);
     const withLocation = locationMode !== "off" && location;
     const res = await repairApi.createRequest({
@@ -73,7 +82,7 @@ export default function NewRepairRequestPage() {
       longitude: withLocation ? location.lng : undefined,
       contact_name: form.contact_name.trim() || undefined,
       contact_phone: toLatinDigits(form.contact_phone).replace(/\D/g, "") || undefined,
-      preferred_time: form.preferred_time.trim() || undefined,
+      preferred_time: formatVisitTime(visit),
     });
     setBusy(false);
     if (isRepairError(res)) {
@@ -140,13 +149,7 @@ export default function NewRepairRequestPage() {
               slotProps={{ htmlInput: { dir: "ltr" } }}
             />
           </Stack>
-          <TextField
-            label="زمان مناسب مراجعه (اختیاری)"
-            placeholder="مثلاً: فردا عصر"
-            value={form.preferred_time}
-            onChange={set("preferred_time")}
-            fullWidth
-          />
+          <VisitTimePicker value={visit} onChange={setVisit} />
           <Button variant="contained" size="large" onClick={() => void submit()} disabled={busy}>
             ثبت درخواست
           </Button>

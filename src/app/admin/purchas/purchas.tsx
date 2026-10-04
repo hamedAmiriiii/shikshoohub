@@ -496,7 +496,7 @@ export default function purchas(props: any) {
     handleCloseDeleteDialog();
     toast.success(
       <Box>
-        <Typography sx={{ fontSize: 13 }}>{message}</Typography>
+        <Typography sx={{ fontSize: 13, color: "inherit !important", lineHeight: 1.8 }}>{message}</Typography>
         {returnedTotal > 0 ? (
           <Button
             size="small"

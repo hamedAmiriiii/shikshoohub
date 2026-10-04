@@ -534,7 +534,30 @@ export function formatReceiptNumber(num: number): string {
   return new Intl.NumberFormat("fa-IR").format(num);
 }
 
+type JalaliParts = { date: string; time: string };
+
+function toLatinDigitsLocal(value: string): string {
+  return value
+    .replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)))
+    .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+}
+
+/** بعضی APIها created_at را از قبل شمسی می‌فرستند (مثل 1405-07-12 10:38)؛ دوباره تبدیلش نکن. */
+function parseJalaliDate(raw: string): JalaliParts | null {
+  const m = toLatinDigitsLocal(String(raw || "").trim()).match(
+    /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?/,
+  );
+  if (!m || Number(m[1]) >= 1700) return null;
+  const fa = (value: string | number) => String(value).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]);
+  return {
+    date: `${fa(Number(m[1]))}/${fa(Number(m[2]))}/${fa(Number(m[3]))}`,
+    time: m[4] !== undefined ? `${fa(Number(m[4]))}:${fa(m[5].padStart(2, "0"))}` : "",
+  };
+}
+
 export function formatReceiptDate(iso: string): string {
+  const jalali = parseJalaliDate(iso);
+  if (jalali) return jalali.time ? `${jalali.date}، ${jalali.time}` : jalali.date;
   try {
     return new Intl.DateTimeFormat("fa-IR", {
       dateStyle: "short",
@@ -546,6 +569,8 @@ export function formatReceiptDate(iso: string): string {
 }
 
 export function formatReceiptDateOnly(iso: string): string {
+  const jalali = parseJalaliDate(iso);
+  if (jalali) return jalali.date;
   try {
     return new Intl.DateTimeFormat("fa-IR", { dateStyle: "short" }).format(new Date(iso));
   } catch {
@@ -554,6 +579,8 @@ export function formatReceiptDateOnly(iso: string): string {
 }
 
 export function formatReceiptTimeOnly(iso: string): string {
+  const jalali = parseJalaliDate(iso);
+  if (jalali) return jalali.time;
   try {
     return new Intl.DateTimeFormat("fa-IR", { timeStyle: "short" }).format(new Date(iso));
   } catch {

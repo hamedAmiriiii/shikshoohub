@@ -12,6 +12,19 @@ export type CostFormValues = {
   share_percent?: number;
 };
 
+function SummaryRow({ label, value, bold, success }: { label: string; value: string; bold?: boolean; success?: boolean }) {
+  return (
+    <Stack direction="row" justifyContent="space-between">
+      <Typography variant="body2" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography variant="body2" fontWeight={bold ? 800 : 400} color={success ? "success.main" : "text.primary"}>
+        {value}
+      </Typography>
+    </Stack>
+  );
+}
+
 export default function CostForm({
   request,
   withShare = false,
@@ -61,12 +74,23 @@ export default function CostForm({
             fullWidth
           />
         )}
-        <Typography variant="body2">
-          جمع قابل پرداخت مشتری: <b>{formatToman(labor + parts)}</b>
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          سهم تعمیرکار: {formatToman(technicianShare)} ({sharePercent}٪ اجرت + کل قطعات)
-        </Typography>
+        {withShare ? (
+          <>
+            <Typography variant="body2">
+              جمع قابل پرداخت مشتری: <b>{formatToman(labor + parts)}</b>
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              سهم تعمیرکار: {formatToman(technicianShare)} ({sharePercent}٪ اجرت + کل قطعات)
+            </Typography>
+          </>
+        ) : (
+          <Stack spacing={0.5} sx={{ p: 1.5, borderRadius: 2, bgcolor: "action.hover" }}>
+            <SummaryRow label="مبلغ کل" value={formatToman(labor + parts)} bold />
+            <SummaryRow label="هزینه (اجرت)" value={formatToman(labor)} />
+            <SummaryRow label="هزینهٔ قطعات" value={formatToman(parts)} />
+            <SummaryRow label="سهم تعمیرکار" value={formatToman(technicianShare)} bold success />
+          </Stack>
+        )}
         <Button
           variant="contained"
           disabled={busy || labor + parts <= 0}

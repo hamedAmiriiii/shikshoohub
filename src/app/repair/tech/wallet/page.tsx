@@ -11,11 +11,18 @@ import {
   type RepairPayout,
   type RepairWalletSummary,
 } from "@/app/lib/repair/api";
+import { RatingBadge } from "../../Rating";
 import { EmptyState, Loader, Section, useRequireRole } from "../../ui";
 
 export default function TechnicianWalletPage() {
   const { allowed } = useRequireRole(["technician"]);
-  const [data, setData] = useState<{ summary: RepairWalletSummary; share_percent: number; payouts: RepairPayout[] } | null>(null);
+  const [data, setData] = useState<{
+    summary: RepairWalletSummary;
+    share_percent: number;
+    rating_avg?: number | null;
+    rating_count?: number;
+    payouts: RepairPayout[];
+  } | null>(null);
 
   useEffect(() => {
     if (!allowed) return;
@@ -50,6 +57,12 @@ export default function TechnicianWalletPage() {
           </Grid>
         ))}
       </Grid>
+      <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Typography variant="body2" color="text.secondary">
+          امتیاز شما از نظر مشتریان
+        </Typography>
+        <RatingBadge avg={data.rating_avg} count={data.rating_count} emptyText="هنوز امتیازی ثبت نشده" />
+      </Paper>
       <Typography variant="body2" color="text.secondary">
         سهم شما: {data.share_percent}٪ اجرت + کل هزینهٔ قطعات هر کار.
       </Typography>

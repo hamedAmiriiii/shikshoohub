@@ -306,8 +306,16 @@ export function LocationPicker({
   );
 }
 
-/** نمایش لوکیشن ثبت‌شده با لینک مسیریابی نشان و بلد. */
-export function LocationView({ source, point }: { source: MapSource; point: LatLng }) {
+/** نمایش لوکیشن ثبت‌شده، با لینک مسیریابی نشان و بلد در صورت نیاز. */
+export function LocationView({
+  source,
+  point,
+  showRouting = false,
+}: {
+  source: MapSource;
+  point: LatLng;
+  showRouting?: boolean;
+}) {
   const { containerRef, state } = useRepairMap(source, point, (L, map) => {
     L.marker([point.lat, point.lng]).addTo(map);
   });
@@ -316,14 +324,16 @@ export function LocationView({ source, point }: { source: MapSource; point: LatL
   return (
     <Stack spacing={1}>
       {state !== "error" && <MapBox containerRef={containerRef} state={state} height={220} />}
-      <Stack direction="row" spacing={1}>
-        <Button size="small" variant="outlined" href={links.neshan} target="_blank" rel="noreferrer" fullWidth>
-          مسیریابی با نشان
-        </Button>
-        <Button size="small" variant="outlined" href={links.balad} target="_blank" rel="noreferrer" fullWidth>
-          مسیریابی با بلد
-        </Button>
-      </Stack>
+      {showRouting && (
+        <Stack direction="row" spacing={1}>
+          <Button size="small" variant="outlined" href={links.neshan} target="_blank" rel="noreferrer" fullWidth>
+            مسیریابی با نشان
+          </Button>
+          <Button size="small" variant="outlined" href={links.balad} target="_blank" rel="noreferrer" fullWidth>
+            مسیریابی با بلد
+          </Button>
+        </Stack>
+      )}
     </Stack>
   );
 }

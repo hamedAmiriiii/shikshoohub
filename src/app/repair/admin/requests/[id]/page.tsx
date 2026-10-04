@@ -20,6 +20,7 @@ import {
 import { toast } from "react-toastify";
 import {
   formatFaDate,
+  formatFaNumber,
   formatToman,
   isRepairError,
   repairApi,
@@ -28,6 +29,7 @@ import {
   type RepairTechnician,
 } from "@/app/lib/repair/api";
 import CostForm, { type CostFormValues } from "../../../CostForm";
+import { CustomerReview } from "../../../Rating";
 import { CostBreakdown, RequestInfo } from "../../../RequestDetails";
 import { Loader, Section, useRequireRole } from "../../../ui";
 
@@ -110,7 +112,7 @@ export default function AdminRepairRequestPage() {
 
   return (
     <Stack spacing={2}>
-      <RequestInfo request={request} showCustomer />
+      <RequestInfo request={request} showCustomer showRouting />
 
       {canAssign && (
         <Section title={request.technician ? "تغییر تعمیرکار" : "ارجاع به تعمیرکار"}>
@@ -138,6 +140,9 @@ export default function AdminRepairRequestPage() {
                 {technicianOptions.map((t) => (
                   <MenuItem key={t.id} value={String(t.id)}>
                     {t.name} {t.specialty ? `(${t.specialty})` : ""} — {t.open_requests ?? 0} کار باز
+                    {t.rating_avg && t.rating_count
+                      ? ` — ★ ${t.rating_avg.toLocaleString("fa-IR", { maximumFractionDigits: 1 })} (${formatFaNumber(t.rating_count)})`
+                      : ""}
                   </MenuItem>
                 ))}
               </TextField>
@@ -156,6 +161,7 @@ export default function AdminRepairRequestPage() {
       )}
 
       <CostBreakdown request={request} showShares />
+      <CustomerReview request={request} />
 
       {request.status === "payment_review" && (
         <Section title="رسید کارت به کارت">

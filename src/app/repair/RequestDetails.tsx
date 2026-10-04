@@ -50,7 +50,15 @@ export function RequestTimeline({ request }: { request: RepairRequest }) {
   );
 }
 
-export function RequestInfo({ request, showCustomer = false }: { request: RepairRequest; showCustomer?: boolean }) {
+export function RequestInfo({
+  request,
+  showCustomer = false,
+  showRouting = false,
+}: {
+  request: RepairRequest;
+  showCustomer?: boolean;
+  showRouting?: boolean;
+}) {
   const { config } = useRepairAuth();
   const point =
     request.latitude !== null && request.longitude !== null ? { lat: request.latitude, lng: request.longitude } : null;
@@ -65,7 +73,7 @@ export function RequestInfo({ request, showCustomer = false }: { request: Repair
       <InfoRow label="آدرس" value={request.address} />
       {point && config && (
         <Stack sx={{ my: 1 }}>
-          <LocationView source={mapSourceFrom(config)} point={point} />
+          <LocationView source={mapSourceFrom(config)} point={point} showRouting={showRouting} />
         </Stack>
       )}
       <InfoRow
@@ -82,7 +90,7 @@ export function RequestInfo({ request, showCustomer = false }: { request: Repair
       {showCustomer && request.customer && (
         <InfoRow label="حساب مشتری" value={`${request.customer.name || "—"} (${request.customer.phone})`} />
       )}
-      {request.preferred_time && <InfoRow label="زمان مناسب" value={request.preferred_time} />}
+      {request.preferred_time && <InfoRow label="زمان مراجعه" value={request.preferred_time} />}
       <InfoRow
         label="تعمیرکار"
         value={
@@ -106,8 +114,54 @@ export function RequestInfo({ request, showCustomer = false }: { request: Repair
   );
 }
 
-export function CostBreakdown({ request, showShares = false }: { request: RepairRequest; showShares?: boolean }) {
+export function CostBreakdown({
+  request,
+  showShares = false,
+  forTechnician = false,
+}: {
+  request: RepairRequest;
+  showShares?: boolean;
+  forTechnician?: boolean;
+}) {
   if (!request.total_amount) return null;
+
+  if (forTechnician) {
+    return (
+      <Section title="هزینه">
+        <Stack>
+          <InfoRow label="مبلغ کل" value={<b>{formatToman(request.total_amount)}</b>} />
+          <InfoRow label="هزینه (اجرت)" value={formatToman(request.labor_amount)} />
+          <InfoRow label="هزینهٔ قطعات" value={formatToman(request.parts_amount)} />
+          {request.technician_share !== undefined && (
+            <>
+              <Divider sx={{ my: 0.5 }} />
+              <InfoRow
+                label="سهم تعمیرکار"
+                value={
+                  <Typography component="span" fontWeight={800} color="success.main">
+                    {formatToman(request.technician_share)}
+                  </Typography>
+                }
+              />
+            </>
+          )}
+          {request.cost_description && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1, whiteSpace: "pre-wrap" }}>
+              {request.cost_description}
+            </Typography>
+          )}
+          {request.paid_at && (
+            <>
+              <Divider sx={{ my: 1 }} />
+              <InfoRow label="روش پرداخت" value={request.payment_method_label || "—"} />
+              <InfoRow label="زمان پرداخت" value={formatFaDate(request.paid_at)} />
+            </>
+          )}
+        </Stack>
+      </Section>
+    );
+  }
+
   return (
     <Section title="هزینه">
       <Stack>

@@ -8,6 +8,7 @@ import MapIcon from "@mui/icons-material/Map";
 import { toast } from "react-toastify";
 import { isRepairError, repairApi, type RepairRequest } from "@/app/lib/repair/api";
 import CostForm, { type CostFormValues } from "../../../CostForm";
+import { CustomerReview } from "../../../Rating";
 import { CostBreakdown, RequestInfo } from "../../../RequestDetails";
 import { Loader, useRequireRole } from "../../../ui";
 
@@ -54,7 +55,7 @@ export default function TechnicianJobPage() {
 
   return (
     <Stack spacing={2}>
-      <RequestInfo request={request} showCustomer />
+      <RequestInfo request={request} showCustomer showRouting />
       <Stack direction="row" spacing={1}>
         <Button fullWidth variant="outlined" startIcon={<PhoneIcon />} href={`tel:${request.contact_phone}`}>
           تماس با مشتری
@@ -78,7 +79,8 @@ export default function TechnicianJobPage() {
         </Button>
       )}
 
-      <CostBreakdown request={request} showShares />
+      <CostBreakdown request={request} forTechnician />
+      <CustomerReview request={request} />
 
       {canEditCost && <CostForm request={request} busy={busy} onSubmit={(v) => void saveCost(v)} />}
       {request.status === "invoiced" && <Alert severity="info">هزینه برای مشتری ارسال شده و منتظر پرداخت است.</Alert>}

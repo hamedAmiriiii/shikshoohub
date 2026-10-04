@@ -50,8 +50,19 @@ export type RepairRequest = {
   receipt_url: string | null;
   receipt_submitted_at: string | null;
   receipt_reject_reason: string | null;
-  technician: { id: number; name: string | null; phone: string; specialty: string | null } | null;
+  technician: {
+    id: number;
+    name: string | null;
+    phone: string;
+    specialty: string | null;
+    rating_avg?: number | null;
+    rating_count?: number;
+  } | null;
   customer?: { id: number; name: string | null; phone: string } | null;
+  rating?: number | null;
+  review?: string | null;
+  rated_at?: string | null;
+  can_rate?: boolean;
   share_percent?: number;
   technician_share?: number;
   platform_share?: number;
@@ -104,6 +115,8 @@ export type RepairTechnician = {
   phone: string;
   specialty: string | null;
   labor_share_percent: number;
+  rating_avg?: number | null;
+  rating_count?: number;
   card_number: string | null;
   address?: string | null;
   notes: string | null;
@@ -350,8 +363,16 @@ export const repairApi = {
   techStart: (id: number) => repairFetch<{ message: string; request: RepairRequest }>("POST", `/tech/requests/${id}/start`),
   techSetCost: (id: number, body: { labor_amount: number; parts_amount: number; cost_description?: string }) =>
     repairFetch<{ message: string; request: RepairRequest }>("PUT", `/tech/requests/${id}/cost`, { body }),
+  rateRequest: (id: number, body: { rating: number; review?: string }) =>
+    repairFetch<{ message: string; request: RepairRequest }>("POST", `/requests/${id}/rate`, { body }),
   techWallet: () =>
-    repairFetch<{ summary: RepairWalletSummary; share_percent: number; payouts: RepairPayout[] }>("GET", "/tech/wallet"),
+    repairFetch<{
+      summary: RepairWalletSummary;
+      share_percent: number;
+      rating_avg?: number | null;
+      rating_count?: number;
+      payouts: RepairPayout[];
+    }>("GET", "/tech/wallet"),
 
   adminDashboard: () => repairFetch<RepairDashboard>("GET", "/admin/dashboard"),
   adminRequests: (params: { status?: string; technician_id?: number | string; q?: string; page?: number }) =>

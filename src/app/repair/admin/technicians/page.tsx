@@ -33,6 +33,7 @@ import {
 } from "@/app/lib/repair/api";
 import { EmptyState, Loader, Section, useRequireRole } from "../../ui";
 import { AppQrButton } from "../AppQr";
+import { RatingBadge } from "../../Rating";
 
 type FormState = {
   id?: number;
@@ -292,6 +293,7 @@ export default function RepairTechniciansPage() {
               </Stack>
             )}
             <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: "wrap", rowGap: 1 }}>
+              <Chip size="small" variant="outlined" label={<RatingBadge avg={t.rating_avg} count={t.rating_count} />} />
               <Chip size="small" variant="outlined" label={`سهم اجرت: ${t.labor_share_percent}٪`} />
               <Chip
                 size="small"

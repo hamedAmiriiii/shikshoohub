@@ -2,8 +2,20 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { Alert, Button, Divider, IconButton, Stack, TextField, Tooltip, Typography } from "@mui/material";
+import {
+  Alert,
+  Button,
+  IconButton,
+  Stack,
+  TextField,
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip,
+  Typography,
+} from "@mui/material";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import CreditCardIcon from "@mui/icons-material/CreditCard";
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import { toast } from "react-toastify";
 import {
   formatToman,
@@ -13,8 +25,11 @@ import {
   type RepairPaymentOptions,
   type RepairRequest,
 } from "@/app/lib/repair/api";
+import { RatingDialog, RatingStars } from "../../Rating";
 import { CostBreakdown, RequestInfo } from "../../RequestDetails";
 import { Loader, Section, useRequireRole } from "../../ui";
+
+type PayMethod = "online" | "card";
 
 export default function MyRepairRequestPage() {
   const { id } = useParams<{ id: string }>();
@@ -25,6 +40,18 @@ export default function MyRepairRequestPage() {
   const [busy, setBusy] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [paymentRef, setPaymentRef] = useState("");
+  const [ratingOpen, setRatingOpen] = useState(false);
+  const [method, setMethod] = useState<PayMethod>("online");
+  const dismissKey = `repair_rate_later_${id}`;
+
+  useEffect(() => {
+    if (request?.can_rate && !window.sessionStorage.getItem(dismissKey)) setRatingOpen(true);
+  }, [request?.can_rate, dismissKey]);
+
+  const closeRating = () => {
+    window.sessionStorage.setItem(dismissKey, "1");
+    setRatingOpen(false);
+  };
 
   const load = useCallback(async () => {
     const res = await repairApi.myRequest(id);
@@ -34,6 +61,7 @@ export default function MyRepairRequestPage() {
     }
     setRequest(res.request);
     setPayment(res.payment);
+    if (!res.payment.online_enabled && res.payment.card_enabled) setMethod("card");
   }, [id]);
 
   useEffect(() => {
@@ -110,13 +138,35 @@ export default function MyRepairRequestPage() {
         <Section title={`پرداخت ${formatToman(request.total_amount)}`}>
           <Stack spacing={2}>
             {request.receipt_reject_reason && <Alert severity="warning">رسید قبلی تأیید نشد: {request.receipt_reject_reason}</Alert>}
-            {payment.online_enabled && (
-              <Button variant="contained" size="large" onClick={() => void payOnline()} disabled={busy}>
-                پرداخت آنلاین
-              </Button>
+            {payment.online_enabled && payment.card_enabled && (
+              <ToggleButtonGroup
+                exclusive
+                fullWidth
+                color="primary"
+                value={method}
+                onChange={(_, value: PayMethod | null) => value && setMethod(value)}
+              >
+                <ToggleButton value="online" sx={{ gap: 1, py: 1.25, fontWeight: 700 }}>
+                  <CreditCardIcon fontSize="small" />
+                  پرداخت آنلاین
+                </ToggleButton>
+                <ToggleButton value="card" sx={{ gap: 1, py: 1.25, fontWeight: 700 }}>
+                  <ReceiptLongIcon fontSize="small" />
+                  کارت به کارت
+                </ToggleButton>
+              </ToggleButtonGroup>
             )}
-            {payment.online_enabled && payment.card_enabled && <Divider>یا</Divider>}
-            {payment.card_enabled && (
+            {method === "online" && payment.online_enabled && (
+              <Stack spacing={1.5}>
+                <Typography variant="body2" color="text.secondary">
+                  با زدن دکمهٔ زیر به درگاه بانکی منتقل می‌شوید و پس از پرداخت به همین صفحه برمی‌گردید.
+                </Typography>
+                <Button variant="contained" size="large" onClick={() => void payOnline()} disabled={busy}>
+                  پرداخت آنلاین {formatToman(request.total_amount)}
+                </Button>
+              </Stack>
+            )}
+            {method === "card" && payment.card_enabled && (
               <Stack spacing={1.5}>
                 <Typography variant="body2">مبلغ را به کارت زیر واریز کنید و تصویر رسید را بفرستید:</Typography>
                 <Stack direction="row" alignItems="center" spacing={1} sx={{ bgcolor: "action.hover", p: 1.5, borderRadius: 2 }}>
@@ -160,7 +210,43 @@ export default function MyRepairRequestPage() {
       {request.status === "payment_review" && (
         <Alert severity="info">رسید پرداخت شما ثبت شد و در حال بررسی است.</Alert>
       )}
-      {request.status === "completed" && <Alert severity="success">کار انجام و پرداخت ثبت شد. سپاس از اعتماد شما.</Alert>}
+      {request.status === "completed" && (
+        <Alert
+          severity="success"
+          action={
+            request.can_rate ? (
+              <Button color="inherit" size="small" onClick={() => setRatingOpen(true)}>
+                ثبت امتیاز
+              </Button>
+            ) : undefined
+          }
+        >
+          کار انجام و پرداخت ثبت شد. سپاس از اعتماد شما.
+        </Alert>
+      )}
+      {request.rating ? (
+        <Section title="امتیاز شما">
+          <Stack spacing={1}>
+            <RatingStars value={request.rating} />
+            {request.review && (
+              <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: "pre-wrap" }}>
+                {request.review}
+              </Typography>
+            )}
+          </Stack>
+        </Section>
+      ) : null}
+      {request.can_rate && (
+        <RatingDialog
+          request={request}
+          open={ratingOpen}
+          onClose={closeRating}
+          onRated={(updated) => {
+            setRequest(updated);
+            setRatingOpen(false);
+          }}
+        />
+      )}
 
       {(request.status === "pending" || request.status === "assigned") && (
         <Button color="error" onClick={() => void cancel()} disabled={busy}>
