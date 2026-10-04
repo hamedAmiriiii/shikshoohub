@@ -9,6 +9,7 @@ import queryClient from "./lib/queryClient";
 import ServiceWorkerRegistration from "./components/ServiceWorkerRegistration";
 import PWAHead from "./components/PWAHead";
 import AppShell from "./AppShell";
+import RepairHostRedirect from "./components/RepairHostRedirect";
 import { LEGACY_BROWSER_BOOTSTRAP } from "./legacyBrowserBootstrap";
 import {
   APP_ICONS,
@@ -112,6 +113,7 @@ export default function RootLayout({
       >
         <script dangerouslySetInnerHTML={{ __html: LEGACY_BROWSER_BOOTSTRAP }} />
         <PWAHead />
+        <RepairHostRedirect />
         <QueryClientProvider client={queryClient}>
         {/* <AuthProvider > */}
         <LanguageProvider>

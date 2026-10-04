@@ -1,28 +1,26 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { isRepairHostname, repairPathFor } from "./app/lib/repairHosts";
 
-const REPAIR_HOSTS = (process.env.NEXT_PUBLIC_REPAIR_HOSTS || "")
-  .split(",")
-  .map((host) => host.trim().toLowerCase())
-  .filter(Boolean);
-
-function requestHost(request: NextRequest) {
-  const raw = request.headers.get("x-forwarded-host") || request.headers.get("host") || "";
-  return raw.split(",")[0].trim().toLowerCase().replace(/:\d+$/, "");
+function requestHosts(request: NextRequest) {
+  return [request.headers.get("x-forwarded-host"), request.headers.get("host")]
+    .filter((value): value is string => Boolean(value))
+    .join(",");
 }
 
 /**
  * فقط pathname را برای metadata می‌فرستد.
  * هیچ redirectای از / به /admin نگذار — لندینگ باید روی آدرس اصلی بماند.
- * روی دامنهٔ سامانهٔ تعمیرکار (NEXT_PUBLIC_REPAIR_HOSTS) همهٔ مسیرها زیر /repair می‌روند.
+ * روی دامنهٔ تعمیرات (مثل omidtamir.ir) همهٔ مسیرها زیر /repair می‌روند.
  */
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (REPAIR_HOSTS.length > 0 && REPAIR_HOSTS.includes(requestHost(request))) {
-    if (pathname !== "/repair" && !pathname.startsWith("/repair/")) {
+  if (isRepairHostname(requestHosts(request))) {
+    const nextPath = repairPathFor(pathname);
+    if (nextPath) {
       const url = request.nextUrl.clone();
-      url.pathname = pathname === "/" ? "/repair" : `/repair${pathname}`;
+      url.pathname = nextPath;
       return NextResponse.redirect(url);
     }
   }
