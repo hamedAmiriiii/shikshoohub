@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Avatar, Button, Stack, TextField, Typography } from "@mui/material";
+import { Alert, Avatar, Button, Stack, TextField, Typography } from "@mui/material";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { toast } from "react-toastify";
-import { isRepairError, repairApi, toLatinDigits, type RepairRole } from "@/app/lib/repair/api";
+import { isRepairError, repairApi, type RepairRole } from "@/app/lib/repair/api";
 import { useRepairAuth } from "./RepairAuth";
+import { BankFields, SelfieInput, bankFieldsError, cardDigits, shebaDigits } from "./TechIdentity";
 import { Loader, Section, useRequireRole } from "./ui";
 
 export default function ProfileForm({ role }: { role: Extract<RepairRole, "customer" | "technician"> }) {
@@ -14,8 +15,9 @@ export default function ProfileForm({ role }: { role: Extract<RepairRole, "custo
   const { allowed, user } = useRequireRole([role]);
   const { setUser, logout } = useRepairAuth();
   const isTech = role === "technician";
-  const [form, setForm] = useState({ name: "", address: "", specialty: "", card_number: "" });
+  const [form, setForm] = useState({ name: "", address: "", specialty: "", card_number: "", sheba: "" });
   const [busy, setBusy] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -23,7 +25,8 @@ export default function ProfileForm({ role }: { role: Extract<RepairRole, "custo
       name: user.name || "",
       address: user.address || "",
       specialty: user.specialty || "",
-      card_number: user.card_number || "",
+      card_number: cardDigits(user.card_number || ""),
+      sheba: shebaDigits(user.sheba || ""),
     });
   }, [user]);
 
@@ -37,6 +40,11 @@ export default function ProfileForm({ role }: { role: Extract<RepairRole, "custo
       toast.error("نام را وارد کنید.");
       return;
     }
+    const bankError = isTech ? bankFieldsError(form.card_number, form.sheba) : null;
+    if (bankError) {
+      toast.error(bankError);
+      return;
+    }
     setBusy(true);
     const res = await repairApi.updateProfile({
       name: form.name.trim(),
@@ -44,7 +52,8 @@ export default function ProfileForm({ role }: { role: Extract<RepairRole, "custo
       ...(isTech
         ? {
             specialty: form.specialty.trim() || null,
-            card_number: toLatinDigits(form.card_number).replace(/[^\d-]/g, "") || null,
+            card_number: cardDigits(form.card_number) || null,
+            sheba: shebaDigits(form.sheba) || null,
           }
         : {}),
     });
@@ -57,6 +66,18 @@ export default function ProfileForm({ role }: { role: Extract<RepairRole, "custo
     toast.success("پروفایل ذخیره شد.");
   };
 
+  const savePhoto = async (dataUrl: string) => {
+    setPhotoBusy(true);
+    const res = await repairApi.updatePhoto(dataUrl);
+    setPhotoBusy(false);
+    if (isRepairError(res)) {
+      toast.error(res.message);
+      return;
+    }
+    setUser(res.user);
+    toast.success(res.message);
+  };
+
   const handleLogout = async () => {
     await logout();
     router.replace(isTech ? "/repair/tech/login" : "/repair");
@@ -65,7 +86,9 @@ export default function ProfileForm({ role }: { role: Extract<RepairRole, "custo
   return (
     <Stack spacing={2}>
       <Stack direction="row" spacing={1.5} alignItems="center">
-        <Avatar sx={{ bgcolor: "primary.main", width: 52, height: 52 }}>{(user.name || "؟").trim().charAt(0)}</Avatar>
+        <Avatar src={user.photo_url || undefined} sx={{ bgcolor: "primary.main", width: 52, height: 52 }}>
+          {(user.name || "؟").trim().charAt(0)}
+        </Avatar>
         <div>
           <Typography fontWeight={800}>{user.name || "کاربر"}</Typography>
           <Typography variant="body2" color="text.secondary" dir="ltr" sx={{ textAlign: "right" }}>
@@ -73,6 +96,17 @@ export default function ProfileForm({ role }: { role: Extract<RepairRole, "custo
           </Typography>
         </div>
       </Stack>
+
+      {isTech && (
+        <Section title="عکس سلفی">
+          {!user.photo_url && (
+            <Alert severity="warning" sx={{ mb: 1 }}>
+              برای امنیت مشتریان، عکس سلفی خود را ثبت کنید. این عکس هنگام ارجاع کار به مشتری نمایش داده می‌شود.
+            </Alert>
+          )}
+          <SelfieInput value={user.photo_url || null} onChange={(dataUrl) => void savePhoto(dataUrl)} required busy={photoBusy} />
+        </Section>
+      )}
 
       <Section title="اطلاعات حساب">
         <Stack spacing={2}>
@@ -97,13 +131,16 @@ export default function ProfileForm({ role }: { role: Extract<RepairRole, "custo
             minRows={2}
           />
           {isTech && (
-            <TextField
-              label="شماره کارت یا شبا برای تسویه"
-              value={form.card_number}
-              onChange={set("card_number")}
-              fullWidth
-              slotProps={{ htmlInput: { dir: "ltr" } }}
-            />
+            <>
+              <Typography variant="body2" fontWeight={700}>
+                اطلاعات حساب برای تسویه
+              </Typography>
+              <BankFields
+                card={form.card_number}
+                sheba={form.sheba}
+                onChange={({ card, sheba }) => setForm((f) => ({ ...f, card_number: card, sheba }))}
+              />
+            </>
           )}
           <Button variant="contained" size="large" onClick={() => void save()} disabled={busy}>
             ذخیره

@@ -20,6 +20,7 @@ import { toast } from "react-toastify";
 import { isRepairError, repairApi, toLatinDigits, type RepairServiceOption } from "@/app/lib/repair/api";
 import { useRepairAuth } from "../../RepairAuth";
 import { RepairInstallBanner } from "../../RepairInstall";
+import { BankFields, SelfieInput, bankFieldsError, cardDigits, shebaDigits } from "../../TechIdentity";
 
 type Step = "phone" | "code" | "register" | "pending" | "rejected";
 
@@ -35,7 +36,15 @@ function TechLoginForm() {
   const [statusMessage, setStatusMessage] = useState("");
   const [registrationToken, setRegistrationToken] = useState("");
   const [services, setServices] = useState<RepairServiceOption[]>([]);
-  const [form, setForm] = useState({ name: "", specialty: "", card_number: "", address: "", service_ids: [] as number[] });
+  const [form, setForm] = useState({
+    name: "",
+    specialty: "",
+    card_number: "",
+    sheba: "",
+    address: "",
+    service_ids: [] as number[],
+  });
+  const [photo, setPhoto] = useState<string | null>(null);
 
   const next = params.get("next");
   const target = next && next.startsWith("/repair/tech") && !next.startsWith("/repair/tech/login") ? next : "/repair/tech";
@@ -103,8 +112,17 @@ function TechLoginForm() {
       toast.error("نام و نام خانوادگی را وارد کنید.");
       return;
     }
+    if (!photo) {
+      toast.error("عکس سلفی خود را بگیرید.");
+      return;
+    }
     if (services.length > 0 && form.service_ids.length === 0) {
       toast.error("حداقل یک نوع خدمت را انتخاب کنید.");
+      return;
+    }
+    const bankError = bankFieldsError(form.card_number, form.sheba);
+    if (bankError) {
+      toast.error(bankError);
       return;
     }
     setBusy(true);
@@ -113,7 +131,9 @@ function TechLoginForm() {
       name: form.name.trim(),
       specialty: form.specialty.trim() || undefined,
       service_ids: form.service_ids,
-      card_number: toLatinDigits(form.card_number).replace(/[^\d-]/g, "") || undefined,
+      card_number: cardDigits(form.card_number) || undefined,
+      sheba: shebaDigits(form.sheba) || undefined,
+      photo,
       address: form.address.trim() || undefined,
     });
     setBusy(false);
@@ -196,6 +216,7 @@ function TechLoginForm() {
         {step === "register" && (
           <Stack spacing={2} component="form" onSubmit={(e) => { e.preventDefault(); void register(); }}>
             <Alert severity="info">این شماره هنوز ثبت‌نام نشده است. فرم زیر را کامل کنید تا مدیر بررسی و تأیید کند.</Alert>
+            <SelfieInput value={photo} onChange={setPhoto} required busy={busy} />
             <TextField
               label="نام و نام خانوادگی"
               value={form.name}
@@ -236,12 +257,14 @@ function TechLoginForm() {
               multiline
               minRows={2}
             />
-            <TextField
-              label="شماره کارت یا شبا برای تسویه (اختیاری)"
-              value={form.card_number}
-              onChange={(e) => setForm({ ...form, card_number: e.target.value })}
-              fullWidth
-              slotProps={{ htmlInput: { dir: "ltr" } }}
+            <Typography variant="body2" fontWeight={700}>
+              اطلاعات حساب برای تسویه
+            </Typography>
+            <BankFields
+              card={form.card_number}
+              sheba={form.sheba}
+              onChange={({ card, sheba }) => setForm({ ...form, card_number: card, sheba })}
+              optional
             />
             <Button type="submit" variant="contained" size="large" disabled={busy}>
               ثبت‌نام

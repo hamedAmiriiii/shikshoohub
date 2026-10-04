@@ -103,7 +103,8 @@ export function useRequireRole(roles: RepairRole[]) {
   useEffect(() => {
     if (!ready) return;
     if (!user) {
-      router.replace(`${repairLoginPathFor(pathname)}?next=${encodeURIComponent(pathname || "/repair")}`);
+      const next = `${pathname || "/repair"}${window.location.search}`;
+      router.replace(`${repairLoginPathFor(pathname)}?next=${encodeURIComponent(next)}`);
     } else if (!rolesKey.split(",").includes(user.role)) {
       router.replace(repairHomeFor(user.role));
     }

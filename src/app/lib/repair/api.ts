@@ -15,6 +15,8 @@ export type RepairSessionUser = {
   specialty?: string | null;
   address?: string | null;
   card_number?: string | null;
+  sheba?: string | null;
+  photo_url?: string | null;
 };
 
 export type RepairStatus =
@@ -57,6 +59,7 @@ export type RepairRequest = {
     specialty: string | null;
     rating_avg?: number | null;
     rating_count?: number;
+    photo_url?: string | null;
   } | null;
   customer?: { id: number; name: string | null; phone: string } | null;
   rating?: number | null;
@@ -118,6 +121,8 @@ export type RepairTechnician = {
   rating_avg?: number | null;
   rating_count?: number;
   card_number: string | null;
+  sheba?: string | null;
+  photo_url?: string | null;
   address?: string | null;
   notes: string | null;
   is_active: boolean;
@@ -137,6 +142,7 @@ export type RepairTechnicianInput = {
   specialty?: string | null;
   labor_share_percent?: number;
   card_number?: string | null;
+  sheba?: string | null;
   notes?: string | null;
   is_active?: boolean;
   service_ids?: number[];
@@ -196,6 +202,53 @@ export type RepairDashboard = {
   month: { jobs: number; revenue: number; platform_share: number; technician_share: number };
   technicians_balance: number;
   pending_technicians?: number;
+  sms_balance?: number | null;
+};
+
+export type RepairSmsLog = {
+  id: number;
+  phone: string;
+  message: string;
+  sms_type: string;
+  sms_type_label: string;
+  sms_parts: number;
+  delivery_status: string;
+  delivery_status_label: string;
+  can_refresh: boolean;
+  created_at: string | null;
+  status_checked_at: string | null;
+};
+
+export type RepairSmsPackage = {
+  id: number;
+  name: string;
+  sms_count: number;
+  price_rial: number;
+  price_toman: number | null;
+};
+
+export type RepairSmsSummary = {
+  enabled: boolean;
+  balance: number;
+  chars_per_sms: number;
+  sent_today: number;
+  used_this_month: number;
+  packages: RepairSmsPackage[];
+  gateways: { id: string; name: string }[];
+  default_gateway: string;
+  types: { id: string; label: string }[];
+};
+
+export type RepairSmsOrder = {
+  id: number;
+  name: string;
+  sms_count: number;
+  amount_toman: number;
+  status: "paid" | "failed";
+  gateway: string;
+  ref_id: string | null;
+  created_at: string | null;
+  paid_at: string | null;
 };
 
 export type RepairTechVerifyResult =
@@ -325,11 +378,20 @@ export const repairApi = {
     specialty?: string;
     service_ids: number[];
     card_number?: string;
+    sheba?: string;
+    photo: string;
     address?: string;
   }) => repairFetch<{ status: string; message: string }>("POST", "/tech-auth/register", { auth: false, body }),
   me: () => repairFetch<{ user: RepairSessionUser }>("GET", "/me"),
-  updateProfile: (body: { name?: string; address?: string | null; specialty?: string | null; card_number?: string | null }) =>
-    repairFetch<{ user: RepairSessionUser }>("PATCH", "/me", { body }),
+  updateProfile: (body: {
+    name?: string;
+    address?: string | null;
+    specialty?: string | null;
+    card_number?: string | null;
+    sheba?: string | null;
+  }) => repairFetch<{ user: RepairSessionUser }>("PATCH", "/me", { body }),
+  updatePhoto: (photo: string) =>
+    repairFetch<{ message: string; user: RepairSessionUser }>("POST", "/me/photo", { body: { photo } }),
   logout: () => repairFetch<{ message: string }>("POST", "/logout"),
   reverseGeocode: (point: LatLng) =>
     repairFetch<{ address: string | null }>("GET", "/geo/reverse", { params: { lat: point.lat, lng: point.lng } }),
@@ -410,6 +472,10 @@ export const repairApi = {
     repairFetch<{ message: string; technician: RepairTechnician }>("POST", "/admin/technicians", { body }),
   adminUpdateTechnician: (id: number, body: RepairTechnicianInput) =>
     repairFetch<{ message: string; technician: RepairTechnician }>("PATCH", `/admin/technicians/${id}`, { body }),
+  adminTechnicianPhoto: (id: number, photo: string) =>
+    repairFetch<{ message: string; technician: RepairTechnician }>("POST", `/admin/technicians/${id}/photo`, {
+      body: { photo },
+    }),
   adminApproveTechnician: (id: number, body: { labor_share_percent?: number; service_ids?: number[] }) =>
     repairFetch<{ message: string; technician: RepairTechnician }>("POST", `/admin/technicians/${id}/approve`, { body }),
   adminRejectTechnician: (id: number, reason?: string) =>
@@ -431,6 +497,18 @@ export const repairApi = {
   adminSettings: () => repairFetch<{ settings: RepairSettings }>("GET", "/admin/settings"),
   adminSaveSettings: (body: Record<string, string | boolean>) =>
     repairFetch<{ message: string; settings: RepairSettings }>("PUT", "/admin/settings", { body }),
+  adminSmsSummary: () => repairFetch<RepairSmsSummary>("GET", "/admin/sms/summary"),
+  adminSmsLogs: (params: { type?: string; status?: string; q?: string; page?: number }) =>
+    repairFetch<{ logs: RepairSmsLog[]; meta: { current_page: number; last_page: number; total: number } }>(
+      "GET",
+      "/admin/sms/logs",
+      { params },
+    ),
+  adminSmsRefreshStatus: (id: number) => repairFetch<{ log: RepairSmsLog }>("POST", `/admin/sms/logs/${id}/refresh-status`),
+  adminSmsRefreshPending: () => repairFetch<{ message: string; updated: number }>("POST", "/admin/sms/logs/refresh-pending"),
+  adminSmsOrders: () => repairFetch<{ orders: RepairSmsOrder[] }>("GET", "/admin/sms/orders"),
+  adminSmsPurchase: (body: { package_id: number; gateway?: string; return_url: string }) =>
+    repairFetch<{ payment_url: string; authority?: string }>("POST", "/admin/sms/purchase", { body }),
 };
 
 const faNumber = new Intl.NumberFormat("fa-IR");

@@ -51,6 +51,7 @@ const NAV: Record<RepairRole, NavItem[]> = {
     { href: "/repair/admin/technicians", label: "تعمیرکاران" },
     { href: "/repair/admin/services", label: "نوع خدمات" },
     { href: "/repair/admin/payouts", label: "سهم و تسویه" },
+    { href: "/repair/admin/sms", label: "پیامک‌ها" },
     { href: "/repair/admin/settings", label: "تنظیمات" },
   ],
 };

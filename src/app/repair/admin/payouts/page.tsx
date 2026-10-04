@@ -33,7 +33,15 @@ import {
 } from "@/app/lib/repair/api";
 import { EmptyState, Loader, MoneyField, Section, useRequireRole } from "../../ui";
 
-type PayoutForm = { technicianId: number; name: string; amount: number; method: string; note: string; cardNumber: string | null };
+type PayoutForm = {
+  technicianId: number;
+  name: string;
+  amount: number;
+  method: string;
+  note: string;
+  cardNumber: string | null;
+  sheba: string | null;
+};
 
 function PayoutsContent() {
   const { allowed } = useRequireRole(["admin"]);
@@ -138,6 +146,7 @@ function PayoutsContent() {
                             method: "کارت به کارت",
                             note: "",
                             cardNumber: r.technician.card_number,
+                            sheba: r.technician.sheba ?? null,
                           })
                         }
                       >
@@ -185,7 +194,17 @@ function PayoutsContent() {
             <Stack spacing={2} sx={{ mt: 1 }}>
               {form.cardNumber && (
                 <Typography variant="body2">
-                  کارت/شبا: <b dir="ltr">{form.cardNumber}</b>
+                  شماره کارت: <b dir="ltr">{form.cardNumber.replace(/(\d{4})(?=\d)/g, "$1-")}</b>
+                </Typography>
+              )}
+              {form.sheba && (
+                <Typography variant="body2">
+                  شبا: <b dir="ltr">{form.sheba}</b>
+                </Typography>
+              )}
+              {!form.cardNumber && !form.sheba && (
+                <Typography variant="body2" color="warning.main">
+                  تعمیرکار شماره کارت یا شبا ثبت نکرده است.
                 </Typography>
               )}
               <MoneyField label="مبلغ پرداختی" value={form.amount} onChange={(amount) => setForm({ ...form, amount })} fullWidth size="small" />

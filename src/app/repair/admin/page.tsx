@@ -25,6 +25,9 @@ export default function RepairAdminDashboard() {
     { label: "دریافتی این ماه", value: formatToman(data.month.revenue) },
     { label: "سهم مجموعه (ماه)", value: formatToman(data.month.platform_share) },
     { label: "بدهی به تعمیرکاران", value: formatToman(data.technicians_balance), href: "/repair/admin/payouts" },
+    ...(typeof data.sms_balance === "number"
+      ? [{ label: "پیامک باقی‌مانده", value: formatFaNumber(data.sms_balance), href: "/repair/admin/sms" }]
+      : []),
   ];
 
   return (
@@ -41,9 +44,23 @@ export default function RepairAdminDashboard() {
           {formatFaNumber(data.pending_technicians)} تعمیرکار ثبت‌نام کرده و منتظر تأیید است.
         </Alert>
       )}
+      {typeof data.sms_balance === "number" && data.sms_balance < 50 && (
+        <Alert
+          severity={data.sms_balance === 0 ? "error" : "warning"}
+          action={
+            <Button component={Link} href="/repair/admin/sms?tab=charge" color="inherit" size="small">
+              شارژ
+            </Button>
+          }
+        >
+          {data.sms_balance === 0
+            ? "اعتبار پیامک تمام شده و پیامک‌های اطلاع‌رسانی ارسال نمی‌شوند."
+            : `فقط ${formatFaNumber(data.sms_balance)} پیامک باقی مانده است.`}
+        </Alert>
+      )}
       <Grid container spacing={1.5}>
         {monthCards.map((card) => (
-          <Grid key={card.label} size={{ xs: 6, sm: 3 }}>
+          <Grid key={card.label} size={{ xs: 6, sm: 4, md: 12 / monthCards.length }}>
             <Paper
               variant="outlined"
               component={card.href ? Link : "div"}

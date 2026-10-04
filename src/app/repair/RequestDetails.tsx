@@ -1,9 +1,13 @@
 "use client";
 
-import { Divider, Link as MuiLink, Stack, Step, StepLabel, Stepper, Typography } from "@mui/material";
+import { Box, Button, Divider, Link as MuiLink, Stack, Step, StepLabel, Stepper, Typography } from "@mui/material";
+import PhoneIcon from "@mui/icons-material/Phone";
+import VerifiedUserIcon from "@mui/icons-material/VerifiedUserOutlined";
 import { formatFaDate, formatToman, type RepairRequest } from "@/app/lib/repair/api";
 import { LocationView, mapSourceFrom } from "./NeshanMap";
+import { RatingBadge } from "./Rating";
 import { useRepairAuth } from "./RepairAuth";
+import { TechnicianPhoto } from "./TechIdentity";
 import { InfoRow, Section, StatusChip } from "./ui";
 
 const FLOW: { key: keyof RepairRequest; label: string }[] = [
@@ -91,26 +95,66 @@ export function RequestInfo({
         <InfoRow label="حساب مشتری" value={`${request.customer.name || "—"} (${request.customer.phone})`} />
       )}
       {request.preferred_time && <InfoRow label="زمان مراجعه" value={request.preferred_time} />}
-      <InfoRow
-        label="تعمیرکار"
-        value={
-          request.technician ? (
-            <>
-              {request.technician.name}
-              {request.technician.specialty ? ` (${request.technician.specialty})` : ""} —{" "}
-              <MuiLink href={`tel:${request.technician.phone}`} dir="ltr">
-                {request.technician.phone}
-              </MuiLink>
-            </>
-          ) : (
-            "هنوز ارجاع نشده"
-          )
-        }
-      />
+      {request.technician ? (
+        <TechnicianCard technician={request.technician} forCustomer={!showCustomer} />
+      ) : (
+        <InfoRow label="تعمیرکار" value="هنوز ارجاع نشده" />
+      )}
       <InfoRow label="تاریخ ثبت" value={formatFaDate(request.created_at)} />
       <Divider sx={{ my: 1.5 }} />
       <RequestTimeline request={request} />
     </Section>
+  );
+}
+
+function TechnicianCard({
+  technician,
+  forCustomer,
+}: {
+  technician: NonNullable<RepairRequest["technician"]>;
+  forCustomer: boolean;
+}) {
+  return (
+    <Box sx={{ my: 1, p: 1.5, borderRadius: 3, bgcolor: "action.hover" }}>
+      <Stack direction="row" spacing={1.5} alignItems="center">
+        <TechnicianPhoto name={technician.name} photoUrl={technician.photo_url} size={forCustomer ? 72 : 52} />
+        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+          <Typography variant="caption" color="text.secondary">
+            تعمیرکار
+          </Typography>
+          <Typography fontWeight={800} noWrap>
+            {technician.name || "—"}
+          </Typography>
+          {technician.specialty && (
+            <Typography variant="body2" color="text.secondary" noWrap>
+              {technician.specialty}
+            </Typography>
+          )}
+          {(technician.rating_count ?? 0) > 0 && (
+            <RatingBadge avg={technician.rating_avg ?? null} count={technician.rating_count ?? 0} />
+          )}
+        </Box>
+        <Button
+          href={`tel:${technician.phone}`}
+          variant="outlined"
+          size="small"
+          startIcon={<PhoneIcon />}
+          sx={{ flexShrink: 0, borderRadius: 3 }}
+        >
+          تماس
+        </Button>
+      </Stack>
+      {forCustomer && (
+        <Stack direction="row" spacing={1} alignItems="flex-start" sx={{ mt: 1.25, color: "success.dark" }}>
+          <VerifiedUserIcon fontSize="small" sx={{ mt: 0.25 }} />
+          <Typography variant="caption" sx={{ lineHeight: 1.9 }}>
+            {technician.photo_url
+              ? "برای امنیت شما: هنگام مراجعه، چهرهٔ تعمیرکار را با این عکس مقایسه کنید و در صورت مغایرت در را باز نکنید و با پشتیبانی تماس بگیرید."
+              : "برای امنیت شما: هنگام مراجعه، نام تعمیرکار را بپرسید و در صورت مغایرت با پشتیبانی تماس بگیرید."}
+          </Typography>
+        </Stack>
+      )}
+    </Box>
   );
 }
 

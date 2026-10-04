@@ -34,6 +34,7 @@ import {
 import { EmptyState, Loader, Section, useRequireRole } from "../../ui";
 import { AppQrButton } from "../AppQr";
 import { RatingBadge } from "../../Rating";
+import { BankFields, SelfieInput, TechnicianPhoto, bankFieldsError, cardDigits, shebaDigits } from "../../TechIdentity";
 
 type FormState = {
   id?: number;
@@ -42,6 +43,8 @@ type FormState = {
   specialty: string;
   labor_share_percent: string;
   card_number: string;
+  sheba: string;
+  photo_url?: string | null;
   notes: string;
   is_active: boolean;
   service_ids: number[];
@@ -55,6 +58,7 @@ const emptyForm = (share: number): FormState => ({
   specialty: "",
   labor_share_percent: String(share),
   card_number: "",
+  sheba: "",
   notes: "",
   is_active: true,
   service_ids: [],
@@ -140,7 +144,8 @@ export default function RepairTechniciansPage() {
       phone: toLatinDigits(form.phone).replace(/\D/g, ""),
       specialty: form.specialty.trim() || null,
       labor_share_percent: Number(toLatinDigits(form.labor_share_percent)) || 0,
-      card_number: toLatinDigits(form.card_number).replace(/[^\d-]/g, "") || null,
+      card_number: cardDigits(form.card_number) || null,
+      sheba: shebaDigits(form.sheba) || null,
       notes: form.notes.trim() || null,
       is_active: form.is_active,
       service_ids: form.service_ids,
@@ -149,12 +154,28 @@ export default function RepairTechniciansPage() {
       toast.error("نام و شماره موبایل معتبر را وارد کنید.");
       return;
     }
+    const bankError = bankFieldsError(form.card_number, form.sheba);
+    if (bankError) {
+      toast.error(bankError);
+      return;
+    }
     setBusy(true);
     const res = form.id ? await repairApi.adminUpdateTechnician(form.id, body) : await repairApi.adminCreateTechnician(body);
     setBusy(false);
     if (isRepairError(res)) return void toast.error(res.message);
     toast.success(res.message);
     setForm(null);
+    void load();
+  };
+
+  const uploadPhoto = async (dataUrl: string) => {
+    if (!form?.id) return;
+    setBusy(true);
+    const res = await repairApi.adminTechnicianPhoto(form.id, dataUrl);
+    setBusy(false);
+    if (isRepairError(res)) return void toast.error(res.message);
+    toast.success(res.message);
+    setForm((f) => (f ? { ...f, photo_url: res.technician.photo_url } : f));
     void load();
   };
 
@@ -190,7 +211,9 @@ export default function RepairTechniciansPage() {
       phone: t.phone,
       specialty: t.specialty || "",
       labor_share_percent: String(t.labor_share_percent),
-      card_number: t.card_number || "",
+      card_number: cardDigits(t.card_number || ""),
+      sheba: shebaDigits(t.sheba || ""),
+      photo_url: t.photo_url,
       notes: t.notes || "",
       is_active: t.is_active,
       service_ids: t.service_ids || [],
@@ -215,12 +238,16 @@ export default function RepairTechniciansPage() {
           <Stack spacing={1.5}>
             {pending.map((t) => (
               <Paper key={t.id} variant="outlined" sx={{ p: 1.5, borderRadius: 2, borderColor: "warning.main" }}>
-                <Typography fontWeight={700}>
-                  {t.name}{" "}
-                  <Typography component="span" variant="body2" color="text.secondary" dir="ltr">
-                    {t.phone}
-                  </Typography>
-                </Typography>
+                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 0.5 }}>
+                  <TechnicianPhoto name={t.name} photoUrl={t.photo_url} size={64} />
+                  <Box>
+                    <Typography fontWeight={700}>{t.name}</Typography>
+                    <Typography variant="body2" color="text.secondary" dir="ltr" sx={{ textAlign: "right" }}>
+                      {t.phone}
+                    </Typography>
+                    {!t.photo_url && <Chip size="small" color="warning" variant="outlined" label="بدون عکس سلفی" sx={{ mt: 0.5 }} />}
+                  </Box>
+                </Stack>
                 {t.specialty && <Typography variant="body2">تخصص: {t.specialty}</Typography>}
                 {t.address && (
                   <Typography variant="body2" color="text.secondary">
@@ -260,14 +287,17 @@ export default function RepairTechniciansPage() {
         others.map((t) => (
           <Paper key={t.id} variant="outlined" sx={{ p: 2, borderRadius: 3, opacity: t.is_active && t.approval_status === "approved" ? 1 : 0.6 }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <div>
-                <Typography fontWeight={700}>
-                  {t.name} {t.specialty ? <Typography component="span" color="text.secondary">({t.specialty})</Typography> : null}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" dir="ltr" sx={{ textAlign: "right" }}>
-                  {t.phone}
-                </Typography>
-              </div>
+              <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0 }}>
+                <TechnicianPhoto name={t.name} photoUrl={t.photo_url} size={48} />
+                <div>
+                  <Typography fontWeight={700}>
+                    {t.name} {t.specialty ? <Typography component="span" color="text.secondary">({t.specialty})</Typography> : null}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" dir="ltr" sx={{ textAlign: "right" }}>
+                    {t.phone}
+                  </Typography>
+                </div>
+              </Stack>
               <Stack direction="row" spacing={1} alignItems="center">
                 {t.approval_status === "rejected" && <Chip size="small" color="error" variant="outlined" label="ردشده" />}
                 {!t.is_active && <Chip size="small" label="غیرفعال" />}
@@ -321,6 +351,9 @@ export default function RepairTechniciansPage() {
         {form && (
           <DialogContent>
             <Stack spacing={2} sx={{ mt: 1 }}>
+              {form.id && (
+                <SelfieInput value={form.photo_url || null} onChange={(dataUrl) => void uploadPhoto(dataUrl)} busy={busy} />
+              )}
               <TextField label="نام و نام خانوادگی" value={form.name} onChange={set("name")} fullWidth size="small" />
               <TextField
                 label="شماره موبایل"
@@ -341,13 +374,11 @@ export default function RepairTechniciansPage() {
                 size="small"
                 inputMode="decimal"
               />
-              <TextField
-                label="شماره کارت / شبا برای تسویه"
-                value={form.card_number}
-                onChange={set("card_number")}
-                fullWidth
+              <BankFields
+                card={form.card_number}
+                sheba={form.sheba}
+                onChange={({ card, sheba }) => setForm({ ...form, card_number: card, sheba })}
                 size="small"
-                slotProps={{ htmlInput: { dir: "ltr" } }}
               />
               <TextField label="یادداشت" value={form.notes} onChange={set("notes")} fullWidth size="small" multiline minRows={2} />
               <FormControlLabel

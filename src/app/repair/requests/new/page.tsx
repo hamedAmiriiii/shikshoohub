@@ -41,6 +41,15 @@ export default function NewRepairRequestPage() {
     }));
   }, [user]);
 
+  useEffect(() => {
+    if (!config) return;
+    const preset = new URLSearchParams(window.location.search).get("service");
+    if (!preset) return;
+    const known = useServiceIds ? realServices.some((s) => String(s.id) === preset) : config.categories.includes(preset);
+    if (known) setForm((f) => (f.service_id ? f : { ...f, service_id: preset }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config]);
+
   if (!allowed) return <Loader />;
 
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
