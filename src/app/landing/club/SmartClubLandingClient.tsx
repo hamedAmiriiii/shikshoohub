@@ -399,21 +399,27 @@ function SectionHead({
   title,
   subtitle,
   align = "center",
+  hideSubtitleOnMobile = false,
 }: {
   eyebrow: string;
   title: ReactNode;
   subtitle?: ReactNode;
   align?: "center" | "start";
+  hideSubtitleOnMobile?: boolean;
 }) {
   const center = align === "center";
   return (
-    <motion.div {...fadeUp()} className={center ? "text-center max-w-3xl mx-auto mb-12" : "mb-8"}>
+    <motion.div {...fadeUp()} className={center ? "text-center max-w-3xl mx-auto mb-8 md:mb-12" : "mb-6 md:mb-8"}>
       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-fuchsia-400/20 bg-fuchsia-500/10 text-fuchsia-200 text-xs font-semibold">
         <Sparkles size={12} />
         {eyebrow}
       </span>
       <h2 className="mt-4 text-2xl md:text-4xl font-black leading-tight text-white">{title}</h2>
-      {subtitle ? <p className="mt-4 text-slate-400 leading-8 md:text-lg">{subtitle}</p> : null}
+      {subtitle ? (
+        <p className={`mt-4 text-slate-400 leading-8 md:text-lg ${hideSubtitleOnMobile ? "hidden md:block" : ""}`}>
+          {subtitle}
+        </p>
+      ) : null}
     </motion.div>
   );
 }
@@ -559,7 +565,7 @@ function ScenariosSection() {
   const s = SCENARIOS[active];
 
   return (
-    <section id="scenarios" className="py-20 md:py-28 border-y border-white/5 bg-white/[0.015]">
+    <section id="scenarios" className="py-12 md:py-28 border-y border-white/5 bg-white/[0.015]">
       <div className="max-w-6xl mx-auto px-4">
         <SectionHead eyebrow="سناریوهای واقعی" title="ببینید باشگاه مشتریان چطور فروش می‌سازد" />
 
@@ -592,7 +598,7 @@ function ScenariosSection() {
             })}
           </div>
 
-          <div className="relative rounded-3xl border border-white/10 bg-[#0f1424] p-6 md:p-8 overflow-hidden min-h-[420px]">
+          <div className="relative rounded-3xl border border-white/10 bg-[#0f1424] p-5 md:p-8 overflow-hidden md:min-h-[420px]">
             <div className="absolute -top-24 -left-24 w-72 h-72 bg-fuchsia-600/10 blur-3xl rounded-full" />
             <AnimatePresence mode="wait">
               <motion.div
@@ -611,7 +617,9 @@ function ScenariosSection() {
                   <h3 className="mt-4 text-xl md:text-2xl font-black text-white">{s.title}</h3>
                   <div className="mt-4 space-y-2.5 text-slate-300 leading-8">
                     {s.story.map((line, i) => (
-                      <p key={i}>{line}</p>
+                      <p key={i} className={i === 0 ? undefined : "hidden md:block"}>
+                        {line}
+                      </p>
                     ))}
                   </div>
 
@@ -623,7 +631,7 @@ function ScenariosSection() {
                     <div className="font-bold text-white">{s.suggestion}</div>
                   </div>
 
-                  {s.after ? <p className="mt-4 text-slate-400 leading-8">{s.after}</p> : null}
+                  {s.after ? <p className="mt-4 text-slate-400 leading-8 hidden md:block">{s.after}</p> : null}
                 </div>
 
                 <div className="flex flex-col gap-4">
@@ -648,7 +656,7 @@ function ScenariosSection() {
 function FaqSection() {
   const [open, setOpen] = useState<number | null>(0);
   return (
-    <section id="faq" className="py-20 md:py-24">
+    <section id="faq" className="py-12 md:py-24">
       <div className="max-w-3xl mx-auto px-4">
         <SectionHead eyebrow="سؤالات متداول" title="هر چیزی که قبل از شروع باید بدانید" />
         <div className="space-y-3">
@@ -703,7 +711,7 @@ export default function SmartClubLandingClient() {
   return (
     <LandingChrome onStartFree={scrollToForm} ctaLabel={CTA_LABEL} hideRegister loginLabel="ورود پنل">
       {/* HERO */}
-      <section className="relative overflow-hidden pt-12 pb-20 md:pt-20 md:pb-28">
+      <section className="relative overflow-hidden pt-10 pb-12 md:pt-20 md:pb-28">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(168,85,247,0.22),_transparent_55%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(6,182,212,0.12),_transparent_50%)]" />
         <div
@@ -739,11 +747,11 @@ export default function SmartClubLandingClient() {
               <b className="text-white">باشگاه مشتریان هوشمند، مستقیماً به نرم‌افزار فروش و حسابداری شما متصل است</b>{" "}
               و اطلاعات واقعی خرید مشتری‌ها را به فرصت‌های فروش تبدیل می‌کند.
             </p>
-            <p className="mt-4 text-slate-400 leading-8">
+            <p className="mt-4 text-slate-400 leading-8 hidden md:block">
               بفهمید چه کسی آماده خرید است، چه کسی در حال از دست رفتن است، چه کسی به VIP شدن نزدیک است و به هرکدام{" "}
               <b className="text-fuchsia-200">چه زمانی و با چه پیشنهادی</b> پیام بدهید.
             </p>
-            <p className="mt-5 text-lg font-bold text-white">از اطلاعات فروش خودتان، برای فروش بیشتر استفاده کنید.</p>
+            <p className="mt-5 text-lg font-bold text-white hidden md:block">از اطلاعات فروش خودتان، برای فروش بیشتر استفاده کنید.</p>
 
             <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
               <PrimaryButton onClick={scrollToForm}>{CTA_LABEL}</PrimaryButton>
@@ -767,7 +775,7 @@ export default function SmartClubLandingClient() {
       </section>
 
       {/* PROBLEM */}
-      <section className="py-20 md:py-28 border-t border-white/5">
+      <section className="py-12 md:py-28 border-t border-white/5">
         <div className="max-w-6xl mx-auto px-4">
           <SectionHead
             eyebrow="یک مشکل آشنا برای خیلی از کسب‌وکارها"
@@ -779,7 +787,9 @@ export default function SmartClubLandingClient() {
               <motion.div
                 key={q.text}
                 {...fadeUp(i * 0.05)}
-                className="group flex items-start gap-4 rounded-2xl border border-white/10 bg-white/[0.02] p-5 hover:border-white/20 hover:bg-white/[0.04] transition"
+                className={`group items-start gap-4 rounded-2xl border border-white/10 bg-white/[0.02] p-5 hover:border-white/20 hover:bg-white/[0.04] transition ${
+                  i >= 3 ? "hidden md:flex" : "flex"
+                }`}
               >
                 <span className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 group-hover:border-fuchsia-400/40 transition">
                   <q.icon size={20} className="text-fuchsia-300" />
@@ -800,7 +810,7 @@ export default function SmartClubLandingClient() {
               <p className="text-lg md:text-xl font-black text-white">
                 اگر جواب این سؤال‌ها را ندانید، بخشی از فرصت فروش شما از دست می‌رود.
               </p>
-              <p className="mt-2 text-slate-300 leading-8">
+              <p className="mt-2 text-slate-300 leading-8 hidden md:block">
                 باشگاه مشتریان هوشمند این اطلاعات را از{" "}
                 <Link href={SHOP_LANDING_URL} className="font-bold text-amber-200 underline decoration-amber-400/40 underline-offset-4 hover:text-white">
                   فروش‌های ثبت‌شده در نرم‌افزار فروش و حسابداری شما
@@ -813,7 +823,7 @@ export default function SmartClubLandingClient() {
       </section>
 
       {/* CORE ADVANTAGE */}
-      <section className="py-20 md:py-28 border-y border-white/5 bg-white/[0.015] relative overflow-hidden">
+      <section className="py-12 md:py-28 border-y border-white/5 bg-white/[0.015] relative overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[640px] h-[640px] bg-violet-700/10 blur-[120px] rounded-full" />
         <div className="max-w-6xl mx-auto px-4 relative">
           <SectionHead eyebrow="مزیت اصلی" title="اطلاعات فروش شما، تبدیل به موتور بازاریابی شما می‌شود." />
@@ -836,7 +846,7 @@ export default function SmartClubLandingClient() {
             ))}
           </div>
 
-          <motion.p {...fadeUp(0.1)} className="mt-10 text-center text-slate-300 leading-8 md:text-lg max-w-3xl mx-auto">
+          <motion.p {...fadeUp(0.1)} className="mt-10 text-center text-slate-300 leading-8 md:text-lg max-w-3xl mx-auto hidden md:block">
             باشگاه مشتریان هوشمند بر اساس <b className="text-white">رفتار واقعی خرید مشتری</b>، آن‌ها را تحلیل
             می‌کند و فرصت‌های فروش را به شما نشان می‌دهد.
           </motion.p>
@@ -871,14 +881,14 @@ export default function SmartClubLandingClient() {
       </section>
 
       {/* 4 JOBS */}
-      <section className="py-20 md:py-28">
+      <section className="py-12 md:py-28">
         <div className="max-w-6xl mx-auto px-4">
           <SectionHead eyebrow="چطور فروش را بالا می‌برد" title="۴ کاری که باشگاه برای افزایش فروش انجام می‌دهد" />
 
           <div className="grid md:grid-cols-2 gap-5">
             <motion.div {...fadeUp()} className="rounded-3xl border border-white/10 bg-white/[0.02] p-6 md:p-8 flex flex-col">
               <JobHead n="۱" icon={Crown} title="مشتری‌های ارزشمند را پیدا می‌کند" />
-              <p className="text-slate-400 leading-8">
+              <p className="text-slate-400 leading-8 hidden md:block">
                 با تحلیل تعداد خرید، مبلغ خرید و زمان آخرین خرید، مشتری‌ها به‌صورت خودکار دسته‌بندی می‌شوند.
               </p>
               <div className="mt-5 flex flex-wrap gap-2">
@@ -888,13 +898,13 @@ export default function SmartClubLandingClient() {
                   </span>
                 ))}
               </div>
-              <p className="mt-5 text-slate-400 leading-8">دیگر لازم نیست صدها مشتری را یکی‌یکی بررسی کنید.</p>
+              <p className="mt-5 text-slate-400 leading-8 hidden md:block">دیگر لازم نیست صدها مشتری را یکی‌یکی بررسی کنید.</p>
               <p className="mt-auto pt-3 font-bold text-white">سیستم به شما می‌گوید روی چه کسی تمرکز کنید.</p>
             </motion.div>
 
             <motion.div {...fadeUp(0.06)} className="rounded-3xl border border-white/10 bg-white/[0.02] p-6 md:p-8 flex flex-col">
               <JobHead n="۲" icon={BellRing} title="قبل از رفتن مشتری، به شما هشدار می‌دهد" />
-              <p className="text-slate-400 leading-8">
+              <p className="text-slate-400 leading-8 hidden md:block">
                 مشتری‌ای که قبلاً مرتب خرید می‌کرده اما حالا مدت زیادی است خرید نکرده، یک فرصت از دست‌رفته نیست؛{" "}
                 <b className="text-white">یک مشتری قابل بازگشت است.</b>
               </p>
@@ -914,7 +924,7 @@ export default function SmartClubLandingClient() {
                   <span>میانگین فاصله: ۳۰ روز</span>
                 </div>
               </div>
-              <p className="mt-5 text-slate-400 leading-8">
+              <p className="mt-5 text-slate-400 leading-8 hidden md:block">
                 باشگاه مشتریان، مشتری‌های در معرض ریزش را شناسایی می‌کند تا قبل از اینکه کاملاً از دست بروند، برایشان
                 کمپین بازگشت اجرا کنید.
               </p>
@@ -925,7 +935,14 @@ export default function SmartClubLandingClient() {
               <p className="text-slate-400 leading-8">
                 اگر یک مشتری معمولاً هر ۳۰ روز خرید می‌کند، چرا روز ۶۰ام به او پیام بدهید؟
               </p>
-              <div className="mt-6 mb-2 px-2">
+              <ul className="mt-5 space-y-2 md:hidden">
+                <li className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-slate-300">خرید قبلی</li>
+                <li className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-sm font-bold text-emerald-300">
+                  روز ۳۰ — زمان پیام
+                </li>
+                <li className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-rose-300/80">روز ۶۰ — دیر است</li>
+              </ul>
+              <div className="mt-6 mb-2 px-2 hidden md:block">
                 <div className="relative h-1.5 rounded-full bg-gradient-to-l from-emerald-400 via-emerald-400/60 to-white/10">
                   {[
                     { pos: "right-0", label: "خرید قبلی", dot: "bg-slate-300", text: "text-slate-400" },
@@ -939,7 +956,7 @@ export default function SmartClubLandingClient() {
                   ))}
                 </div>
               </div>
-              <p className="mt-10 text-slate-400 leading-8">
+              <p className="mt-10 text-slate-400 leading-8 hidden md:block">
                 باشگاه با بررسی الگوی خرید مشتری، <b className="text-white">زمان احتمالی خرید مجدد</b> را تشخیص می‌دهد
                 و مشتری را درست زمانی هدف می‌گیرید که احتمال خرید دوباره‌اش بیشتر است.
               </p>
@@ -947,7 +964,7 @@ export default function SmartClubLandingClient() {
 
             <motion.div {...fadeUp(0.1)} className="rounded-3xl border border-white/10 bg-white/[0.02] p-6 md:p-8 flex flex-col">
               <JobHead n="۴" icon={BarChart3} title="نتیجه کمپین را اندازه می‌گیرد" />
-              <p className="text-slate-400 leading-8">
+              <p className="text-slate-400 leading-8 hidden md:block">
                 ارسال پیامک به‌تنهایی مهم نیست. <b className="text-white">فروش حاصل از پیامک مهم است.</b> بعد از کمپین
                 ببینید:
               </p>
@@ -973,7 +990,7 @@ export default function SmartClubLandingClient() {
 
           <motion.div
             {...fadeUp(0.1)}
-            className="mt-6 rounded-3xl border border-emerald-400/20 bg-gradient-to-l from-emerald-500/10 to-cyan-500/[0.04] p-6 text-center text-lg md:text-xl font-bold text-white leading-9"
+            className="mt-6 hidden md:block rounded-3xl border border-emerald-400/20 bg-gradient-to-l from-emerald-500/10 to-cyan-500/[0.04] p-6 text-center text-lg md:text-xl font-bold text-white leading-9"
           >
             اینجاست که تبلیغات از «هزینه» به یک{" "}
             <span className="text-emerald-300">سرمایه‌گذاری قابل اندازه‌گیری</span> تبدیل می‌شود.
@@ -982,7 +999,7 @@ export default function SmartClubLandingClient() {
       </section>
 
       {/* FEATURES */}
-      <section id="features" className="py-20 md:py-28 border-y border-white/5 bg-white/[0.015]">
+      <section id="features" className="py-12 md:py-28 border-y border-white/5 bg-white/[0.015]">
         <div className="max-w-6xl mx-auto px-4">
           <SectionHead eyebrow="امکانات" title="هر چیزی که برای یک باشگاه مشتریان حرفه‌ای لازم دارید" />
           <div className="columns-1 md:columns-2 lg:columns-3 gap-5">
@@ -996,11 +1013,16 @@ export default function SmartClubLandingClient() {
                   <f.icon size={22} className="text-white" />
                 </div>
                 <h3 className="text-lg font-black text-white">{f.title}</h3>
-                <p className="mt-2 text-sm text-slate-400 leading-7">{f.body}</p>
+                <p className="mt-2 text-sm text-slate-400 leading-7 hidden md:block">{f.body}</p>
                 {f.quotes ? (
                   <div className="mt-4 space-y-2">
-                    {f.quotes.map((q) => (
-                      <div key={q} className="rounded-xl border-r-2 border-fuchsia-400/60 bg-white/[0.04] px-3 py-2 text-sm text-slate-200">
+                    {f.quotes.map((q, qi) => (
+                      <div
+                        key={q}
+                        className={`rounded-xl border-r-2 border-fuchsia-400/60 bg-white/[0.04] px-3 py-2 text-sm text-slate-200 ${
+                          qi > 0 ? "hidden md:block" : ""
+                        }`}
+                      >
                         «{q}»
                       </div>
                     ))}
@@ -1015,7 +1037,7 @@ export default function SmartClubLandingClient() {
                     ))}
                   </div>
                 ) : null}
-                {f.footer ? <div className="mt-4 text-sm leading-7">{f.footer}</div> : null}
+                {f.footer ? <div className="mt-4 text-sm leading-7 hidden md:block">{f.footer}</div> : null}
               </motion.div>
             ))}
           </div>
@@ -1025,12 +1047,13 @@ export default function SmartClubLandingClient() {
       <ScenariosSection />
 
       {/* INTEGRATION FLOW */}
-      <section className="py-20 md:py-28 relative overflow-hidden">
+      <section className="py-12 md:py-28 relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(16,185,129,0.08),_transparent_60%)]" />
         <div className="max-w-6xl mx-auto px-4 relative">
           <SectionHead
             eyebrow="یک مزیت مهم‌تر از همه"
             title="باشگاه مشتریان از اطلاعات فروش واقعی شما استفاده می‌کند"
+            hideSubtitleOnMobile
             subtitle={
               <>
                 باشگاه مشتریان هوشمند یک سیستم جدا و بی‌ارتباط با فروش شما نیست.{" "}
@@ -1044,23 +1067,28 @@ export default function SmartClubLandingClient() {
 
           <div className="relative">
             <div className="hidden lg:block absolute top-9 right-[7%] left-[7%] h-0.5 bg-gradient-to-l from-violet-500 via-fuchsia-500 to-emerald-400 opacity-60" />
-            <div className="flex flex-col items-center lg:grid lg:grid-cols-7 gap-0 lg:gap-3">
+            <div className="grid grid-cols-2 gap-3 lg:grid lg:grid-cols-7 lg:gap-3">
               {FLOW.map((step, i) => (
-                <motion.div key={step.text} {...fadeUp(i * 0.06)} className="flex flex-col items-center w-full max-w-xs lg:max-w-none">
-                  <div className="relative z-10 w-[72px] h-[72px] rounded-2xl bg-[#0f1424] border border-white/10 flex items-center justify-center shadow-lg">
-                    <step.icon size={26} className={i === FLOW.length - 1 ? "text-emerald-300" : "text-fuchsia-300"} />
-                    <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white text-[11px] font-black flex items-center justify-center">
+                <motion.div
+                  key={step.text}
+                  {...fadeUp(i * 0.06)}
+                  className={`flex flex-col items-center ${i === FLOW.length - 1 ? "col-span-2 lg:col-span-1" : ""}`}
+                >
+                  <div className="relative z-10 w-12 h-12 lg:w-[72px] lg:h-[72px] rounded-2xl bg-[#0f1424] border border-white/10 flex items-center justify-center shadow-lg">
+                    <step.icon size={22} className={i === FLOW.length - 1 ? "text-emerald-300" : "text-fuchsia-300"} />
+                    <span className="absolute -top-2 -right-2 w-5 h-5 lg:w-6 lg:h-6 rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white text-[10px] lg:text-[11px] font-black flex items-center justify-center">
                       {(i + 1).toLocaleString("fa-IR")}
                     </span>
                   </div>
-                  <div className="mt-3 text-center text-sm font-bold text-slate-200 leading-6">{step.text}</div>
-                  {i < FLOW.length - 1 ? <ArrowDown size={18} className="lg:hidden my-3 text-fuchsia-400/70" /> : null}
+                  <div className="mt-2 lg:mt-3 text-center text-xs lg:text-sm font-bold text-slate-200 leading-5 lg:leading-6 px-1">
+                    {step.text}
+                  </div>
                 </motion.div>
               ))}
             </div>
           </div>
 
-          <motion.p {...fadeUp(0.1)} className="mt-14 text-center text-xl md:text-3xl font-black text-white">
+          <motion.p {...fadeUp(0.1)} className="mt-8 lg:mt-14 text-center text-xl md:text-3xl font-black text-white">
             از ثبت فاکتور تا بازگشت مشتری؛{" "}
             <span className="bg-gradient-to-l from-fuchsia-300 to-emerald-300 bg-clip-text text-transparent">همه در یک چرخه.</span>
           </motion.p>
@@ -1068,7 +1096,7 @@ export default function SmartClubLandingClient() {
       </section>
 
       {/* CREDIT */}
-      <section className="py-20 md:py-28 border-y border-white/5 bg-white/[0.015]">
+      <section className="py-12 md:py-28 border-y border-white/5 bg-white/[0.015]">
         <div className="max-w-6xl mx-auto px-4 grid lg:grid-cols-2 gap-14 items-center">
           <div>
             <SectionHead
@@ -1076,6 +1104,7 @@ export default function SmartClubLandingClient() {
               eyebrow="اعتبار خرید؛ مشتری را برای خرید بعدی برگردانید"
               title="هر خرید، می‌تواند دلیل خرید بعدی باشد."
               subtitle="با کش‌بک، درصدی از خرید مشتری را به اعتبار تبدیل کنید و برای اعتبار، تاریخ انقضا تعیین کنید."
+              hideSubtitleOnMobile
             />
             <motion.div {...fadeUp(0.05)} className="rounded-3xl border border-white/10 bg-[#0f1424] p-6">
               <div className="flex items-center justify-between mb-5">
@@ -1154,15 +1183,15 @@ export default function SmartClubLandingClient() {
       </section>
 
       {/* MEASURABLE */}
-      <section className="py-20 md:py-28">
+      <section className="py-12 md:py-28">
         <div className="max-w-6xl mx-auto px-4 grid lg:grid-cols-2 gap-14 items-center">
           <div>
             <SectionHead align="start" eyebrow="تبلیغاتتان را قابل اندازه‌گیری کنید" title="دیگر فقط نگویید «پیامک فرستادیم»." />
-            <motion.p {...fadeUp(0.05)} className="text-slate-300 leading-8 md:text-lg">
+            <motion.p {...fadeUp(0.05)} className="text-slate-300 leading-8 md:text-lg hidden md:block">
               بگویید از ۵۰۰ مشتری هدف، چند نفر برگشتند، چقدر فروش ساختید و هر تومان اعتبار چند برابر برگشت. باشگاه
               مشتریان کمک می‌کند بدانید <b className="text-white">کدام اقدام واقعاً برای کسب‌وکار شما نتیجه می‌دهد.</b>
             </motion.p>
-            <motion.ul {...fadeUp(0.1)} className="mt-6 space-y-3">
+            <motion.ul {...fadeUp(0.1)} className="mt-6 space-y-3 hidden md:block">
               {["فروش حاصل از کمپین", "میانگین فاکتور", "نرخ تبدیل", "بازدهی اعتبار"].map((item) => (
                 <li key={item} className="flex items-center gap-3 text-slate-200 font-semibold">
                   <span className="w-7 h-7 rounded-lg bg-emerald-500/15 flex items-center justify-center">
@@ -1224,7 +1253,7 @@ export default function SmartClubLandingClient() {
       </section>
 
       {/* DIFFERENT */}
-      <section className="py-20 md:py-28 border-y border-white/5 bg-white/[0.015]">
+      <section className="py-12 md:py-28 border-y border-white/5 bg-white/[0.015]">
         <div className="max-w-6xl mx-auto px-4">
           <SectionHead eyebrow="تفاوت" title="چه چیزی این باشگاه را متفاوت می‌کند؟" />
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1258,7 +1287,7 @@ export default function SmartClubLandingClient() {
                 <h3 className="text-lg md:text-2xl font-black text-white leading-9">
                   باشگاه مشتریان هوشمند، فروش + حسابداری + رفتار مشتری + بازاریابی را به هم وصل می‌کند.
                 </h3>
-                <p className="mt-3 text-slate-300 leading-8">
+                <p className="mt-3 text-slate-300 leading-8 hidden md:block">
                   تا اطلاعاتی که هر روز در کسب‌وکار شما تولید می‌شود، تبدیل به{" "}
                   <b className="text-white">اقدام واقعی برای افزایش فروش</b> شود.
                 </p>
@@ -1269,7 +1298,7 @@ export default function SmartClubLandingClient() {
       </section>
 
       {/* FINAL CTA */}
-      <section className="py-20 md:py-28">
+      <section className="py-12 md:py-28">
         <div className="max-w-5xl mx-auto px-4">
           <motion.div
             {...fadeUp()}
@@ -1282,7 +1311,7 @@ export default function SmartClubLandingClient() {
                 <h2 className="text-2xl md:text-4xl font-black text-white leading-tight">
                   مشتری‌های فعلی شما، بزرگ‌ترین فرصت فروش شما هستند.
                 </h2>
-                <p className="mt-4 text-violet-100/90 leading-8">
+                <p className="mt-4 text-violet-100/90 leading-8 hidden md:block">
                   برای پیدا کردن مشتری جدید هزینه می‌کنید. اما قبل از آن، ببینید از مشتری‌هایی که همین حالا دارید چقدر
                   می‌توانید بیشتر بفروشید.
                 </p>
@@ -1333,7 +1362,7 @@ export default function SmartClubLandingClient() {
       <FaqSection />
 
       {/* CLOSING */}
-      <section className="pb-24 pt-4">
+      <section className="hidden md:block pb-24 pt-4">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <motion.div {...fadeUp()}>
             <h2 className="text-2xl md:text-4xl font-black text-white leading-tight">
