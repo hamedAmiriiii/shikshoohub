@@ -62,6 +62,7 @@ const NOINDEX_PREFIXES = [
   "/orders",
   "/main",
   "/referrals",
+  "/newuser",
   "/api",
 ];
 
