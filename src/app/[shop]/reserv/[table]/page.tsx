@@ -5,6 +5,7 @@ import {
   Box,
   Button,
   Checkbox,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -29,7 +30,7 @@ import { useParams, usePathname, useRouter } from "next/navigation";
 import { apiRequestError } from "@/app/lib/apiRequestError";
 import { APP_FONT_FAMILY } from "@/app/lib/appFont";
 import { useShopStorefront } from "@/app/context/ShopContext";
-import { extractShopTableInfo, extractPaymentMethods, DEFAULT_TABLE_PAYMENT_METHODS, extractTableOrders, getTableOrderAmount, getTableOrderProducts, tablePaymentMethodLabel, shopPlaceNoun, type ShopTableInfo, type TablePaymentMethod, type TableOrder } from "@/app/lib/shopTables";
+import { extractShopTableInfo, extractPaymentMethods, FALLBACK_TABLE_PAYMENT_METHODS, extractTableOrders, getTableOrderAmount, getTableOrderProducts, tablePaymentMethodLabel, shopPlaceNoun, type ShopTableInfo, type TablePaymentMethod, type TableOrder } from "@/app/lib/shopTables";
 import { placeKindFromPathname } from "@/app/lib/shopStorefront";
 import {
   getActiveRootCategories,
@@ -104,6 +105,8 @@ type Product = {
   }>;
   quantity?: number;
 };
+
+type OnlinePayState = null | "redirecting" | "paid" | "failed";
 
 type CartLine = {
   product_id?: number | null;
@@ -439,7 +442,11 @@ function TableReservPageBody() {
   const [ordersOpen, setOrdersOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("");
-  const [paymentMethods, setPaymentMethods] = useState<TablePaymentMethod[]>(DEFAULT_TABLE_PAYMENT_METHODS);
+  const [paymentMethods, setPaymentMethods] = useState<TablePaymentMethod[]>(FALLBACK_TABLE_PAYMENT_METHODS);
+  const [onlineState, setOnlineState] = useState<OnlinePayState>(null);
+  const [onlineRefId, setOnlineRefId] = useState("");
+  const [onlineMessage, setOnlineMessage] = useState("");
+  const [payingOnline, setPayingOnline] = useState(false);
   const [receiptBase64, setReceiptBase64] = useState("");
   const [receiptName, setReceiptName] = useState("");
   const [receiptIsPdf, setReceiptIsPdf] = useState(false);
@@ -593,7 +600,7 @@ function TableReservPageBody() {
       const methods = info.paymentMethods?.length
         ? info.paymentMethods
         : extractPaymentMethods(shop);
-      setPaymentMethods(methods.length ? methods : DEFAULT_TABLE_PAYMENT_METHODS);
+      setPaymentMethods(methods.length ? methods : FALLBACK_TABLE_PAYMENT_METHODS);
     } catch {
       setTableInfo({
         table: null,
@@ -1144,6 +1151,104 @@ function TableReservPageBody() {
     void lookupGuest(normalizedPhone, true);
   };
 
+  const guestOrderStatusLabel = (order: TableOrder) => {
+    if (order.status === "cancelled") return t("cancelled");
+    if (order.paid_online) return t("paidOnline");
+    if (order.awaiting_online_payment) return t("awaitingOnlinePayment");
+    return t("awaitingPayment");
+  };
+
+  const paymentReturnUrl = () => {
+    if (typeof window === "undefined") return undefined;
+    return `${window.location.origin}${window.location.pathname}`;
+  };
+
+  const showOnlineOrder = (orderId: number | null, state: OnlinePayState, message = "", refId = "") => {
+    setPaymentMethod("online");
+    setSubmittedOrderId(orderId);
+    setSubmittedHasReceipt(false);
+    setSubmittedCancelled(false);
+    setOnlineState(state);
+    setOnlineMessage(message);
+    setOnlineRefId(refId);
+    setCurrentOpen(false);
+    setSubmitted(true);
+  };
+
+  const redirectToGateway = (res: Record<string, unknown> | null | undefined): boolean => {
+    const url = typeof res?.payment_url === "string" ? res.payment_url : "";
+    if (!url) return false;
+    setOnlineState("redirecting");
+    window.location.href = url;
+    return true;
+  };
+
+  const payOnline = async (orderId: number) => {
+    if (!shopCode || payingOnline) return;
+    setPayingOnline(true);
+    try {
+      const res = await apiRequestError(
+        "Post",
+        {},
+        {
+          return_url: paymentReturnUrl(),
+          ...(phoneReady ? { phone: normalizedPhone } : {}),
+        },
+        shopApi(`/api/table-order/${orderId}/pay-online`),
+        false,
+        true,
+        "",
+      );
+      if (res?.hasError) {
+        const paid = Boolean(res?.table_order?.paid_online);
+        if (paid) {
+          showOnlineOrder(orderId, "paid", "", String(res.table_order.online_ref_id || ""));
+          return;
+        }
+        const msg = typeof res.message === "string" ? res.message : t("onlineFailedText");
+        toast.error(msg);
+        showOnlineOrder(orderId, "failed", msg);
+        return;
+      }
+      showOnlineOrder(orderId, "redirecting");
+      if (!redirectToGateway(res)) showOnlineOrder(orderId, "failed", t("onlineFailedText"));
+    } catch {
+      toast.error(t("networkError"));
+    } finally {
+      setPayingOnline(false);
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("type") !== "table_order" || !params.get("payment")) return;
+    const orderId = Number(params.get("item_id"));
+    const ok = params.get("payment") === "ok";
+    showOnlineOrder(
+      Number.isFinite(orderId) && orderId > 0 ? orderId : null,
+      ok ? "paid" : "failed",
+      ok ? "" : params.get("message") || "",
+      params.get("ref_id") || "",
+    );
+    window.history.replaceState(null, "", window.location.pathname);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) setOnlineState((prev) => (prev === "redirecting" ? "failed" : prev));
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, []);
+
+  useEffect(() => {
+    if (paymentMethod && !paymentMethods.some((item) => item.key === paymentMethod)) {
+      setPaymentMethod("");
+    }
+  }, [paymentMethod, paymentMethods]);
+
   const submitOrder = async () => {
     if (!shopCode || cart.length === 0) return;
     if (useCredit && !phoneReady) {
@@ -1168,6 +1273,7 @@ function TableReservPageBody() {
           ...(phoneReady ? { phone: normalizedPhone } : {}),
           ...(useCredit && phoneReady ? { use_credit: true } : {}),
           ...(paymentMethod === "card_to_card" && receiptBase64 ? { receipt_base64: receiptBase64 } : {}),
+          ...(paymentMethod === "online" ? { return_url: paymentReturnUrl() } : {}),
         },
         shopApi("/api/table-order"),
         false,
@@ -1175,6 +1281,13 @@ function TableReservPageBody() {
         "",
       );
       if (res?.hasError) {
+        const existing = res?.table_order as TableOrder | undefined;
+        if (res?.code === "table_has_active_order" && existing?.awaiting_online_payment && existing.id) {
+          toast.info(typeof res.message === "string" ? res.message : t("onlineFailedText"));
+          setCartOpen(false);
+          showOnlineOrder(Number(existing.id), "failed", typeof res.message === "string" ? res.message : "");
+          return;
+        }
         toast.error(typeof res.message === "string" ? res.message : t("submitFail"));
         return;
       }
@@ -1184,7 +1297,23 @@ function TableReservPageBody() {
       setCartOpen(false);
       const order = (res?.table_order || res?.data || res) as { id?: number; has_receipt?: boolean } | undefined;
       const orderId = Number(order?.id);
-      setSubmittedOrderId(Number.isFinite(orderId) && orderId > 0 ? orderId : null);
+      const validOrderId = Number.isFinite(orderId) && orderId > 0 ? orderId : null;
+      if (paymentMethod === "online") {
+        clearReceipt();
+        if (res?.paid_with_credit) {
+          showOnlineOrder(validOrderId, "paid", t("paidWithCreditText", { label: displayPlaceLabel }));
+        } else if (typeof res?.payment_error === "string") {
+          toast.error(res.payment_error);
+          showOnlineOrder(validOrderId, "failed", res.payment_error);
+        } else {
+          showOnlineOrder(validOrderId, "redirecting");
+          if (!redirectToGateway(res)) showOnlineOrder(validOrderId, "failed", t("onlineFailedText"));
+        }
+        if (phoneReady) lookupGuest(normalizedPhone, true);
+        return;
+      }
+      setOnlineState(null);
+      setSubmittedOrderId(validOrderId);
       setSubmittedHasReceipt(Boolean(order?.has_receipt || hadReceipt));
       clearReceipt();
       setSubmittedCancelled(false);
@@ -1231,6 +1360,142 @@ function TableReservPageBody() {
     return (
       <Box sx={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", p: 3, direction: dir, bgcolor: BG }}>
         <Typography sx={{ color: "#e57373" }}>{tableError || t("invalidPlace", { place: t(placeKind === "room" ? "room" : "table") })}</Typography>
+      </Box>
+    );
+  }
+
+  if (submitted && onlineState) {
+    const paidOk = onlineState === "paid";
+    const failed = onlineState === "failed";
+    return (
+      <Box
+        sx={{
+          minHeight: "100dvh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 1.5,
+          p: 3,
+          direction: dir,
+          textAlign: "center",
+          bgcolor: BG,
+        }}
+      >
+        <Box
+          sx={{
+            width: 88,
+            height: 88,
+            borderRadius: "50%",
+            bgcolor: failed || submittedCancelled ? "rgba(198,40,40,0.12)" : ACCENT_SOFT,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {onlineState === "redirecting" ? (
+            <CircularProgress size={44} sx={{ color: ACCENT }} />
+          ) : failed || submittedCancelled ? (
+            <CancelOutlinedIcon sx={{ fontSize: 52, color: "#e57373" }} />
+          ) : (
+            <CheckCircleIcon sx={{ fontSize: 52, color: ACCENT }} />
+          )}
+        </Box>
+        <Typography sx={{ fontWeight: 800, fontSize: 22, color: TEXT }}>
+          {submittedCancelled
+            ? t("orderCancelledTitle", { label: displayPlaceLabel })
+            : onlineState === "redirecting"
+              ? t("redirectingToGateway")
+              : paidOk
+                ? t("onlinePaidTitle")
+                : t("onlineFailedTitle")}
+        </Typography>
+        {submittedOrderId ? (
+          <Typography sx={{ color: ACCENT, fontWeight: 800, fontSize: 15 }}>
+            {t("orderNumber", { n: formatNumber(submittedOrderId) })}
+          </Typography>
+        ) : null}
+        {onlineState !== "redirecting" ? (
+          <Typography sx={{ color: MUTED, maxWidth: 320, lineHeight: 1.8, fontSize: 14 }}>
+            {submittedCancelled
+              ? t("orderHiddenFromPos")
+              : paidOk
+                ? onlineMessage || t("onlinePaidText", { label: displayPlaceLabel })
+                : onlineMessage || t("onlineFailedText")}
+          </Typography>
+        ) : null}
+        {paidOk && onlineRefId ? (
+          <Typography sx={{ color: TEXT, fontWeight: 700, fontSize: 13, direction: "ltr" }}>
+            {t("onlineRefId", { ref: onlineRefId })}
+          </Typography>
+        ) : null}
+        {failed && !submittedCancelled && submittedOrderId ? (
+          <Button
+            variant="contained"
+            disabled={payingOnline}
+            onClick={() => void payOnline(submittedOrderId)}
+            sx={{
+              mt: 1,
+              px: 3,
+              py: 1.2,
+              borderRadius: "14px",
+              bgcolor: ACCENT,
+              color: ACCENT_ON,
+              fontWeight: 800,
+              "&:hover": { bgcolor: ACCENT_DARK, color: ACCENT_ON },
+            }}
+          >
+            {payingOnline ? "..." : t("payOnlineAgain")}
+          </Button>
+        ) : null}
+        {onlineState !== "redirecting" ? (
+          <Button
+            variant={failed && !submittedCancelled ? "text" : "contained"}
+            onClick={() => {
+              setSubmitted(false);
+              setSubmittedCancelled(false);
+              setSubmittedOrderId(null);
+              setOnlineState(null);
+              setOnlineMessage("");
+              setOnlineRefId("");
+            }}
+            sx={
+              failed && !submittedCancelled
+                ? { color: MUTED, fontWeight: 700 }
+                : {
+                    mt: 1.5,
+                    px: 3,
+                    py: 1.2,
+                    borderRadius: "14px",
+                    bgcolor: ACCENT,
+                    color: ACCENT_ON,
+                    fontWeight: 800,
+                    "&:hover": { bgcolor: ACCENT_DARK, color: ACCENT_ON },
+                  }
+            }
+          >
+            {t("back")}
+          </Button>
+        ) : null}
+        {failed && submittedOrderId && !submittedCancelled ? (
+          <Button onClick={() => setCancelConfirmOpen(true)} sx={{ color: "#e57373", fontWeight: 700 }}>
+            {t("cancelOrder")}
+          </Button>
+        ) : null}
+        <Dialog open={cancelConfirmOpen} onClose={() => !cancellingOrder && setCancelConfirmOpen(false)}>
+          <DialogContent>
+            <Typography sx={{ color: TEXT, fontWeight: 800, mb: 1 }}>{t("cancelOrderConfirm")}</Typography>
+          </DialogContent>
+          <DialogActions sx={{ px: 2, pb: 2 }}>
+            <Button onClick={() => setCancelConfirmOpen(false)} disabled={cancellingOrder} sx={{ color: MUTED }}>
+              {t("dismiss")}
+            </Button>
+            <Button onClick={cancelSubmittedOrder} disabled={cancellingOrder} sx={{ color: "#e57373", fontWeight: 800 }}>
+              {cancellingOrder ? "..." : t("cancelOrder")}
+            </Button>
+          </DialogActions>
+        </Dialog>
+        <ToastContainer position="bottom-center" autoClose={3000} theme={themeMode} rtl={dir === "rtl"} />
       </Box>
     );
   }
@@ -1883,7 +2148,7 @@ function TableReservPageBody() {
             "&:hover": { bgcolor: ACCENT_DARK, color: ACCENT_ON },
           }}
         >
-          {submitting ? t("submitting") : t("submitDineIn")}
+          {submitting ? t("submitting") : paymentMethod === "online" ? t("payAndSubmit") : t("submitDineIn")}
         </Button>
       </Drawer>
       <Drawer
@@ -2005,8 +2270,27 @@ function TableReservPageBody() {
             </Typography>
             <Typography sx={{ color: MUTED, fontSize: 12, mt: 0.4 }}>
               {translatePayMethod(currentDetail.payment_method, tablePaymentMethodLabel(currentDetail)) || "—"}
-              {currentDetail.status === "cancelled" ? ` · ${t("cancelled")}` : ` · ${t("awaitingPayment")}`}
+              {` · ${guestOrderStatusLabel(currentDetail)}`}
             </Typography>
+            {currentDetail.awaiting_online_payment ? (
+              <Button
+                fullWidth
+                variant="contained"
+                disabled={payingOnline}
+                onClick={() => void payOnline(currentDetail.id)}
+                sx={{
+                  mt: 1.5,
+                  py: 1.1,
+                  borderRadius: "14px",
+                  bgcolor: ACCENT,
+                  color: ACCENT_ON,
+                  fontWeight: 800,
+                  "&:hover": { bgcolor: ACCENT_DARK, color: ACCENT_ON },
+                }}
+              >
+                {payingOnline ? "..." : t("payOnlineNow")}
+              </Button>
+            ) : null}
             {getTableOrderProducts(currentDetail).length === 0 ? (
               <Typography sx={{ color: MUTED, fontSize: 13, mt: 2 }}>{t("noItems")}</Typography>
             ) : (
@@ -2032,7 +2316,7 @@ function TableReservPageBody() {
                 ))}
               </Box>
             )}
-            {currentDetail.status !== "cancelled" ? (
+            {currentDetail.status !== "cancelled" && !currentDetail.paid_online ? (
               <Button
                 fullWidth
                 onClick={async () => {
@@ -2093,7 +2377,7 @@ function TableReservPageBody() {
                     {translatePlace(order.table_label || tableLabel, placeKind)}
                   </Typography>
                   <Typography sx={{ fontSize: 12, color: MUTED }}>
-                    {order.status === "cancelled" ? t("cancelled") : t("awaitingPayment")}
+                    {guestOrderStatusLabel(order)}
                   </Typography>
                 </Box>
                 <Typography sx={{ fontSize: 14, color: ACCENT, fontWeight: 800, mt: 0.4 }}>

@@ -47,6 +47,17 @@ import {
   tablePaymentMethodLabel,
   type TableOrder,
 } from "@/app/lib/shopTables";
+import TableOrderSettlementPicker, {
+  DEFAULT_SETTLEMENT,
+  settlementRequestBody,
+  type SettlementValue,
+} from "./TableOrderSettlementPicker";
+
+const CANCELLED_BY_LABEL: Record<string, string> = {
+  customer: "لغو توسط مشتری",
+  staff: "لغو توسط پرسنل",
+  system: "لغو خودکار",
+};
 
 const formatNumber = (n: number) => new Intl.NumberFormat("fa-IR").format(n);
 
@@ -71,6 +82,7 @@ export default function TableOrdersPage() {
   const [orders, setOrders] = useState<TableOrder[]>([]);
   const [itemsOrder, setItemsOrder] = useState<TableOrder | null>(null);
   const [payOrder, setPayOrder] = useState<TableOrder | null>(null);
+  const [settlement, setSettlement] = useState<SettlementValue>(DEFAULT_SETTLEMENT);
   const [paying, setPaying] = useState(false);
   const [invoiceReady, setInvoiceReady] = useState(false);
   const [cancelOrder, setCancelOrder] = useState<TableOrder | null>(null);
@@ -111,9 +123,10 @@ export default function TableOrdersPage() {
   }, [loadOrders]);
 
   useEffect(() => {
-    const onNew = () => {
-      toast.info("سفارش حضوری جدید رسید");
-      if (listFilter === "pending") void loadOrders({ silent: true });
+    const onNew = (event: Event) => {
+      const onlinePaid = Boolean((event as CustomEvent<{ onlinePaid?: boolean }>).detail?.onlinePaid);
+      toast.info(onlinePaid ? "سفارش حضوری آنلاین پرداخت شد" : "سفارش حضوری جدید رسید");
+      if (listFilter !== "cancelled") void loadOrders({ silent: true });
     };
     window.addEventListener(TABLE_ORDERS_NEW_EVENT, onNew);
     return () => window.removeEventListener(TABLE_ORDERS_NEW_EVENT, onNew);
@@ -135,9 +148,16 @@ export default function TableOrdersPage() {
     if (!payOrder) return;
     const token = tokenCode();
     if (!token) return;
+    const request = settlementRequestBody(settlement, payOrder);
+    if ("error" in request) {
+      toast.error(request.error);
+      return;
+    }
     setPaying(true);
     try {
-      const res = await FetchWithJwtClient("POST", `/api/table-orders/${payOrder.id}/pay`, token);
+      const res = await FetchWithJwtClient("POST", `/api/table-orders/${payOrder.id}/pay`, token, {}, {
+        body: JSON.stringify(request.body),
+      });
       if (res?.hasError) {
         toast.error(getApiErrorMessage(res, "تأیید پرداخت ناموفق بود"));
         return;
@@ -264,7 +284,7 @@ export default function TableOrdersPage() {
         >
         {orders.map((order) => {
           const label = order.table_label || (order.table_number != null ? `میز ${order.table_number}` : "میز");
-          const highlighted = Boolean(order.has_receipt) || order.payment_method === "online";
+          const highlighted = Boolean(order.has_receipt) || Boolean(order.paid_online);
           const iconBtn = {
             width: 26,
             height: 26,
@@ -354,6 +374,18 @@ export default function TableOrdersPage() {
                     {tablePaymentMethodLabel(order)}
                   </Typography>
                 ) : null}
+                {order.paid_online ? (
+                  <Chip
+                    size="small"
+                    label="پرداخت آنلاین ✓"
+                    sx={{ mt: 0.35, height: 18, fontSize: 10, fontWeight: 800, color: "#2e7d32", bgcolor: "rgba(76, 175, 80, 0.16)" }}
+                  />
+                ) : null}
+                {listFilter === "cancelled" && order.cancelled_by ? (
+                  <Typography sx={{ color: "#e57373", fontSize: 10, mt: 0.15 }}>
+                    {CANCELLED_BY_LABEL[order.cancelled_by] || "لغوشده"}
+                  </Typography>
+                ) : null}
                 {order.phone ? (
                   <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 10, mt: 0.1, direction: "ltr", textAlign: "right" }}>
                     {order.phone}
@@ -410,6 +442,7 @@ export default function TableOrdersPage() {
                         size="small"
                         onClick={() => {
                           setInvoiceReady(false);
+                          setSettlement(DEFAULT_SETTLEMENT);
                           setPayOrder(order);
                         }}
                         sx={{ ...iconBtn, color: "var(--admin-accent)" }}
@@ -439,7 +472,7 @@ export default function TableOrdersPage() {
                       <PrintOutlinedIcon sx={{ fontSize: 16 }} />
                     </IconButton>
                   </Tooltip>
-                  {listFilter === "pending" ? (
+                  {listFilter === "pending" && !order.paid_online ? (
                     <Tooltip title="لغو">
                       <IconButton
                         size="small"
@@ -551,6 +584,15 @@ export default function TableOrdersPage() {
             >
               مشاهده رسید مشتری
             </Button>
+          ) : null}
+          {payOrder && !invoiceReady ? (
+            <TableOrderSettlementPicker
+              order={payOrder}
+              amount={getTableOrderAmount(payOrder)}
+              value={settlement}
+              onChange={setSettlement}
+              disabled={paying}
+            />
           ) : null}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>

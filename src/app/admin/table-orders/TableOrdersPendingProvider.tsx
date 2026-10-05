@@ -50,6 +50,7 @@ export default function TableOrdersPendingProvider({ children }: { children: Rea
   const [withReceipt, setWithReceipt] = useState(0);
   const [latestId, setLatestId] = useState<number | null>(null);
   const seenLatest = useRef<number | null>(null);
+  const seenOnlinePaid = useRef<number | null>(null);
   const seenCount = useRef(0);
   const seenInitialized = useRef(false);
 
@@ -80,6 +81,11 @@ export default function TableOrdersPendingProvider({ children }: { children: Rea
         nextLatest != null &&
         Number.isFinite(nextLatest) &&
         (seenLatest.current == null || nextLatest > seenLatest.current);
+      const onlinePaidRaw = res?.latest_online_paid_id == null ? null : Number(res.latest_online_paid_id);
+      const onlinePaidId = Number.isFinite(onlinePaidRaw as number) ? onlinePaidRaw : null;
+      const onlinePaidLabel =
+        typeof res?.latest_online_paid_label === "string" ? res.latest_online_paid_label : "";
+      const onlinePaidNew = onlinePaidId != null && onlinePaidId !== seenOnlinePaid.current;
       if (seenInitialized.current && nextCount > 0 && (nextCount > prevCount || latestGrew)) {
         playNewOrderSound(nextLabel);
         window.dispatchEvent(
@@ -87,7 +93,15 @@ export default function TableOrdersPendingProvider({ children }: { children: Rea
             detail: { count: nextCount, latestId: nextLatest, prevCount, label: nextLabel },
           }),
         );
+      } else if (seenInitialized.current && onlinePaidNew) {
+        playNewOrderSound(onlinePaidLabel);
+        window.dispatchEvent(
+          new CustomEvent(TABLE_ORDERS_NEW_EVENT, {
+            detail: { count: nextCount, latestId: onlinePaidId, prevCount, label: onlinePaidLabel, onlinePaid: true },
+          }),
+        );
       }
+      seenOnlinePaid.current = onlinePaidId;
       seenInitialized.current = true;
       seenCount.current = nextCount;
       if (nextLatest != null && Number.isFinite(nextLatest)) {
@@ -117,6 +131,7 @@ export default function TableOrdersPendingProvider({ children }: { children: Rea
       seenInitialized.current = false;
       seenCount.current = 0;
       seenLatest.current = null;
+      seenOnlinePaid.current = null;
       return;
     }
     void refresh();

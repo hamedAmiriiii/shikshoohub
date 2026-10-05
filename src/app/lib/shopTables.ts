@@ -33,6 +33,11 @@ export const DEFAULT_TABLE_PAYMENT_METHODS: TablePaymentMethod[] = [
   { key: "pos", label: "کارتخوان فروشگاه" },
 ];
 
+/** وقتی تنظیمات فروشگاه دریافت نشد؛ آنلاین فقط اگر سرور فعالش اعلام کند. */
+export const FALLBACK_TABLE_PAYMENT_METHODS: TablePaymentMethod[] = DEFAULT_TABLE_PAYMENT_METHODS.filter(
+  (item) => item.key !== "online",
+);
+
 export type ShopTableInfo = {
   table: ShopTable | null;
   shopName?: string;
@@ -75,6 +80,12 @@ export type TableOrder = {
   purchase?: any;
   daily_ticket_number?: number;
   dailyTicketNumber?: number;
+  paid_online?: boolean;
+  online_paid_at?: string | null;
+  online_ref_id?: string | null;
+  awaiting_online_payment?: boolean;
+  cancelled_by?: string | null;
+  cancelled_at?: string | null;
 };
 
 function asRecord(value: unknown): Record<string, unknown> | null {

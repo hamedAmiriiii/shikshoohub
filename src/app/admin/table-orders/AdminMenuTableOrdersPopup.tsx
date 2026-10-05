@@ -44,6 +44,11 @@ import {
   tablePaymentMethodLabel,
   type TableOrder,
 } from "@/app/lib/shopTables";
+import TableOrderSettlementPicker, {
+  DEFAULT_SETTLEMENT,
+  settlementRequestBody,
+  type SettlementValue,
+} from "./TableOrderSettlementPicker";
 import {
   ADMIN_POS_SETTINGS_CHANGED_EVENT,
   readAdminPosSettings,
@@ -77,6 +82,7 @@ export default function AdminMenuTableOrdersPopup() {
   const [orders, setOrders] = useState<TableOrder[]>([]);
   const [itemsOrder, setItemsOrder] = useState<TableOrder | null>(null);
   const [payOrder, setPayOrder] = useState<TableOrder | null>(null);
+  const [settlement, setSettlement] = useState<SettlementValue>(DEFAULT_SETTLEMENT);
   const [paying, setPaying] = useState(false);
   const [invoiceReady, setInvoiceReady] = useState(false);
   const [cancelOrder, setCancelOrder] = useState<TableOrder | null>(null);
@@ -112,7 +118,8 @@ export default function AdminMenuTableOrdersPopup() {
       setOpen(false);
       return;
     }
-    const onNew = () => {
+    const onNew = (event: Event) => {
+      if ((event as CustomEvent<{ onlinePaid?: boolean }>).detail?.onlinePaid) return;
       setOpen(true);
       void loadOrders();
     };
@@ -134,9 +141,16 @@ export default function AdminMenuTableOrdersPopup() {
     if (!payOrder) return;
     const token = tokenCode();
     if (!token) return;
+    const request = settlementRequestBody(settlement, payOrder);
+    if ("error" in request) {
+      toast.error(request.error);
+      return;
+    }
     setPaying(true);
     try {
-      const res = await FetchWithJwtClient("POST", `/api/table-orders/${payOrder.id}/pay`, token);
+      const res = await FetchWithJwtClient("POST", `/api/table-orders/${payOrder.id}/pay`, token, {}, {
+        body: JSON.stringify(request.body),
+      });
       if (res?.hasError) {
         toast.error(getApiErrorMessage(res, "تأیید پرداخت ناموفق بود"));
         return;
@@ -241,7 +255,7 @@ export default function AdminMenuTableOrdersPopup() {
               {orders.map((order) => {
                 const label =
                   order.table_label || (order.table_number != null ? `میز ${order.table_number}` : "میز");
-                const highlighted = Boolean(order.has_receipt) || order.payment_method === "online";
+                const highlighted = Boolean(order.has_receipt) || Boolean(order.paid_online);
                 const iconBtn = {
                   width: 26,
                   height: 26,
@@ -330,6 +344,7 @@ export default function AdminMenuTableOrdersPopup() {
                         {tablePaymentMethodLabel(order) ? (
                           <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 10, mt: 0.15 }}>
                             {tablePaymentMethodLabel(order)}
+                            {order.paid_online ? " · پرداخت‌شده ✓" : ""}
                           </Typography>
                         ) : null}
                         {order.phone ? (
@@ -389,6 +404,7 @@ export default function AdminMenuTableOrdersPopup() {
                               size="small"
                               onClick={() => {
                                 setInvoiceReady(false);
+                                setSettlement(DEFAULT_SETTLEMENT);
                                 setPayOrder(order);
                               }}
                               sx={{ ...iconBtn, color: "var(--admin-accent)" }}
@@ -415,15 +431,19 @@ export default function AdminMenuTableOrdersPopup() {
                               <PrintOutlinedIcon sx={{ fontSize: 16 }} />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title="لغو">
-                            <IconButton
-                              size="small"
-                              onClick={() => setCancelOrder(order)}
-                              sx={{ ...iconBtn, "&:hover": { color: "#c62828", bgcolor: "rgba(198,40,40,0.08)" } }}
-                            >
-                              <CloseRoundedIcon sx={{ fontSize: 16 }} />
-                            </IconButton>
-                          </Tooltip>
+                          {order.paid_online ? (
+                            <Box sx={{ width: 26 }} />
+                          ) : (
+                            <Tooltip title="لغو">
+                              <IconButton
+                                size="small"
+                                onClick={() => setCancelOrder(order)}
+                                sx={{ ...iconBtn, "&:hover": { color: "#c62828", bgcolor: "rgba(198,40,40,0.08)" } }}
+                              >
+                                <CloseRoundedIcon sx={{ fontSize: 16 }} />
+                              </IconButton>
+                            </Tooltip>
+                          )}
                         </Box>
                       </Box>
                     </CardContent>
@@ -512,6 +532,15 @@ export default function AdminMenuTableOrdersPopup() {
                 : `روش مشتری: ${tablePaymentMethodLabel(payOrder)}. مبلغ ${formatNumber(getTableOrderAmount(payOrder))} تومان `
               : ""}
           </Typography>
+          {payOrder && !invoiceReady ? (
+            <TableOrderSettlementPicker
+              order={payOrder}
+              amount={getTableOrderAmount(payOrder)}
+              value={settlement}
+              onChange={setSettlement}
+              disabled={paying}
+            />
+          ) : null}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           {invoiceReady ? (

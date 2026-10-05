@@ -339,6 +339,10 @@ export default function SettingsPage() {
   const [shopCardNumber, setShopCardNumber] = useState("");
   const [shopCardHolder, setShopCardHolder] = useState("");
   const [shopBankName, setShopBankName] = useState("");
+  const [tablePayOnline, setTablePayOnline] = useState(false);
+  const [tablePayCardToCard, setTablePayCardToCard] = useState(true);
+  const [tablePayPos, setTablePayPos] = useState(true);
+  const [shopZarinpalMerchant, setShopZarinpalMerchant] = useState("");
   const [isSavingShopCard, setIsSavingShopCard] = useState(false);
   const [printerOpen, setPrinterOpen] = useState(false);
   const [listPrinterOpen, setListPrinterOpen] = useState(false);
@@ -783,6 +787,19 @@ export default function SettingsPage() {
     if (number) setShopCardNumber(number);
     if (holder) setShopCardHolder(holder);
     if (bank) setShopBankName(bank);
+    const readFlag = (key: string, fallback: boolean) => {
+      const raw = typeof rows[key] === "string" ? (rows[key] as string) : fromList(key);
+      if (!raw || !raw.trim()) return fallback;
+      return ["1", "true", "yes", "on"].includes(raw.trim().toLowerCase());
+    };
+    setTablePayOnline(readFlag("table_payment_online_enabled", false));
+    setTablePayCardToCard(readFlag("table_payment_card_to_card_enabled", true));
+    setTablePayPos(readFlag("table_payment_pos_enabled", true));
+    const merchant =
+      typeof rows.shop_zarinpal_merchant_id === "string"
+        ? rows.shop_zarinpal_merchant_id
+        : fromList("shop_zarinpal_merchant_id");
+    setShopZarinpalMerchant(merchant.trim());
   };
 
   const openLoyaltyClub = async () => {
@@ -837,12 +854,25 @@ export default function SettingsPage() {
   const handleSaveShopCard = async () => {
     const token = tokenCode();
     if (!token) return;
+    const merchant = shopZarinpalMerchant.trim();
+    if (merchant && !/^[A-Za-z0-9-]{20,64}$/.test(merchant)) {
+      toast.error("مرچنت کد زرین‌پال نامعتبر است (معمولاً ۳۶ کاراکتر با خط تیره).");
+      return;
+    }
+    if (!tablePayOnline && !tablePayCardToCard && !tablePayPos) {
+      toast.error("حداقل یک روش پرداخت سفارش میز را فعال بگذارید.");
+      return;
+    }
     setIsSavingShopCard(true);
     try {
       const entries = [
         ["shop_card_number", shopCardNumber.trim()],
         ["shop_card_holder", shopCardHolder.trim()],
         ["shop_bank_name", shopBankName.trim()],
+        ["table_payment_online_enabled", tablePayOnline ? "1" : "0"],
+        ["table_payment_card_to_card_enabled", tablePayCardToCard ? "1" : "0"],
+        ["table_payment_pos_enabled", tablePayPos ? "1" : "0"],
+        ["shop_zarinpal_merchant_id", merchant],
       ] as const;
       for (const [key, value] of entries) {
         const res = await apiRequestError(
@@ -859,7 +889,7 @@ export default function SettingsPage() {
           return;
         }
       }
-      toast.success("مشخصات کارت فروشگاه ذخیره شد");
+      toast.success("تنظیمات پرداخت سفارش میز ذخیره شد");
     } catch {
       toast.error("خطا در ذخیره کارت فروشگاه");
     } finally {
@@ -1386,8 +1416,8 @@ export default function SettingsPage() {
 
       <SettingsSectionCard
         icon={<CreditCardIcon sx={{ fontSize: 18 }} />}
-        title="کارت فروشگاه"
-        hint="پرداخت کارت‌به‌کارت سفارش پای میز"
+        title="پرداخت سفارش میز"
+        hint="روش‌های پرداخت، درگاه آنلاین و کارت فروشگاه"
         loading={shopCardOpen && shopCardLoading}
         action={
           shopCardOpen ? undefined : (
@@ -1399,6 +1429,49 @@ export default function SettingsPage() {
       >
         {shopCardOpen && !shopCardLoading ? (
         <Box sx={{ mt: 1, display: "flex", flexDirection: "column", gap: 1 }}>
+          <Box>
+            <SettingsToggleRow
+              icon={<PaymentsIcon sx={{ fontSize: 16 }} />}
+              title="پرداخت آنلاین (زرین‌پال)"
+              hint="مشتری هنگام ثبت پرداخت می‌کند و سفارش خودکار فاکتور می‌شود"
+              checked={tablePayOnline}
+              onChange={(e) => setTablePayOnline(e.target.checked)}
+            />
+            <SettingsToggleRow
+              icon={<CreditCardIcon sx={{ fontSize: 16 }} />}
+              title="کارت به کارت"
+              checked={tablePayCardToCard}
+              onChange={(e) => setTablePayCardToCard(e.target.checked)}
+            />
+            <SettingsToggleRow
+              icon={<PointOfSaleIcon sx={{ fontSize: 16 }} />}
+              title="کارتخوان فروشگاه"
+              checked={tablePayPos}
+              onChange={(e) => setTablePayPos(e.target.checked)}
+              last
+            />
+          </Box>
+          {tablePayOnline ? (
+            <TextField
+              size="small"
+              label="مرچنت کد زرین‌پال فروشگاه (اختیاری)"
+              value={shopZarinpalMerchant}
+              onChange={(e) => setShopZarinpalMerchant(e.target.value.trim())}
+              helperText="خالی باشد، مبلغ به حساب مرکزی وبینو واریز می‌شود. در پنل زرین‌پال دامنهٔ webinoo-plus.ir را ثبت کنید."
+              inputProps={{ dir: "ltr" }}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  backgroundColor: "var(--admin-surface-alt)",
+                  color: "var(--admin-text)",
+                  fontSize: "13px",
+                  "& fieldset": { borderColor: "var(--admin-border)" },
+                },
+                "& .MuiInputLabel-root": { color: "var(--admin-text-muted)", fontSize: "13px" },
+                "& .MuiInputBase-input": { py: 0.75 },
+                "& .MuiFormHelperText-root": { color: "var(--admin-text-muted)", fontSize: "11px", mx: 0 },
+              }}
+            />
+          ) : null}
           <TextField
             size="small"
             label="شماره کارت"
