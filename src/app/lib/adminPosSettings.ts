@@ -42,6 +42,8 @@ export type AdminPosSettings = {
   showDailyTicketNumber: boolean;
   /** نمایش فیلد اولویت/ترتیب نمایش در ثبت و ویرایش کالا */
   productDisplayOrderEnabled: boolean;
+  /** نمایش تاریخ خرید در ثبت و ویرایش کالا */
+  productPurchaseDateEnabled: boolean;
   /** بعد از ثبت کالا، بارکد بعدی روی همین دستگاه پر شود */
   sequentialProductBarcodeEnabled: boolean;
   /** دکمه پیش‌فاکتور کنار ثبت فروش */
@@ -75,6 +77,7 @@ const DEFAULT_SETTINGS: AdminPosSettings = {
   askCustomerName: false,
   showDailyTicketNumber: false,
   productDisplayOrderEnabled: false,
+  productPurchaseDateEnabled: false,
   sequentialProductBarcodeEnabled: false,
   proformaEnabled: false,
   invoiceProductEntryEnabled: false,

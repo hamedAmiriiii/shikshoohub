@@ -318,6 +318,9 @@ export default function SettingsPage() {
   const [roundSalePriceToThousand, setRoundSalePriceToThousand] = useState(true);
   const [isSavingSalePriceRounding, setIsSavingSalePriceRounding] = useState(false);
   const [saleDateEditEnabled, setSaleDateEditEnabled] = useState(false);
+  const [saleReturnDays, setSaleReturnDays] = useState("");
+  const [isSavingSaleReturnDays, setIsSavingSaleReturnDays] = useState(false);
+  const [productPurchaseDateEnabled, setProductPurchaseDateEnabled] = useState(false);
   const [classicPosMode, setClassicPosMode] = useState(false);
   const [askCustomerName, setAskCustomerName] = useState(false);
   const [showDailyTicketNumber, setShowDailyTicketNumber] = useState(false);
@@ -361,6 +364,7 @@ export default function SettingsPage() {
       setCartProfitEnabled(Boolean(settings.cartProfitEnabled));
       setRoundSalePriceToThousand(settings.roundSalePriceToThousand !== false);
       setSaleDateEditEnabled(Boolean(settings.saleDateEditEnabled));
+      setProductPurchaseDateEnabled(Boolean(settings.productPurchaseDateEnabled));
       setClassicPosMode(settings.classicPosMode);
       setAskCustomerName(settings.askCustomerName);
       setShowDailyTicketNumber(Boolean(settings.showDailyTicketNumber));
@@ -401,6 +405,11 @@ export default function SettingsPage() {
         if (enabled !== (readAdminPosSettings().roundSalePriceToThousand !== false)) {
           writeAdminPosSettings({ roundSalePriceToThousand: enabled });
         }
+      });
+      void apiRequestError("Get", {}, {}, `/api/settings/sale-return-days`, true, true, token).then((res) => {
+        if (!res || res.hasError) return;
+        const days = (res as { days?: unknown }).days;
+        setSaleReturnDays(days == null || days === "" ? "" : String(days));
       });
     }
     return () => window.removeEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, syncPosSettings);
@@ -651,6 +660,48 @@ export default function SettingsPage() {
         ? "ویرایش تاریخ فروش فعال شد"
         : "ویرایش تاریخ فروش غیرفعال شد",
     );
+  };
+
+  const handleToggleProductPurchaseDate = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setProductPurchaseDateEnabled(enabled);
+    writeAdminPosSettings({ productPurchaseDateEnabled: enabled });
+    toast.success(
+      enabled
+        ? "تاریخ خرید در ثبت کالا نشان داده می‌شود"
+        : "تاریخ خرید از ثبت کالا پنهان شد",
+    );
+  };
+
+  const handleSaveSaleReturnDays = async () => {
+    const trimmed = saleReturnDays.trim();
+    if (trimmed !== "" && (!/^\d+$/.test(trimmed) || Number(trimmed) > 3650)) {
+      toast.error("تعداد روز باید عدد باشد");
+      return;
+    }
+    const token = tokenCode();
+    if (!token) return;
+    setIsSavingSaleReturnDays(true);
+    try {
+      const res = await apiRequestError(
+        "Put",
+        {},
+        { days: trimmed === "" ? null : Number(trimmed) },
+        `/api/settings/sale-return-days`,
+        true,
+        true,
+        token,
+      );
+      if (res?.hasError) {
+        toast.error("ذخیره مهلت بازگشت ناموفق بود");
+        return;
+      }
+      toast.success(trimmed === "" ? "محدودیت بازگشت کالا برداشته شد" : "مهلت بازگشت کالا ذخیره شد");
+    } catch {
+      toast.error("خطا در ذخیره مهلت بازگشت");
+    } finally {
+      setIsSavingSaleReturnDays(false);
+    }
   };
 
   const handleToggleDebtPayment = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1198,6 +1249,40 @@ export default function SettingsPage() {
             hint="انتخاب تاریخ فاکتور در صفحه فروش — پیش‌فرض امروز"
             checked={saleDateEditEnabled}
             onChange={handleToggleSaleDateEdit}
+          />
+          <Box sx={{ gridColumn: "1 / -1", py: 1, borderBottom: "1px solid var(--admin-border)" }}>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: 13, fontWeight: 600 }}>
+              مهلت بازگشت کالای فروش‌رفته
+            </Typography>
+            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, mb: 0.75 }}>
+              خالی یعنی بدون محدودیت. ۱ یعنی همان روز فروش و روز بعد مجاز است و از روز دوم خطا می‌دهد.
+            </Typography>
+            <Box sx={{ display: "flex", gap: 1, alignItems: "center", maxWidth: 360 }}>
+              <TextField
+                size="small"
+                label="روز"
+                value={saleReturnDays}
+                onChange={(event) => setSaleReturnDays(event.target.value.replace(/[^\d]/g, "").slice(0, 4))}
+                placeholder="بدون محدودیت"
+                sx={{ flex: 1 }}
+              />
+              <Button
+                size="small"
+                variant="contained"
+                disabled={isSavingSaleReturnDays}
+                onClick={() => void handleSaveSaleReturnDays()}
+                sx={{ backgroundColor: "var(--admin-accent)", minWidth: 72 }}
+              >
+                ذخیره
+              </Button>
+            </Box>
+          </Box>
+          <SettingsToggleRow
+            icon={<Inventory2Icon sx={{ fontSize: 18 }} />}
+            title="تاریخ خرید در ثبت کالا"
+            hint="فیلد تاریخ خرید در ثبت و ویرایش کالا — پیش‌فرض خاموش"
+            checked={productPurchaseDateEnabled}
+            onChange={handleToggleProductPurchaseDate}
           />
           <SettingsToggleRow
             icon={<PersonIcon sx={{ fontSize: 18 }} />}

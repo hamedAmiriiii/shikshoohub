@@ -26,6 +26,8 @@ import { mainColors, searchColors } from "../../liberari/colors";
 import { PRODUCTS_CACHE_KEY } from "@/app/lib/productsCache";
 import { catalogItemKey, isProducedGoodItem } from "@/app/lib/catalogItems";
 import { readAdminPosSettings } from "@/app/lib/adminPosSettings";
+import type DateObject from "react-date-object";
+import { gregorianApiDateFromDateObject, parseAccessEndToDateObject } from "@/app/lib/shopAccess";
 import { readRoundSalePriceToThousand, roundToTen } from "@/app/lib/salePriceRounding";
 
 const PRODUCT_SORT_OPTIONS = [
@@ -63,6 +65,7 @@ export default function ListData() {
     const [editScanManualCode, setEditScanManualCode] = useState("");
     const editBarcodeScanInputRef = useRef<HTMLInputElement>(null);
     const [purchase_price, setPurchase_price] = useState("");
+    const [purchaseDate, setPurchaseDate] = useState<DateObject | null>(null);
     const [sale_price, setSale_price] = useState("");
     const [quantity, setQuantity] = useState("");
     const [profitPercentage, setProfitPercentage] = useState(45);
@@ -703,6 +706,7 @@ export default function ListData() {
       );
       setBarcode(product.barcode || "");
       setPurchase_price(product.purchase_price?.toString() || "");
+      setPurchaseDate(parseAccessEndToDateObject(product.purchased_on || null));
       setSale_price(product.sale_price?.toString() || "");
       setQuantity(product.quantity?.toString() || "");
       setProfitPercentage(
@@ -794,6 +798,9 @@ export default function ListData() {
       if (readAdminPosSettings().productDisplayOrderEnabled) {
         const n = parseInt(String(displayOrder).replace(/,/g, ""), 10);
         data.display_order = Number.isFinite(n) ? Math.max(0, Math.min(9999, n)) : 50;
+      }
+      if (readAdminPosSettings().productPurchaseDateEnabled) {
+        data.purchased_on = gregorianApiDateFromDateObject(purchaseDate) || null;
       }
 
       // اضافه کردن فقط عکس‌های جدید (base64) در صورت وجود
@@ -1043,6 +1050,8 @@ export default function ListData() {
           onProfitPercentageChange={handleProfitPercentageChange}
           purchasePrice={purchase_price}
           onPurchasePriceChange={handlePurchasePriceChange}
+          purchaseDate={purchaseDate}
+          onPurchaseDateChange={setPurchaseDate}
           salePrice={sale_price}
           onSalePriceChange={(e) => {
             setSale_price(e);

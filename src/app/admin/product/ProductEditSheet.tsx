@@ -23,6 +23,8 @@ import {
   ADMIN_POS_SETTINGS_CHANGED_EVENT,
   readAdminPosSettings,
 } from "@/app/lib/adminPosSettings";
+import DateObject from "react-date-object";
+import ProductPurchaseDateField from "./ProductPurchaseDateField";
 
 type ProductEditSheetProps = {
   open: boolean;
@@ -40,6 +42,8 @@ type ProductEditSheetProps = {
   onProfitPercentageChange: (value: string) => void;
   purchasePrice: string;
   onPurchasePriceChange: (value: string) => void;
+  purchaseDate: DateObject | null;
+  onPurchaseDateChange: (value: DateObject | null) => void;
   salePrice: string;
   onSalePriceChange: (value: string) => void;
   quantity: string;
@@ -72,6 +76,8 @@ export default function ProductEditSheet({
   onProfitPercentageChange,
   purchasePrice,
   onPurchasePriceChange,
+  purchaseDate,
+  onPurchaseDateChange,
   salePrice,
   onSalePriceChange,
   quantity,
@@ -88,9 +94,14 @@ export default function ProductEditSheet({
   onSubmit,
 }: ProductEditSheetProps) {
   const [showDisplayOrder, setShowDisplayOrder] = useState(false);
+  const [showPurchaseDate, setShowPurchaseDate] = useState(false);
 
   useEffect(() => {
-    const sync = () => setShowDisplayOrder(Boolean(readAdminPosSettings().productDisplayOrderEnabled));
+    const sync = () => {
+      const settings = readAdminPosSettings();
+      setShowDisplayOrder(Boolean(settings.productDisplayOrderEnabled));
+      setShowPurchaseDate(Boolean(settings.productPurchaseDateEnabled));
+    };
     sync();
     window.addEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, sync);
     return () => window.removeEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, sync);
@@ -238,6 +249,11 @@ export default function ProductEditSheet({
               />
             </Box>
           </Grid>
+          {showPurchaseDate ? (
+            <Grid item xs={12} sm={6} md={3}>
+              <ProductPurchaseDateField value={purchaseDate} onChange={onPurchaseDateChange} />
+            </Grid>
+          ) : null}
           <Grid item xs={6} sm={4} md={2}>
             <Box sx={fieldWrapSx}>
               <TextInput

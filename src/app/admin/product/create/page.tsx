@@ -51,6 +51,9 @@ import {
   readLastSequentialBarcode,
   writeLastSequentialBarcode,
 } from "@/app/lib/adminPosSettings";
+import type DateObject from "react-date-object";
+import ProductPurchaseDateField from "./ProductPurchaseDateField";
+import { gregorianApiDateFromDateObject } from "@/app/lib/shopAccess";
 import { isMeasuredProduct, type ProductUnitType } from "@/app/lib/productUnits";
 import { readRoundSalePriceToThousand, roundToTen } from "@/app/lib/salePriceRounding";
 import { ToggleButton, ToggleButtonGroup, FormControl, FormLabel } from "@mui/material";
@@ -140,12 +143,15 @@ export default function Page() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [kgSalesEnabled, setKgSalesEnabled] = useState(false);
   const [productDisplayOrderEnabled, setProductDisplayOrderEnabled] = useState(false);
+  const [productPurchaseDateEnabled, setProductPurchaseDateEnabled] = useState(false);
+  const [purchaseDate, setPurchaseDate] = useState<DateObject | null>(null);
   const [unitType, setUnitType] = useState<ProductUnitType>("piece");
 
   useEffect(() => {
     const settings = readAdminPosSettings();
     setKgSalesEnabled(settings.kgSalesEnabled);
     setProductDisplayOrderEnabled(Boolean(settings.productDisplayOrderEnabled));
+    setProductPurchaseDateEnabled(Boolean(settings.productPurchaseDateEnabled));
     setProfitPercentage(String(readStoredProfitPercent()));
     if (settings.sequentialProductBarcodeEnabled) {
       const next = nextSequentialBarcode(readLastSequentialBarcode());
@@ -483,6 +489,7 @@ export default function Page() {
     setfull_name("");
     setDescription("");
     setDisplayOrder("50");
+    setPurchaseDate(null);
     setProfitPercentage(String(readStoredProfitPercent()));
     setDiscountPercent("");
     setImages([]);
@@ -555,6 +562,10 @@ export default function Page() {
       if (productDisplayOrderEnabled) {
         const n = parseInt(String(displayOrder).replace(/,/g, ""), 10);
         data.display_order = Number.isFinite(n) ? Math.max(0, Math.min(9999, n)) : 50;
+      }
+
+      if (productPurchaseDateEnabled) {
+        data.purchased_on = gregorianApiDateFromDateObject(purchaseDate) || null;
       }
 
       if (kgSalesEnabled) {
@@ -947,6 +958,11 @@ export default function Page() {
                   />
                 </Box>
               </Grid>
+              {productPurchaseDateEnabled ? (
+                <Grid item xs={6} sm={3}>
+                  <ProductPurchaseDateField value={purchaseDate} onChange={setPurchaseDate} />
+                </Grid>
+              ) : null}
               <Grid item xs={6} sm={2}>
                 <Box sx={fieldWrapSx}>
                   <TextInput

@@ -332,7 +332,7 @@ export default function ExpensesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterBeneficiaryId, setFilterBeneficiaryId] = useState<number | "">("");
   const [filterBeneficiaryOption, setFilterBeneficiaryOption] = useState<Beneficiary | null>(null);
-  const [creditSourceFilter, setCreditSourceFilter] = useState<ExpenseCreditSource | "all">("all");
+  const [creditSourceFilter, setCreditSourceFilter] = useState<ExpenseCreditSource | "all" | "none">("none");
   const [creditHelpOpen, setCreditHelpOpen] = useState(false);
 
   useEffect(() => {
@@ -347,7 +347,9 @@ export default function ExpensesPage() {
     const id = Number(params.get("beneficiary_id"));
     if (Number.isFinite(id) && id > 0) setFilterBeneficiaryId(id);
     const source = params.get("credit_source");
-    if (isExpenseCreditSource(source)) setCreditSourceFilter(source);
+    if (source === "all" || source === "none" || isExpenseCreditSource(source)) {
+      setCreditSourceFilter(source);
+    }
   }, []);
 
   const buildUrl = useCallback(() => {
@@ -378,7 +380,7 @@ export default function ExpensesPage() {
       );
     }
     if (filterBeneficiaryId !== "") params.push(`beneficiary_id=${filterBeneficiaryId}`);
-    if (creditSourceFilter !== "all") params.push(`credit_source=${creditSourceFilter}`);
+    params.push(`credit_source=${creditSourceFilter}`);
     return `/api/expenses?${params.join("&")}`;
   }, [perPage, currentPage, expenseTypeFilter, filterMode, dateRange, searchQuery, filterBeneficiaryId, creditSourceFilter]);
 
@@ -536,7 +538,7 @@ export default function ExpensesPage() {
     dateRange.length > 0 ||
     searchQuery.trim() !== "" ||
     filterBeneficiaryId !== "" ||
-    creditSourceFilter !== "all";
+    creditSourceFilter !== "none";
 
   return (
     <Box
@@ -1091,13 +1093,14 @@ export default function ExpensesPage() {
               label="اعتبار"
               value={creditSourceFilter}
               options={[
+                ["none", "بدون مصرف اعتبار"],
                 ["all", "همه"],
                 ["loyalty_purchase", EXPENSE_CREDIT_SOURCE_LABELS.loyalty_purchase],
                 ["purchase_return", EXPENSE_CREDIT_SOURCE_LABELS.purchase_return],
                 ["manual", EXPENSE_CREDIT_SOURCE_LABELS.manual],
               ]}
               onChange={(value) => {
-                setCreditSourceFilter(value as ExpenseCreditSource | "all");
+                setCreditSourceFilter(value as ExpenseCreditSource | "all" | "none");
                 setCurrentPage(1);
               }}
             />
@@ -1162,7 +1165,7 @@ export default function ExpensesPage() {
                   setSearchQuery("");
                   setFilterBeneficiaryId("");
                   setFilterBeneficiaryOption(null);
-                  setCreditSourceFilter("all");
+                  setCreditSourceFilter("none");
                   setCurrentPage(1);
                   setOpenFilterSheet(false);
                 }}
