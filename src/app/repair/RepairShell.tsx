@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -9,14 +10,24 @@ import {
   Box,
   Button,
   Container,
+  Divider,
+  Drawer,
   IconButton,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
   Paper,
-  Stack,
   Toolbar,
   Tooltip,
   Typography,
 } from "@mui/material";
 import LogoutIcon from "@mui/icons-material/Logout";
+import MenuIcon from "@mui/icons-material/Menu";
+import DashboardIcon from "@mui/icons-material/DashboardOutlined";
+import CategoryIcon from "@mui/icons-material/CategoryOutlined";
+import SmsIcon from "@mui/icons-material/SmsOutlined";
+import SettingsIcon from "@mui/icons-material/SettingsOutlined";
 import BuildIcon from "@mui/icons-material/Build";
 import EngineeringIcon from "@mui/icons-material/Engineering";
 import HomeIcon from "@mui/icons-material/HomeOutlined";
@@ -46,13 +57,13 @@ const NAV: Record<RepairRole, NavItem[]> = {
     { href: "/repair/tech/profile", label: "پروفایل", icon: <PersonIcon /> },
   ],
   admin: [
-    { href: "/repair/admin", label: "داشبورد" },
-    { href: "/repair/admin/requests", label: "درخواست‌ها" },
-    { href: "/repair/admin/technicians", label: "تعمیرکاران" },
-    { href: "/repair/admin/services", label: "نوع خدمات" },
-    { href: "/repair/admin/payouts", label: "سهم و تسویه" },
-    { href: "/repair/admin/sms", label: "پیامک‌ها" },
-    { href: "/repair/admin/settings", label: "تنظیمات" },
+    { href: "/repair/admin", label: "داشبورد", icon: <DashboardIcon /> },
+    { href: "/repair/admin/requests", label: "درخواست‌ها", icon: <ListAltIcon /> },
+    { href: "/repair/admin/technicians", label: "تعمیرکاران", icon: <EngineeringIcon /> },
+    { href: "/repair/admin/services", label: "نوع خدمات", icon: <CategoryIcon /> },
+    { href: "/repair/admin/payouts", label: "سهم و تسویه", icon: <PaymentsIcon /> },
+    { href: "/repair/admin/sms", label: "پیامک‌ها", icon: <SmsIcon /> },
+    { href: "/repair/admin/settings", label: "تنظیمات", icon: <SettingsIcon /> },
   ],
 };
 
@@ -76,9 +87,11 @@ export default function RepairShell({ children }: { children: React.ReactNode })
   const nav = user ? NAV[user.role] : [];
   const current = activeHref(nav, pathname);
   const bottomNav = Boolean(user) && user?.role !== "admin" && nav.length > 0;
+  const [menuOpen, setMenuOpen] = useState(false);
   useRepairPwa(pathname);
 
   const handleLogout = async () => {
+    setMenuOpen(false);
     await logout();
     router.replace(techApp ? "/repair/tech/login" : "/repair");
   };
@@ -87,6 +100,11 @@ export default function RepairShell({ children }: { children: React.ReactNode })
     <Box sx={{ minHeight: "100vh", bgcolor: "#f4f6fb", color: "text.primary" }}>
       <AppBar position="sticky" elevation={0} color="inherit" sx={{ borderBottom: "1px solid", borderColor: "divider" }}>
         <Toolbar sx={{ gap: 1 }}>
+          {nav.length > 0 && (
+            <IconButton edge="start" onClick={() => setMenuOpen(true)} aria-label="منو">
+              <MenuIcon />
+            </IconButton>
+          )}
           <Box
             component={Link}
             href={homeHref}
@@ -117,29 +135,50 @@ export default function RepairShell({ children }: { children: React.ReactNode })
             )
           )}
         </Toolbar>
-        {nav.length > 0 && (
-          <Stack
-            direction="row"
-            spacing={0.5}
-            sx={{ px: 1, pb: 1, overflowX: "auto", display: bottomNav ? { xs: "none", md: "flex" } : "flex" }}
-          >
+      </AppBar>
+      <Drawer anchor="left" open={menuOpen && nav.length > 0} onClose={() => setMenuOpen(false)}>
+        <Box sx={{ width: 260, display: "flex", flexDirection: "column", height: "100%" }}>
+          <Box sx={{ px: 2, py: 2 }}>
+            <Typography fontWeight={800} noWrap color="primary.main">
+              {title}
+            </Typography>
+            {user && (
+              <Typography variant="body2" color="text.secondary" noWrap>
+                {user.name || user.phone}
+              </Typography>
+            )}
+          </Box>
+          <Divider />
+          <List sx={{ flexGrow: 1, py: 1 }}>
             {nav.map((item) => (
-              <Button
+              <ListItemButton
                 key={item.href}
                 component={Link}
                 href={item.href}
-                size="small"
-                startIcon={item.icon}
-                variant={current === item.href ? "contained" : "text"}
-                disableElevation
-                sx={{ flexShrink: 0, borderRadius: 5, "& .MuiButton-startIcon": { ml: 0.5, mr: 0 } }}
+                selected={current === item.href}
+                onClick={() => setMenuOpen(false)}
+                sx={{ mx: 1, borderRadius: 2 }}
               >
-                {item.label}
-              </Button>
+                {item.icon && <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>}
+                <ListItemText primary={item.label} />
+              </ListItemButton>
             ))}
-          </Stack>
-        )}
-      </AppBar>
+          </List>
+          {user && (
+            <>
+              <Divider />
+              <List sx={{ py: 1 }}>
+                <ListItemButton onClick={() => void handleLogout()} sx={{ mx: 1, borderRadius: 2, color: "error.main" }}>
+                  <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>
+                    <LogoutIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="خروج" />
+                </ListItemButton>
+              </List>
+            </>
+          )}
+        </Box>
+      </Drawer>
       <Container maxWidth="md" sx={{ py: 2.5, pb: bottomNav ? { xs: "calc(88px + env(safe-area-inset-bottom))", md: 2.5 } : 2.5 }}>
         {children}
       </Container>

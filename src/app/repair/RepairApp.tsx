@@ -7,6 +7,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { APP_FONT_FAMILY } from "@/app/lib/appFont";
 import { RepairAuthProvider } from "./RepairAuth";
 import RepairShell from "./RepairShell";
+import RepairSplash from "./RepairSplash";
 
 const repairTheme = createTheme({
   direction: "rtl",
@@ -35,6 +36,7 @@ export default function RepairApp({ children }: { children: React.ReactNode }) {
       {repairGlobalStyles}
       <RepairAuthProvider>
         <RepairShell>{children}</RepairShell>
+        <RepairSplash />
         <ToastContainer position="top-center" autoClose={3500} hideProgressBar newestOnTop rtl />
       </RepairAuthProvider>
     </ThemeProvider>

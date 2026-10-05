@@ -26,7 +26,7 @@ export default function PWAHead() {
       appleTouch.rel = "apple-touch-icon";
       document.head.appendChild(appleTouch);
     }
-    appleTouch.href = "/pic/icon.png";
+    appleTouch.href = isRepair ? "/pic/omidtamirat-180.png" : "/pic/icon.png";
 
     let themeColor = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
     if (!themeColor) {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Box, Button, Chip, Grid2 as Grid, Paper, Stack, Typography } from "@mui/material";
+import { Box, Button, Grid2 as Grid, Paper, Stack, Typography } from "@mui/material";
 import type { SvgIconComponent } from "@mui/icons-material";
 import AcUnitIcon from "@mui/icons-material/AcUnit";
 import AssignmentIcon from "@mui/icons-material/Assignment";
@@ -72,12 +72,11 @@ function serviceIcon(name: string): SvgIconComponent {
   return SERVICE_ICONS.find(([pattern]) => pattern.test(name))?.[1] || BuildIcon;
 }
 
-const heroChipSx = {
-  bgcolor: "rgba(255,255,255,0.16)",
-  color: "#fff",
-  fontWeight: 600,
-  "& .MuiChip-icon": { color: "#fff" },
-};
+const HERO_BADGES = [
+  { icon: VerifiedIcon, label: "تعمیرکار تأییدشده" },
+  { icon: ReceiptLongIcon, label: "فاکتور شفاف" },
+  { icon: PaymentsIcon, label: "پرداخت بعد از کار" },
+];
 
 export default function RepairLandingPage() {
   const { user, config } = useRepairAuth();
@@ -109,8 +108,8 @@ export default function RepairLandingPage() {
         sx={{
           position: "relative",
           overflow: "hidden",
-          p: { xs: 3, sm: 5 },
-          borderRadius: 5,
+          p: { xs: 2.5, sm: 5 },
+          borderRadius: { xs: 4, sm: 5 },
           color: "#fff",
           background: "linear-gradient(135deg, #1e40af 0%, #2563eb 45%, #7c3aed 100%)",
         }}
@@ -160,46 +159,110 @@ export default function RepairLandingPage() {
           <HandymanIcon sx={{ fontSize: 84 }} />
         </Box>
 
-        <Stack spacing={2} sx={{ position: "relative", maxWidth: { sm: "calc(100% - 210px)" } }}>
+        <Stack spacing={{ xs: 1.5, sm: 2 }} sx={{ position: "relative", maxWidth: { sm: "calc(100% - 210px)" } }}>
           {user?.name && (
-            <Typography sx={{ opacity: 0.85, fontWeight: 600 }}>سلام {user.name}، خوش آمدید</Typography>
+            <Typography variant="body2" sx={{ opacity: 0.85, fontWeight: 600 }}>
+              سلام {user.name}، خوش آمدید
+            </Typography>
           )}
-          <Typography variant="h4" fontWeight={900} sx={{ fontSize: { xs: 26, sm: 36 }, lineHeight: 1.5 }}>
-            {brand}؛ تعمیرکار مطمئن، دمِ در خانه
+          <Box>
+            <Typography sx={{ opacity: 0.8, fontWeight: 700, fontSize: { xs: 13, sm: 15 }, mb: 0.5 }}>{brand}</Typography>
+            <Typography variant="h4" component="h1" fontWeight={900} sx={{ fontSize: { xs: 22, sm: 34 }, lineHeight: 1.6 }}>
+              تعمیرکار مطمئن، دمِ در خانه
+            </Typography>
+          </Box>
+          <Typography sx={{ opacity: 0.88, lineHeight: 1.9, fontSize: { xs: 14, sm: 16 } }}>
+            <Box component="span" sx={{ display: { xs: "inline", sm: "none" } }}>
+              درخواست بدهید، زمان را انتخاب کنید؛ بقیه با ما.
+            </Box>
+            <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
+              درخواست بدهید، زمان مراجعه را انتخاب کنید؛ تعمیرکار متخصص اعزام می‌شود و بعد از انجام کار، هزینه را با
+              فاکتور شفاف پرداخت می‌کنید.
+            </Box>
           </Typography>
-          <Typography sx={{ opacity: 0.9, lineHeight: 2 }}>
-            درخواست بدهید، زمان مراجعه را انتخاب کنید؛ تعمیرکار متخصص اعزام می‌شود و بعد از انجام کار، هزینه را با فاکتور
-            شفاف پرداخت می‌کنید.
-          </Typography>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+          <Stack direction="row" spacing={1} sx={{ pt: 0.5 }}>
             <Button
               component={Link}
               href={primaryHref}
-              size="large"
               variant="contained"
               color="inherit"
               endIcon={<ChevronLeftIcon />}
-              sx={{ color: "primary.main", fontWeight: 800, px: 3, borderRadius: 3 }}
+              sx={{
+                flex: { xs: 1, sm: "0 0 auto" },
+                py: { xs: 1.1, sm: 1.4 },
+                px: 3,
+                color: "primary.main",
+                fontWeight: 800,
+                borderRadius: 3,
+                whiteSpace: "nowrap",
+                boxShadow: "0 8px 20px rgba(15,23,42,0.18)",
+              }}
             >
               {primaryLabel}
             </Button>
-            {user?.role === "customer" && (
-              <Button component={Link} href="/repair/requests" size="large" variant="outlined" color="inherit" sx={{ borderRadius: 3 }}>
-                پیگیری درخواست‌ها
+            {(user?.role === "customer" || !user) && (
+              <Button
+                component={Link}
+                href={user ? "/repair/requests" : "/repair/login"}
+                variant="outlined"
+                color="inherit"
+                sx={{
+                  flex: { xs: 1, sm: "0 0 auto" },
+                  py: { xs: 1.1, sm: 1.4 },
+                  px: 2,
+                  borderRadius: 3,
+                  whiteSpace: "nowrap",
+                  borderColor: "rgba(255,255,255,0.5)",
+                }}
+              >
+                {user ? (
+                  "پیگیری درخواست‌ها"
+                ) : (
+                  <>
+                    <Box component="span" sx={{ display: { xs: "inline", sm: "none" } }}>
+                      ورود همکاران
+                    </Box>
+                    <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
+                      ورود تعمیرکاران و مدیر
+                    </Box>
+                  </>
+                )}
               </Button>
             )}
-            {!user && (
-              <Button component={Link} href="/repair/login" size="large" variant="outlined" color="inherit" sx={{ borderRadius: 3 }}>
-                ورود تعمیرکاران و مدیر
-              </Button>
-            )}
-          </Stack>
-          <Stack direction="row" flexWrap="wrap" useFlexGap spacing={1} sx={{ pt: 0.5 }}>
-            <Chip size="small" icon={<VerifiedIcon />} label="تعمیرکار تأییدشده" sx={heroChipSx} />
-            <Chip size="small" icon={<ReceiptLongIcon />} label="فاکتور شفاف" sx={heroChipSx} />
-            <Chip size="small" icon={<PaymentsIcon />} label="پرداخت بعد از انجام کار" sx={heroChipSx} />
           </Stack>
         </Stack>
+
+        <Box
+          sx={{
+            position: "relative",
+            mt: { xs: 2.5, sm: 3 },
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            borderRadius: 3,
+            bgcolor: "rgba(255,255,255,0.12)",
+            border: "1px solid rgba(255,255,255,0.18)",
+            maxWidth: { sm: 520 },
+          }}
+        >
+          {HERO_BADGES.map(({ icon: Icon, label }, index) => (
+            <Stack
+              key={label}
+              direction={{ xs: "column", sm: "row" }}
+              spacing={{ xs: 0.5, sm: 1 }}
+              alignItems="center"
+              justifyContent="center"
+              sx={{
+                py: 1.25,
+                px: 0.5,
+                textAlign: "center",
+                borderInlineStart: index > 0 ? "1px solid rgba(255,255,255,0.18)" : "none",
+              }}
+            >
+              <Icon sx={{ fontSize: 20 }} />
+              <Typography sx={{ fontSize: { xs: 11, sm: 12.5 }, fontWeight: 700, lineHeight: 1.5 }}>{label}</Typography>
+            </Stack>
+          ))}
+        </Box>
       </Paper>
 
       <RepairInstallBanner app="customer" />

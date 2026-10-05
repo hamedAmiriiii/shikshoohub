@@ -52,7 +52,7 @@ import {
   writeLastSequentialBarcode,
 } from "@/app/lib/adminPosSettings";
 import type DateObject from "react-date-object";
-import ProductPurchaseDateField from "./ProductPurchaseDateField";
+import ProductPurchaseDateField from "../ProductPurchaseDateField";
 import { gregorianApiDateFromDateObject } from "@/app/lib/shopAccess";
 import { isMeasuredProduct, type ProductUnitType } from "@/app/lib/productUnits";
 import { readRoundSalePriceToThousand, roundToTen } from "@/app/lib/salePriceRounding";

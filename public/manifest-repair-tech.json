@@ -6,26 +6,26 @@
   "start_url": "/repair/tech",
   "scope": "/repair/tech",
   "display": "standalone",
-  "background_color": "#f4f6fb",
+  "background_color": "#ffffff",
   "theme_color": "#2563eb",
   "orientation": "portrait",
   "lang": "fa",
   "dir": "rtl",
   "icons": [
     {
-      "src": "/pic/icon.png",
+      "src": "/pic/omidtamirat-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/pic/icon.png",
+      "src": "/pic/omidtamirat-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/pic/icon.png",
+      "src": "/pic/omidtamirat-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

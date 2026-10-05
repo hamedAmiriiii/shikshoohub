@@ -10,6 +10,10 @@ export const metadata: Metadata = {
   robots: NOINDEX_ROBOTS,
   applicationName: "امید تعمیر",
   manifest: "/manifest-repair.json",
+  icons: {
+    icon: "/pic/omidtamirat-192.png",
+    apple: "/pic/omidtamirat-180.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
