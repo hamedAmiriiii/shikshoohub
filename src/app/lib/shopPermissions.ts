@@ -61,6 +61,7 @@ const SUPER_ADMIN_PATHS = [
   "/admin/agency-requests",
   "/admin/marketers",
   "/admin/shop-plans/manage",
+  "/admin/menu-packages",
   "/admin/product-plans",
   "/admin/desktop-licenses",
   "/admin/site-stats",

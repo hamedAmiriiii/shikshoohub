@@ -72,6 +72,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/sms-packages': 'خرید بسته پیامک',
     '/admin/shop-plans': 'تمدید اشتراک',
     '/admin/shop-plans/manage': 'پلن‌های اکانت',
+    '/admin/menu-packages': 'پکیج منوی دیجیتال',
     '/admin/product-plans/orders': 'خریداران یادینو',
     '/admin/product-plans': 'پلن‌های یادینو',
     '/admin/sms-package-orders': 'درخواست‌های بسته پیامک',

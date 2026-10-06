@@ -45,6 +45,14 @@ function formatCountdown(seconds: number) {
   return `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, "0")}`;
 }
 
+/** یک فیلد «نام و نام خانوادگی» → name / last_name برای API */
+function splitFullName(full: string): { name: string; last_name: string } {
+  const parts = full.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { name: "", last_name: "" };
+  if (parts.length === 1) return { name: parts[0], last_name: parts[0] };
+  return { name: parts[0], last_name: parts.slice(1).join(" ") };
+}
+
 async function readJson(res: Response): Promise<Record<string, unknown>> {
   return asRecord(await res.json().catch(() => ({}))) ?? {};
 }
@@ -58,12 +66,9 @@ type Props = {
 export default function MenuPlanCheckout({ plan, onClose, onConsult }: Props) {
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
-  const [name, setName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const [fullName, setFullName] = useState("");
   const [atelierName, setAtelierName] = useState("");
-  const [nationalCode, setNationalCode] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [codeDigits, setCodeDigits] = useState<string[]>(["", "", "", "", ""]);
   const [codeTimer, setCodeTimer] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -94,16 +99,9 @@ export default function MenuPlanCheckout({ plan, onClose, onConsult }: Props) {
 
   const mobile = normalizePhone(phone);
   const phoneOk = /^09\d{9}$/.test(mobile);
-  const nationalOk = /^\d{10}$/.test(toLatinDigits(nationalCode));
   const code = codeDigits.join("");
   const codeOk = code.length === 5;
-  const formOk =
-    name.trim() &&
-    lastName.trim() &&
-    atelierName.trim() &&
-    nationalOk &&
-    password.length >= 6 &&
-    password === confirmPassword;
+  const formOk = fullName.trim().length >= 2 && atelierName.trim() && password.length >= 6;
   const codeExpired = step === "register" && codeTimer === 0;
 
   const focusInput = (idx: number) => {
@@ -197,7 +195,7 @@ export default function MenuPlanCheckout({ plan, onClose, onConsult }: Props) {
       return;
     }
     if (!formOk) {
-      setError("همه فیلدها را درست پر کنید (کد ملی ۱۰ رقم، رمز حداقل ۶ کاراکتر و یکسان).");
+      setError("نام، نام مجموعه و رمز عبور (حداقل ۶ کاراکتر) را پر کنید.");
       return;
     }
     if (!codeOk) {
@@ -212,14 +210,14 @@ export default function MenuPlanCheckout({ plan, onClose, onConsult }: Props) {
     setBusy(true);
     setError("");
     try {
+      const { name, last_name } = splitFullName(fullName);
       const body: Record<string, unknown> = {
-        name: name.trim(),
-        last_name: lastName.trim(),
+        name,
+        last_name,
         type: [2],
         password,
         phone: mobile,
         atelier_name: atelierName.trim(),
-        national_code: toLatinDigits(nationalCode),
         verification_code: code,
       };
       const marketerCode = getStoredMarketerRefCode();
@@ -357,53 +355,32 @@ export default function MenuPlanCheckout({ plan, onClose, onConsult }: Props) {
           </div>
         ) : (
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-2">
-              <label className="block text-sm text-slate-300">
-                نام
-                <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
-              </label>
-              <label className="block text-sm text-slate-300">
-                نام خانوادگی
-                <input value={lastName} onChange={(e) => setLastName(e.target.value)} className={inputClass} />
-              </label>
-            </div>
+            <label className="block text-sm text-slate-300">
+              نام و نام خانوادگی
+              <input
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className={inputClass}
+                placeholder="مثلاً علی رضایی"
+                autoComplete="name"
+              />
+            </label>
             <label className="block text-sm text-slate-300">
               نام مجموعه / رستوران
               <input value={atelierName} onChange={(e) => setAtelierName(e.target.value)} className={inputClass} />
             </label>
             <label className="block text-sm text-slate-300">
-              کد ملی
+              رمز عبور
               <input
-                value={nationalCode}
-                onChange={(e) => setNationalCode(e.target.value)}
+                type="text"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className={inputClass}
                 dir="ltr"
-                inputMode="numeric"
-                maxLength={10}
+                autoComplete="new-password"
+                placeholder="حداقل ۶ کاراکتر"
               />
             </label>
-            <div className="grid grid-cols-2 gap-2">
-              <label className="block text-sm text-slate-300">
-                رمز عبور
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className={inputClass}
-                  dir="ltr"
-                />
-              </label>
-              <label className="block text-sm text-slate-300">
-                تکرار رمز
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className={inputClass}
-                  dir="ltr"
-                />
-              </label>
-            </div>
 
             <div>
               <div className="flex items-center justify-between text-sm text-slate-300 mb-1">

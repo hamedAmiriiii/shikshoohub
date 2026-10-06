@@ -44,6 +44,7 @@ import StorefrontIcon from "@mui/icons-material/Storefront";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import ShoppingCartCheckoutIcon from "@mui/icons-material/ShoppingCartCheckout";
 import CardMembershipIcon from "@mui/icons-material/CardMembership";
+import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import VpnKeyIcon from "@mui/icons-material/VpnKey";
 import WifiIcon from "@mui/icons-material/Wifi";
 import PasswordIcon from "@mui/icons-material/Password";
@@ -553,6 +554,12 @@ export default function AdminHamburgerSidebar({
         label: "پلن‌های اکانت",
         href: "/admin/shop-plans/manage",
         icon: <CardMembershipIcon />,
+      },
+      {
+        id: "menu-packages-admin",
+        label: "پکیج منوی دیجیتال",
+        href: "/admin/menu-packages",
+        icon: <RestaurantMenuIcon />,
       },
       {
         id: "product-plans-admin",

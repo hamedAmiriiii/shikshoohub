@@ -320,44 +320,125 @@ export default function ShopTablesPage() {
           </CardContent>
         </Card>
       ) : (
-        tables.filter((t) => (t.kind || "table") === placeKind).map((table) => {
-          const url = shopCode.trim() ? tableReservAbsoluteUrl(shopCode.trim(), table.number, table.kind || "table") : "";
-          return (
-            <Card
-              key={table.id}
-              sx={{ mb: 1.25, backgroundColor: "var(--admin-surface)", border: "1px solid var(--admin-border)" }}
-            >
-              <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  {table.kind === "room" ? (
-                    <MeetingRoomIcon sx={{ color: "var(--admin-accent)" }} />
-                  ) : (
-                    <TableRestaurantIcon sx={{ color: "var(--admin-accent)" }} />
-                  )}
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography sx={{ fontWeight: 800 }}>{shopTableDisplayName(table)}</Typography>
-                    <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: 12 }}>
-                      شماره {table.number}
-                      {url ? ` · ${url.replace(/^https?:\/\/[^/]+/, "")}` : ""}
-                    </Typography>
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: {
+              xs: "repeat(2, minmax(0, 1fr))",
+              sm: "repeat(3, minmax(0, 1fr))",
+              md: "repeat(4, minmax(0, 1fr))",
+              lg: "repeat(5, minmax(0, 1fr))",
+            },
+            gap: 1.25,
+          }}
+        >
+          {tables.filter((t) => (t.kind || "table") === placeKind).map((table) => {
+            const url = shopCode.trim() ? tableReservAbsoluteUrl(shopCode.trim(), table.number, table.kind || "table") : "";
+            return (
+              <Card
+                key={table.id}
+                sx={{
+                  backgroundColor: "var(--admin-surface)",
+                  border: "1px solid var(--admin-border)",
+                  borderRadius: "14px",
+                  boxShadow: "none",
+                  height: "100%",
+                  transition: "border-color 0.15s ease",
+                  "&:hover": { borderColor: "var(--admin-accent)" },
+                }}
+              >
+                <CardContent
+                  sx={{
+                    py: 1.75,
+                    px: 1.5,
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    textAlign: "center",
+                    gap: 1,
+                    "&:last-child": { pb: 1.75 },
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: "12px",
+                      display: "grid",
+                      placeItems: "center",
+                      bgcolor: "rgba(var(--admin-accent-rgb, 0, 150, 136), 0.12)",
+                      backgroundColor: "var(--admin-surface-alt)",
+                      border: "1px solid var(--admin-border)",
+                    }}
+                  >
+                    {table.kind === "room" ? (
+                      <MeetingRoomIcon sx={{ color: "var(--admin-accent)", fontSize: 26 }} />
+                    ) : (
+                      <TableRestaurantIcon sx={{ color: "var(--admin-accent)", fontSize: 26 }} />
+                    )}
                   </Box>
-                  <IconButton onClick={() => setQrTable(table)} sx={{ color: "var(--admin-accent)" }}>
-                    <QrCode2Icon />
-                  </IconButton>
-                  <IconButton onClick={() => copyLink(table)} sx={{ color: "var(--admin-text)" }}>
-                    <ContentCopyIcon />
-                  </IconButton>
-                  <IconButton onClick={() => openEdit(table)} sx={{ color: "var(--admin-text)" }}>
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton onClick={() => deleteTable(table)} sx={{ color: "var(--admin-error-soft)" }}>
-                    <DeleteIcon />
-                  </IconButton>
-                </Box>
-              </CardContent>
-            </Card>
-          );
-        })
+                  <Box sx={{ minWidth: 0, width: "100%" }}>
+                    <Typography
+                      sx={{
+                        fontWeight: 800,
+                        fontSize: 15,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        color: "var(--admin-text)",
+                      }}
+                    >
+                      {shopTableDisplayName(table)}
+                    </Typography>
+                    <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: 12, mt: 0.35 }}>
+                      شماره {table.number}
+                    </Typography>
+                    {url ? (
+                      <Typography
+                        sx={{
+                          color: "var(--admin-text-muted)",
+                          fontSize: 10,
+                          mt: 0.35,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          direction: "ltr",
+                        }}
+                        title={url}
+                      >
+                        {url.replace(/^https?:\/\/[^/]+/, "")}
+                      </Typography>
+                    ) : null}
+                  </Box>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "center",
+                      flexWrap: "wrap",
+                      gap: 0.25,
+                      mt: "auto",
+                      pt: 0.5,
+                    }}
+                  >
+                    <IconButton size="small" onClick={() => setQrTable(table)} sx={{ color: "var(--admin-accent)" }}>
+                      <QrCode2Icon fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small" onClick={() => copyLink(table)} sx={{ color: "var(--admin-text)" }}>
+                      <ContentCopyIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small" onClick={() => openEdit(table)} sx={{ color: "var(--admin-text)" }}>
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small" onClick={() => deleteTable(table)} sx={{ color: "var(--admin-error-soft)" }}>
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </Box>
       )}
 
       <Dialog open={dialogOpen} onClose={() => !saving && setDialogOpen(false)} fullWidth maxWidth="xs">

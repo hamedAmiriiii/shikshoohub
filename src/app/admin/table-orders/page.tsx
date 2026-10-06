@@ -8,8 +8,6 @@ import {
 import {
   Box,
   Button,
-  Card,
-  CardContent,
   Chip,
   CircularProgress,
   Dialog,
@@ -61,6 +59,31 @@ const CANCELLED_BY_LABEL: Record<string, string> = {
 
 const formatNumber = (n: number) => new Intl.NumberFormat("fa-IR").format(n);
 
+type ListFilter = "pending" | "paid" | "cancelled";
+
+function orderRowBackground(order: TableOrder, listFilter: ListFilter): string {
+  const status = (order.status || listFilter || "pending").toLowerCase();
+  if (status === "cancelled" || listFilter === "cancelled") {
+    return "rgba(198, 40, 40, 0.12)";
+  }
+  if (status === "paid" || listFilter === "paid") {
+    return "rgba(76, 175, 80, 0.14)";
+  }
+  // pending — رسید یا پرداخت آنلاین: کمی سبزتر
+  if (order.has_receipt || order.paid_online) {
+    return "rgba(76, 175, 80, 0.10)";
+  }
+  return "rgba(255, 152, 0, 0.12)";
+}
+
+function orderRowBorder(order: TableOrder, listFilter: ListFilter): string {
+  const status = (order.status || listFilter || "pending").toLowerCase();
+  if (status === "cancelled" || listFilter === "cancelled") return "rgba(229, 115, 115, 0.45)";
+  if (status === "paid" || listFilter === "paid") return "rgba(129, 199, 132, 0.5)";
+  if (order.has_receipt || order.paid_online) return "rgba(129, 199, 132, 0.45)";
+  return "rgba(255, 183, 77, 0.45)";
+}
+
 function formatDate(value?: string): string {
   if (!value) return "—";
   const date = new Date(value.replace(" ", "T"));
@@ -73,8 +96,6 @@ function formatDate(value?: string): string {
     minute: "2-digit",
   }).format(date);
 }
-
-type ListFilter = "pending" | "paid" | "cancelled";
 
 export default function TableOrdersPage() {
   const [loading, setLoading] = useState(true);
@@ -275,19 +296,13 @@ export default function TableOrdersPage() {
       ) : orders.length === 0 ? (
         <Typography sx={{ color: "var(--admin-text-secondary)" }}>سفارشی برای نمایش نیست.</Typography>
       ) : (
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: { xs: "1fr 1fr", md: "1fr 1fr 1fr" },
-            gap: 0.85,
-          }}
-        >
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
         {orders.map((order) => {
           const label = order.table_label || (order.table_number != null ? `میز ${order.table_number}` : "میز");
           const highlighted = Boolean(order.has_receipt) || Boolean(order.paid_online);
           const iconBtn = {
-            width: 26,
-            height: 26,
+            width: 32,
+            height: 32,
             color: "var(--admin-text-muted)",
             "&:hover": { color: "var(--admin-accent)", bgcolor: "var(--admin-menu-hover)" },
           };
@@ -296,99 +311,74 @@ export default function TableOrdersPage() {
             else setItemsOrder(order);
           };
           return (
-            <Card
+            <Box
               key={order.id}
               onClick={() => setItemsOrder(order)}
               sx={{
-                backgroundColor: "var(--admin-surface)",
-                border: "1px solid var(--admin-border)",
-                borderRadius: "12px",
-                boxShadow: "none",
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                gap: { xs: 0.75, sm: 1.25 },
+                px: { xs: 1, sm: 1.5 },
+                py: 1,
+                borderRadius: "10px",
+                border: `1px solid ${orderRowBorder(order, listFilter)}`,
+                backgroundColor: orderRowBackground(order, listFilter),
                 cursor: "pointer",
-                overflow: "hidden",
-                transition: "border-color 0.15s ease",
-                "&:hover": { borderColor: highlighted ? "#66bb6a" : "#ffb74d" },
+                transition: "border-color 0.15s ease, filter 0.15s ease",
+                "&:hover": { filter: "brightness(1.06)" },
               }}
             >
-              <CardContent sx={{ p: 0, "&:last-child": { pb: 0 } }}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 0.4,
-                    px: 0.9,
-                    py: 0.5,
-                    bgcolor: highlighted ? "rgba(76, 175, 80, 0.22)" : "rgba(255, 152, 0, 0.18)",
-                  }}
-                >
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.35, minWidth: 0, flex: 1 }}>
-                    <TableRestaurantIcon sx={{ color: highlighted ? "#66bb6a" : "#ffa726", fontSize: 14 }} />
-                    <Typography
-                      sx={{
-                        fontWeight: 800,
-                        fontSize: 12,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                        color: highlighted ? "#81c784" : "#ffb74d",
-                      }}
-                    >
-                      {label}
-                    </Typography>
-                  </Box>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, minWidth: 0, flex: "1 1 140px" }}>
+                <TableRestaurantIcon sx={{ color: "var(--admin-accent)", fontSize: 20, flexShrink: 0 }} />
+                <Box sx={{ minWidth: 0 }}>
                   <Typography
                     sx={{
-                      flex: 1,
                       fontWeight: 800,
-                      fontSize: 11,
-                      textAlign: "center",
-                      color: highlighted ? "#81c784" : "#ffb74d",
+                      fontSize: 14,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
+                      color: "var(--admin-text)",
                     }}
                   >
-                    {formatNumber(order.id)}
+                    {label}
+                    <Box component="span" sx={{ color: "var(--admin-text-muted)", fontWeight: 600, fontSize: 12, mr: 0.75 }}>
+                      #{formatNumber(order.id)}
+                    </Box>
                   </Typography>
-                  <Typography
-                    sx={{
-                      flex: 1,
-                      color: highlighted ? "#81c784" : "#ffb74d",
-                      fontSize: 9,
-                      lineHeight: 1.3,
-                      textAlign: "left",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
+                  <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, whiteSpace: "nowrap" }}>
                     {formatDate(order.created_at)}
+                    {order.phone ? ` · ${order.phone}` : ""}
                   </Typography>
                 </Box>
-                <Box sx={{ px: 0.9, pb: 0.75, pt: 0.55 }}>
-                <Typography sx={{ fontWeight: 800, fontSize: 13, letterSpacing: "-0.02em", lineHeight: 1.2 }}>
+              </Box>
+
+              <Box sx={{ display: "flex", flexDirection: "column", alignItems: { xs: "flex-start", sm: "flex-end" }, flex: "0 1 auto", minWidth: 90 }}>
+                <Typography sx={{ fontWeight: 800, fontSize: 14, letterSpacing: "-0.02em", lineHeight: 1.2, color: "var(--admin-text)" }}>
                   {formatNumber(getTableOrderAmount(order))}
-                  <Box component="span" sx={{ fontSize: 9, fontWeight: 600, color: "var(--admin-text-muted)", mr: 0.35 }}>
+                  <Box component="span" sx={{ fontSize: 10, fontWeight: 600, color: "var(--admin-text-muted)", mr: 0.35 }}>
                     تومان
                   </Box>
                 </Typography>
                 {tablePaymentMethodLabel(order) ? (
-                  <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 10, mt: 0.15 }}>
+                  <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 10 }}>
                     {tablePaymentMethodLabel(order)}
                   </Typography>
                 ) : null}
+              </Box>
+
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexWrap: "wrap", flex: "1 1 auto" }}>
                 {order.paid_online ? (
                   <Chip
                     size="small"
                     label="پرداخت آنلاین ✓"
-                    sx={{ mt: 0.35, height: 18, fontSize: 10, fontWeight: 800, color: "#2e7d32", bgcolor: "rgba(76, 175, 80, 0.16)" }}
+                    sx={{ height: 22, fontSize: 11, fontWeight: 800, color: "#2e7d32", bgcolor: "rgba(76, 175, 80, 0.16)" }}
                   />
                 ) : null}
                 {listFilter === "cancelled" && order.cancelled_by ? (
-                  <Typography sx={{ color: "#e57373", fontSize: 10, mt: 0.15 }}>
+                  <Typography sx={{ color: "#e57373", fontSize: 11 }}>
                     {CANCELLED_BY_LABEL[order.cancelled_by] || "لغوشده"}
-                  </Typography>
-                ) : null}
-                {order.phone ? (
-                  <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 10, mt: 0.1, direction: "ltr", textAlign: "right" }}>
-                    {order.phone}
                   </Typography>
                 ) : null}
                 {order.note?.trim() ? (
@@ -398,29 +388,26 @@ export default function TableOrdersPage() {
                         e.stopPropagation();
                         setItemsOrder(order);
                       }}
-                      sx={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        mt: 0.35,
-                        color: "#e53935",
-                      }}
+                      sx={{ display: "inline-flex", alignItems: "center", color: "#e53935" }}
                     >
                       <StickyNote2OutlinedIcon sx={{ fontSize: 18 }} />
                     </Box>
                   </Tooltip>
                 ) : null}
+              </Box>
+
+              <Box
+                sx={{ display: "flex", alignItems: "center", gap: 0.25, ml: "auto", flexShrink: 0 }}
+                onClick={(e) => e.stopPropagation()}
+              >
                 {highlighted ? (
                   <Button
                     size="small"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openView();
-                    }}
+                    onClick={openView}
                     sx={{
-                      mt: 0.45,
                       minWidth: 0,
                       px: 1,
-                      py: 0.15,
+                      py: 0.25,
                       fontSize: 11,
                       fontWeight: 800,
                       color: "#2e7d32",
@@ -432,63 +419,51 @@ export default function TableOrdersPage() {
                     مشاهده
                   </Button>
                 ) : null}
-                <Box
-                  sx={{ display: "flex", justifyContent: "space-between", mt: 0.35, mx: -0.35 }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {listFilter === "pending" ? (
-                    <Tooltip title="تأیید پرداخت">
-                      <IconButton
-                        size="small"
-                        onClick={() => {
-                          setInvoiceReady(false);
-                          setSettlement(DEFAULT_SETTLEMENT);
-                          setPayOrder(order);
-                        }}
-                        sx={{ ...iconBtn, color: "var(--admin-accent)" }}
-                      >
-                        <CheckRoundedIcon sx={{ fontSize: 16 }} />
-                      </IconButton>
-                    </Tooltip>
-                  ) : (
-                    <Box sx={{ width: 26 }} />
-                  )}
-                  <Tooltip title="اقلام">
-                    <IconButton size="small" onClick={() => setItemsOrder(order)} sx={iconBtn}>
-                      <NotesRoundedIcon sx={{ fontSize: 16 }} />
+                {listFilter === "pending" ? (
+                  <Tooltip title="تأیید پرداخت">
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        setInvoiceReady(false);
+                        setSettlement(DEFAULT_SETTLEMENT);
+                        setPayOrder(order);
+                      }}
+                      sx={{ ...iconBtn, color: "var(--admin-accent)" }}
+                    >
+                      <CheckRoundedIcon sx={{ fontSize: 18 }} />
                     </IconButton>
                   </Tooltip>
-                  {order.has_receipt && order.receipt_url ? (
-                    <Tooltip title="رسید">
-                      <IconButton size="small" onClick={() => setReceiptPreview(order)} sx={iconBtn}>
-                        <ReceiptLongOutlinedIcon sx={{ fontSize: 16 }} />
-                      </IconButton>
-                    </Tooltip>
-                  ) : (
-                    <Box sx={{ width: 26 }} />
-                  )}
-                  <Tooltip title="پرینت">
-                    <IconButton size="small" onClick={() => printOrder(order)} sx={iconBtn}>
-                      <PrintOutlinedIcon sx={{ fontSize: 16 }} />
+                ) : null}
+                <Tooltip title="اقلام">
+                  <IconButton size="small" onClick={() => setItemsOrder(order)} sx={iconBtn}>
+                    <NotesRoundedIcon sx={{ fontSize: 18 }} />
+                  </IconButton>
+                </Tooltip>
+                {order.has_receipt && order.receipt_url ? (
+                  <Tooltip title="رسید">
+                    <IconButton size="small" onClick={() => setReceiptPreview(order)} sx={iconBtn}>
+                      <ReceiptLongOutlinedIcon sx={{ fontSize: 18 }} />
                     </IconButton>
                   </Tooltip>
-                  {listFilter === "pending" && !order.paid_online ? (
-                    <Tooltip title="لغو">
-                      <IconButton
-                        size="small"
-                        onClick={() => setCancelOrder(order)}
-                        sx={{ ...iconBtn, "&:hover": { color: "#c62828", bgcolor: "rgba(198,40,40,0.08)" } }}
-                      >
-                        <CloseRoundedIcon sx={{ fontSize: 16 }} />
-                      </IconButton>
-                    </Tooltip>
-                  ) : (
-                    <Box sx={{ width: 26 }} />
-                  )}
-                </Box>
-                </Box>
-              </CardContent>
-            </Card>
+                ) : null}
+                <Tooltip title="پرینت">
+                  <IconButton size="small" onClick={() => printOrder(order)} sx={iconBtn}>
+                    <PrintOutlinedIcon sx={{ fontSize: 18 }} />
+                  </IconButton>
+                </Tooltip>
+                {listFilter === "pending" && !order.paid_online ? (
+                  <Tooltip title="لغو">
+                    <IconButton
+                      size="small"
+                      onClick={() => setCancelOrder(order)}
+                      sx={{ ...iconBtn, "&:hover": { color: "#c62828", bgcolor: "rgba(198,40,40,0.08)" } }}
+                    >
+                      <CloseRoundedIcon sx={{ fontSize: 18 }} />
+                    </IconButton>
+                  </Tooltip>
+                ) : null}
+              </Box>
+            </Box>
           );
         })}
         </Box>

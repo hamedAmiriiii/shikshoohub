@@ -124,7 +124,7 @@ const PLANS = [
   {
     slug: "base" as const,
     name: "پایه",
-    price: "۱۱",
+    priceToman: 11_000_000,
     tag: null as string | null,
     description: "منوی آنلاین و صندوق فروش برای شروع",
     popular: false,
@@ -139,9 +139,9 @@ const PLANS = [
   {
     slug: "full_sale" as const,
     name: "فروش کامل",
-    price: "۱۶",
+    priceToman: 16_000_000,
     tag: null as string | null,
-    description: "منو به‌همراه پنل فروش کامل رستوران",
+    description: "منو به‌همراه پنل فروش کامل ",
     popular: true,
     features: [
       "همه امکانات پایه",
@@ -153,8 +153,8 @@ const PLANS = [
   },
   {
     slug: "v21" as const,
-    name: "نسخه ۲۱",
-    price: "۲۹",
+    name: "نسخه هوشمند",
+    priceToman: 29_000_000,
     tag: "پنل فروش + باشگاه هوشمند",
     description: "منو، پنل فروش و باشگاه مشتریان هوشمند",
     popular: false,
@@ -167,6 +167,10 @@ const PLANS = [
     ],
   },
 ];
+
+type LandingPlan = (typeof PLANS)[number];
+
+const API_ORIGIN = (process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoo-plus.ir").replace(/\/$/, "");
 
 function fadeUp(delay = 0) {
   return {
@@ -181,12 +185,62 @@ function toFaDigits(value: string | number) {
   return String(value).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]);
 }
 
+function formatPlanPrice(priceToman: number): { main: string; unit: string; label: string } {
+  if (priceToman >= 1_000_000 && priceToman % 1_000_000 === 0) {
+    const m = priceToman / 1_000_000;
+    const main = toFaDigits(m);
+    return { main, unit: "میلیون تومان", label: `${main} میلیون تومان` };
+  }
+  if (priceToman >= 1_000_000) {
+    const m = Math.round((priceToman / 1_000_000) * 10) / 10;
+    const main = toFaDigits(String(m).replace(".", "٫"));
+    return { main, unit: "میلیون تومان", label: `${main} میلیون تومان` };
+  }
+  const main = toFaDigits(priceToman.toLocaleString("en-US"));
+  return { main, unit: "تومان", label: `${main} تومان` };
+}
+
 export default function DigitalMenuLandingClient() {
   const [navOpen, setNavOpen] = useState(false);
   const [activeTheme, setActiveTheme] = useState<ReservMenuThemeId>("video");
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [checkoutPlan, setCheckoutPlan] = useState<MenuCheckoutPlan | null>(null);
+  const [plans, setPlans] = useState<LandingPlan[]>(PLANS);
   const paymentNotice = useMenuPaymentReturnNotice();
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await fetch(`${API_ORIGIN}/api/shop-packages`, {
+          headers: { Accept: "application/json" },
+        });
+        if (!res.ok) return;
+        const json = (await res.json().catch(() => null)) as { data?: unknown } | null;
+        const list = Array.isArray(json?.data) ? json.data : [];
+        if (!list.length || cancelled) return;
+        setPlans((prev) =>
+          prev.map((plan) => {
+            const row = list.find(
+              (item) =>
+                item &&
+                typeof item === "object" &&
+                String((item as Record<string, unknown>).slug ?? "") === plan.slug,
+            ) as Record<string, unknown> | undefined;
+            const price = Number(row?.price_toman);
+            if (!Number.isFinite(price) || price <= 0) return plan;
+            return { ...plan, priceToman: Math.round(price) };
+          }),
+        );
+      } catch {
+        /* fallback static */
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const scrollTo = useCallback((id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -197,11 +251,12 @@ export default function DigitalMenuLandingClient() {
     document.getElementById("consult")?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
-  const openCheckout = useCallback((plan: (typeof PLANS)[number]) => {
+  const openCheckout = useCallback((plan: LandingPlan) => {
+    const priced = formatPlanPrice(plan.priceToman);
     setCheckoutPlan({
       slug: plan.slug,
       name: plan.name,
-      priceLabel: `${toFaDigits(plan.price)} میلیون تومان`,
+      priceLabel: priced.label,
       description: plan.description,
     });
   }, []);
@@ -471,7 +526,9 @@ export default function DigitalMenuLandingClient() {
             </div>
           ) : null}
           <div className="grid md:grid-cols-3 gap-4 items-stretch">
-            {PLANS.map((plan, i) => (
+            {plans.map((plan, i) => {
+              const priced = formatPlanPrice(plan.priceToman);
+              return (
               <motion.article
                 key={plan.slug}
                 {...fadeUp(i * 0.05)}
@@ -494,8 +551,8 @@ export default function DigitalMenuLandingClient() {
                   <p className="text-sm text-slate-400 mt-2 leading-7">{plan.description}</p>
                 </div>
                 <div className="mb-5">
-                  <span className="text-4xl font-black text-white">{toFaDigits(plan.price)}</span>
-                  <span className="text-slate-400 text-sm mr-2">میلیون تومان</span>
+                  <span className="text-4xl font-black text-white">{priced.main}</span>
+                  <span className="text-slate-400 text-sm mr-2">{priced.unit}</span>
                 </div>
                 <ul className="space-y-2.5 text-sm text-slate-300 mb-6 flex-1">
                   {plan.features.map((f) => (
@@ -524,7 +581,8 @@ export default function DigitalMenuLandingClient() {
                   مشاوره قبل از خرید
                 </button>
               </motion.article>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
