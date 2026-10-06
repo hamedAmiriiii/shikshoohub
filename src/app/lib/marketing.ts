@@ -219,7 +219,18 @@ function readStoredRef(): StoredRef | null {
       localStorage.removeItem(REF_STORAGE_KEY);
       return null;
     }
-    return parsed;
+    const normalized = normalizeMarketerRefCode(parsed.code);
+    if (!normalized) {
+      localStorage.removeItem(REF_STORAGE_KEY);
+      return null;
+    }
+    if (normalized !== parsed.code) {
+      const upgraded = { ...parsed, code: normalized, days };
+      localStorage.setItem(REF_STORAGE_KEY, JSON.stringify(upgraded));
+      document.cookie = `${REF_COOKIE}=${encodeURIComponent(normalized)}; path=/; max-age=${days * 86400}; samesite=lax`;
+      return upgraded;
+    }
+    return { ...parsed, code: normalized, days };
   } catch {
     return null;
   }
@@ -231,8 +242,10 @@ function writeStoredRef(ref: StoredRef | null) {
     document.cookie = `${REF_COOKIE}=; path=/; max-age=0; samesite=lax`;
     return;
   }
-  localStorage.setItem(REF_STORAGE_KEY, JSON.stringify(ref));
-  document.cookie = `${REF_COOKIE}=${encodeURIComponent(ref.code)}; path=/; max-age=${ref.days * 86400}; samesite=lax`;
+  const code = normalizeMarketerRefCode(ref.code) || ref.code;
+  const next = { ...ref, code };
+  localStorage.setItem(REF_STORAGE_KEY, JSON.stringify(next));
+  document.cookie = `${REF_COOKIE}=${encodeURIComponent(code)}; path=/; max-age=${ref.days * 86400}; samesite=lax`;
 }
 
 function getVisitorId(): string {
@@ -247,15 +260,33 @@ function getVisitorId(): string {
   return id;
 }
 
+function readMarketerCodeFromCookie(): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(/(?:^|;\s*)wb_mref=([^;]*)/);
+  if (!match) return null;
+  try {
+    return normalizeMarketerRefCode(decodeURIComponent(match[1]));
+  } catch {
+    return normalizeMarketerRefCode(match[1]);
+  }
+}
+
+function readMarketerCodeFromUrl(): string | null {
+  if (typeof window === "undefined") return null;
+  return normalizeMarketerRefCode(new URLSearchParams(window.location.search).get("mref"));
+}
+
 /** کد معرف فقط عدد ۴ رقمی */
 export function normalizeMarketerRefCode(raw: string | null | undefined): string | null {
-  const digits = toLatinDigits(String(raw || "")).replace(/\D/g, "");
+  const upper = String(raw || "").trim().toUpperCase();
+  if (upper === "4Z3T6F") return "4366";
+  const digits = toLatinDigits(upper).replace(/\D/g, "");
   return /^\d{4}$/.test(digits) ? digits : null;
 }
 
-/** کد معرف ذخیره‌شده (برای ارسال هنگام ثبت‌نام) */
+/** کد معرف ذخیره‌شده (برای ارسال هنگام ثبت‌نام) — localStorage / کوکی / URL */
 export function getStoredMarketerRefCode(): string | null {
-  return readStoredRef()?.code ?? null;
+  return readStoredRef()?.code ?? readMarketerCodeFromCookie() ?? readMarketerCodeFromUrl();
 }
 
 /**
@@ -280,6 +311,9 @@ export async function captureMarketerRef(): Promise<void> {
       at: Date.now(),
       days: DEFAULT_ATTRIBUTION_DAYS,
     });
+  } else if (existing.code !== code && normalizeMarketerRefCode(existing.code) === code) {
+    // ارتقای کد قدیمی به ۴ رقمی
+    writeStoredRef({ ...existing, code });
   }
 
   const res = await request<{ valid: boolean; attribution_days?: number }>(
@@ -301,33 +335,50 @@ export async function captureMarketerRef(): Promise<void> {
 /**
  * وقتی کاربرِ آمده با لینک بازاریاب، ثبت‌نام فروشگاه را تمام کرد و لاگین شد،
  * فروشگاهش را به نام بازاریاب ثبت می‌کند.
+ * @returns نتیجه برای نمایش به کاربر (اختیاری)
  */
-export async function tryClaimMarketerRef(): Promise<void> {
-  if (typeof window === "undefined") return;
-  const ref = readStoredRef();
-  if (!ref) return;
+export async function tryClaimMarketerRef(): Promise<{ ok: boolean; message: string } | null> {
+  if (typeof window === "undefined") return null;
+  let ref = readStoredRef();
+  if (!ref) {
+    const code = readMarketerCodeFromCookie() ?? readMarketerCodeFromUrl();
+    if (!code) return null;
+    ref = {
+      code,
+      visitor_id: getVisitorId(),
+      at: Date.now(),
+      days: DEFAULT_ATTRIBUTION_DAYS,
+    };
+    writeStoredRef(ref);
+  }
   const token = tokenCode();
-  if (!token) return;
-  if (ref.last_claim_at && Date.now() - ref.last_claim_at < CLAIM_RETRY_MS) return;
+  if (!token) return null;
+  if (ref.last_claim_at && Date.now() - ref.last_claim_at < CLAIM_RETRY_MS) return null;
 
+  const code = normalizeMarketerRefCode(ref.code) || ref.code;
   const res = await request<{ ok: boolean; final: boolean; message: string }>(
     "POST",
     "/api/marketing/claim",
     { Authorization: `Bearer ${token}` },
-    { code: ref.code, visitor_id: ref.visitor_id },
+    { code, visitor_id: ref.visitor_id },
   );
 
   if (!res.ok) {
-    writeStoredRef({ ...ref, last_claim_at: Date.now() });
-    return;
+    writeStoredRef({ ...ref, code, last_claim_at: Date.now() });
+    return { ok: false, message: res.message || "انتساب بازاریاب انجام نشد." };
+  }
+
+  if (res.data.ok) {
+    writeStoredRef(null);
+    return { ok: true, message: res.data.message || "ثبت شد." };
   }
 
   if (res.data.final) {
-    // موفق یا قطعی ناموفق — دیگر تلاش نکن
+    // شکست قطعی (مثلاً خودمعرفی) — کد را پاک کن تا لوپ نشود
     writeStoredRef(null);
-    return;
+    return { ok: false, message: res.data.message || "انتساب انجام نشد." };
   }
 
-  // هنوز فروشگاه آماده نیست؛ کمی بعد دوباره تلاش می‌شود
-  writeStoredRef({ ...ref, last_claim_at: Date.now() });
+  writeStoredRef({ ...ref, code, last_claim_at: Date.now() });
+  return { ok: false, message: res.data.message || "بعداً دوباره تلاش می‌شود." };
 }
