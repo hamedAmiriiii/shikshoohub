@@ -1,7 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 
-export const SITE_PAGE_KEYS = ["landing", "accounting", "accounting_admin", "smart_club"] as const;
+export const SITE_PAGE_KEYS = ["landing", "accounting", "accounting_admin", "smart_club", "digital_menu"] as const;
 
 export type SitePageKey = (typeof SITE_PAGE_KEYS)[number];
 
@@ -10,6 +10,7 @@ export const SITE_PAGE_LABELS: Record<SitePageKey, { title: string; hint: string
   accounting: { title: "صفحه حسابداری", hint: "لندینگ نرم‌افزار حسابداری و فروش" },
   accounting_admin: { title: "ادمین حسابداری", hint: "بخش حسابداری داخل پنل" },
   smart_club: { title: "صفحه باشگاه هوشمند", hint: "لندینگ باشگاه مشتریان هوشمند" },
+  digital_menu: { title: "صفحه منوی آنلاین", hint: "لندینگ منوی دیجیتال رستوران" },
 };
 
 export type SitePageVisit = {
@@ -35,6 +36,7 @@ function emptyStore(): Store {
     accounting: emptyBucket(),
     accounting_admin: emptyBucket(),
     smart_club: emptyBucket(),
+    digital_menu: emptyBucket(),
   };
 }
 

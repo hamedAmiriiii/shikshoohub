@@ -9,6 +9,7 @@ import CalculateIcon from "@mui/icons-material/Calculate";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import ApiIcon from "@mui/icons-material/Api";
 import LoyaltyIcon from "@mui/icons-material/Loyalty";
+import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { isSuperAdminUser } from "@/app/lib/superAdmin";
@@ -23,6 +24,7 @@ const ICONS: Record<SitePageKey, ReactNode> = {
   accounting: <CalculateIcon sx={{ color: "var(--admin-accent)" }} />,
   accounting_admin: <AdminPanelSettingsIcon sx={{ color: "var(--admin-accent)" }} />,
   smart_club: <LoyaltyIcon sx={{ color: "var(--admin-accent)" }} />,
+  digital_menu: <RestaurantMenuIcon sx={{ color: "var(--admin-accent)" }} />,
 };
 
 function formatCount(value: number) {

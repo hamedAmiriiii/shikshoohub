@@ -13,6 +13,9 @@ function requestHosts(request: NextRequest) {
  * هیچ redirectای از / به /admin نگذار — لندینگ باید روی آدرس اصلی بماند.
  * روی دامنهٔ تعمیرات (مثل omidtamir.ir) همهٔ مسیرها زیر /repair می‌روند.
  */
+/** لینک بازاریاب منوی آنلاین → مستقیم لندینگ منو (با حفظ ?mref=) */
+const MENU_LANDING_MREF = "4Z3T6F";
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -21,6 +24,15 @@ export function middleware(request: NextRequest) {
     if (nextPath) {
       const url = request.nextUrl.clone();
       url.pathname = nextPath;
+      return NextResponse.redirect(url);
+    }
+  }
+
+  if (pathname === "/") {
+    const mref = (request.nextUrl.searchParams.get("mref") || "").trim().toUpperCase();
+    if (mref === MENU_LANDING_MREF) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/landing/menu";
       return NextResponse.redirect(url);
     }
   }

@@ -1,19 +1,20 @@
 import type { Metadata } from "next";
 import JsonLd from "@/app/components/JsonLd";
+import RecordSiteView from "@/app/components/RecordSiteView";
 import { pageMetadata, SITE_URL } from "@/app/lib/seo";
 import DigitalMenuLandingClient from "./DigitalMenuLandingClient";
 
 export const metadata: Metadata = pageMetadata({
-  title: "منوی دیجیتال رستوران و کافی‌شاپ وبینو | سفارش با QR و پرداخت آنلاین",
+  title: "منوی آنلاین رستوران و کافی‌شاپ | وبینو منو",
   description:
-    "منوی دیجیتال وبینو برای رستوران و کافی‌شاپ: اسکن QR روی میز، مشاهده منو روی گوشی، سفارش و پرداخت آنلاین متصل به نرم‌افزار فروش.",
+    "منوی دیجیتال وبینو: QR میز، چند تم زنده، سفارش روی گوشی و پرداخت آنلاین. سه پلن ۱۱، ۱۶ و ۲۹ میلیون — نسخه ۲۱ با پنل فروش و باشگاه هوشمند.",
   path: "/landing/menu",
   keywords: [
-    "منو دیجیتال",
+    "منو آنلاین",
     "منوی دیجیتال رستوران",
-    "منو آنلاین کافی شاپ",
+    "منو کافی شاپ",
     "سفارش با QR",
-    "وبینو",
+    "وبینو منو",
   ],
 });
 
@@ -21,24 +22,31 @@ export default function DigitalMenuLandingPage() {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    name: "منوی دیجیتال وبینو",
+    name: "وبینو منو",
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web, Android, iOS",
     url: `${SITE_URL}/landing/menu`,
     description:
-      "منوی دیجیتال رستوران و کافی‌شاپ با اسکن QR، سفارش روی گوشی و پرداخت آنلاین متصل به وبینو.",
+      "منوی آنلاین رستوران و کافی‌شاپ با QR، تم‌های متنوع، سفارش و پرداخت آنلاین متصل به پنل فروش وبینو.",
+    offers: [
+      { "@type": "Offer", name: "پایه", price: "11000000", priceCurrency: "IRR" },
+      { "@type": "Offer", name: "فروش کامل", price: "16000000", priceCurrency: "IRR" },
+      { "@type": "Offer", name: "نسخه ۲۱", price: "29000000", priceCurrency: "IRR" },
+    ],
     featureList: [
       "اسکن QR میز",
-      "نمایش تصویر و قیمت منو",
-      "فراخوان گارسون",
-      "پرداخت نقدی و آنلاین",
-      "اتصال به باشگاه مشتریان",
+      "چندین تم منو",
+      "سفارش روی گوشی",
+      "پیجر گارسون",
+      "پرداخت آنلاین",
+      "پنل فروش و باشگاه هوشمند در نسخه ۲۱",
     ],
   };
 
   return (
     <>
       <JsonLd data={jsonLd} />
+      <RecordSiteView page="digital_menu" />
       <DigitalMenuLandingClient />
     </>
   );

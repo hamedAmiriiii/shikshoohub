@@ -135,21 +135,24 @@ const CLASSIC_DARK: ReservTheme = {
   SHADOW: "0 10px 28px rgba(0,0,0,0.4)",
 };
 
-const GOLD = "#b8894a";
-const GOLD_GRADIENT = "linear-gradient(135deg, #d8b679 0%, #b8894a 55%, #94692f 100%)";
+const GOLD = "#edc531";
+const GOLD_DEEP = "#c9a61a";
+const GOLD_SOFT = "#f5e07a";
+const GOLD_INK = "#2b2116";
+const GOLD_GRADIENT = `linear-gradient(135deg, ${GOLD_SOFT} 0%, ${GOLD} 48%, ${GOLD_DEEP} 100%)`;
 
 const SHOWCASE_LIGHT: ReservTheme = {
-  BG: "#f3ece0",
-  BG_GRADIENT: "linear-gradient(180deg, #f8f2e8 0%, #efe4d1 100%)",
-  SURFACE: "#fffaf2",
-  SURFACE_ALT: "#f1e8d8",
-  TEXT: "#2b2116",
+  BG: "#f7f3e6",
+  BG_GRADIENT: "linear-gradient(180deg, #fbf8ee 0%, #f0e8d0 100%)",
+  SURFACE: "#fffdf6",
+  SURFACE_ALT: "#f3ebd4",
+  TEXT: GOLD_INK,
   MUTED: "#8a7a63",
-  BORDER: "rgba(160,122,63,0.22)",
-  HEADER_BG: "rgba(248,242,232,0.92)",
+  BORDER: "rgba(237,197,49,0.35)",
+  HEADER_BG: "rgba(251,248,238,0.94)",
   CART_BAR_BG: GOLD_GRADIENT,
-  CART_BAR_TEXT: "#1f160b",
-  SHADOW: "0 8px 24px rgba(120,90,40,0.14)",
+  CART_BAR_TEXT: GOLD_INK,
+  SHADOW: "0 8px 24px rgba(201,166,26,0.18)",
 };
 
 const SHOWCASE_DARK: ReservTheme = {
@@ -159,10 +162,10 @@ const SHOWCASE_DARK: ReservTheme = {
   SURFACE_ALT: "#2c2317",
   TEXT: "#f5ead6",
   MUTED: "#b8a586",
-  BORDER: "rgba(216,182,121,0.18)",
+  BORDER: "rgba(237,197,49,0.28)",
   HEADER_BG: "rgba(21,17,11,0.92)",
   CART_BAR_BG: GOLD_GRADIENT,
-  CART_BAR_TEXT: "#1f160b",
+  CART_BAR_TEXT: GOLD_INK,
   SHADOW: "0 8px 24px rgba(0,0,0,0.45)",
 };
 
@@ -478,8 +481,8 @@ function ThemeCategoryBar({
     switch (variant) {
       case "gold":
         return {
-          bgcolor: active ? "#2b2116" : "rgba(255,255,255,0.22)",
-          color: active ? "#f3d9a4" : "#2b2116",
+          bgcolor: active ? GOLD_INK : "rgba(255,255,255,0.28)",
+          color: active ? GOLD : GOLD_INK,
           border: "none",
           boxShadow: active ? "0 6px 14px rgba(43,33,22,0.35)" : "none",
         };
@@ -520,7 +523,7 @@ function ThemeCategoryBar({
               background: GOLD_GRADIENT,
               borderRadius: "26px",
               p: 0.75,
-              boxShadow: "0 10px 26px rgba(148,105,47,0.3)",
+              boxShadow: "0 10px 26px rgba(201,166,26,0.35)",
             }
           : {}),
       }}
@@ -669,7 +672,7 @@ function HorizontalCard({
         : palette.SURFACE;
   const tone: QtyTone =
     variant === "showcase"
-      ? { bg: GOLD_GRADIENT, fg: "#1f160b", pillBg: dark ? "#2c2317" : "#fffaf2", pillFg: palette.TEXT, ring: palette.BORDER }
+      ? { bg: GOLD_GRADIENT, fg: GOLD_INK, pillBg: dark ? "#2c2317" : "#fffdf6", pillFg: palette.TEXT, ring: palette.BORDER }
       : { bg: palette.TEXT, fg: palette.BG, pillBg: palette.SURFACE_ALT, pillFg: palette.TEXT, ring: palette.BORDER };
 
   return (
@@ -690,7 +693,7 @@ function HorizontalCard({
             ? `1px solid ${palette.BORDER}`
             : "1px solid transparent",
         boxShadow: highlight
-          ? "0 10px 28px rgba(184,137,74,0.35)"
+          ? "0 10px 28px rgba(237,197,49,0.4)"
           : variant === "cover"
             ? "0 8px 22px rgba(0,0,0,0.06)"
             : "0 1px 2px rgba(0,0,0,0.04)",
@@ -722,9 +725,9 @@ function HorizontalCard({
               borderRadius: "8px",
               fontSize: 11,
               fontWeight: 900,
-              bgcolor: variant === "showcase" ? "#eaa47a" : "#ef4444",
-              color: variant === "showcase" ? "#5a2a0c" : "#fff",
-              border: variant === "showcase" ? "1.5px dashed rgba(90,42,12,0.45)" : "none",
+              bgcolor: variant === "showcase" ? GOLD : "#ef4444",
+              color: variant === "showcase" ? GOLD_INK : "#fff",
+              border: variant === "showcase" ? `1.5px dashed ${GOLD_DEEP}` : "none",
               boxShadow: "0 4px 10px rgba(0,0,0,0.18)",
             }}
           >
@@ -1144,7 +1147,6 @@ function ShowcaseSideRail({
   selectedId,
   onSelect,
   dimmed,
-  compact,
   toolbar,
   palette,
 }: {
@@ -1152,7 +1154,6 @@ function ShowcaseSideRail({
   selectedId: string;
   onSelect: (id: string) => void;
   dimmed?: boolean;
-  compact?: boolean;
   toolbar?: ReservShowcaseToolbarProps | null;
   palette: ReservTheme;
 }) {
@@ -1164,11 +1165,10 @@ function ShowcaseSideRail({
       sx={{
         width: "20%",
         flex: "0 0 20%",
-        alignSelf: "flex-start",
-        position: compact ? "relative" : "sticky",
-        top: compact ? "auto" : 64,
-        maxHeight: compact ? "none" : "calc(100dvh - 120px)",
+        alignSelf: "stretch",
+        maxHeight: "100%",
         overflowY: "auto",
+        overscrollBehavior: "contain",
         display: "flex",
         flexDirection: "column",
         scrollbarWidth: "none",
@@ -1187,7 +1187,7 @@ function ShowcaseSideRail({
             p: 0.5,
             borderRadius: "16px",
             background: GOLD_GRADIENT,
-            boxShadow: "0 10px 26px rgba(148,105,47,0.28)",
+            boxShadow: "0 10px 26px rgba(201,166,26,0.32)",
             opacity: dimmed ? 0.45 : 1,
             pointerEvents: dimmed ? "none" : "auto",
           }}
@@ -1216,8 +1216,8 @@ function ShowcaseSideRail({
                   fontWeight: active ? 800 : 600,
                   lineHeight: 1.35,
                   textAlign: "center",
-                  color: active ? "#f3d9a4" : "#2b2116",
-                  bgcolor: active ? "#2b2116" : "rgba(255,255,255,0.28)",
+                  color: active ? GOLD : GOLD_INK,
+                  bgcolor: active ? GOLD_INK : "rgba(255,255,255,0.32)",
                   boxShadow: active ? "0 4px 10px rgba(43,33,22,0.28)" : "none",
                   wordBreak: "break-word",
                   transition: "background-color 160ms ease, color 160ms ease",
@@ -1242,18 +1242,41 @@ function ShowcaseLayout(props: ReservMenuLayoutProps) {
   const all: Section[] = discounted.length
     ? [{ id: "__discount", title: t("discountedItems"), items: discounted }, ...sections]
     : sections;
+  const compact = Boolean(props.compact);
   return (
-    <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
+    <Box
+      sx={{
+        display: "flex",
+        alignItems: "stretch",
+        gap: 1,
+        overflow: "hidden",
+        // ستون راست ثابت؛ فقط ستون کارت‌ها اسکرول می‌شود
+        height: compact ? 560 : "calc(100dvh - 148px)",
+        maxHeight: compact ? 560 : "calc(100dvh - 148px)",
+        minHeight: compact ? 420 : 280,
+      }}
+    >
       <ShowcaseSideRail
         categories={categories}
         selectedId={selectedCategory}
         onSelect={props.onSelectCategory}
         dimmed={searchActive}
-        compact={props.compact}
         toolbar={props.showcaseToolbar}
         palette={palette}
       />
-      <Box sx={{ flex: 1, minWidth: 0 }}>
+      <Box
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          height: "100%",
+          overflowY: "auto",
+          overscrollBehavior: "contain",
+          WebkitOverflowScrolling: "touch",
+          scrollbarWidth: "thin",
+          pr: 0.25,
+          pb: 1.5,
+        }}
+      >
         {all.map((section, sectionIndex) => (
           <Box key={section.id} component="section" sx={{ mb: 2.5 }}>
             {sectionIndex > 0 ? (
