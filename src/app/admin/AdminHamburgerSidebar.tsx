@@ -37,6 +37,7 @@ import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import HandshakeIcon from "@mui/icons-material/Handshake";
 import QrCode2Icon from "@mui/icons-material/QrCode2";
 import ShareIcon from "@mui/icons-material/Share";
+import CampaignIcon from "@mui/icons-material/Campaign";
 import StorefrontIcon from "@mui/icons-material/Storefront";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import ShoppingCartCheckoutIcon from "@mui/icons-material/ShoppingCartCheckout";
@@ -561,6 +562,12 @@ export default function AdminHamburgerSidebar({
         label: "خریداران یادینو",
         href: "/admin/product-plans/orders",
         icon: <ReceiptLongIcon />,
+      },
+      {
+        id: "marketers",
+        label: "بازاریاب‌ها",
+        href: "/admin/marketers",
+        icon: <CampaignIcon />,
       },
       {
         id: "agency-requests",

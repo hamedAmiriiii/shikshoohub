@@ -21,6 +21,10 @@ function isRepairPath(pathname: string | null) {
   return pathname === "/repair" || Boolean(pathname?.startsWith("/repair/"));
 }
 
+function isMarketerPanelPath(pathname: string | null) {
+  return pathname === "/newuser" || Boolean(pathname?.startsWith("/newuser/"));
+}
+
 function AppShellContent({ children }: { children: React.ReactNode }) {
   const { searchQuery, setSearchQuery } = useShopContext();
   const pathname = usePathname();
@@ -63,7 +67,12 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  if (isOilPath(pathname) || isOilPublicPath(pathname) || isRepairPath(pathname)) {
+  if (
+    isOilPath(pathname) ||
+    isOilPublicPath(pathname) ||
+    isRepairPath(pathname) ||
+    isMarketerPanelPath(pathname)
+  ) {
     return <>{children}</>;
   }
   return (

@@ -74,6 +74,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/sms-package-orders': 'درخواست‌های بسته پیامک',
     '/admin/two-factor-codes': 'کدهای دوعاملی',
     '/admin/agency-requests': 'نمایندگی‌ها',
+    '/admin/marketers': 'بازاریاب‌ها',
     '/admin/desktop-licenses': 'لایسنس دسکتاپ',
     '/admin/desktop-licenses/logs': 'لاگ اتصال دسکتاپ',
     '/admin/site-stats': 'آمار سایت',
