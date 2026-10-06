@@ -110,6 +110,7 @@ type HeaderProps = {
   onHistory: () => void;
   showLanguageSwitch?: boolean;
   showThemeToggle?: boolean;
+  variant?: "default" | "classic";
 };
 
 export function ReservHeader({
@@ -123,6 +124,7 @@ export function ReservHeader({
   showServiceShortcut = false,
   showLanguageSwitch = false,
   showThemeToggle = true,
+  variant = "default",
   onLogin,
   onToggleTheme,
   onCurrentOrders,
@@ -136,15 +138,26 @@ export function ReservHeader({
   const moreOpen = Boolean(moreAnchor);
   /** با فعال بودن خدمات، روی موبایل دکمه‌های اضافه داخل همبرگر می‌روند */
   const compactOnMobile = showServiceShortcut;
-  const iconBtn = {
-    width: 44,
-    height: 44,
-    color: theme.TEXT,
-    bgcolor: theme.SURFACE,
-    border: `1px solid ${theme.BORDER}`,
-    borderRadius: "14px",
-    "&:hover": { bgcolor: theme.SURFACE_ALT },
-  } as const;
+  const isClassic = variant === "classic";
+  const iconBtn = isClassic
+    ? {
+        width: 40,
+        height: 40,
+        color: "#f4ece4",
+        bgcolor: "transparent",
+        border: "1px solid rgba(244,236,228,0.22)",
+        borderRadius: "8px",
+        "&:hover": { bgcolor: "rgba(244,236,228,0.08)" },
+      }
+    : {
+        width: 44,
+        height: 44,
+        color: theme.TEXT,
+        bgcolor: theme.SURFACE,
+        border: `1px solid ${theme.BORDER}`,
+        borderRadius: "14px",
+        "&:hover": { bgcolor: theme.SURFACE_ALT },
+      };
 
   const menuPaperSx = {
     mt: 0.5,
@@ -177,12 +190,12 @@ export function ReservHeader({
         position: "sticky",
         top: 0,
         zIndex: 30,
-        bgcolor: theme.HEADER_BG,
-        backdropFilter: "blur(12px)",
-        borderBottom: `1px solid ${theme.BORDER}`,
+        bgcolor: isClassic ? "#1c1410" : theme.HEADER_BG,
+        backdropFilter: isClassic ? "none" : "blur(12px)",
+        borderBottom: isClassic ? "3px solid #c45c26" : `1px solid ${theme.BORDER}`,
         px: { xs: 1.5, md: 2 },
         pt: "max(10px, env(safe-area-inset-top))",
-        pb: 1.25,
+        pb: isClassic ? 1.5 : 1.25,
         fontFamily: APP_FONT_FAMILY,
       }}
     >
@@ -197,6 +210,19 @@ export function ReservHeader({
         }}
       >
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}>
+            {isClassic ? (
+              <Box
+                sx={{
+                  width: 4,
+                  alignSelf: "stretch",
+                  minHeight: 36,
+                  bgcolor: "#c45c26",
+                  borderRadius: 1,
+                  flexShrink: 0,
+                }}
+                aria-hidden
+              />
+            ) : (
             <Box
             sx={{
               width: 40,
@@ -215,13 +241,15 @@ export function ReservHeader({
           >
             {shopTitle.trim().slice(0, 1) || "م"}
           </Box>
+            )}
           <Box sx={{ minWidth: 0 }}>
             <Typography
               component="h1"
               sx={{
-                fontWeight: 800,
-                fontSize: { xs: 16, sm: 18 },
-                color: theme.TEXT,
+                fontWeight: isClassic ? 900 : 800,
+                fontSize: isClassic ? { xs: 18, sm: 22 } : { xs: 16, sm: 18 },
+                color: isClassic ? "#f4ece4" : theme.TEXT,
+                letterSpacing: isClassic ? "0.04em" : 0,
                 lineHeight: 1.3,
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -236,7 +264,11 @@ export function ReservHeader({
                 alignItems: "center",
                 gap: 0.4,
                 mt: 0.15,
-                color: ACCENT_DARK,
+                color: isClassic ? "#c45c26" : ACCENT_DARK,
+                px: isClassic ? 0.8 : 0,
+                py: isClassic ? 0.1 : 0,
+                border: isClassic ? "1px solid rgba(196,92,38,0.45)" : "none",
+                borderRadius: isClassic ? "4px" : 0,
               }}
             >
               <TableRestaurantIcon sx={{ fontSize: 14 }} />
@@ -294,13 +326,13 @@ export function ReservHeader({
               minWidth: 44,
               minHeight: 40,
               px: 1.2,
-              borderRadius: "12px",
-              color: theme.TEXT,
+              borderRadius: isClassic ? "8px" : "12px",
+              color: isClassic ? "#f4ece4" : theme.TEXT,
               fontWeight: 700,
               fontSize: 12,
-              bgcolor: theme.SURFACE,
-              border: `1px solid ${theme.BORDER}`,
-              "&:hover": { bgcolor: theme.SURFACE_ALT },
+              bgcolor: isClassic ? "transparent" : theme.SURFACE,
+              border: isClassic ? "1px solid rgba(244,236,228,0.22)" : `1px solid ${theme.BORDER}`,
+              "&:hover": { bgcolor: isClassic ? "rgba(244,236,228,0.08)" : theme.SURFACE_ALT },
             }}
           >
             {guestLabel}
@@ -460,10 +492,12 @@ type SearchProps = {
   onChange: (value: string) => void;
   theme: ReservTheme;
   placeholder?: string;
+  variant?: "default" | "classic";
 };
 
-export function ReservSearchBar({ value, onChange, theme, placeholder }: SearchProps) {
+export function ReservSearchBar({ value, onChange, theme, placeholder, variant = "default" }: SearchProps) {
   const { t } = useReservI18n();
+  const classic = variant === "classic";
   return (
     <TextField
       size="small"
@@ -493,15 +527,19 @@ export function ReservSearchBar({ value, onChange, theme, placeholder }: SearchP
       }}
       sx={{
         "& .MuiOutlinedInput-root": {
-          borderRadius: "16px",
-          bgcolor: theme.SURFACE,
+          borderRadius: classic ? "0px" : "16px",
+          bgcolor: classic ? "transparent" : theme.SURFACE,
           color: theme.TEXT,
           fontSize: 15,
-          minHeight: 48,
-          boxShadow: "0 1px 2px rgba(26,23,18,0.04)",
-          "& fieldset": { borderColor: theme.BORDER },
-          "&:hover fieldset": { borderColor: ACCENT_BLUE_BORDER },
-          "&.Mui-focused fieldset": { borderColor: ACCENT_BLUE },
+          minHeight: classic ? 44 : 48,
+          boxShadow: classic ? "none" : "0 1px 2px rgba(26,23,18,0.04)",
+          "& fieldset": {
+            borderColor: classic ? "transparent" : theme.BORDER,
+            borderBottom: classic ? `1.5px solid ${theme.BORDER}` : undefined,
+            borderRadius: classic ? 0 : undefined,
+          },
+          "&:hover fieldset": { borderColor: classic ? "#c45c26" : ACCENT_BLUE_BORDER },
+          "&.Mui-focused fieldset": { borderColor: classic ? "#c45c26" : ACCENT_BLUE },
         },
         "& .MuiInputBase-input::placeholder": { color: theme.MUTED, opacity: 1 },
       }}

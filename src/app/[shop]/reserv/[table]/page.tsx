@@ -60,11 +60,9 @@ import {
   ACCENT_SOFT,
   ReservCartBar,
   ReservCategorySkeleton,
-  ReservCategoryTabs,
   ReservDesktopCartPanel,
   ReservEmptyState,
   ReservHeader,
-  ReservProductCard,
   ReservProductSkeletonList,
   ReservSearchBar,
   type ReservThemeMode,
@@ -929,8 +927,8 @@ function TableReservPageBody() {
     [menuProducts],
   );
   const layoutItems = useMemo(
-    () => (isClassicMenu ? [] : visibleProducts.map(toLayoutItem)),
-    [isClassicMenu, toLayoutItem, visibleProducts],
+    () => visibleProducts.map(toLayoutItem),
+    [toLayoutItem, visibleProducts],
   );
   const coverItems = useMemo(
     () => (activeThemeId === "cover" ? menuProducts.map(toLayoutItem) : []),
@@ -1774,6 +1772,7 @@ function TableReservPageBody() {
         guestLabel={guestIdentified ? normalizedPhone.slice(-4) : t("signIn")}
         themeMode={effectiveMode}
         showThemeToggle={!forcedMode}
+        variant={isClassicMenu ? "classic" : "default"}
         theme={theme}
         currentOrderCount={activeCurrentCount}
         currentServiceCount={activeServiceCount}
@@ -1825,6 +1824,7 @@ function TableReservPageBody() {
               value={search}
               onChange={setSearch}
               theme={theme}
+              variant={isClassicMenu ? "classic" : "default"}
               placeholder={
                 catalogMode === "services" && (showBothCatalogs || (allowServices && !hasMenu))
                   ? t("searchServices")
@@ -1865,23 +1865,13 @@ function TableReservPageBody() {
             </>
           ) : (
             <>
-          {isClassicMenu || productsLoading ? (
+          {productsLoading ? (
           <Box sx={{ mb: 1.5 }}>
-            {productsLoading ? (
               <ReservCategorySkeleton theme={theme} />
-            ) : (
-              <ReservCategoryTabs
-                categories={categories}
-                selectedId={selectedCategory}
-                onSelect={setSelectedCategory}
-                theme={theme}
-                dimmed={searchActive}
-              />
-            )}
           </Box>
           ) : null}
 
-          {!isClassicMenu && !productsLoading && !productsError ? (
+          {!productsLoading && !productsError && visibleProducts.length > 0 ? (
             <ReservMenuLayout
               themeId={activeThemeId}
               items={layoutItems}
@@ -1929,36 +1919,7 @@ function TableReservPageBody() {
                     : t("noFoodInCategory")
               }
             />
-          ) : !isClassicMenu ? null : (
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" },
-                gap: 1.1,
-              }}
-            >
-              {visibleProducts.map((product, index) => {
-                const qty = qtyOf(product);
-                const outOfStock = isCatalogItemOutOfStock(product);
-                return (
-                  <ReservProductCard
-                    key={catalogItemKey(product)}
-                    name={product.name}
-                    description={product.description}
-                    price={Number(product.sale_price) || 0}
-                    image={productImage(product, categoryImageById)}
-                    quantity={qty}
-                    outOfStock={outOfStock}
-                    priority={index < 4}
-                    theme={theme}
-                    onAdd={() => setQty(product, qty + 1)}
-                    onRemove={() => setQty(product, qty - 1)}
-                    onOpen={() => setDetailProduct(product)}
-                  />
-                );
-              })}
-            </Box>
-          )}
+          ) : null}
 
           {!productsLoading && !productsError && hasMore && !searchActive ? (
             <Button

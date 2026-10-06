@@ -16,8 +16,6 @@ import {
   type ReservMenuItem,
 } from "@/app/[shop]/reserv/[table]/ReservMenuLayouts";
 import {
-  ReservCategoryTabs,
-  ReservProductCard,
   type CategoryChip,
 } from "@/app/[shop]/reserv/[table]/ReservOrderingParts";
 import { ReservI18nProvider } from "@/app/[shop]/reserv/[table]/reservI18n";
@@ -160,12 +158,15 @@ export function ReservMenuThemePreview({
           alignItems: "center",
           gap: 1,
           px: 1.5,
-          py: 1.25,
-          bgcolor: palette.HEADER_BG,
-          borderBottom: `1px solid ${palette.BORDER}`,
-          backdropFilter: "blur(12px)",
+          py: themeId === "classic" ? 1.35 : 1.25,
+          bgcolor: themeId === "classic" ? "#1c1410" : palette.HEADER_BG,
+          borderBottom: themeId === "classic" ? "3px solid #c45c26" : `1px solid ${palette.BORDER}`,
+          backdropFilter: themeId === "classic" ? "none" : "blur(12px)",
         }}
       >
+        {themeId === "classic" ? (
+          <Box sx={{ width: 4, alignSelf: "stretch", minHeight: 32, bgcolor: "#c45c26", borderRadius: 1 }} />
+        ) : (
         <Box
           sx={{
             width: 36,
@@ -178,46 +179,18 @@ export function ReservMenuThemePreview({
             color: palette.CART_BAR_TEXT,
           }}
         >
-          ک
+          ر
         </Box>
+        )}
         <Box>
-          <Typography sx={{ fontWeight: 800, fontSize: 15, color: palette.TEXT, lineHeight: 1.3 }}>رستوران نمونه</Typography>
-          <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.4, color: palette.MUTED }}>
+          <Typography sx={{ fontWeight: 800, fontSize: themeId === "classic" ? 16 : 15, color: themeId === "classic" ? "#f4ece4" : palette.TEXT, lineHeight: 1.3 }}>رستوران نمونه</Typography>
+          <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.4, color: themeId === "classic" ? "#c45c26" : palette.MUTED }}>
             <TableRestaurantIcon sx={{ fontSize: 13 }} />
             <Typography sx={{ fontSize: 11, fontWeight: 700 }}>میز ۴</Typography>
           </Box>
         </Box>
       </Box>
       <Box sx={{ position: "relative", zIndex: 1, px: 1.5, pt: 1.5, pb: 3 }}>
-        {themeId === "classic" ? (
-          <>
-            <Box sx={{ mb: 1.5 }}>
-              <ReservCategoryTabs
-                categories={SAMPLE_CATEGORIES}
-                selectedId={selectedCategory}
-                onSelect={setSelectedCategory}
-                theme={palette}
-              />
-            </Box>
-            <Box sx={{ display: "grid", gap: 1.1 }}>
-              {items.map((item) => (
-                <ReservProductCard
-                  key={item.key}
-                  name={item.name}
-                  description={item.description}
-                  price={item.price}
-                  image={item.image}
-                  quantity={actions.qtyOf(item.key)}
-                  outOfStock={item.outOfStock}
-                  theme={palette}
-                  onAdd={() => actions.onAdd(item.key)}
-                  onRemove={() => actions.onRemove(item.key)}
-                  onOpen={() => {}}
-                />
-              ))}
-            </Box>
-          </>
-        ) : (
           <ReservMenuLayout
             themeId={themeId}
             items={items}
@@ -230,7 +203,6 @@ export function ReservMenuThemePreview({
             compact
             {...actions}
           />
-        )}
       </Box>
     </Box>
     </ReservI18nProvider>

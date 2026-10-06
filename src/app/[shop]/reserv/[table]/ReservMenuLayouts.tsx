@@ -77,6 +77,36 @@ const SOFT_DARK: ReservTheme = {
   SHADOW: "0 8px 24px rgba(0,0,0,0.4)",
 };
 
+const INK = "#c45c26";
+
+const CLASSIC_LIGHT: ReservTheme = {
+  BG: "#f7f0e6",
+  BG_GRADIENT: "none",
+  SURFACE: "#fffdf8",
+  SURFACE_ALT: "#efe6d8",
+  TEXT: "#1c1410",
+  MUTED: "#7a6a5c",
+  BORDER: "rgba(28,20,16,0.14)",
+  HEADER_BG: "#1c1410",
+  CART_BAR_BG: "#1c1410",
+  CART_BAR_TEXT: "#f4ece4",
+  SHADOW: "0 10px 28px rgba(28,20,16,0.12)",
+};
+
+const CLASSIC_DARK: ReservTheme = {
+  BG: "#16110e",
+  BG_GRADIENT: "none",
+  SURFACE: "#221a16",
+  SURFACE_ALT: "#2c241f",
+  TEXT: "#f4ece4",
+  MUTED: "#b5a394",
+  BORDER: "rgba(244,236,228,0.14)",
+  HEADER_BG: "#1c1410",
+  CART_BAR_BG: "#c45c26",
+  CART_BAR_TEXT: "#fff7f0",
+  SHADOW: "0 10px 28px rgba(0,0,0,0.4)",
+};
+
 const GOLD = "#b8894a";
 const GOLD_GRADIENT = "linear-gradient(135deg, #d8b679 0%, #b8894a 55%, #94692f 100%)";
 
@@ -143,6 +173,8 @@ export function reservThemeForcedMode(themeId: ReservMenuThemeId): ReservThemeMo
 
 export function reservPaletteFor(themeId: ReservMenuThemeId, mode: ReservThemeMode): ReservTheme {
   switch (themeId) {
+    case "classic":
+      return mode === "dark" ? CLASSIC_DARK : CLASSIC_LIGHT;
     case "list":
     case "grid":
     case "cover":
@@ -711,6 +743,223 @@ function HorizontalCard({
 
 function twoColumns(compact?: boolean) {
   return compact ? "1fr" : { xs: "1fr", lg: "1fr 1fr" };
+}
+
+function ClassicLayout(props: ReservMenuLayoutProps) {
+  const { t, formatNumber } = useReservI18n();
+  const { palette, items, categories, selectedCategory, searchActive } = props;
+  const featured = !searchActive ? pickReservOfferItem(items) : null;
+  const rest = featured ? items.filter((item) => item.key !== featured.key) : items;
+  const qtyTone: QtyTone = {
+    bg: INK,
+    fg: "#fff7f0",
+    pillBg: palette.SURFACE_ALT,
+    pillFg: palette.TEXT,
+    ring: palette.BORDER,
+  };
+
+  return (
+    <Box>
+      {categories.length > 1 ? (
+        <Box
+          role="tablist"
+          aria-label={t("categoriesAria")}
+          sx={{
+            display: "flex",
+            gap: 0,
+            overflowX: "auto",
+            mb: 2,
+            borderBottom: `1px solid ${palette.BORDER}`,
+            opacity: searchActive ? 0.45 : 1,
+            pointerEvents: searchActive ? "none" : "auto",
+            scrollbarWidth: "none",
+            "&::-webkit-scrollbar": { display: "none" },
+          }}
+        >
+          {categories.map((cat) => {
+            const active = selectedCategory === cat.id;
+            return (
+              <Box
+                key={cat.id}
+                component="button"
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => props.onSelectCategory(cat.id)}
+                sx={{
+                  appearance: "none",
+                  flexShrink: 0,
+                  border: 0,
+                  bgcolor: "transparent",
+                  cursor: "pointer",
+                  px: 1.5,
+                  py: 1.1,
+                  fontFamily: APP_FONT_FAMILY,
+                  fontSize: 14,
+                  fontWeight: active ? 900 : 600,
+                  color: active ? INK : palette.MUTED,
+                  borderBottom: active ? `2.5px solid ${INK}` : "2.5px solid transparent",
+                  marginBottom: "-1px",
+                }}
+              >
+                {cat.name}
+              </Box>
+            );
+          })}
+        </Box>
+      ) : null}
+
+      {featured ? (
+        <Box
+          component="article"
+          onClick={() => props.onOpen(featured.key)}
+          sx={{
+            position: "relative",
+            mb: 2.5,
+            overflow: "hidden",
+            borderRadius: "6px",
+            cursor: "pointer",
+            minHeight: 210,
+            bgcolor: palette.SURFACE_ALT,
+          }}
+        >
+          <ItemImage
+            item={featured}
+            sx={{ width: "100%", height: 230, objectFit: "cover" }}
+          />
+          <Box
+            sx={{
+              position: "absolute",
+              inset: 0,
+              background: "linear-gradient(180deg, rgba(28,20,16,0.05) 30%, rgba(28,20,16,0.82) 100%)",
+            }}
+          />
+          <Box
+            sx={{
+              position: "absolute",
+              insetInline: 0,
+              bottom: 0,
+              p: 1.5,
+              display: "flex",
+              alignItems: "flex-end",
+              justifyContent: "space-between",
+              gap: 1,
+            }}
+          >
+            <Box sx={{ minWidth: 0 }}>
+              <Typography sx={{ fontSize: 11, fontWeight: 800, color: INK, letterSpacing: "0.12em", mb: 0.4 }}>
+                {t("specialOffer")}
+              </Typography>
+              <Typography sx={{ fontWeight: 900, fontSize: 20, color: "#fff7f0", lineHeight: 1.35 }}>
+                {featured.name}
+              </Typography>
+              <Typography sx={{ mt: 0.4, fontWeight: 800, fontSize: 15, color: "#fff7f0" }}>
+                {t("amountToman", { amount: formatNumber(featured.price) })}
+              </Typography>
+            </Box>
+            <QtyControl
+              name={featured.name}
+              quantity={props.qtyOf(featured.key)}
+              outOfStock={featured.outOfStock}
+              onAdd={() => props.onAdd(featured.key)}
+              onRemove={() => props.onRemove(featured.key)}
+              tone={qtyTone}
+              size={36}
+            />
+          </Box>
+        </Box>
+      ) : null}
+
+      {rest.length > 0 ? (
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1.25,
+            mb: 1.25,
+            color: palette.MUTED,
+          }}
+        >
+          <Box sx={{ flex: 1, height: 1, bgcolor: palette.BORDER }} />
+          <Typography sx={{ fontSize: 12, fontWeight: 900, letterSpacing: "0.18em" }}>{t("menu")}</Typography>
+          <Box sx={{ flex: 1, height: 1, bgcolor: palette.BORDER }} />
+        </Box>
+      ) : null}
+
+      <Box sx={{ display: "flex", flexDirection: "column" }}>
+        {rest.map((item) => (
+          <Box
+            key={item.key}
+            component="article"
+            onClick={() => props.onOpen(item.key)}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1.1,
+              py: 1.15,
+              borderBottom: `1px dashed ${palette.BORDER}`,
+              cursor: "pointer",
+            }}
+          >
+            <ItemImage
+              item={item}
+              sx={{
+                width: 58,
+                height: 58,
+                borderRadius: "50%",
+                flexShrink: 0,
+                bgcolor: palette.SURFACE_ALT,
+                border: `2px solid ${palette.SURFACE}`,
+                boxShadow: "0 2px 8px rgba(28,20,16,0.12)",
+              }}
+            />
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography sx={{ fontWeight: 800, fontSize: 14.5, color: palette.TEXT, lineHeight: 1.4 }}>
+                {item.name}
+                {item.outOfStock ? <OutOfStockTag color={palette.MUTED} bg={palette.SURFACE_ALT} /> : null}
+              </Typography>
+              {item.description ? (
+                <Typography
+                  sx={{
+                    fontSize: 11,
+                    color: palette.MUTED,
+                    display: "-webkit-box",
+                    WebkitLineClamp: 1,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                  }}
+                >
+                  {item.description}
+                </Typography>
+              ) : null}
+            </Box>
+            <Box
+              sx={{
+                flex: "0 1 28px",
+                alignSelf: "center",
+                borderBottom: `1px dotted ${palette.BORDER}`,
+                minWidth: 12,
+                height: 0,
+                display: { xs: "none", sm: "block" },
+              }}
+            />
+            <Box sx={{ textAlign: "end", flexShrink: 0 }}>
+              <Price item={item} color={INK} muted={palette.MUTED} size={14} />
+            </Box>
+            <QtyControl
+              name={item.name}
+              quantity={props.qtyOf(item.key)}
+              outOfStock={item.outOfStock}
+              onAdd={() => props.onAdd(item.key)}
+              onRemove={() => props.onRemove(item.key)}
+              tone={qtyTone}
+              size={30}
+            />
+          </Box>
+        ))}
+      </Box>
+    </Box>
+  );
 }
 
 function ListLayout(props: ReservMenuLayoutProps) {
@@ -1391,6 +1640,8 @@ function VideoLayout(props: ReservMenuLayoutProps) {
 
 export function ReservMenuLayout(props: ReservMenuLayoutProps) {
   switch (props.themeId) {
+    case "classic":
+      return <ClassicLayout {...props} />;
     case "list":
       return <ListLayout {...props} />;
     case "showcase":

@@ -19,7 +19,7 @@ export const RESERV_MENU_THEMES: Array<{
   title: string;
   hint: string;
 }> = [
-  { id: "classic", title: "کلاسیک", hint: "همین منوی فعلی — کارت افقی با دکمهٔ افزودن" },
+  { id: "classic", title: "کلاسیک", hint: "هدر تیره، غذای ویژه بالای صفحه و ردیف‌های منو با خطچین قیمت" },
   { id: "list", title: "لیستی", hint: "کارت‌های خاکستری نرم، عکس بزرگ کنار نام و قیمت" },
   { id: "showcase", title: "ویترین طلایی", hint: "نوار دسته‌های طلایی، تیتر هر دسته و برچسب تخفیف" },
   { id: "grid", title: "جدولی", hint: "دو ستون کارت با عکس بالای کارت" },
