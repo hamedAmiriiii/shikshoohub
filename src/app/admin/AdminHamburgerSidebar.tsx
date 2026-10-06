@@ -13,6 +13,7 @@ import {
 } from "@mui/material";
 import { useTableOrdersPending } from "./table-orders/TableOrdersPendingProvider";
 import { useServiceRequestsPending } from "./shop-services/ServiceRequestsPendingProvider";
+import { useTablePagersPending } from "./table-pagers/TablePagersPendingProvider";
 import HomeIcon from "@mui/icons-material/Home";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
@@ -30,6 +31,7 @@ import ShoppingBagIcon from "@mui/icons-material/ShoppingBag";
 import TableRestaurantIcon from "@mui/icons-material/TableRestaurant";
 import { getAppBuildLabel } from "@/app/lib/appBuildVersion";
 import RoomServiceIcon from "@mui/icons-material/RoomService";
+import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import FactoryIcon from "@mui/icons-material/Factory";
 import CreditCardIcon from "@mui/icons-material/CreditCard";
@@ -132,6 +134,7 @@ export default function AdminHamburgerSidebar({
 }: AdminHamburgerSidebarProps) {
   const { count: pendingTableOrders } = useTableOrdersPending();
   const { count: pendingServiceRequests } = useServiceRequestsPending();
+  const { count: pendingPagers } = useTablePagersPending();
   const { can, isOwner, ready: permissionsReady } = useShopPermissionGate();
   const isRealOwner = isOwner && !(permissionsReady && isShopAuditor());
   const [restaurantCafeEnabled, setRestaurantCafeEnabled] = useState(false);
@@ -642,6 +645,13 @@ export default function AdminHamburgerSidebar({
         permission: "shop_tables",
       },
       {
+        id: "table-pagers",
+        label: "پیجر میز",
+        href: "/admin/table-pagers",
+        icon: <NotificationsActiveIcon />,
+        permission: "shop_tables",
+      },
+      {
         id: "shop-tables",
         label: "میز و اتاق",
         href: "/admin/shop-tables",
@@ -819,6 +829,15 @@ export default function AdminHamburgerSidebar({
             >
               {leaf.icon}
             </Badge>
+          ) : leaf.href === "/admin/table-pagers" && pendingPagers > 0 ? (
+            <Badge
+              badgeContent={pendingPagers}
+              color="error"
+              max={99}
+              sx={{ "& .MuiBadge-badge": { fontSize: "0.65rem", minWidth: 16, height: 16 } }}
+            >
+              {leaf.icon}
+            </Badge>
           ) : leaf.href === "/admin/shop-services" && pendingServiceRequests > 0 ? (
             <Badge
               badgeContent={pendingServiceRequests}
@@ -973,8 +992,9 @@ export default function AdminHamburgerSidebar({
         {groups.filter((g) => g.id === "financial" || g.id === "accounting").map(renderGroup)}
         {topLinks.slice(4).filter((link) =>
           can(link.permission) &&
-          ((link.id !== "table-orders" && link.id !== "shop-tables" && link.id !== "shop-services") ||
+          ((link.id !== "table-orders" && link.id !== "table-pagers" && link.id !== "shop-tables" && link.id !== "shop-services") ||
             (link.id === "table-orders" && restaurantCafeEnabled) ||
+            (link.id === "table-pagers" && (restaurantCafeEnabled || roomServicesEnabled)) ||
             (link.id === "shop-tables" && (restaurantCafeEnabled || roomServicesEnabled)) ||
             (link.id === "shop-services" && roomServicesEnabled)),
         ).map((link) =>

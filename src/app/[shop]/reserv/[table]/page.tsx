@@ -90,6 +90,11 @@ import {
   ReservServiceRequestList,
 } from "./ReservServicesParts";
 import { ReservI18nProvider, useReservI18n } from "./reservI18n";
+import {
+  extractTablePagerCall,
+  extractTablePagerCalls,
+  type TablePagerCall,
+} from "@/app/lib/tablePagers";
 
 type ProductImage = { image_url?: string; image_path?: string };
 
@@ -431,6 +436,8 @@ function TableReservPageBody() {
   const [serviceRequests, setServiceRequests] = useState<TableServiceRequest[]>([]);
   const [requestingServiceId, setRequestingServiceId] = useState<number | null>(null);
   const [cancellingServiceId, setCancellingServiceId] = useState<number | null>(null);
+  const [pendingPager, setPendingPager] = useState<TablePagerCall | null>(null);
+  const [pagerBusy, setPagerBusy] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState(false);
@@ -1121,6 +1128,76 @@ function TableReservPageBody() {
     }
   };
 
+  const loadPager = useCallback(async () => {
+    if (!shopCode || !validTable) return;
+    try {
+      const query = new URLSearchParams({ table_number: String(tableNumber), kind: placeKind });
+      const res = await apiRequestError(
+        "Get",
+        {},
+        {},
+        shopApi(`/api/table-pagers?${query.toString()}`),
+        false,
+        true,
+        "",
+      );
+      if (res?.hasError) {
+        setPendingPager(null);
+        return;
+      }
+      const open = extractTablePagerCalls(res).find((row) => !row.status || row.status === "pending") || null;
+      setPendingPager(open);
+    } catch {
+      setPendingPager(null);
+    }
+  }, [placeKind, shopApi, shopCode, tableNumber, validTable]);
+
+  useEffect(() => {
+    if (!shopCode || !validTable) return;
+    void loadPager();
+    const timer = window.setInterval(() => {
+      void loadPager();
+    }, 20000);
+    return () => window.clearInterval(timer);
+  }, [loadPager, shopCode, tableNumber, validTable]);
+
+  const callPager = async () => {
+    if (!shopCode || !validTable) return;
+    if (previewThemeId) {
+      toast.info(t("previewNoSubmit"));
+      return;
+    }
+    if (pendingPager) {
+      toast.info(t("pagerAlready"));
+      return;
+    }
+    setPagerBusy(true);
+    try {
+      const res = await apiRequestError(
+        "Post",
+        {},
+        { table_number: tableNumber, kind: placeKind },
+        shopApi("/api/table-pager"),
+        false,
+        true,
+        "",
+      );
+      if (res?.hasError) {
+        toast.error(typeof res.message === "string" ? res.message : t("pagerFail"));
+        return;
+      }
+      const call = extractTablePagerCall(res);
+      if (call) setPendingPager(call);
+      toast.success(
+        res?.already_pending ? t("pagerAlready") : typeof res.message === "string" ? res.message : t("pagerOk"),
+      );
+    } catch {
+      toast.error(t("networkError"));
+    } finally {
+      setPagerBusy(false);
+    }
+  };
+
   const openCurrentOrders = () => {
     setCurrentOpen(true);
     setCurrentDetail(null);
@@ -1785,6 +1862,9 @@ function TableReservPageBody() {
           void loadServiceRequests();
         }}
         onHistory={openOrders}
+        onPager={callPager}
+        pagerPending={Boolean(pendingPager)}
+        pagerBusy={pagerBusy}
         showLanguageSwitch={allowServices || servicesEnabled}
       />
 

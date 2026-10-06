@@ -140,6 +140,9 @@ export function shopFeatureAllowsPath(
   if (pathname === "/admin/table-orders" || pathname.startsWith("/admin/table-orders/")) {
     return features.restaurant_cafe_enabled;
   }
+  if (pathname === "/admin/table-pagers" || pathname.startsWith("/admin/table-pagers/")) {
+    return features.restaurant_cafe_enabled || features.room_services_enabled;
+  }
   if (pathname === "/admin/shop-services" || pathname.startsWith("/admin/shop-services/")) {
     return features.room_services_enabled;
   }

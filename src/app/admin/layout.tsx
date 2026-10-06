@@ -6,6 +6,8 @@ import AdminThemeProvider from './theme/AdminThemeProvider';
 import AdminOnboardingProvider from './onboarding/AdminOnboardingProvider';
 import TableOrdersPendingProvider from './table-orders/TableOrdersPendingProvider';
 import ServiceRequestsPendingProvider from './shop-services/ServiceRequestsPendingProvider';
+import TablePagersPendingProvider from './table-pagers/TablePagersPendingProvider';
+import AdminTablePagerPopup from './table-pagers/AdminTablePagerPopup';
 import './theme/admin-theme.css';
 import './theme/admin-pos-fullscreen.css';
 import { usePathname, useRouter } from 'next/navigation';
@@ -56,6 +58,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/broadcast-sms': 'ارسال پیامک',
     '/admin/orders': 'سفارشات اینترنتی',
     '/admin/table-orders': 'سفارش حضوری',
+    '/admin/table-pagers': 'پیجر میز',
     '/admin/shop-tables': 'میز و اتاق',
     '/admin/shop-services': 'خدمات اتاق',
     '/admin/best-selling': 'محصولات پرفروش',
@@ -236,6 +239,7 @@ export default function ShikshooLayout({
       <AdminOnboardingProvider>
         <TableOrdersPendingProvider>
         <ServiceRequestsPendingProvider>
+        <TablePagersPendingProvider>
         <Box
           className="admin-app"
           sx={{
@@ -279,9 +283,11 @@ export default function ShikshooLayout({
                 <WebinoChatbot audience="admin" hideLauncher />
               </Box>
             )}
+            {!isPrintPage && !isPublicAdminPage && <AdminTablePagerPopup />}
           </>
         )}
         </Box>
+        </TablePagersPendingProvider>
         </ServiceRequestsPendingProvider>
         </TableOrdersPendingProvider>
       </AdminOnboardingProvider>

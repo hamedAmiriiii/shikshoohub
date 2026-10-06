@@ -9,6 +9,7 @@ import LanguageIcon from "@mui/icons-material/Language";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import MenuIcon from "@mui/icons-material/Menu";
+import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import RemoveIcon from "@mui/icons-material/Remove";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import RoomServiceIcon from "@mui/icons-material/RoomService";
@@ -108,6 +109,9 @@ type HeaderProps = {
   onCurrentOrders: () => void;
   onCurrentServices?: () => void;
   onHistory: () => void;
+  onPager?: () => void;
+  pagerPending?: boolean;
+  pagerBusy?: boolean;
   showLanguageSwitch?: boolean;
   showThemeToggle?: boolean;
   variant?: "default" | "classic";
@@ -130,6 +134,9 @@ export function ReservHeader({
   onCurrentOrders,
   onCurrentServices,
   onHistory,
+  onPager,
+  pagerPending = false,
+  pagerBusy = false,
 }: HeaderProps) {
   const { t, locale, setLocale } = useReservI18n();
   const [langAnchor, setLangAnchor] = useState<null | HTMLElement>(null);
@@ -318,6 +325,43 @@ export function ReservHeader({
                 ))}
               </Menu>
             </>
+          ) : null}
+          {onPager ? (
+            <Button
+              onClick={onPager}
+              disabled={pagerBusy}
+              aria-label={pagerPending ? t("pagerWaiting") : t("pager")}
+              sx={{
+                minWidth: 44,
+                minHeight: 40,
+                px: 1.1,
+                borderRadius: isClassic ? "8px" : "12px",
+                color: pagerPending ? "#92400e" : isClassic ? "#f4ece4" : theme.TEXT,
+                fontWeight: 800,
+                fontSize: 12,
+                gap: 0.5,
+                bgcolor: pagerPending
+                  ? "rgba(245, 158, 11, 0.22)"
+                  : isClassic
+                    ? "transparent"
+                    : theme.SURFACE,
+                border: pagerPending
+                  ? "1px solid rgba(217, 119, 6, 0.45)"
+                  : isClassic
+                    ? "1px solid rgba(244,236,228,0.22)"
+                    : `1px solid ${theme.BORDER}`,
+                "&:hover": {
+                  bgcolor: pagerPending
+                    ? "rgba(245, 158, 11, 0.3)"
+                    : isClassic
+                      ? "rgba(244,236,228,0.08)"
+                      : theme.SURFACE_ALT,
+                },
+              }}
+            >
+              <NotificationsActiveIcon sx={{ fontSize: 18 }} />
+              {pagerPending ? t("pagerWaiting") : t("pager")}
+            </Button>
           ) : null}
           <Button
             onClick={onLogin}
