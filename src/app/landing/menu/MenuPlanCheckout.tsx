@@ -249,6 +249,23 @@ export default function MenuPlanCheckout({ plan, onClose, onConsult }: Props) {
         return;
       }
 
+      const claimFromRegister = json.marketer_claim as
+        | { ok?: boolean; message?: string; code?: string | null }
+        | undefined;
+      let claimOk = Boolean(claimFromRegister?.ok);
+      let claimMsg = typeof claimFromRegister?.message === "string" ? claimFromRegister.message : "";
+      if (!claimOk) {
+        const claim = await tryClaimMarketerRef({ force: true });
+        if (claim) {
+          claimOk = claim.ok;
+          claimMsg = claim.message;
+        }
+      }
+      if (!claimOk && (getStoredMarketerRefCode() || claimMsg)) {
+        // انتساب fail — پرداخت را ادامه بده ولی خطا را نشان بده
+        setError(claimMsg || "فروشگاه ثبت شد ولی انتساب بازاریاب انجام نشد.");
+      }
+
       try {
         await startPayment(token);
       } catch (e) {
