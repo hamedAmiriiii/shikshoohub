@@ -803,12 +803,8 @@ export default function ListData() {
         data.purchased_on = gregorianApiDateFromDateObject(purchaseDate) || null;
       }
 
-      // اضافه کردن فقط عکس‌های جدید (base64) در صورت وجود
-      // عکس‌های موجود (URL) نباید ارسال شوند، چون از قبل در API هستند
-      const newBase64Images = images.filter(img => img.startsWith('data:image/'));
-      if (newBase64Images.length > 0) {
-        data.images = newBase64Images;
-      }
+      // لیست نهایی عکس‌ها (باقی‌مانده + جدید). خالی یعنی همه حذف شوند.
+      data.images = images;
 
       // اضافه کردن دسته‌بندی‌ها در صورت وجود
       if (categoryIds.length > 0) {
@@ -834,15 +830,19 @@ export default function ListData() {
           }
         });
 
-        // Update React Query cache (temporary update until refetch)
+        const remainingImages = Array.isArray(res?.images)
+          ? res.images
+          : images.map((url) =>
+              typeof url === "string" ? { image_url: url } : url
+            );
+
         const updatedProduct = {
           ...editingProduct,
           ...data,
           purchase_price: purchasePriceNum,
           sale_price: salePriceNum,
           quantity: quantityNum,
-          // نگه داشتن عکس‌های موجود از editingProduct
-          images: editingProduct.images || []
+          images: remainingImages,
         };
 
         // Update infinite query cache (for mobile)
