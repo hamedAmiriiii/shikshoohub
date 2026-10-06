@@ -87,8 +87,8 @@ export default function MenuPackagesManagePage() {
     }
     setLoading(true);
     try {
-      const token = await tokenCode();
-      const res = await FetchWithJwtClient("Get", {}, {}, "/api/admin/shop-packages", true, false, token);
+      const token = tokenCode();
+      const res = await FetchWithJwtClient("GET", "/api/admin/shop-packages", token);
       if (res?.hasError) {
         toast.error(getApiErrorMessage(res, "بارگذاری پکیج‌ها ناموفق بود"));
         return;
@@ -118,15 +118,13 @@ export default function MenuPackagesManagePage() {
     }
     setSavingSlug(slug);
     try {
-      const token = await tokenCode();
+      const token = tokenCode();
       const res = await FetchWithJwtClient(
-        "Put",
-        {},
-        { price_toman: price },
+        "PUT",
         `/api/admin/shop-packages/${encodeURIComponent(slug)}`,
-        true,
-        false,
         token,
+        {},
+        { body: JSON.stringify({ price_toman: price }) },
       );
       if (res?.hasError) {
         toast.error(getApiErrorMessage(res, "ذخیره قیمت ناموفق بود"));
