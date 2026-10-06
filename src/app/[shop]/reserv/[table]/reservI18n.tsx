@@ -179,6 +179,15 @@ const FA: Dict = {
   svcWifiDesc: "راهنمایی اتصال به اینترنت",
   svcOther: "سایر خدمات",
   svcOtherDesc: "درخواست خدمت از پذیرش",
+  viewMenu: "مشاهده منو",
+  viewMenuHint: "منو و محصولات را در ادامه ببینید",
+  welcome: "خوش آمدید",
+  specialOffer: "پیشنهاد ویژه",
+  discountedItems: "تخفیف‌خورده‌ها",
+  otherItems: "سایر",
+  itemsCount: "{n} آیتم",
+  previewBanner: "پیش‌نمایش تم منو — ثبت سفارش در این حالت غیرفعال است",
+  previewNoSubmit: "در حالت پیش‌نمایش نمی‌توان سفارش ثبت کرد",
 };
 
 const EN: Dict = {
@@ -352,6 +361,15 @@ const EN: Dict = {
   svcWifiDesc: "Help connecting to the internet",
   svcOther: "Other services",
   svcOtherDesc: "A request to reception",
+  viewMenu: "View menu",
+  viewMenuHint: "Scroll down to see the menu",
+  welcome: "Welcome",
+  specialOffer: "Special offer",
+  discountedItems: "On sale",
+  otherItems: "Other",
+  itemsCount: "{n} items",
+  previewBanner: "Menu theme preview — ordering is disabled",
+  previewNoSubmit: "Orders can't be placed in preview mode",
 };
 
 const AR: Dict = {
@@ -525,6 +543,15 @@ const AR: Dict = {
   svcWifiDesc: "المساعدة على الاتصال بالإنترنت",
   svcOther: "خدمات أخرى",
   svcOtherDesc: "طلب خدمة من الاستقبال",
+  viewMenu: "عرض القائمة",
+  viewMenuHint: "مرّر للأسفل لرؤية القائمة",
+  welcome: "أهلاً بكم",
+  specialOffer: "عرض خاص",
+  discountedItems: "عليها خصم",
+  otherItems: "أخرى",
+  itemsCount: "{n} عنصر",
+  previewBanner: "معاينة شكل القائمة — الطلب معطّل",
+  previewNoSubmit: "لا يمكن تسجيل الطلب في وضع المعاينة",
 };
 
 const DICTS: Record<ReservLocale, Dict> = { fa: FA, en: EN, ar: AR };

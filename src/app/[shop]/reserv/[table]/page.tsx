@@ -67,9 +67,25 @@ import {
   ReservProductCard,
   ReservProductSkeletonList,
   ReservSearchBar,
-  THEMES,
   type ReservThemeMode,
 } from "./ReservOrderingParts";
+import {
+  ReservCoverHero,
+  ReservMenuLayout,
+  ReservThemeBackdrop,
+  pickReservCoverImage,
+  pickReservOfferItem,
+  reservPaletteFor,
+  reservThemeForcedMode,
+  type ReservMenuItem,
+} from "./ReservMenuLayouts";
+import {
+  RESERV_MENU_PREVIEW_QUERY,
+  normalizeReservMenuThemeId,
+  parseReservMenuTheme,
+  type ReservMenuThemeConfig,
+  type ReservMenuThemeId,
+} from "@/app/lib/reservMenuThemes";
 import {
   ReservMenuServiceSwitch,
   ReservServiceGrid,
@@ -474,8 +490,25 @@ function TableReservPageBody() {
       return "light";
     }
   });
-  const theme = THEMES[themeMode];
+  const [menuTheme, setMenuTheme] = useState<ReservMenuThemeConfig | null>(null);
+  const [previewThemeId, setPreviewThemeId] = useState<ReservMenuThemeId | null>(null);
+  const menuAnchorRef = useRef<HTMLDivElement | null>(null);
+  const activeThemeId: ReservMenuThemeId = previewThemeId ?? menuTheme?.id ?? "classic";
+  const isClassicMenu = activeThemeId === "classic";
+  const forcedMode = reservThemeForcedMode(activeThemeId);
+  const effectiveMode: ReservThemeMode = forcedMode ?? themeMode;
+  const theme = reservPaletteFor(activeThemeId, effectiveMode);
   const { BG, BG_GRADIENT, SURFACE, SURFACE_ALT, TEXT, MUTED, BORDER } = theme;
+
+  useEffect(() => {
+    const raw = new URLSearchParams(window.location.search).get(RESERV_MENU_PREVIEW_QUERY);
+    if (raw) setPreviewThemeId(normalizeReservMenuThemeId(raw));
+  }, []);
+
+  useEffect(() => {
+    const fromShop = parseReservMenuTheme(shop);
+    if (fromShop) setMenuTheme((prev) => prev ?? fromShop);
+  }, [shop]);
 
   const toggleTheme = () => {
     setThemeMode((prev) => {
@@ -586,6 +619,8 @@ function TableReservPageBody() {
       }
       const info = extractShopTableInfo(res, tableNumber);
       setTableInfo(info);
+      const themeFromTable = parseReservMenuTheme(res);
+      if (themeFromTable) setMenuTheme(themeFromTable);
       // اگر اتاق با مسیر /reserv باز شده باشد، به /room هدایت کن (و برعکس)
       if (info.kind && info.kind !== placeKind && shopCode) {
         const target =
@@ -866,6 +901,55 @@ function TableReservPageBody() {
     persistCart(
       cart.map((line) => (catalogItemKey(line) === lineKey ? { ...line, quantity } : line)),
     );
+  };
+
+  const toLayoutItem = useCallback(
+    (product: Product): ReservMenuItem => {
+      const categoryIds = (product.categories || [])
+        .map((cat) => (cat?.id != null ? String(cat.id) : ""))
+        .filter(Boolean);
+      if (product.category_id != null) categoryIds.push(String(product.category_id));
+      const original = Number(product.original_sale_price);
+      return {
+        key: catalogItemKey(product),
+        name: product.name,
+        description: product.description,
+        price: Number(product.sale_price) || 0,
+        originalPrice: Number.isFinite(original) && original > 0 ? original : undefined,
+        image: productImage(product, categoryImageById),
+        categoryIds,
+        outOfStock: isCatalogItemOutOfStock(product),
+      };
+    },
+    [categoryImageById],
+  );
+
+  const productByKey = useMemo(
+    () => new Map(menuProducts.map((product) => [catalogItemKey(product), product])),
+    [menuProducts],
+  );
+  const layoutItems = useMemo(
+    () => (isClassicMenu ? [] : visibleProducts.map(toLayoutItem)),
+    [isClassicMenu, toLayoutItem, visibleProducts],
+  );
+  const coverItems = useMemo(
+    () => (activeThemeId === "cover" ? menuProducts.map(toLayoutItem) : []),
+    [activeThemeId, menuProducts, toLayoutItem],
+  );
+  const layoutActions = {
+    qtyOf: (key: string) => qtyOf(key),
+    onAdd: (key: string) => {
+      const product = productByKey.get(key);
+      if (product) setQty(product, qtyOf(product) + 1);
+    },
+    onRemove: (key: string) => {
+      const product = productByKey.get(key);
+      if (product) setQty(product, qtyOf(product) - 1);
+    },
+    onOpen: (key: string) => {
+      const product = productByKey.get(key);
+      if (product) setDetailProduct(product);
+    },
   };
 
   const cartCount = cart.reduce((sum, line) => sum + line.quantity, 0);
@@ -1251,6 +1335,10 @@ function TableReservPageBody() {
 
   const submitOrder = async () => {
     if (!shopCode || cart.length === 0) return;
+    if (previewThemeId) {
+      toast.info(t("previewNoSubmit"));
+      return;
+    }
     if (useCredit && !phoneReady) {
       toast.error(t("needPhoneForCredit"));
       return;
@@ -1495,7 +1583,7 @@ function TableReservPageBody() {
             </Button>
           </DialogActions>
         </Dialog>
-        <ToastContainer position="bottom-center" autoClose={3000} theme={themeMode} rtl={dir === "rtl"} />
+        <ToastContainer position="bottom-center" autoClose={3000} theme={effectiveMode} rtl={dir === "rtl"} />
       </Box>
     );
   }
@@ -1602,7 +1690,7 @@ function TableReservPageBody() {
             </Button>
           </DialogActions>
         </Dialog>
-        <ToastContainer position="bottom-center" autoClose={3000} theme={themeMode} rtl={dir === "rtl"} />
+        <ToastContainer position="bottom-center" autoClose={3000} theme={effectiveMode} rtl={dir === "rtl"} />
       </Box>
     );
   }
@@ -1628,11 +1716,64 @@ function TableReservPageBody() {
       }}
       lang={locale}
     >
+      <ReservThemeBackdrop
+        themeId={activeThemeId}
+        backgroundUrl={menuTheme?.backgroundUrl}
+        backgroundType={menuTheme?.backgroundType}
+      />
+      {previewThemeId ? (
+        <Box
+          sx={{
+            position: "relative",
+            zIndex: 31,
+            py: 0.75,
+            px: 1.5,
+            textAlign: "center",
+            bgcolor: "#f59e0b",
+            color: "#1f160b",
+            fontSize: 12,
+            fontWeight: 800,
+          }}
+        >
+          {t("previewBanner")}
+        </Box>
+      ) : null}
+      {activeThemeId === "cover" && allowMenu ? (
+        <ReservCoverHero
+          shopTitle={shopTitle}
+          tableLabel={displayPlaceLabel}
+          palette={theme}
+          coverImage={pickReservCoverImage(coverItems, categories)}
+          offer={pickReservOfferItem(coverItems)}
+          onViewMenu={() => menuAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+          onOpenOffer={layoutActions.onOpen}
+          topActions={
+            <Button
+              onClick={() => setLoginOpen(true)}
+              sx={{
+                minWidth: 44,
+                px: 1.4,
+                py: 0.7,
+                borderRadius: "999px",
+                color: "#fff",
+                fontWeight: 800,
+                fontSize: 12,
+                bgcolor: "rgba(0,0,0,0.35)",
+                border: "1px solid rgba(255,255,255,0.35)",
+                "&:hover": { bgcolor: "rgba(0,0,0,0.5)" },
+              }}
+            >
+              {guestIdentified ? normalizedPhone.slice(-4) : t("signIn")}
+            </Button>
+          }
+        />
+      ) : null}
       <ReservHeader
         shopTitle={shopTitle}
         tableLabel={displayPlaceLabel}
         guestLabel={guestIdentified ? normalizedPhone.slice(-4) : t("signIn")}
-        themeMode={themeMode}
+        themeMode={effectiveMode}
+        showThemeToggle={!forcedMode}
         theme={theme}
         currentOrderCount={activeCurrentCount}
         currentServiceCount={activeServiceCount}
@@ -1649,7 +1790,11 @@ function TableReservPageBody() {
       />
 
       <Box
+        ref={menuAnchorRef}
         sx={{
+          position: "relative",
+          zIndex: 1,
+          scrollMarginTop: "68px",
           maxWidth: 1100,
           mx: "auto",
           px: { xs: 1.5, md: 2 },
@@ -1720,6 +1865,7 @@ function TableReservPageBody() {
             </>
           ) : (
             <>
+          {isClassicMenu || productsLoading ? (
           <Box sx={{ mb: 1.5 }}>
             {productsLoading ? (
               <ReservCategorySkeleton theme={theme} />
@@ -1733,6 +1879,21 @@ function TableReservPageBody() {
               />
             )}
           </Box>
+          ) : null}
+
+          {!isClassicMenu && !productsLoading && !productsError ? (
+            <ReservMenuLayout
+              themeId={activeThemeId}
+              items={layoutItems}
+              categories={categories}
+              selectedCategory={selectedCategory}
+              onSelectCategory={setSelectedCategory}
+              searchActive={searchActive}
+              palette={theme}
+              themeMode={effectiveMode}
+              {...layoutActions}
+            />
+          ) : null}
 
           {productsLoading ? (
             <ReservProductSkeletonList theme={theme} />
@@ -1768,7 +1929,7 @@ function TableReservPageBody() {
                     : t("noFoodInCategory")
               }
             />
-          ) : (
+          ) : !isClassicMenu ? null : (
             <Box
               sx={{
                 display: "grid",
@@ -1853,7 +2014,7 @@ function TableReservPageBody() {
           },
         }}
       >
-        <Box sx={{ width: 42, height: 5, borderRadius: 99, bgcolor: themeMode === "dark" ? "#475569" : "#cbd5e1", mx: "auto", mb: 1.5 }} />
+        <Box sx={{ width: 42, height: 5, borderRadius: 99, bgcolor: effectiveMode === "dark" ? "#475569" : "#cbd5e1", mx: "auto", mb: 1.5 }} />
         <Typography sx={{ fontWeight: 800, mb: 1.5, fontSize: 18, color: TEXT }}>{t("orderFor", { label: displayPlaceLabel })}</Typography>
         <Box sx={{ maxHeight: "46vh", overflowY: "auto" }}>
           {cart.map((line) => (
@@ -2170,7 +2331,7 @@ function TableReservPageBody() {
           },
         }}
       >
-        <Box sx={{ width: 42, height: 5, borderRadius: 99, bgcolor: themeMode === "dark" ? "#475569" : "#cbd5e1", mx: "auto", mb: 1.5 }} />
+        <Box sx={{ width: 42, height: 5, borderRadius: 99, bgcolor: effectiveMode === "dark" ? "#475569" : "#cbd5e1", mx: "auto", mb: 1.5 }} />
         <Typography sx={{ fontWeight: 800, mb: 0.4, fontSize: 18, color: TEXT }}>{t("pastOrders")}</Typography>
         <Typography sx={{ color: MUTED, fontSize: 12, mb: 1.5 }}>{normalizedPhone}</Typography>
         {lookupLoading ? (
@@ -2250,7 +2411,7 @@ function TableReservPageBody() {
           },
         }}
       >
-        <Box sx={{ width: 42, height: 5, borderRadius: 99, bgcolor: themeMode === "dark" ? "#475569" : "#cbd5e1", mx: "auto", mb: 1.5 }} />
+        <Box sx={{ width: 42, height: 5, borderRadius: 99, bgcolor: effectiveMode === "dark" ? "#475569" : "#cbd5e1", mx: "auto", mb: 1.5 }} />
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}>
           <Typography sx={{ fontWeight: 800, fontSize: 18, color: TEXT }}>
             {currentDetail ? t("orderDetails") : t("currentOrder")}
@@ -2410,7 +2571,7 @@ function TableReservPageBody() {
           },
         }}
       >
-        <Box sx={{ width: 42, height: 5, borderRadius: 99, bgcolor: themeMode === "dark" ? "#475569" : "#cbd5e1", mx: "auto", mb: 1.5 }} />
+        <Box sx={{ width: 42, height: 5, borderRadius: 99, bgcolor: effectiveMode === "dark" ? "#475569" : "#cbd5e1", mx: "auto", mb: 1.5 }} />
         <Typography sx={{ fontWeight: 800, fontSize: 18, color: TEXT, mb: 1 }}>{t("roomServicesTitle")}</Typography>
         {serviceRequests.length === 0 ? (
           <Typography sx={{ textAlign: "center", color: MUTED, py: 4 }}>
@@ -2553,7 +2714,7 @@ function TableReservPageBody() {
           },
         }}
       >
-        <Box sx={{ width: 42, height: 5, borderRadius: 99, bgcolor: themeMode === "dark" ? "#475569" : "#cbd5e1", mx: "auto", mb: 1.5 }} />
+        <Box sx={{ width: 42, height: 5, borderRadius: 99, bgcolor: effectiveMode === "dark" ? "#475569" : "#cbd5e1", mx: "auto", mb: 1.5 }} />
         {detailProduct ? (
           <Box>
             <Box
@@ -2649,7 +2810,7 @@ function TableReservPageBody() {
           </Box>
         ) : null}
       </Drawer>
-      <ToastContainer position="bottom-center" autoClose={3000} theme={themeMode} rtl={dir === "rtl"} />
+      <ToastContainer position="bottom-center" autoClose={3000} theme={effectiveMode} rtl={dir === "rtl"} />
     </Box>
   );
 }

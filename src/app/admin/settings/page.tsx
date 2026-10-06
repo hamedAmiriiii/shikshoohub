@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -81,6 +81,8 @@ import {
 } from "@/app/lib/salePriceRounding";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import SavingsOutlinedIcon from "@mui/icons-material/SavingsOutlined";
+import PaletteOutlinedIcon from "@mui/icons-material/PaletteOutlined";
+import ReservMenuThemeSettings from "@/app/admin/settings/ReservMenuThemeSettings";
 
 const settingsCardSx = {
   backgroundColor: "var(--admin-surface)",
@@ -297,6 +299,7 @@ export default function SettingsPage() {
   const [loyaltyLoaded, setLoyaltyLoaded] = useState(false);
   const [loyaltyLoading, setLoyaltyLoading] = useState(false);
   const [shopCardOpen, setShopCardOpen] = useState(false);
+  const [menuThemeOpen, setMenuThemeOpen] = useState(false);
   const [shopCardLoaded, setShopCardLoaded] = useState(false);
   const [shopCardLoading, setShopCardLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -826,7 +829,7 @@ export default function SettingsPage() {
     }
   };
 
-  const openShopCard = async () => {
+  const openShopCard = useCallback(async () => {
     setShopCardOpen(true);
     if (shopCardLoaded) return;
     const token = tokenCode();
@@ -849,7 +852,11 @@ export default function SettingsPage() {
     } finally {
       setShopCardLoading(false);
     }
-  };
+  }, [shopCardLoaded]);
+
+  useEffect(() => {
+    if (restaurantCafeEnabled) void openShopCard();
+  }, [restaurantCafeEnabled, openShopCard]);
 
   const handleSaveShopCard = async () => {
     const token = tokenCode();
@@ -1414,26 +1421,24 @@ export default function SettingsPage() {
         ) : null}
       </SettingsSectionCard>
 
+      {restaurantCafeEnabled ? (
       <SettingsSectionCard
         icon={<CreditCardIcon sx={{ fontSize: 18 }} />}
         title="پرداخت سفارش میز"
-        hint="روش‌های پرداخت، درگاه آنلاین و کارت فروشگاه"
-        loading={shopCardOpen && shopCardLoading}
-        action={
-          shopCardOpen ? undefined : (
-            <Button size="small" variant="outlined" onClick={() => void openShopCard()} sx={viewBtnSx}>
-              مشاهده
-            </Button>
-          )
-        }
+        hint="آنلاین با زرین‌پال وبینو، کارت‌به‌کارت یا کارتخوان"
+        loading={shopCardLoading}
       >
-        {shopCardOpen && !shopCardLoading ? (
+        {!shopCardLoading ? (
         <Box sx={{ mt: 1, display: "flex", flexDirection: "column", gap: 1 }}>
           <Box>
             <SettingsToggleRow
               icon={<PaymentsIcon sx={{ fontSize: 16 }} />}
               title="پرداخت آنلاین (زرین‌پال)"
-              hint="مشتری هنگام ثبت پرداخت می‌کند و سفارش خودکار فاکتور می‌شود"
+              hint={
+                shopZarinpalMerchant.trim()
+                  ? "مبلغ به مرچنت کد همین فروشگاه واریز می‌شود"
+                  : "مرچنت جدا لازم نیست؛ مبلغ به حساب مرکزی وبینو واریز می‌شود"
+              }
               checked={tablePayOnline}
               onChange={(e) => setTablePayOnline(e.target.checked)}
             />
@@ -1457,7 +1462,7 @@ export default function SettingsPage() {
               label="مرچنت کد زرین‌پال فروشگاه (اختیاری)"
               value={shopZarinpalMerchant}
               onChange={(e) => setShopZarinpalMerchant(e.target.value.trim())}
-              helperText="خالی باشد، مبلغ به حساب مرکزی وبینو واریز می‌شود. در پنل زرین‌پال دامنهٔ webinoo-plus.ir را ثبت کنید."
+              helperText="خالی بگذارید تا همان درگاه وبینو استفاده شود. فقط اگر حساب زرین‌پال خودتان را دارید پر کنید."
               inputProps={{ dir: "ltr" }}
               sx={{
                 "& .MuiOutlinedInput-root": {
@@ -1533,6 +1538,24 @@ export default function SettingsPage() {
         </Box>
         ) : null}
       </SettingsSectionCard>
+      ) : null}
+
+      {restaurantCafeEnabled ? (
+      <SettingsSectionCard
+        icon={<PaletteOutlinedIcon sx={{ fontSize: 18 }} />}
+        title="مدل منوی سفارش میز"
+        hint="ظاهر منویی که مشتری با اسکن QR میز می‌بیند — ۷ مدل با پیش‌نمایش"
+        action={
+          menuThemeOpen ? undefined : (
+            <Button size="small" variant="outlined" onClick={() => setMenuThemeOpen(true)} sx={viewBtnSx}>
+              مشاهده
+            </Button>
+          )
+        }
+      >
+        {menuThemeOpen ? <ReservMenuThemeSettings /> : null}
+      </SettingsSectionCard>
+      ) : null}
 
       {can("backup") ? (
       <SettingsSectionCard

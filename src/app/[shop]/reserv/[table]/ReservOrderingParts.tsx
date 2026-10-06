@@ -81,7 +81,7 @@ export const THEMES = {
   },
 } as const;
 
-export type ReservTheme = (typeof THEMES)[ReservThemeMode];
+export type ReservTheme = Record<keyof (typeof THEMES)["light"], string>;
 
 export function formatNumber(num: number, locale = "fa-IR") {
   return new Intl.NumberFormat(locale).format(num);
@@ -109,6 +109,7 @@ type HeaderProps = {
   onCurrentServices?: () => void;
   onHistory: () => void;
   showLanguageSwitch?: boolean;
+  showThemeToggle?: boolean;
 };
 
 export function ReservHeader({
@@ -121,6 +122,7 @@ export function ReservHeader({
   currentServiceCount = 0,
   showServiceShortcut = false,
   showLanguageSwitch = false,
+  showThemeToggle = true,
   onLogin,
   onToggleTheme,
   onCurrentOrders,
@@ -331,21 +333,23 @@ export function ReservHeader({
                 transformOrigin={{ vertical: "top", horizontal: "right" }}
                 slotProps={{ paper: { sx: menuPaperSx } }}
               >
-                <MenuItem
-                  onClick={() => {
-                    onToggleTheme();
-                    setMoreAnchor(null);
-                  }}
-                >
-                  <ListItemIcon sx={{ color: theme.TEXT, minWidth: 36 }}>
-                    {themeMode === "dark" ? (
-                      <LightModeIcon sx={{ fontSize: 20 }} />
-                    ) : (
-                      <DarkModeIcon sx={{ fontSize: 20 }} />
-                    )}
-                  </ListItemIcon>
-                  <ListItemText primary={themeMode === "dark" ? t("themeLight") : t("themeDark")} />
-                </MenuItem>
+                {showThemeToggle ? (
+                  <MenuItem
+                    onClick={() => {
+                      onToggleTheme();
+                      setMoreAnchor(null);
+                    }}
+                  >
+                    <ListItemIcon sx={{ color: theme.TEXT, minWidth: 36 }}>
+                      {themeMode === "dark" ? (
+                        <LightModeIcon sx={{ fontSize: 20 }} />
+                      ) : (
+                        <DarkModeIcon sx={{ fontSize: 20 }} />
+                      )}
+                    </ListItemIcon>
+                    <ListItemText primary={themeMode === "dark" ? t("themeLight") : t("themeDark")} />
+                  </MenuItem>
+                ) : null}
                 <MenuItem
                   onClick={() => {
                     onCurrentOrders();
@@ -399,13 +403,15 @@ export function ReservHeader({
             </>
           ) : null}
 
-          <IconButton
-            onClick={onToggleTheme}
-            aria-label={themeMode === "dark" ? t("themeLight") : t("themeDark")}
-            sx={{ ...iconBtn, width: 40, height: 40, ...inlineActionsSx }}
-          >
-            {themeMode === "dark" ? <LightModeIcon sx={{ fontSize: 18 }} /> : <DarkModeIcon sx={{ fontSize: 18 }} />}
-          </IconButton>
+          {showThemeToggle ? (
+            <IconButton
+              onClick={onToggleTheme}
+              aria-label={themeMode === "dark" ? t("themeLight") : t("themeDark")}
+              sx={{ ...iconBtn, width: 40, height: 40, ...inlineActionsSx }}
+            >
+              {themeMode === "dark" ? <LightModeIcon sx={{ fontSize: 18 }} /> : <DarkModeIcon sx={{ fontSize: 18 }} />}
+            </IconButton>
+          ) : null}
           <IconButton
             onClick={onCurrentOrders}
             aria-label={t("foodOrdersAria")}
