@@ -1248,12 +1248,14 @@ function ShowcaseLayout(props: ReservMenuLayoutProps) {
       sx={{
         display: "flex",
         alignItems: "stretch",
-        gap: 1,
+        gap: 0.75,
         overflow: "hidden",
+        width: "100%",
+        maxWidth: "100%",
         // ستون راست ثابت؛ فقط ستون کارت‌ها اسکرول می‌شود
-        height: compact ? 560 : "calc(100dvh - 148px)",
-        maxHeight: compact ? 560 : "calc(100dvh - 148px)",
-        minHeight: compact ? 420 : 280,
+        height: compact ? 480 : "calc(100dvh - 148px)",
+        maxHeight: compact ? 480 : "calc(100dvh - 148px)",
+        minHeight: compact ? 360 : 280,
       }}
     >
       <ShowcaseSideRail
@@ -1602,16 +1604,16 @@ function MotionCard({
         position: "relative",
         overflow: "hidden",
         cursor: "pointer",
-        borderRadius: "26px",
+        borderRadius: "21px",
         aspectRatio: "3 / 4",
         width: fill ? "100%" : undefined,
         bgcolor: "#151528",
         border: "1px solid rgba(255,255,255,0.08)",
-        boxShadow: "0 18px 40px rgba(0,0,0,0.45)",
+        boxShadow: "0 14px 32px rgba(0,0,0,0.42)",
         animation: "reservRise 560ms cubic-bezier(.2,.8,.2,1) both",
         animationDelay: `${Math.min(index, 8) * 70}ms`,
         transition: "transform 220ms ease",
-        "&:hover": { transform: "translateY(-4px)" },
+        "&:hover": { transform: "translateY(-3px)" },
         "&:hover img": { transform: "scale(1.12)" },
         "@keyframes reservRise": {
           from: { opacity: 0, transform: "translateY(26px) scale(0.96)" },
@@ -1651,22 +1653,22 @@ function MotionCard({
         <Box
           sx={{
             position: "absolute",
-            top: 12,
-            insetInlineStart: 12,
-            px: 1,
-            py: 0.25,
+            top: 9,
+            insetInlineStart: 9,
+            px: 0.8,
+            py: 0.2,
             borderRadius: "999px",
             background: "linear-gradient(90deg, #f59e0b, #ef4444)",
             color: "#fff",
-            fontSize: 11.5,
+            fontSize: 10,
             fontWeight: 900,
-            boxShadow: "0 6px 16px rgba(239,68,68,0.4)",
+            boxShadow: "0 5px 12px rgba(239,68,68,0.4)",
           }}
         >
           {`٪${off}`}
         </Box>
       ) : null}
-      <Box sx={{ position: "absolute", top: 10, insetInlineEnd: 10 }}>
+      <Box sx={{ position: "absolute", top: 8, insetInlineEnd: 8 }}>
         {qty > 0 ? (
           <Box
             key={qty}
@@ -1695,19 +1697,19 @@ function MotionCard({
             ring: "rgba(255,255,255,0.18)",
             shadow: "0 8px 20px rgba(236,72,153,0.45)",
           }}
-          size={34}
+          size={27}
         />
       </Box>
-      <Box sx={{ position: "absolute", insetInline: 0, bottom: 0, p: 1.5 }}>
-        <Typography sx={{ fontWeight: 800, fontSize: 15.5, color: "#fff", lineHeight: 1.4 }}>
+      <Box sx={{ position: "absolute", insetInline: 0, bottom: 0, p: 1.15 }}>
+        <Typography sx={{ fontWeight: 800, fontSize: 12.5, color: "#fff", lineHeight: 1.35 }}>
           {item.name}
           {item.outOfStock ? <OutOfStockTag color="#fff" bg="rgba(255,255,255,0.18)" /> : null}
         </Typography>
         {item.description ? (
           <Typography
             sx={{
-              mt: 0.2,
-              fontSize: 11,
+              mt: 0.15,
+              fontSize: 10,
               color: "rgba(229,229,255,0.75)",
               display: "-webkit-box",
               WebkitLineClamp: 1,
@@ -1718,12 +1720,12 @@ function MotionCard({
             {item.description}
           </Typography>
         ) : null}
-        <Box sx={{ mt: 0.6 }}>
+        <Box sx={{ mt: 0.45 }}>
           <Price
             item={item}
             color="#fff"
             muted="rgba(229,229,255,0.7)"
-            size={16}
+            size={13}
             gradient="linear-gradient(90deg, #c4b5fd, #f9a8d4)"
           />
         </Box>
@@ -1773,10 +1775,10 @@ function MotionLayout(props: ReservMenuLayoutProps) {
             <Box
               sx={{
                 display: "flex",
-                gap: 1.25,
+                gap: 1,
                 overflowX: "auto",
                 scrollSnapType: "x mandatory",
-                pb: 1.5,
+                pb: 1.25,
                 mx: compact ? -1.5 : { xs: -1.5, md: 0 },
                 px: compact ? 1.5 : { xs: 1.5, md: 0 },
                 scrollbarWidth: "none",
@@ -1786,7 +1788,7 @@ function MotionLayout(props: ReservMenuLayoutProps) {
               {section.items.map((item, index) => (
                 <Box
                   key={item.key}
-                  sx={{ flex: "0 0 auto", width: compact ? 170 : { xs: "58%", sm: 220 }, scrollSnapAlign: "start" }}
+                  sx={{ flex: "0 0 auto", width: compact ? 136 : { xs: "46%", sm: 176 }, scrollSnapAlign: "start" }}
                 >
                   <MotionCard item={item} actions={props} index={index} fill />
                 </Box>
@@ -1799,11 +1801,13 @@ function MotionLayout(props: ReservMenuLayoutProps) {
                 gridTemplateColumns: compact
                   ? "repeat(2, minmax(0, 1fr))"
                   : { xs: "repeat(2, minmax(0, 1fr))", md: "repeat(3, minmax(0, 1fr))" },
-                gap: 1.25,
+                gap: 1,
               }}
             >
               {section.items.map((item, index) => (
-                <MotionCard key={item.key} item={item} actions={props} index={index} fill />
+                <Box key={item.key} sx={{ width: "80%", mx: "auto" }}>
+                  <MotionCard item={item} actions={props} index={index} fill />
+                </Box>
               ))}
             </Box>
           )}
@@ -2035,6 +2039,7 @@ export function ReservThemeBackdrop({
 
 export function ReservCoverHero({
   shopTitle,
+  shopIconUrl,
   tableLabel,
   palette,
   coverImage,
@@ -2045,6 +2050,7 @@ export function ReservCoverHero({
   topActions,
 }: {
   shopTitle: string;
+  shopIconUrl?: string | null;
   tableLabel: string;
   palette: ReservTheme;
   coverImage: string | null;
@@ -2111,9 +2117,14 @@ export function ReservCoverHero({
               bgcolor: "#fff",
               boxShadow: "0 6px 18px rgba(0,0,0,0.3)",
               flexShrink: 0,
+              overflow: "hidden",
             }}
           >
-            {shopTitle.trim().slice(0, 1) || "م"}
+            {shopIconUrl ? (
+              <Box component="img" src={shopIconUrl} alt="" sx={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : (
+              shopTitle.trim().slice(0, 1) || "م"
+            )}
           </Box>
           <Box sx={{ minWidth: 0 }}>
             <Typography sx={{ fontWeight: 900, fontSize: 18, lineHeight: 1.3, textShadow: "0 2px 10px rgba(0,0,0,0.4)" }}>

@@ -15,9 +15,8 @@ function requestHosts(request: NextRequest) {
  */
 /**
  * لینک بازاریاب منوی آنلاین → مستقیم لندینگ منو (با حفظ ?mref=).
- * کد جدید ۴ رقمی؛ 4Z3T6F برای لینک‌های قدیمی نگه داشته شده.
  */
-const MENU_LANDING_MREFS = new Set(["4366", "4Z3T6F"]);
+const MENU_LANDING_MREFS = new Set(["9834", "4366", "4Z3T6F"]);
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -32,11 +31,12 @@ export function middleware(request: NextRequest) {
   }
 
   if (pathname === "/") {
-    const mref = (request.nextUrl.searchParams.get("mref") || "").trim().toUpperCase();
-    if (MENU_LANDING_MREFS.has(mref)) {
+    const raw = (request.nextUrl.searchParams.get("mref") || "").trim();
+    const mref = raw.toUpperCase();
+    if (MENU_LANDING_MREFS.has(mref) || MENU_LANDING_MREFS.has(raw)) {
       const url = request.nextUrl.clone();
       url.pathname = "/landing/menu";
-      // لینک قدیمی را به کد ۴ رقمی نگاشت کن تا ردیابی بازاریاب کار کند
+      // لینک قدیمی حروفی را به کد ۴ رقمی نگاشت کن
       if (mref === "4Z3T6F") {
         url.searchParams.set("mref", "4366");
       }

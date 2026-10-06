@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -21,8 +21,8 @@ import {
   X,
 } from "lucide-react";
 import WebinoChatbot from "@/app/coponent/WebinoChatbot";
-import { ReservMenuThemePreview } from "@/app/admin/settings/ReservMenuThemePreview";
 import {
+  RESERV_MENU_PREVIEW_QUERY,
   RESERV_MENU_THEMES,
   type ReservMenuThemeId,
 } from "@/app/lib/reservMenuThemes";
@@ -40,7 +40,66 @@ import {
 const SHOP_LANDING_URL = "/landing/shop";
 const CLUB_LANDING_URL = "/landing/club";
 
-const DEMO_THEMES = RESERV_MENU_THEMES.filter((t) => t.id !== "video");
+/** دموی زنده دقیقاً همان منوی واقعی مکث کباب */
+const DEMO_LIVE_MENU_BASE = "/max/reserv/1";
+
+/** ویدیو اول؛ بقیه تم‌ها بعدش */
+const DEMO_THEMES = [
+  ...RESERV_MENU_THEMES.filter((t) => t.id === "video"),
+  ...RESERV_MENU_THEMES.filter((t) => t.id !== "video"),
+];
+
+const DEMO_FRAME_WIDTH = 360;
+const DEMO_FRAME_HEIGHT = 640;
+
+function FitMenuPreview({
+  themeId,
+  className = "",
+}: {
+  themeId: ReservMenuThemeId;
+  className?: string;
+}) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.72);
+  const src = `${DEMO_LIVE_MENU_BASE}?${RESERV_MENU_PREVIEW_QUERY}=${themeId}`;
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const update = () => {
+      const available = Math.max(0, el.clientWidth - 4);
+      setScale(Math.min(1, Math.max(0.5, available / DEMO_FRAME_WIDTH)));
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  return (
+    <div ref={wrapRef} className={`w-full mx-auto overflow-hidden ${className}`}>
+      <div
+        className="relative mx-auto overflow-hidden rounded-[18px] border-[4px] border-[#111] bg-black"
+        style={{ width: DEMO_FRAME_WIDTH * scale, height: DEMO_FRAME_HEIGHT * scale }}
+      >
+        <iframe
+          key={themeId}
+          src={src}
+          title={`پیش‌نمایش زنده تم ${themeId}`}
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+          className="absolute top-0 left-0 border-0"
+          style={{
+            width: DEMO_FRAME_WIDTH,
+            height: DEMO_FRAME_HEIGHT,
+            transform: `scale(${scale})`,
+            transformOrigin: "top left",
+          }}
+        />
+      </div>
+    </div>
+  );
+}
 
 const FEATURES = [
   { icon: QrCode, title: "QR اختصاصی میز", desc: "هر میز لینک خودش را دارد؛ مشتری اسکن می‌کند و وارد منو می‌شود." },
@@ -81,7 +140,7 @@ const PLANS = [
     features: [
       "همه امکانات پایه",
       "سفارش آنلاین میز و اتاق",
-      "اقساط، نسیه، خرید و سود",
+      "نسیه، خرید و سود",
       "پرداخت آنلاین روی منو",
       "پیجر گارسون و حقوق پرسنل",
     ],
@@ -117,7 +176,7 @@ function toFaDigits(value: string | number) {
 
 export default function DigitalMenuLandingClient() {
   const [navOpen, setNavOpen] = useState(false);
-  const [activeTheme, setActiveTheme] = useState<ReservMenuThemeId>("classic");
+  const [activeTheme, setActiveTheme] = useState<ReservMenuThemeId>("video");
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
 
   const scrollTo = useCallback((id: string) => {
@@ -137,7 +196,7 @@ export default function DigitalMenuLandingClient() {
   const activeThemeMeta = DEMO_THEMES.find((t) => t.id === activeTheme) ?? DEMO_THEMES[0];
 
   return (
-    <div dir="rtl" className="min-h-screen bg-[#071018] text-slate-100 antialiased">
+    <div dir="rtl" className="min-h-screen bg-[#071018] text-slate-100 antialiased overflow-x-hidden">
       <header className="sticky top-0 z-50 border-b border-emerald-500/15 bg-[#071018]/85 backdrop-blur-xl">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 min-w-0">
@@ -251,13 +310,21 @@ export default function DigitalMenuLandingClient() {
             </div>
           </motion.div>
 
-          <motion.div {...fadeUp(0.1)} className="relative mx-auto w-full max-w-[340px]">
-            <div className="absolute -inset-6 bg-gradient-to-br from-cyan-500/20 to-emerald-500/10 blur-2xl rounded-full" />
-            <div className="relative rounded-[2rem] border border-white/10 bg-black/30 p-3 shadow-2xl shadow-emerald-950/40">
-              <ReservMenuThemePreview themeId={activeTheme} scale={0.88} height={620} />
+          <motion.div {...fadeUp(0.1)} className="relative mx-auto w-full min-w-0 max-w-[300px]">
+            <div className="absolute -inset-6 bg-gradient-to-br from-cyan-500/20 to-emerald-500/10 blur-2xl rounded-full pointer-events-none" />
+            <div className="relative rounded-[1.75rem] border border-white/10 bg-black/30 p-1.5 shadow-2xl shadow-emerald-950/40 overflow-hidden">
+              <FitMenuPreview themeId={activeTheme} />
             </div>
             <p className="mt-3 text-center text-xs text-slate-400">
-              پیش‌نمایش زنده تم «{activeThemeMeta.title}»
+              پیش‌نمایش زنده تم «{activeThemeMeta.title}» —{" "}
+              <a
+                href={`${DEMO_LIVE_MENU_BASE}?${RESERV_MENU_PREVIEW_QUERY}=${activeTheme}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-emerald-300 hover:underline"
+              >
+                باز کردن کامل
+              </a>
             </p>
           </motion.div>
         </div>
@@ -292,8 +359,8 @@ export default function DigitalMenuLandingClient() {
       </section>
 
       {/* Live themes */}
-      <section id="themes" className="py-14 md:py-16 bg-white/[0.02] border-y border-white/5 scroll-mt-20">
-        <div className="max-w-6xl mx-auto px-4">
+      <section id="themes" className="py-14 md:py-16 bg-white/[0.02] border-y border-white/5 scroll-mt-20 overflow-x-hidden">
+        <div className="max-w-6xl mx-auto px-4 min-w-0">
           <motion.div {...fadeUp()} className="text-center mb-8">
             <h2 className="text-2xl md:text-3xl font-bold text-white">تم‌های منو — دموی زنده</h2>
             <p className="text-slate-400 mt-2">روی هر تم بزنید؛ پیش‌نمایش همان لحظه عوض می‌شود</p>
@@ -307,7 +374,7 @@ export default function DigitalMenuLandingClient() {
                   key={theme.id}
                   type="button"
                   onClick={() => setActiveTheme(theme.id)}
-                  className={`px-4 py-2 rounded-xl text-sm font-semibold border transition ${
+                  className={`px-3.5 py-2 rounded-xl text-sm font-semibold border transition ${
                     active
                       ? "bg-gradient-to-l from-cyan-500 to-emerald-500 text-white border-transparent shadow-lg shadow-emerald-900/30"
                       : "bg-white/5 text-slate-300 border-white/10 hover:border-emerald-400/40"
@@ -319,8 +386,8 @@ export default function DigitalMenuLandingClient() {
             })}
           </div>
 
-          <div className="grid lg:grid-cols-[280px_1fr] gap-8 items-start">
-            <motion.div {...fadeUp()} className="rounded-2xl border border-white/10 bg-[#0c1520] p-5">
+          <div className="grid lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)] gap-6 lg:gap-8 items-start min-w-0">
+            <motion.div {...fadeUp()} className="rounded-2xl border border-white/10 bg-[#0c1520] p-5 min-w-0 order-2 lg:order-1">
               <div className="text-lg font-bold text-white mb-2">{activeThemeMeta.title}</div>
               <p className="text-sm text-slate-400 leading-7 mb-4">{activeThemeMeta.hint}</p>
               <ul className="space-y-2 text-sm text-slate-300">
@@ -330,21 +397,19 @@ export default function DigitalMenuLandingClient() {
               </ul>
             </motion.div>
 
-            <motion.div {...fadeUp(0.06)} className="flex justify-center">
-              <div className="relative w-full max-w-[360px]">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={activeTheme}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    transition={{ duration: 0.28 }}
-                    className="rounded-[2rem] border border-white/10 bg-black/25 p-2 shadow-2xl"
-                  >
-                    <ReservMenuThemePreview themeId={activeTheme} scale={1} height={640} scrollable />
-                  </motion.div>
-                </AnimatePresence>
-              </div>
+            <motion.div {...fadeUp(0.06)} className="flex justify-center min-w-0 w-full order-1 lg:order-2">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeTheme}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.28 }}
+                  className="w-full max-w-[300px] rounded-[1.75rem] border border-white/10 bg-black/25 p-1.5 shadow-2xl overflow-hidden"
+                >
+                  <FitMenuPreview themeId={activeTheme} />
+                </motion.div>
+              </AnimatePresence>
             </motion.div>
           </div>
         </div>

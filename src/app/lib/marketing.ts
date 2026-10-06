@@ -9,7 +9,8 @@ const REF_STORAGE_KEY = "wb_marketer_ref";
 const VISITOR_ID_KEY = "wb_visitor_id";
 const REF_COOKIE = "wb_mref";
 const DEFAULT_ATTRIBUTION_DAYS = 60;
-const CLAIM_RETRY_MS = 2 * 60 * 1000;
+/** فاصلهٔ کوتاه بین تلاش‌های claim وقتی هنوز فروشگاه آماده نبوده */
+const CLAIM_RETRY_MS = 8 * 1000;
 
 export type MarketerProfile = {
   id: number;
@@ -246,24 +247,21 @@ function getVisitorId(): string {
   return id;
 }
 
-function toLatinDigits(value: string): string {
-  return value.replace(/[۰-۹٠-٩]/g, (ch) => {
-    const fa = "۰۱۲۳۴۵۶۷۸۹".indexOf(ch);
-    if (fa >= 0) return String(fa);
-    const ar = "٠١٢٣٤٥٦٧٨٩".indexOf(ch);
-    return ar >= 0 ? String(ar) : ch;
-  });
-}
-
 /** کد معرف فقط عدد ۴ رقمی */
 export function normalizeMarketerRefCode(raw: string | null | undefined): string | null {
   const digits = toLatinDigits(String(raw || "")).replace(/\D/g, "");
   return /^\d{4}$/.test(digits) ? digits : null;
 }
 
+/** کد معرف ذخیره‌شده (برای ارسال هنگام ثبت‌نام) */
+export function getStoredMarketerRefCode(): string | null {
+  return readStoredRef()?.code ?? null;
+}
+
 /**
  * اگر آدرس صفحه ?mref=CODE داشته باشد، معرف را ذخیره می‌کند.
  * اولین معرف تا پایان مهلت انتساب حفظ می‌شود (لینک بعدی جایگزینش نمی‌شود).
+ * حتی اگر API بازدید خطا بدهد، کد در مرورگر نگه داشته می‌شود تا بعد از ثبت‌نام claim شود.
  */
 export async function captureMarketerRef(): Promise<void> {
   if (typeof window === "undefined") return;
@@ -274,6 +272,16 @@ export async function captureMarketerRef(): Promise<void> {
   const visitorId = getVisitorId();
   const existing = readStoredRef();
 
+  // اول محلی ذخیره کن تا با خطای شبکه/۴۰۴ موقت، انتساب از دست نرود
+  if (!existing) {
+    writeStoredRef({
+      code,
+      visitor_id: visitorId,
+      at: Date.now(),
+      days: DEFAULT_ATTRIBUTION_DAYS,
+    });
+  }
+
   const res = await request<{ valid: boolean; attribution_days?: number }>(
     "POST",
     "/api/marketing/visit",
@@ -282,14 +290,12 @@ export async function captureMarketerRef(): Promise<void> {
   );
   if (!res.ok || !res.data.valid) return;
 
-  if (!existing) {
-    writeStoredRef({
-      code,
-      visitor_id: visitorId,
-      at: Date.now(),
-      days: res.data.attribution_days || DEFAULT_ATTRIBUTION_DAYS,
-    });
-  }
+  const current = readStoredRef();
+  if (!current || current.code !== code) return;
+  writeStoredRef({
+    ...current,
+    days: res.data.attribution_days || DEFAULT_ATTRIBUTION_DAYS,
+  });
 }
 
 /**
@@ -304,15 +310,24 @@ export async function tryClaimMarketerRef(): Promise<void> {
   if (!token) return;
   if (ref.last_claim_at && Date.now() - ref.last_claim_at < CLAIM_RETRY_MS) return;
 
-  writeStoredRef({ ...ref, last_claim_at: Date.now() });
-
   const res = await request<{ ok: boolean; final: boolean; message: string }>(
     "POST",
     "/api/marketing/claim",
     { Authorization: `Bearer ${token}` },
     { code: ref.code, visitor_id: ref.visitor_id },
   );
-  if (res.ok && res.data.final) {
-    writeStoredRef(null);
+
+  if (!res.ok) {
+    writeStoredRef({ ...ref, last_claim_at: Date.now() });
+    return;
   }
+
+  if (res.data.final) {
+    // موفق یا قطعی ناموفق — دیگر تلاش نکن
+    writeStoredRef(null);
+    return;
+  }
+
+  // هنوز فروشگاه آماده نیست؛ کمی بعد دوباره تلاش می‌شود
+  writeStoredRef({ ...ref, last_claim_at: Date.now() });
 }

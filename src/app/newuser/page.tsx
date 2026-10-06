@@ -9,23 +9,62 @@ import {
   CardContent,
   CircularProgress,
   Container,
-  Tab,
-  Tabs,
+  Divider,
+  IconButton,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
   TextField,
   Typography,
 } from "@mui/material";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import ShareIcon from "@mui/icons-material/Share";
 import LogoutIcon from "@mui/icons-material/Logout";
+import MenuIcon from "@mui/icons-material/Menu";
+import GroupsIcon from "@mui/icons-material/Groups";
+import ShoppingBagOutlinedIcon from "@mui/icons-material/ShoppingBagOutlined";
+import AccountBalanceWalletOutlinedIcon from "@mui/icons-material/AccountBalanceWalletOutlined";
+import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
+import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import {
+  formatToman,
   getMarketerToken,
   marketerApi,
   setMarketerToken,
   toFaNumber,
   toLatinDigits,
   type MarketerDashboard,
+  type MarketerSummary,
 } from "@/app/lib/marketing";
-import { PayoutsTable, ReferralsTable, SummaryCards } from "./MarketerTables";
+import { PayoutsTable, ReferralsTable, StatCard } from "./MarketerTables";
+
+type PanelView = "home" | "all" | "paid" | "payouts" | "profile";
+
+const PANEL_TITLES: Record<PanelView, string> = {
+  home: "خانه",
+  all: "زیرمجموعه‌ها",
+  paid: "خریداران",
+  payouts: "تسویه‌ها",
+  profile: "اطلاعات حساب",
+};
+
+function CompactSummary({ summary, percent }: { summary: MarketerSummary; percent: number }) {
+  return (
+    <Box
+      sx={{
+        display: "grid",
+        gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(4, 1fr)" },
+        gap: 1,
+      }}
+    >
+      <StatCard label="بازدید" value={toFaNumber(summary.visitors_count)} />
+      <StatCard label="ثبت‌نام" value={toFaNumber(summary.registered_count)} />
+      <StatCard label="پورسانت" value={`${toFaNumber(percent)}٪`} />
+      <StatCard label="مانده تسویه" value={formatToman(summary.balance_toman)} accent />
+    </Box>
+  );
+}
 
 const fieldSx = {
   "& .MuiOutlinedInput-root": {
@@ -234,7 +273,8 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
   const [data, setData] = useState<MarketerDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [tab, setTab] = useState<"all" | "paid" | "payouts" | "profile">("all");
+  const [view, setView] = useState<PanelView>("home");
+  const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [copied, setCopied] = useState(false);
 
   const load = useCallback(async () => {
@@ -318,105 +358,158 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
   }
 
   const { marketer, summary } = data;
+  const menuOpen = Boolean(menuAnchor);
+
+  const openView = (next: PanelView) => {
+    setView(next);
+    setMenuAnchor(null);
+  };
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 2, maxWidth: 720, mx: "auto" }}>
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1 }}>
-        <Box>
-          <Typography sx={{ color: "var(--admin-text)", fontWeight: 800, fontSize: { xs: "20px", md: "24px" } }}>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography sx={{ color: "var(--admin-text)", fontWeight: 800, fontSize: { xs: "18px", md: "22px" } }}>
             {marketer.name ? `سلام ${marketer.name}` : "پنل بازاریابی"}
           </Typography>
-          <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "13px", direction: "ltr", textAlign: "right" }}>
-            {marketer.phone}
+          <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "12px" }}>
+            {view === "home" ? <span dir="ltr">{marketer.phone}</span> : PANEL_TITLES[view]}
           </Typography>
         </Box>
-        <Button
-          size="small"
-          startIcon={<LogoutIcon />}
-          onClick={() => void logout()}
-          sx={{ color: "var(--admin-text-secondary)", "& .MuiButton-startIcon": { ml: 0.5, mr: 0 } }}
+        <IconButton aria-label="منو" onClick={(e) => setMenuAnchor(e.currentTarget)} sx={{ color: "var(--admin-text)" }}>
+          <MenuIcon />
+        </IconButton>
+        <Menu
+          anchorEl={menuAnchor}
+          open={menuOpen}
+          onClose={() => setMenuAnchor(null)}
+          anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+          transformOrigin={{ vertical: "top", horizontal: "left" }}
+          slotProps={{
+            paper: {
+              sx: {
+                minWidth: 220,
+                bgcolor: "var(--admin-surface)",
+                border: "1px solid var(--admin-border)",
+                color: "var(--admin-text)",
+              },
+            },
+          }}
         >
-          خروج
-        </Button>
-      </Box>
-
-      <Card sx={cardSx}>
-        <CardContent sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
-          <Typography sx={{ color: "var(--admin-text)", fontWeight: 700 }}>لینک اختصاصی شما</Typography>
-          <Box
-            sx={{
-              p: 1.25,
-              borderRadius: "10px",
-              backgroundColor: "var(--admin-surface-alt)",
-              border: "1px dashed var(--admin-border)",
-              direction: "ltr",
-              fontFamily: "monospace",
-              fontSize: "14px",
-              color: "var(--admin-accent)",
-              wordBreak: "break-all",
+          <MenuItem selected={view === "home"} onClick={() => openView("home")}>
+            <ListItemIcon sx={{ color: "var(--admin-text-secondary)", minWidth: 36 }}>
+              <HomeOutlinedIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary="خانه" />
+          </MenuItem>
+          <MenuItem selected={view === "all"} onClick={() => openView("all")}>
+            <ListItemIcon sx={{ color: "var(--admin-text-secondary)", minWidth: 36 }}>
+              <GroupsIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary={`زیرمجموعه‌ها (${toFaNumber(data.referrals.length)})`} />
+          </MenuItem>
+          <MenuItem selected={view === "paid"} onClick={() => openView("paid")}>
+            <ListItemIcon sx={{ color: "var(--admin-text-secondary)", minWidth: 36 }}>
+              <ShoppingBagOutlinedIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary={`خریداران (${toFaNumber(paidReferrals.length)})`} />
+          </MenuItem>
+          <MenuItem selected={view === "payouts"} onClick={() => openView("payouts")}>
+            <ListItemIcon sx={{ color: "var(--admin-text-secondary)", minWidth: 36 }}>
+              <AccountBalanceWalletOutlinedIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary="تسویه‌ها" />
+          </MenuItem>
+          <MenuItem selected={view === "profile"} onClick={() => openView("profile")}>
+            <ListItemIcon sx={{ color: "var(--admin-text-secondary)", minWidth: 36 }}>
+              <PersonOutlineIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary="اطلاعات حساب" />
+          </MenuItem>
+          <Divider sx={{ borderColor: "var(--admin-border)", my: 0.5 }} />
+          <MenuItem
+            onClick={() => {
+              setMenuAnchor(null);
+              void logout();
             }}
           >
-            {marketer.referral_link}
-          </Box>
-          <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-            <Button
-              variant="contained"
-              startIcon={<ContentCopyIcon />}
-              onClick={() => void copyLink()}
-              sx={{ ...primaryButtonSx, "& .MuiButton-startIcon": { ml: 0.5, mr: 0 } }}
-            >
-              {copied ? "کپی شد" : "کپی لینک"}
-            </Button>
-            <Button
-              variant="outlined"
-              startIcon={<ShareIcon />}
-              onClick={() => void shareLink()}
-              sx={{
-                color: "var(--admin-accent)",
-                borderColor: "var(--admin-accent)",
-                "& .MuiButton-startIcon": { ml: 0.5, mr: 0 },
-              }}
-            >
-              اشتراک‌گذاری
-            </Button>
-          </Box>
-          <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "12px", lineHeight: 1.9 }}>
-            کد معرف شما (عدد ۴ رقمی): <b style={{ direction: "ltr" }}>{marketer.code}</b> — هر کس با این لینک وارد سایت شود و تا{" "}
-            {toFaNumber(data.attribution_days ?? 60)} روز بعد ثبت‌نام کند، زیرمجموعهٔ شما می‌شود و از هر خرید اکانت پولی
-            او {toFaNumber(marketer.commission_percent)}٪ پورسانت می‌گیرید. می‌توانید <span dir="ltr">?mref={marketer.code}</span>{" "}
-            را به آخر هر صفحه‌ای از سایت هم اضافه کنید.
-          </Typography>
-        </CardContent>
-      </Card>
+            <ListItemIcon sx={{ color: "var(--admin-text-secondary)", minWidth: 36 }}>
+              <LogoutIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary="خروج" />
+          </MenuItem>
+        </Menu>
+      </Box>
 
-      <SummaryCards summary={summary} percent={marketer.commission_percent} />
+      {view === "home" ? (
+        <>
+          <Card sx={cardSx}>
+            <CardContent sx={{ display: "flex", flexDirection: "column", gap: 1.25, py: 2, "&:last-child": { pb: 2 } }}>
+              <Box sx={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 1 }}>
+                <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: 14 }}>لینک شما</Typography>
+                <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }} dir="ltr">
+                  کد {marketer.code}
+                </Typography>
+              </Box>
+              <Box
+                sx={{
+                  p: 1.1,
+                  borderRadius: "10px",
+                  backgroundColor: "var(--admin-surface-alt)",
+                  border: "1px dashed var(--admin-border)",
+                  direction: "ltr",
+                  fontFamily: "monospace",
+                  fontSize: "13px",
+                  color: "var(--admin-accent)",
+                  wordBreak: "break-all",
+                }}
+              >
+                {marketer.referral_link}
+              </Box>
+              <Box sx={{ display: "flex", gap: 1 }}>
+                <Button
+                  size="small"
+                  variant="contained"
+                  startIcon={<ContentCopyIcon />}
+                  onClick={() => void copyLink()}
+                  sx={{ ...primaryButtonSx, flex: 1, "& .MuiButton-startIcon": { ml: 0.5, mr: 0 } }}
+                >
+                  {copied ? "کپی شد" : "کپی"}
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<ShareIcon />}
+                  onClick={() => void shareLink()}
+                  sx={{
+                    flex: 1,
+                    color: "var(--admin-accent)",
+                    borderColor: "var(--admin-accent)",
+                    "& .MuiButton-startIcon": { ml: 0.5, mr: 0 },
+                  }}
+                >
+                  اشتراک
+                </Button>
+              </Box>
+              <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "11.5px", lineHeight: 1.7 }}>
+                تا {toFaNumber(data.attribution_days ?? 60)} روز بعد از کلیک، ثبت‌نام‌ها زیرمجموعه شما می‌شوند —{" "}
+                {toFaNumber(marketer.commission_percent)}٪ از خرید اکانت پولی.
+              </Typography>
+            </CardContent>
+          </Card>
 
-      <Tabs
-        value={tab}
-        onChange={(_, v) => setTab(v)}
-        variant="scrollable"
-        allowScrollButtonsMobile
-        sx={{
-          minHeight: 40,
-          "& .MuiTab-root": { color: "var(--admin-text-muted)", minHeight: 40 },
-          "& .Mui-selected": { color: "var(--admin-accent) !important" },
-          "& .MuiTabs-indicator": { backgroundColor: "var(--admin-accent)" },
-        }}
-      >
-        <Tab value="all" label={`زیرمجموعه‌ها (${toFaNumber(data.referrals.length)})`} />
-        <Tab value="paid" label={`خریداران (${toFaNumber(paidReferrals.length)})`} />
-        <Tab value="payouts" label="تسویه‌ها" />
-        <Tab value="profile" label="اطلاعات حساب" />
-      </Tabs>
+          <CompactSummary summary={summary} percent={marketer.commission_percent} />
+        </>
+      ) : null}
 
-      {tab === "all" ? (
+      {view === "all" ? (
         <ReferralsTable rows={data.referrals} emptyText="هنوز کسی با لینک شما ثبت‌نام نکرده است." />
       ) : null}
-      {tab === "paid" ? (
+      {view === "paid" ? (
         <ReferralsTable rows={paidReferrals} emptyText="هنوز هیچ‌کدام از زیرمجموعه‌ها اکانت پولی نخریده‌اند." />
       ) : null}
-      {tab === "payouts" ? <PayoutsTable rows={data.payouts} /> : null}
-      {tab === "profile" ? <ProfileForm data={data} onSaved={() => void load()} /> : null}
+      {view === "payouts" ? <PayoutsTable rows={data.payouts} /> : null}
+      {view === "profile" ? <ProfileForm data={data} onSaved={() => void load()} /> : null}
     </Box>
   );
 }

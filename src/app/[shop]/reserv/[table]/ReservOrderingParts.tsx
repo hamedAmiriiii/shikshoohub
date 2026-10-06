@@ -10,6 +10,7 @@ import LightModeIcon from "@mui/icons-material/LightMode";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import MenuIcon from "@mui/icons-material/Menu";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
+import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import RemoveIcon from "@mui/icons-material/Remove";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import RoomServiceIcon from "@mui/icons-material/RoomService";
@@ -97,6 +98,8 @@ const motionSafe = {
 
 type HeaderProps = {
   shopTitle: string;
+  /** آیکون فروشگاه؛ اگر باشد به‌جای حرف اول نام نشان داده می‌شود */
+  shopIconUrl?: string | null;
   tableLabel: string;
   guestLabel: string;
   themeMode: ReservThemeMode;
@@ -121,6 +124,7 @@ type HeaderProps = {
 
 export function ReservHeader({
   shopTitle,
+  shopIconUrl = null,
   tableLabel,
   guestLabel,
   themeMode,
@@ -220,7 +224,7 @@ export function ReservHeader({
         }}
       >
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}>
-            {isClassic ? (
+            {isClassic && !shopIconUrl ? (
               <Box
                 sx={{
                   width: 4,
@@ -238,18 +242,33 @@ export function ReservHeader({
               width: 40,
               height: 40,
               borderRadius: "12px",
-              background: WL_GRADIENT,
+              background: shopIconUrl ? (isClassic ? "#2a211c" : theme.SURFACE_ALT) : WL_GRADIENT,
               color: ACCENT_ON,
               display: "grid",
               placeItems: "center",
               fontWeight: 800,
               fontSize: 15,
               flexShrink: 0,
-              boxShadow: WL_SHADOW_BLUE,
+              boxShadow: shopIconUrl ? "none" : WL_SHADOW_BLUE,
+              overflow: "hidden",
+              border: shopIconUrl
+                ? isClassic
+                  ? "1px solid rgba(244,236,228,0.22)"
+                  : `1px solid ${theme.BORDER}`
+                : "none",
             }}
             aria-hidden
           >
-            {shopTitle.trim().slice(0, 1) || "م"}
+            {shopIconUrl ? (
+              <Box
+                component="img"
+                src={shopIconUrl}
+                alt=""
+                sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+              />
+            ) : (
+              shopTitle.trim().slice(0, 1) || "م"
+            )}
           </Box>
             )}
           <Box sx={{ minWidth: 0 }}>
@@ -331,19 +350,16 @@ export function ReservHeader({
             </>
           ) : null}
           {onPager ? (
-            <Button
+            <IconButton
               onClick={onPager}
               disabled={pagerBusy}
               aria-label={pagerPending ? t("pagerWaiting") : t("pager")}
+              title={pagerPending ? t("pagerWaiting") : t("pager")}
               sx={{
-                minWidth: 44,
-                minHeight: 40,
-                px: 1.1,
-                borderRadius: isClassic ? "8px" : "12px",
+                ...iconBtn,
+                width: 40,
+                height: 40,
                 color: pagerPending ? "#92400e" : isClassic ? "#f4ece4" : theme.TEXT,
-                fontWeight: 800,
-                fontSize: 12,
-                gap: 0.5,
                 bgcolor: pagerPending
                   ? "rgba(245, 158, 11, 0.22)"
                   : isClassic
@@ -354,6 +370,7 @@ export function ReservHeader({
                   : isClassic
                     ? "1px solid rgba(244,236,228,0.22)"
                     : `1px solid ${theme.BORDER}`,
+                borderRadius: isClassic ? "8px" : "12px",
                 "&:hover": {
                   bgcolor: pagerPending
                     ? "rgba(245, 158, 11, 0.3)"
@@ -363,28 +380,26 @@ export function ReservHeader({
                 },
               }}
             >
-              <NotificationsActiveIcon sx={{ fontSize: 18 }} />
-              {pagerPending ? t("pagerWaiting") : t("pager")}
-            </Button>
+              <NotificationsActiveIcon sx={{ fontSize: 20 }} />
+            </IconButton>
           ) : null}
-          <Button
+          <IconButton
             onClick={onLogin}
             aria-label={t("signInAria")}
+            title={guestLabel}
             sx={{
-              minWidth: 44,
-              minHeight: 40,
-              px: 1.2,
-              borderRadius: isClassic ? "8px" : "12px",
+              ...iconBtn,
+              width: 40,
+              height: 40,
               color: isClassic ? "#f4ece4" : theme.TEXT,
-              fontWeight: 700,
-              fontSize: 12,
               bgcolor: isClassic ? "transparent" : theme.SURFACE,
               border: isClassic ? "1px solid rgba(244,236,228,0.22)" : `1px solid ${theme.BORDER}`,
+              borderRadius: isClassic ? "8px" : "12px",
               "&:hover": { bgcolor: isClassic ? "rgba(244,236,228,0.08)" : theme.SURFACE_ALT },
             }}
           >
-            {guestLabel}
-          </Button>
+            <PersonOutlineIcon sx={{ fontSize: 20 }} />
+          </IconButton>
 
           {compactOnMobile ? (
             <>

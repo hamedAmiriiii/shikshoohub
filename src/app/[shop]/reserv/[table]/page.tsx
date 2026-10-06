@@ -24,6 +24,7 @@ import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import PhoneIphoneIcon from "@mui/icons-material/PhoneIphone";
+import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
 import { useParams, usePathname, useRouter } from "next/navigation";
@@ -1797,26 +1798,11 @@ function TableReservPageBody() {
         backgroundUrl={menuTheme?.backgroundUrl}
         backgroundType={menuTheme?.backgroundType}
       />
-      {previewThemeId ? (
-        <Box
-          sx={{
-            position: "relative",
-            zIndex: 31,
-            py: 0.75,
-            px: 1.5,
-            textAlign: "center",
-            bgcolor: "#f59e0b",
-            color: "#1f160b",
-            fontSize: 12,
-            fontWeight: 800,
-          }}
-        >
-          {t("previewBanner")}
-        </Box>
-      ) : null}
+      
       {activeThemeId === "cover" && allowMenu ? (
         <ReservCoverHero
           shopTitle={shopTitle}
+          shopIconUrl={menuTheme?.iconUrl}
           tableLabel={displayPlaceLabel}
           palette={theme}
           coverImage={pickReservCoverImage(coverItems, categories)}
@@ -1824,28 +1810,27 @@ function TableReservPageBody() {
           onViewMenu={() => menuAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
           onOpenOffer={layoutActions.onOpen}
           topActions={
-            <Button
+            <IconButton
               onClick={() => setLoginOpen(true)}
+              aria-label={t("signInAria")}
+              title={guestIdentified ? normalizedPhone.slice(-4) : t("signIn")}
               sx={{
-                minWidth: 44,
-                px: 1.4,
-                py: 0.7,
-                borderRadius: "999px",
+                width: 40,
+                height: 40,
                 color: "#fff",
-                fontWeight: 800,
-                fontSize: 12,
                 bgcolor: "rgba(0,0,0,0.35)",
                 border: "1px solid rgba(255,255,255,0.35)",
                 "&:hover": { bgcolor: "rgba(0,0,0,0.5)" },
               }}
             >
-              {guestIdentified ? normalizedPhone.slice(-4) : t("signIn")}
-            </Button>
+              <PersonOutlineIcon sx={{ fontSize: 20 }} />
+            </IconButton>
           }
         />
       ) : null}
       <ReservHeader
         shopTitle={shopTitle}
+        shopIconUrl={menuTheme?.iconUrl}
         tableLabel={displayPlaceLabel}
         guestLabel={guestIdentified ? normalizedPhone.slice(-4) : t("signIn")}
         themeMode={effectiveMode}

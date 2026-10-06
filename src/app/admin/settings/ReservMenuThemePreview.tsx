@@ -90,6 +90,7 @@ export function ReservMenuThemePreview({
   themeId,
   backgroundUrl,
   backgroundType,
+  iconUrl,
   scale = 0.5,
   height = 680,
   scrollable = false,
@@ -97,6 +98,7 @@ export function ReservMenuThemePreview({
   themeId: ReservMenuThemeId;
   backgroundUrl?: string | null;
   backgroundType?: ReservMenuBackgroundType | null;
+  iconUrl?: string | null;
   scale?: number;
   height?: number;
   scrollable?: boolean;
@@ -123,9 +125,11 @@ export function ReservMenuThemePreview({
       sx={{
         position: "relative",
         width: FRAME_WIDTH,
+        maxWidth: "100%",
         minHeight: height,
         direction: "rtl",
         overflow: "hidden",
+        boxSizing: "border-box",
         bgcolor: palette.BG,
         backgroundImage: palette.BG_GRADIENT,
         color: palette.TEXT,
@@ -164,7 +168,7 @@ export function ReservMenuThemePreview({
           backdropFilter: themeId === "classic" ? "none" : "blur(12px)",
         }}
       >
-        {themeId === "classic" ? (
+        {themeId === "classic" && !iconUrl ? (
           <Box sx={{ width: 4, alignSelf: "stretch", minHeight: 32, bgcolor: "#c45c26", borderRadius: 1 }} />
         ) : (
         <Box
@@ -175,11 +179,16 @@ export function ReservMenuThemePreview({
             display: "grid",
             placeItems: "center",
             fontWeight: 800,
-            background: palette.CART_BAR_BG,
+            background: iconUrl ? palette.SURFACE_ALT : palette.CART_BAR_BG,
             color: palette.CART_BAR_TEXT,
+            overflow: "hidden",
           }}
         >
-          ر
+          {iconUrl ? (
+            <Box component="img" src={iconUrl} alt="" sx={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          ) : (
+            "ر"
+          )}
         </Box>
         )}
         <Box>
@@ -227,16 +236,19 @@ export function ReservMenuThemePreview({
     return (
       <Box
         sx={{
-          width: FRAME_WIDTH,
+          width: "100%",
+          maxWidth: FRAME_WIDTH,
           height,
+          overflowX: "hidden",
           overflowY: "auto",
           borderRadius: "28px",
-          border: "8px solid #111",
+          border: "6px solid #111",
+          boxSizing: "border-box",
           boxShadow: "0 20px 50px rgba(0,0,0,0.3)",
           mx: "auto",
         }}
       >
-        {content}
+        <Box sx={{ width: "100%", maxWidth: "100%", overflowX: "hidden" }}>{content}</Box>
       </Box>
     );
   }
@@ -245,17 +257,28 @@ export function ReservMenuThemePreview({
     <Box
       sx={{
         position: "relative",
-        width: FRAME_WIDTH * scale,
+        width: "100%",
+        maxWidth: FRAME_WIDTH * scale,
         height: height * scale,
         overflow: "hidden",
         borderRadius: "18px",
         border: "4px solid #111",
+        boxSizing: "border-box",
         mx: "auto",
         pointerEvents: "none",
         bgcolor: palette.BG,
       }}
     >
-      <Box sx={{ position: "absolute", top: 0, left: 0, transform: `scale(${scale})`, transformOrigin: "top left" }}>
+      <Box
+        sx={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: FRAME_WIDTH,
+          transform: `scale(${scale})`,
+          transformOrigin: "top left",
+        }}
+      >
         {content}
       </Box>
     </Box>

@@ -6,6 +6,7 @@ export type ReservMenuThemeConfig = {
   id: ReservMenuThemeId;
   backgroundUrl: string | null;
   backgroundType: ReservMenuBackgroundType | null;
+  iconUrl: string | null;
 };
 
 export const RESERV_MENU_THEME_SETTING_KEY = "reserv_menu_theme";
@@ -13,6 +14,8 @@ export const RESERV_MENU_THEME_SETTING_KEY = "reserv_menu_theme";
 export const RESERV_MENU_PREVIEW_QUERY = "preview_theme";
 
 export const RESERV_MENU_BG_MAX_BYTES = 15 * 1024 * 1024;
+
+export const RESERV_MENU_ICON_MAX_BYTES = 2 * 1024 * 1024;
 
 export const RESERV_MENU_THEMES: Array<{
   id: ReservMenuThemeId;
@@ -50,9 +53,14 @@ export function parseReservMenuTheme(res: unknown): ReservMenuThemeConfig | null
   const url = typeof theme.background_url === "string" && theme.background_url.trim()
     ? resolveApiMediaUrl(theme.background_url.trim())
     : null;
+  const iconUrl =
+    typeof theme.icon_url === "string" && theme.icon_url.trim()
+      ? resolveApiMediaUrl(theme.icon_url.trim())
+      : null;
   return {
     id: normalizeReservMenuThemeId(theme.id),
     backgroundUrl: url,
     backgroundType: url ? (theme.background_type === "image" ? "image" : "video") : null,
+    iconUrl,
   };
 }

@@ -20,7 +20,15 @@ import LockIcon from "@mui/icons-material/Lock";
 import PersonIcon from "@mui/icons-material/Person";
 import PermIdentityIcon from "@mui/icons-material/PermIdentity";
 import StorefrontIcon from "@mui/icons-material/Storefront";
-import { formatAccessEndDate, getShopAccessFromUser } from "@/app/lib/shopAccess";
+import {
+  formatAccessEndDate,
+  getShopAccessFromUser,
+  mergeUserWithShopAccess,
+  syncShopAccessFromLogin,
+} from "@/app/lib/shopAccess";
+import { getStoredMarketerRefCode, tryClaimMarketerRef } from "@/app/lib/marketing";
+import { getFirstAllowedAdminPath, mergeUserWithShopPermissions } from "@/app/lib/shopPermissions";
+import { mergeUserWithShopFeatures, SHOP_FEATURES_CHANGED_EVENT } from "@/app/lib/shopFeatures";
 
 type Step = "phone" | "register";
 
@@ -230,9 +238,18 @@ function RegisterShopPageInner() {
       if (referralCode) {
         body.referral_code = referralCode;
       }
+      const marketerCode = getStoredMarketerRefCode();
+      if (marketerCode) {
+        body.marketer_code = marketerCode;
+        try {
+          const visitorId = localStorage.getItem("wb_visitor_id");
+          if (visitorId) body.marketer_visitor_id = visitorId;
+        } catch {
+          /* ignore */
+        }
+      }
 
       const res = await apiRequestError("Post", {}, body, "/api/auth/register", false, false, "");
-      console.log("res : ",res);
       setIsLoading(false);
 
       if (res.hasError) {
@@ -245,10 +262,31 @@ function RegisterShopPageInner() {
         return;
       }
 
-      const access = getShopAccessFromUser(res as Record<string, unknown>);
+      const payload = res as Record<string, unknown>;
+      const access = getShopAccessFromUser(payload);
       const accessMsg = access?.shop_access_ends_at
         ? ` اعتبار کاربری تا ${formatAccessEndDate(access.shop_access_ends_at)}.`
         : "";
+
+      // توکن ثبت‌نام را نگه دار و همان لحظه انتساب بازاریاب را قطعی کن
+      if (payload.user && typeof payload.token === "string" && payload.token) {
+        localStorage.setItem("token", payload.token);
+        const user = mergeUserWithShopFeatures(
+          mergeUserWithShopPermissions(
+            mergeUserWithShopAccess(payload.user as Record<string, unknown>, payload),
+            payload,
+          ),
+          payload,
+        );
+        localStorage.setItem("user", JSON.stringify(user));
+        window.dispatchEvent(new CustomEvent(SHOP_FEATURES_CHANGED_EVENT));
+        syncShopAccessFromLogin(payload);
+        await tryClaimMarketerRef();
+        toast.success(`فروشگاه با موفقیت ثبت شد.${accessMsg}`);
+        router.push(getFirstAllowedAdminPath(user));
+        return;
+      }
+
       toast.success(`فروشگاه با موفقیت ثبت شد.${accessMsg} اکنون می‌توانید وارد شوید.`);
       setTimeout(() => router.push("/admin/login"), 2000);
     } catch {
