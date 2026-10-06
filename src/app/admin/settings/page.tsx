@@ -885,7 +885,7 @@ export default function SettingsPage() {
         const res = await apiRequestError(
           "Put",
           {},
-          { value: value || " " },
+          { value },
           `/api/settings/${key}`,
           true,
           true,
