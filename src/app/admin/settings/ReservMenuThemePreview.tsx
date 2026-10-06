@@ -201,6 +201,21 @@ export function ReservMenuThemePreview({
             palette={palette}
             themeMode={mode}
             compact
+            showcaseToolbar={
+              themeId === "showcase"
+                ? {
+                    guestLabel: "ورود",
+                    themeMode: mode,
+                    currentOrderCount: 1,
+                    showThemeToggle: true,
+                    onLogin: () => {},
+                    onToggleTheme: () => {},
+                    onCurrentOrders: () => {},
+                    onHistory: () => {},
+                    onPager: () => {},
+                  }
+                : null
+            }
             {...actions}
           />
       </Box>

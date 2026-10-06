@@ -114,6 +114,8 @@ type HeaderProps = {
   pagerBusy?: boolean;
   showLanguageSwitch?: boolean;
   showThemeToggle?: boolean;
+  /** فقط نام فروشگاه و میز؛ دکمه‌ها در جای دیگری رندر می‌شوند */
+  hideActions?: boolean;
   variant?: "default" | "classic";
 };
 
@@ -128,6 +130,7 @@ export function ReservHeader({
   showServiceShortcut = false,
   showLanguageSwitch = false,
   showThemeToggle = true,
+  hideActions = false,
   variant = "default",
   onLogin,
   onToggleTheme,
@@ -284,6 +287,7 @@ export function ReservHeader({
           </Box>
         </Box>
 
+        {hideActions ? null : (
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0, justifyContent: "flex-end" }}>
           {showLanguageSwitch ? (
             <>
@@ -526,6 +530,7 @@ export function ReservHeader({
             <HistoryIcon sx={{ fontSize: 18 }} />
           </IconButton>
         </Box>
+        )}
       </Box>
     </Box>
   );

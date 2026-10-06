@@ -500,6 +500,7 @@ function TableReservPageBody() {
   const menuAnchorRef = useRef<HTMLDivElement | null>(null);
   const activeThemeId: ReservMenuThemeId = previewThemeId ?? menuTheme?.id ?? "classic";
   const isClassicMenu = activeThemeId === "classic";
+  const isShowcaseMenu = activeThemeId === "showcase";
   const forcedMode = reservThemeForcedMode(activeThemeId);
   const effectiveMode: ReservThemeMode = forcedMode ?? themeMode;
   const theme = reservPaletteFor(activeThemeId, effectiveMode);
@@ -1849,6 +1850,7 @@ function TableReservPageBody() {
         guestLabel={guestIdentified ? normalizedPhone.slice(-4) : t("signIn")}
         themeMode={effectiveMode}
         showThemeToggle={!forcedMode}
+        hideActions={isShowcaseMenu && catalogMode !== "services"}
         variant={isClassicMenu ? "classic" : "default"}
         theme={theme}
         currentOrderCount={activeCurrentCount}
@@ -1961,6 +1963,30 @@ function TableReservPageBody() {
               searchActive={searchActive}
               palette={theme}
               themeMode={effectiveMode}
+              showcaseToolbar={
+                isShowcaseMenu
+                  ? {
+                      guestLabel: guestIdentified ? normalizedPhone.slice(-4) : t("signIn"),
+                      themeMode: effectiveMode,
+                      currentOrderCount: activeCurrentCount,
+                      currentServiceCount: activeServiceCount,
+                      showServiceShortcut: allowServices,
+                      showLanguageSwitch: allowServices,
+                      showThemeToggle: !forcedMode,
+                      onLogin: () => setLoginOpen(true),
+                      onToggleTheme: toggleTheme,
+                      onCurrentOrders: openCurrentOrders,
+                      onCurrentServices: () => {
+                        setServicesOpen(true);
+                        void loadServiceRequests();
+                      },
+                      onHistory: openOrders,
+                      onPager: callPager,
+                      pagerPending: Boolean(pendingPager),
+                      pagerBusy,
+                    }
+                  : null
+              }
               {...layoutActions}
             />
           ) : null}

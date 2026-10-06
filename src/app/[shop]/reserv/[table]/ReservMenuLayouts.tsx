@@ -1,15 +1,23 @@
 "use client";
 
 import AddIcon from "@mui/icons-material/Add";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
+import HistoryIcon from "@mui/icons-material/History";
+import LanguageIcon from "@mui/icons-material/Language";
+import LightModeIcon from "@mui/icons-material/LightMode";
+import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
+import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import RemoveIcon from "@mui/icons-material/Remove";
+import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
+import RoomServiceIcon from "@mui/icons-material/RoomService";
 import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRounded";
 import TableRestaurantIcon from "@mui/icons-material/TableRestaurant";
-import { Box, IconButton, Typography } from "@mui/material";
-import type { MouseEvent, ReactNode } from "react";
+import { Badge, Box, IconButton, Menu, MenuItem, Typography } from "@mui/material";
+import { useState, type MouseEvent, type ReactNode } from "react";
 import { APP_FONT_FAMILY } from "@/app/lib/appFont";
 import type { ReservMenuBackgroundType, ReservMenuThemeId } from "@/app/lib/reservMenuThemes";
 import { THEMES, type CategoryChip, type ReservTheme, type ReservThemeMode } from "./ReservOrderingParts";
-import { useReservI18n } from "./reservI18n";
+import { RESERV_LOCALES, useReservI18n } from "./reservI18n";
 
 export type ReservMenuItem = {
   key: string;
@@ -29,6 +37,24 @@ type ItemActions = {
   onOpen: (key: string) => void;
 };
 
+export type ReservShowcaseToolbarProps = {
+  guestLabel: string;
+  themeMode: ReservThemeMode;
+  currentOrderCount: number;
+  currentServiceCount?: number;
+  showServiceShortcut?: boolean;
+  showLanguageSwitch?: boolean;
+  showThemeToggle?: boolean;
+  onLogin: () => void;
+  onToggleTheme: () => void;
+  onCurrentOrders: () => void;
+  onCurrentServices?: () => void;
+  onHistory: () => void;
+  onPager?: () => void;
+  pagerPending?: boolean;
+  pagerBusy?: boolean;
+};
+
 export type ReservMenuLayoutProps = ItemActions & {
   themeId: ReservMenuThemeId;
   items: ReservMenuItem[];
@@ -40,6 +66,8 @@ export type ReservMenuLayoutProps = ItemActions & {
   themeMode: ReservThemeMode;
   /** پیش‌نمایش داخل قاب موبایل: چیدمان همیشه موبایلی و بدون position: fixed */
   compact?: boolean;
+  /** اکشن‌های هدر برای تم ویترین طلایی — ستون سمت راست */
+  showcaseToolbar?: ReservShowcaseToolbarProps | null;
 };
 
 const motionSafe = {
@@ -990,6 +1018,222 @@ function ListLayout(props: ReservMenuLayoutProps) {
   );
 }
 
+function ShowcaseToolbar({
+  toolbar,
+  palette,
+}: {
+  toolbar: ReservShowcaseToolbarProps;
+  palette: ReservTheme;
+}) {
+  const { t, locale, setLocale } = useReservI18n();
+  const [langAnchor, setLangAnchor] = useState<null | HTMLElement>(null);
+  const langOpen = Boolean(langAnchor);
+  const btnSx = {
+    width: "100%",
+    minWidth: 0,
+    height: 36,
+    borderRadius: "10px",
+    color: palette.TEXT,
+    bgcolor: palette.SURFACE,
+    border: `1px solid ${palette.BORDER}`,
+    "&:hover": { bgcolor: palette.SURFACE_ALT },
+  } as const;
+
+  return (
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 0.45, mb: 0.65 }}>
+      {toolbar.onPager ? (
+        <IconButton
+          onClick={toolbar.onPager}
+          disabled={toolbar.pagerBusy}
+          aria-label={toolbar.pagerPending ? t("pagerWaiting") : t("pager")}
+          title={toolbar.pagerPending ? t("pagerWaiting") : t("pager")}
+          sx={{
+            ...btnSx,
+            color: toolbar.pagerPending ? "#92400e" : palette.TEXT,
+            bgcolor: toolbar.pagerPending ? "rgba(245, 158, 11, 0.22)" : palette.SURFACE,
+            border: toolbar.pagerPending ? "1px solid rgba(217, 119, 6, 0.45)" : `1px solid ${palette.BORDER}`,
+          }}
+        >
+          <NotificationsActiveIcon sx={{ fontSize: 18 }} />
+        </IconButton>
+      ) : null}
+      <IconButton onClick={toolbar.onLogin} aria-label={t("signInAria")} title={toolbar.guestLabel} sx={btnSx}>
+        <PersonOutlineIcon sx={{ fontSize: 18 }} />
+      </IconButton>
+      {toolbar.showThemeToggle !== false ? (
+        <IconButton
+          onClick={toolbar.onToggleTheme}
+          aria-label={toolbar.themeMode === "dark" ? t("themeLight") : t("themeDark")}
+          title={toolbar.themeMode === "dark" ? t("themeLight") : t("themeDark")}
+          sx={btnSx}
+        >
+          {toolbar.themeMode === "dark" ? <LightModeIcon sx={{ fontSize: 17 }} /> : <DarkModeIcon sx={{ fontSize: 17 }} />}
+        </IconButton>
+      ) : null}
+      <IconButton onClick={toolbar.onCurrentOrders} aria-label={t("foodOrdersAria")} title={t("foodOrdersAria")} sx={btnSx}>
+        <Badge
+          badgeContent={toolbar.currentOrderCount}
+          color="error"
+          max={9}
+          sx={{ "& .MuiBadge-badge": { fontSize: "0.5rem", minWidth: 12, height: 12 } }}
+        >
+          <RestaurantMenuIcon sx={{ fontSize: 17 }} />
+        </Badge>
+      </IconButton>
+      {toolbar.showServiceShortcut && toolbar.onCurrentServices ? (
+        <IconButton
+          onClick={toolbar.onCurrentServices}
+          aria-label={t("roomServicesAria")}
+          title={t("roomServicesAria")}
+          sx={btnSx}
+        >
+          <Badge
+            badgeContent={toolbar.currentServiceCount || 0}
+            color="error"
+            max={9}
+            sx={{ "& .MuiBadge-badge": { fontSize: "0.5rem", minWidth: 12, height: 12 } }}
+          >
+            <RoomServiceIcon sx={{ fontSize: 17 }} />
+          </Badge>
+        </IconButton>
+      ) : null}
+      <IconButton onClick={toolbar.onHistory} aria-label={t("pastOrdersAria")} title={t("pastOrdersAria")} sx={btnSx}>
+        <HistoryIcon sx={{ fontSize: 17 }} />
+      </IconButton>
+      {toolbar.showLanguageSwitch ? (
+        <>
+          <IconButton
+            onClick={(e) => setLangAnchor(e.currentTarget)}
+            aria-label="Language"
+            aria-haspopup="menu"
+            aria-expanded={langOpen}
+            title="Language"
+            sx={btnSx}
+          >
+            <LanguageIcon sx={{ fontSize: 17 }} />
+          </IconButton>
+          <Menu
+            anchorEl={langAnchor}
+            open={langOpen}
+            onClose={() => setLangAnchor(null)}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            transformOrigin={{ vertical: "top", horizontal: "right" }}
+          >
+            {RESERV_LOCALES.map((item) => (
+              <MenuItem
+                key={item.id}
+                selected={locale === item.id}
+                onClick={() => {
+                  setLocale(item.id);
+                  setLangAnchor(null);
+                }}
+                sx={{ fontFamily: APP_FONT_FAMILY, fontWeight: 700, fontSize: 13 }}
+              >
+                {t(item.id === "fa" ? "langFa" : item.id === "en" ? "langEn" : "langAr")}
+              </MenuItem>
+            ))}
+          </Menu>
+        </>
+      ) : null}
+    </Box>
+  );
+}
+
+function ShowcaseSideRail({
+  categories,
+  selectedId,
+  onSelect,
+  dimmed,
+  compact,
+  toolbar,
+  palette,
+}: {
+  categories: CategoryChip[];
+  selectedId: string;
+  onSelect: (id: string) => void;
+  dimmed?: boolean;
+  compact?: boolean;
+  toolbar?: ReservShowcaseToolbarProps | null;
+  palette: ReservTheme;
+}) {
+  const { t } = useReservI18n();
+  const hasCats = categories.length > 1;
+
+  return (
+    <Box
+      sx={{
+        width: "20%",
+        flex: "0 0 20%",
+        alignSelf: "flex-start",
+        position: compact ? "relative" : "sticky",
+        top: compact ? "auto" : 64,
+        maxHeight: compact ? "none" : "calc(100dvh - 120px)",
+        overflowY: "auto",
+        display: "flex",
+        flexDirection: "column",
+        scrollbarWidth: "none",
+        "&::-webkit-scrollbar": { display: "none" },
+      }}
+    >
+      {toolbar ? <ShowcaseToolbar toolbar={toolbar} palette={palette} /> : null}
+      {hasCats ? (
+        <Box
+          role="tablist"
+          aria-label={t("categoriesAria")}
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 0.55,
+            p: 0.5,
+            borderRadius: "16px",
+            background: GOLD_GRADIENT,
+            boxShadow: "0 10px 26px rgba(148,105,47,0.28)",
+            opacity: dimmed ? 0.45 : 1,
+            pointerEvents: dimmed ? "none" : "auto",
+          }}
+        >
+          {categories.map((cat) => {
+            const active = selectedId === cat.id;
+            return (
+              <Box
+                key={cat.id}
+                component="button"
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => onSelect(cat.id)}
+                sx={{
+                  appearance: "none",
+                  cursor: "pointer",
+                  width: "100%",
+                  minHeight: 40,
+                  px: 0.35,
+                  py: 0.65,
+                  border: "none",
+                  borderRadius: "12px",
+                  fontFamily: APP_FONT_FAMILY,
+                  fontSize: 11,
+                  fontWeight: active ? 800 : 600,
+                  lineHeight: 1.35,
+                  textAlign: "center",
+                  color: active ? "#f3d9a4" : "#2b2116",
+                  bgcolor: active ? "#2b2116" : "rgba(255,255,255,0.28)",
+                  boxShadow: active ? "0 4px 10px rgba(43,33,22,0.28)" : "none",
+                  wordBreak: "break-word",
+                  transition: "background-color 160ms ease, color 160ms ease",
+                  ...motionSafe,
+                }}
+              >
+                {cat.name}
+              </Box>
+            );
+          })}
+        </Box>
+      ) : null}
+    </Box>
+  );
+}
+
 function ShowcaseLayout(props: ReservMenuLayoutProps) {
   const { t } = useReservI18n();
   const { palette, themeMode, items, categories, selectedCategory, searchActive } = props;
@@ -999,40 +1243,44 @@ function ShowcaseLayout(props: ReservMenuLayoutProps) {
     ? [{ id: "__discount", title: t("discountedItems"), items: discounted }, ...sections]
     : sections;
   return (
-    <Box>
-      <ThemeCategoryBar
+    <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
+      <ShowcaseSideRail
         categories={categories}
         selectedId={selectedCategory}
         onSelect={props.onSelectCategory}
-        variant="gold"
-        palette={palette}
         dimmed={searchActive}
-        sticky={!props.compact}
+        compact={props.compact}
+        toolbar={props.showcaseToolbar}
+        palette={palette}
       />
-      {all.map((section) => (
-        <Box key={section.id} component="section" sx={{ mb: 3 }}>
-          <SectionTitle
-            title={section.title}
-            count={section.items.length}
-            color={palette.TEXT}
-            muted={palette.MUTED}
-            accent={GOLD_GRADIENT}
-          />
-          <Box sx={{ display: "grid", gridTemplateColumns: twoColumns(props.compact), gap: 1.4 }}>
-            {section.items.map((item, index) => (
-              <HorizontalCard
-                key={`${section.id}-${item.key}`}
-                item={item}
-                actions={props}
-                palette={palette}
-                mode={themeMode}
-                variant="showcase"
-                highlight={section.id === "__discount" && index === 0}
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        {all.map((section, sectionIndex) => (
+          <Box key={section.id} component="section" sx={{ mb: 2.5 }}>
+            {sectionIndex > 0 ? (
+              <SectionTitle
+                title={section.title}
+                count={section.items.length}
+                color={palette.TEXT}
+                muted={palette.MUTED}
+                accent={GOLD_GRADIENT}
               />
-            ))}
+            ) : null}
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
+              {section.items.map((item, index) => (
+                <HorizontalCard
+                  key={`${section.id}-${item.key}`}
+                  item={item}
+                  actions={props}
+                  palette={palette}
+                  mode={themeMode}
+                  variant="showcase"
+                  highlight={section.id === "__discount" && index === 0}
+                />
+              ))}
+            </Box>
           </Box>
-        </Box>
-      ))}
+        ))}
+      </Box>
     </Box>
   );
 }
