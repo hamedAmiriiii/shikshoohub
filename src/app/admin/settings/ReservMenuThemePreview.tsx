@@ -23,11 +23,11 @@ import { ReservI18nProvider } from "@/app/[shop]/reserv/[table]/reservI18n";
 const FRAME_WIDTH = 360;
 
 const SAMPLE_PHOTOS = [
-  "https://api.webinoo-plus.ir/storage/1405/6/19/products/2578/image_1789047236_1.jpeg",
-  "https://api.webinoo-plus.ir/storage/1405/6/19/products/2580/image_1789047307_1.jpeg",
-  "https://api.webinoo-plus.ir/storage/1405/6/19/products/2610/image_1789048925_1.jpeg",
-  "https://api.webinoo-plus.ir/storage/1405/6/19/products/2583/image_1789047455_1.jpeg",
-  "https://api.webinoo-plus.ir/storage/1405/6/19/products/2599/image_1789048418_1.jpeg",
+  "/pic/menu-preview/1.webp",
+  "/pic/menu-preview/2.webp",
+  "/pic/menu-preview/3.webp",
+  "/pic/menu-preview/4.webp",
+  "/pic/menu-preview/5.webp",
 ] as const;
 
 const SAMPLE_CATEGORIES: CategoryChip[] = [
