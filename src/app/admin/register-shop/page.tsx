@@ -26,7 +26,13 @@ import {
   mergeUserWithShopAccess,
   syncShopAccessFromLogin,
 } from "@/app/lib/shopAccess";
-import { getStoredMarketerRefCode, tryClaimMarketerRef } from "@/app/lib/marketing";
+import {
+  getStoredMarketerRefCode,
+  normalizeMarketerRefCode,
+  captureMarketerRef,
+  tryClaimMarketerRef,
+  MARKETING_API_BASE,
+} from "@/app/lib/marketing";
 import { getFirstAllowedAdminPath, mergeUserWithShopPermissions } from "@/app/lib/shopPermissions";
 import { mergeUserWithShopFeatures, SHOP_FEATURES_CHANGED_EVENT } from "@/app/lib/shopFeatures";
 
@@ -56,6 +62,7 @@ function RegisterShopPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const referralCode = searchParams.get("ref")?.trim() || "";
+  const mrefFromUrl = normalizeMarketerRefCode(searchParams.get("mref"));
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
@@ -64,6 +71,7 @@ function RegisterShopPageInner() {
   const [nationalCode, setNationalCode] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [marketerCode, setMarketerCode] = useState(mrefFromUrl || "");
   const [codeDigits, setCodeDigits] = useState<string[]>(["", "", "", "", ""]);
   const [isLoading, setIsLoading] = useState(false);
   const [codeTimer, setCodeTimer] = useState(0);
@@ -87,7 +95,12 @@ function RegisterShopPageInner() {
       setAtelierName(savedShop);
       sessionStorage.removeItem("landing_register_shop");
     }
-  }, []);
+    void captureMarketerRef().finally(() => {
+      const stored = getStoredMarketerRefCode();
+      if (stored) setMarketerCode(stored);
+      else if (mrefFromUrl) setMarketerCode(mrefFromUrl);
+    });
+  }, [mrefFromUrl]);
 
   const formatCountdown = (seconds: number) =>
     `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, "0")}`;
@@ -225,6 +238,22 @@ function RegisterShopPageInner() {
 
     setIsLoading(true);
     try {
+      const resolvedMarketer =
+        normalizeMarketerRefCode(marketerCode) || getStoredMarketerRefCode() || mrefFromUrl;
+      let visitorId: string | null = null;
+      try {
+        visitorId = localStorage.getItem("wb_visitor_id");
+        if (!visitorId) {
+          const raw = localStorage.getItem("wb_marketer_ref");
+          if (raw) {
+            const parsed = JSON.parse(raw) as { visitor_id?: string };
+            if (parsed?.visitor_id) visitorId = parsed.visitor_id;
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+
       const body: Record<string, unknown> = {
         name: name.trim(),
         last_name: lastName.trim(),
@@ -238,23 +267,27 @@ function RegisterShopPageInner() {
       if (referralCode) {
         body.referral_code = referralCode;
       }
-      const marketerCode = getStoredMarketerRefCode();
-      if (marketerCode) {
-        body.marketer_code = marketerCode;
-        try {
-          const visitorId = localStorage.getItem("wb_visitor_id");
-          if (visitorId) body.marketer_visitor_id = visitorId;
-        } catch {
-          /* ignore */
-        }
+      if (resolvedMarketer) {
+        body.marketer_code = resolvedMarketer;
+        body.mref = resolvedMarketer;
+        if (visitorId) body.marketer_visitor_id = visitorId;
+      } else {
+        toast.warning("کد معرف بازاریاب خالی است — انتساب انجام نمی‌شود.");
       }
 
-      const res = await apiRequestError("Post", {}, body, "/api/auth/register", false, false, "");
+      // مستقیم از مرورگر به API — بدون Server Action (که گاهی body را ناقص می‌فرستد)
+      const apiRes = await fetch(`${MARKETING_API_BASE}/api/auth/register`, {
+        method: "POST",
+        headers: { Accept: "application/json", "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        cache: "no-store",
+      });
+      const payload = (await apiRes.json().catch(() => ({}))) as Record<string, unknown>;
       setIsLoading(false);
 
-      if (res.hasError) {
-        const { message } = parseErrorBody(res.errorText);
-        if (res.statusCode === 422) {
+      if (!apiRes.ok) {
+        const message = typeof payload.message === "string" ? payload.message : undefined;
+        if (apiRes.status === 422) {
           toast.error(message || "کد تأیید نامعتبر است یا منقضی شده است.");
           return;
         }
@@ -262,7 +295,6 @@ function RegisterShopPageInner() {
         return;
       }
 
-      const payload = res as Record<string, unknown>;
       const access = getShopAccessFromUser(payload);
       const accessMsg = access?.shop_access_ends_at
         ? ` اعتبار کاربری تا ${formatAccessEndDate(access.shop_access_ends_at)}.`
@@ -283,17 +315,28 @@ function RegisterShopPageInner() {
         syncShopAccessFromLogin(payload);
 
         const claimFromRegister = payload.marketer_claim as
-          | { ok?: boolean; message?: string }
+          | { ok?: boolean; message?: string; code?: string | null }
           | undefined;
-        if (claimFromRegister && claimFromRegister.ok === false && claimFromRegister.message) {
-          toast.warning(claimFromRegister.message);
-        } else if (claimFromRegister?.ok) {
-          toast.success(claimFromRegister.message || "انتساب بازاریاب ثبت شد.");
-        } else {
-          const claim = await tryClaimMarketerRef();
-          if (claim && !claim.ok && claim.message) {
-            toast.warning(claim.message);
+
+        // اگر API قدیمی بود یا claim سمت سرور fail شد، از مرورگر دوباره claim کن
+        let claimOk = Boolean(claimFromRegister?.ok);
+        let claimMessage = claimFromRegister?.message || "";
+
+        if (!claimOk && resolvedMarketer) {
+          const claim = await tryClaimMarketerRef({ force: true });
+          if (claim) {
+            claimOk = claim.ok;
+            claimMessage = claim.message;
           }
+        }
+
+        if (claimOk) {
+          toast.success(claimMessage || "انتساب بازاریاب ثبت شد.");
+        } else if (resolvedMarketer) {
+          toast.error(
+            `انتساب بازاریاب انجام نشد: ${claimMessage || "پاسخی از سرور نیامد — API را دیپلوی کنید"} [کد ${resolvedMarketer}]`,
+            { autoClose: 10000 },
+          );
         }
 
         toast.success(`فروشگاه با موفقیت ثبت شد.${accessMsg}`);
@@ -496,6 +539,26 @@ function RegisterShopPageInner() {
                 <StorefrontIcon sx={{ color: "var(--admin-text-muted)", fontSize: "20px" }} />
               </InputAdornment>
             ),
+          }}
+          sx={inputSx}
+        />
+        <TextField
+          value={marketerCode}
+          onChange={(e) => setMarketerCode(e.target.value.replace(/\D/g, "").slice(0, 4))}
+          placeholder="کد معرف بازاریاب (۴ رقم)"
+          fullWidth
+          inputProps={{ inputMode: "numeric", dir: "ltr", maxLength: 4 }}
+          helperText={
+            normalizeMarketerRefCode(marketerCode)
+              ? `کد ${normalizeMarketerRefCode(marketerCode)} برای انتساب ارسال می‌شود`
+              : "اگر با لینک بازاریاب آمده‌اید این کد باید پر باشد (مثلاً ۹۸۳۴)"
+          }
+          FormHelperTextProps={{
+            sx: {
+              color: normalizeMarketerRefCode(marketerCode)
+                ? "var(--admin-accent)"
+                : "var(--admin-text-muted)",
+            },
           }}
           sx={inputSx}
         />

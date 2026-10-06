@@ -337,7 +337,9 @@ export async function captureMarketerRef(): Promise<void> {
  * فروشگاهش را به نام بازاریاب ثبت می‌کند.
  * @returns نتیجه برای نمایش به کاربر (اختیاری)
  */
-export async function tryClaimMarketerRef(): Promise<{ ok: boolean; message: string } | null> {
+export async function tryClaimMarketerRef(
+  opts?: { force?: boolean },
+): Promise<{ ok: boolean; message: string } | null> {
   if (typeof window === "undefined") return null;
   let ref = readStoredRef();
   if (!ref) {
@@ -353,14 +355,16 @@ export async function tryClaimMarketerRef(): Promise<{ ok: boolean; message: str
   }
   const token = tokenCode();
   if (!token) return null;
-  if (ref.last_claim_at && Date.now() - ref.last_claim_at < CLAIM_RETRY_MS) return null;
+  if (!opts?.force && ref.last_claim_at && Date.now() - ref.last_claim_at < CLAIM_RETRY_MS) {
+    return null;
+  }
 
   const code = normalizeMarketerRefCode(ref.code) || ref.code;
   const res = await request<{ ok: boolean; final: boolean; message: string }>(
     "POST",
     "/api/marketing/claim",
     { Authorization: `Bearer ${token}` },
-    { code, visitor_id: ref.visitor_id },
+    { code, visitor_id: ref.visitor_id, marketer_code: code },
   );
 
   if (!res.ok) {
@@ -374,7 +378,6 @@ export async function tryClaimMarketerRef(): Promise<{ ok: boolean; message: str
   }
 
   if (res.data.final) {
-    // شکست قطعی (مثلاً خودمعرفی) — کد را پاک کن تا لوپ نشود
     writeStoredRef(null);
     return { ok: false, message: res.data.message || "انتساب انجام نشد." };
   }
