@@ -24,74 +24,67 @@ import { ReservI18nProvider } from "@/app/[shop]/reserv/[table]/reservI18n";
 
 const FRAME_WIDTH = 360;
 
-function sampleImage(emoji: string, from: string, to: string) {
-  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='${from}'/><stop offset='1' stop-color='${to}'/></linearGradient></defs><rect width='240' height='240' fill='url(#g)'/><text x='50%' y='55%' font-size='112' text-anchor='middle' dominant-baseline='middle'>${emoji}</text></svg>`;
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-}
+const SAMPLE_PHOTOS = [
+  "https://api.webinoo-plus.ir/storage/1405/6/19/products/2578/image_1789047236_1.jpeg",
+  "https://api.webinoo-plus.ir/storage/1405/6/19/products/2580/image_1789047307_1.jpeg",
+  "https://api.webinoo-plus.ir/storage/1405/6/19/products/2610/image_1789048925_1.jpeg",
+  "https://api.webinoo-plus.ir/storage/1405/6/19/products/2583/image_1789047455_1.jpeg",
+  "https://api.webinoo-plus.ir/storage/1405/6/19/products/2599/image_1789048418_1.jpeg",
+] as const;
 
 const SAMPLE_CATEGORIES: CategoryChip[] = [
   { id: "all", name: "همه", image: null },
-  { id: "breakfast", name: "صبحانه", image: sampleImage("🥞", "#fde68a", "#f59e0b") },
-  { id: "main", name: "غذای اصلی", image: sampleImage("🍝", "#fecaca", "#ef4444") },
-  { id: "drink", name: "نوشیدنی", image: sampleImage("☕", "#d6d3d1", "#78716c") },
+  { id: "kebab", name: "کباب", image: SAMPLE_PHOTOS[1] },
+  { id: "salad", name: "سالاد", image: SAMPLE_PHOTOS[4] },
 ];
 
 const SAMPLE_ITEMS: ReservMenuItem[] = [
   {
     key: "s1",
-    name: "چیزکیک لیمو و بلوبری",
-    description: "کیک پنیر خامه‌ای با سس بلوبری تازه",
+    name: "چلو کباب مخلوط",
+    description: "کباب برگ و جوجه، برنج ایرانی و زرشک",
     price: 595000,
     originalPrice: 700000,
-    image: sampleImage("🍰", "#e0e7ff", "#a5b4fc"),
-    categoryIds: ["breakfast"],
+    image: SAMPLE_PHOTOS[0],
+    categoryIds: ["kebab"],
     outOfStock: false,
   },
   {
     key: "s2",
-    name: "پنکیک عسل و کره",
-    description: "سه لایه پنکیک گرم با عسل طبیعی",
-    price: 420000,
-    image: sampleImage("🥞", "#fef3c7", "#fbbf24"),
-    categoryIds: ["breakfast"],
+    name: "چلو برگ و کوبیده",
+    description: "یک سیخ برگ، یک سیخ کوبیده، گوجه و لیمو",
+    price: 480000,
+    image: SAMPLE_PHOTOS[1],
+    categoryIds: ["kebab"],
     outOfStock: false,
   },
   {
     key: "s3",
-    name: "شریمپ ریزوتو",
-    description: "میگو، ریزوتو، سس سیر و کره",
-    price: 2700000,
-    image: sampleImage("🍤", "#ffedd5", "#fb923c"),
-    categoryIds: ["main"],
+    name: "کوبیده روی نان",
+    description: "دو سیخ کوبیده، نان سنگک، گوجه و فلفل کبابی",
+    price: 420000,
+    image: SAMPLE_PHOTOS[2],
+    categoryIds: ["kebab"],
     outOfStock: false,
   },
   {
     key: "s4",
-    name: "پاستا آلفردو",
-    description: "پنه، مرغ گریل، سس قارچ و پارمزان",
-    price: 1450000,
-    originalPrice: 1650000,
-    image: sampleImage("🍝", "#fee2e2", "#f87171"),
-    categoryIds: ["main"],
+    name: "جوجه کباب مخصوص",
+    description: "سینه مرغ زعفرانی با برنج و کره",
+    price: 390000,
+    originalPrice: 450000,
+    image: SAMPLE_PHOTOS[3],
+    categoryIds: ["kebab"],
     outOfStock: false,
   },
   {
     key: "s5",
-    name: "ماچا لته",
-    description: "شیر، چای ماچا، وانیل",
+    name: "سالاد فصل",
+    description: "کاهو، ذرت، زیتون، گوجه گیلاسی و سس",
     price: 187000,
-    image: sampleImage("🍵", "#dcfce7", "#4ade80"),
-    categoryIds: ["drink"],
+    image: SAMPLE_PHOTOS[4],
+    categoryIds: ["salad"],
     outOfStock: false,
-  },
-  {
-    key: "s6",
-    name: "اسپرسو دبل",
-    description: "۱۰۰٪ عربیکا",
-    price: 145000,
-    image: sampleImage("☕", "#e7e5e4", "#a8a29e"),
-    categoryIds: ["drink"],
-    outOfStock: true,
   },
 ];
 
@@ -149,7 +142,7 @@ export function ReservMenuThemePreview({
       />
       {themeId === "cover" ? (
         <ReservCoverHero
-          shopTitle="کافه نمونه"
+          shopTitle="رستوران نمونه"
           tableLabel="میز ۴"
           palette={palette}
           coverImage={pickReservCoverImage(SAMPLE_ITEMS, SAMPLE_CATEGORIES)}
@@ -188,7 +181,7 @@ export function ReservMenuThemePreview({
           ک
         </Box>
         <Box>
-          <Typography sx={{ fontWeight: 800, fontSize: 15, color: palette.TEXT, lineHeight: 1.3 }}>کافه نمونه</Typography>
+          <Typography sx={{ fontWeight: 800, fontSize: 15, color: palette.TEXT, lineHeight: 1.3 }}>رستوران نمونه</Typography>
           <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.4, color: palette.MUTED }}>
             <TableRestaurantIcon sx={{ fontSize: 13 }} />
             <Typography sx={{ fontSize: 11, fontWeight: 700 }}>میز ۴</Typography>
