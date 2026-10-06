@@ -36,6 +36,10 @@ import {
   SUPPORT_PHONE,
   SUPPORT_TEL,
 } from "../catalog";
+import MenuPlanCheckout, {
+  useMenuPaymentReturnNotice,
+  type MenuCheckoutPlan,
+} from "./MenuPlanCheckout";
 
 const SHOP_LANDING_URL = "/landing/shop";
 const CLUB_LANDING_URL = "/landing/club";
@@ -118,6 +122,7 @@ const SAMPLE_MENUS = [
 
 const PLANS = [
   {
+    slug: "base" as const,
     name: "پایه",
     price: "۱۱",
     tag: null as string | null,
@@ -132,6 +137,7 @@ const PLANS = [
     ],
   },
   {
+    slug: "full_sale" as const,
     name: "فروش کامل",
     price: "۱۶",
     tag: null as string | null,
@@ -146,6 +152,7 @@ const PLANS = [
     ],
   },
   {
+    slug: "v21" as const,
     name: "نسخه ۲۱",
     price: "۲۹",
     tag: "پنل فروش + باشگاه هوشمند",
@@ -178,6 +185,8 @@ export default function DigitalMenuLandingClient() {
   const [navOpen, setNavOpen] = useState(false);
   const [activeTheme, setActiveTheme] = useState<ReservMenuThemeId>("video");
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [checkoutPlan, setCheckoutPlan] = useState<MenuCheckoutPlan | null>(null);
+  const paymentNotice = useMenuPaymentReturnNotice();
 
   const scrollTo = useCallback((id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -186,6 +195,15 @@ export default function DigitalMenuLandingClient() {
   const scrollToConsult = useCallback((planName?: string) => {
     if (planName) setSelectedPlan(planName);
     document.getElementById("consult")?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
+  const openCheckout = useCallback((plan: (typeof PLANS)[number]) => {
+    setCheckoutPlan({
+      slug: plan.slug,
+      name: plan.name,
+      priceLabel: `${toFaDigits(plan.price)} میلیون تومان`,
+      description: plan.description,
+    });
   }, []);
 
   const showTheme = useCallback((theme: ReservMenuThemeId) => {
@@ -443,12 +461,19 @@ export default function DigitalMenuLandingClient() {
         <div className="max-w-6xl mx-auto px-4">
           <motion.div {...fadeUp()} className="text-center mb-10">
             <h2 className="text-2xl md:text-3xl font-bold text-white">قیمت‌ها</h2>
-            <p className="text-slate-400 mt-2">سه پلن شفاف — نسخه ۲۱ پنل فروش و باشگاه هوشمند دارد</p>
+            <p className="text-slate-400 mt-2">
+              خرید آنلاین — ثبت‌نام و فعال‌سازی فوری؛ نسخه ۲۱ پنل فروش و باشگاه هوشمند دارد
+            </p>
           </motion.div>
+          {paymentNotice ? (
+            <div className="mb-6 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100 text-center">
+              {paymentNotice}
+            </div>
+          ) : null}
           <div className="grid md:grid-cols-3 gap-4 items-stretch">
             {PLANS.map((plan, i) => (
               <motion.article
-                key={plan.name}
+                key={plan.slug}
                 {...fadeUp(i * 0.05)}
                 className={`relative rounded-2xl border p-6 flex flex-col ${
                   plan.popular
@@ -482,14 +507,21 @@ export default function DigitalMenuLandingClient() {
                 </ul>
                 <button
                   type="button"
-                  onClick={() => scrollToConsult(plan.name)}
+                  onClick={() => openCheckout(plan)}
                   className={`w-full py-3 rounded-xl font-bold transition ${
                     plan.popular
                       ? "bg-gradient-to-l from-cyan-500 to-emerald-500 text-white hover:opacity-95"
                       : "border border-white/15 bg-white/5 text-slate-100 hover:border-emerald-400/40"
                   }`}
                 >
-                  انتخاب {plan.name}
+                  خرید {plan.name}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollToConsult(plan.name)}
+                  className="mt-2 w-full py-2 text-xs text-slate-500 hover:text-emerald-300 transition"
+                >
+                  مشاوره قبل از خرید
                 </button>
               </motion.article>
             ))}
@@ -497,12 +529,18 @@ export default function DigitalMenuLandingClient() {
         </div>
       </section>
 
+      <MenuPlanCheckout
+        plan={checkoutPlan}
+        onClose={() => setCheckoutPlan(null)}
+        onConsult={(planName) => scrollToConsult(planName)}
+      />
+
       <ConsultationRequestForm
         source="digital_menu"
         businessPlaceholder="نام رستوران یا کافی‌شاپ"
         selectedPlan={selectedPlan}
         submitGradientClass="from-cyan-500 to-emerald-500"
-        subtitle="فرم را پر کنید؛ همکاران وبینو برای راه‌اندازی منو با شما تماس می‌گیرند."
+        subtitle="اگر هنوز آمادهٔ خرید آنلاین نیستید، فرم را پر کنید؛ همکاران وبینو تماس می‌گیرند."
       />
 
       <section className="py-14 border-t border-white/5">
