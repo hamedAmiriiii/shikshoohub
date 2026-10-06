@@ -365,7 +365,7 @@ export async function tryClaimMarketerRef(): Promise<{ ok: boolean; message: str
 
   if (!res.ok) {
     writeStoredRef({ ...ref, code, last_claim_at: Date.now() });
-    return { ok: false, message: res.message || "انتساب بازاریاب انجام نشد." };
+    return { ok: false, message: ("message" in res && res.message) || "انتساب بازاریاب انجام نشد." };
   }
 
   if (res.data.ok) {

@@ -281,7 +281,21 @@ function RegisterShopPageInner() {
         localStorage.setItem("user", JSON.stringify(user));
         window.dispatchEvent(new CustomEvent(SHOP_FEATURES_CHANGED_EVENT));
         syncShopAccessFromLogin(payload);
-        await tryClaimMarketerRef();
+
+        const claimFromRegister = payload.marketer_claim as
+          | { ok?: boolean; message?: string }
+          | undefined;
+        if (claimFromRegister && claimFromRegister.ok === false && claimFromRegister.message) {
+          toast.warning(claimFromRegister.message);
+        } else if (claimFromRegister?.ok) {
+          toast.success(claimFromRegister.message || "انتساب بازاریاب ثبت شد.");
+        } else {
+          const claim = await tryClaimMarketerRef();
+          if (claim && !claim.ok && claim.message) {
+            toast.warning(claim.message);
+          }
+        }
+
         toast.success(`فروشگاه با موفقیت ثبت شد.${accessMsg}`);
         router.push(getFirstAllowedAdminPath(user));
         return;
