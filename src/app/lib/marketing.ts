@@ -246,6 +246,21 @@ function getVisitorId(): string {
   return id;
 }
 
+function toLatinDigits(value: string): string {
+  return value.replace(/[۰-۹٠-٩]/g, (ch) => {
+    const fa = "۰۱۲۳۴۵۶۷۸۹".indexOf(ch);
+    if (fa >= 0) return String(fa);
+    const ar = "٠١٢٣٤٥٦٧٨٩".indexOf(ch);
+    return ar >= 0 ? String(ar) : ch;
+  });
+}
+
+/** کد معرف فقط عدد ۴ رقمی */
+export function normalizeMarketerRefCode(raw: string | null | undefined): string | null {
+  const digits = toLatinDigits(String(raw || "")).replace(/\D/g, "");
+  return /^\d{4}$/.test(digits) ? digits : null;
+}
+
 /**
  * اگر آدرس صفحه ?mref=CODE داشته باشد، معرف را ذخیره می‌کند.
  * اولین معرف تا پایان مهلت انتساب حفظ می‌شود (لینک بعدی جایگزینش نمی‌شود).
@@ -253,8 +268,8 @@ function getVisitorId(): string {
 export async function captureMarketerRef(): Promise<void> {
   if (typeof window === "undefined") return;
   const params = new URLSearchParams(window.location.search);
-  const code = (params.get("mref") || "").trim().toUpperCase();
-  if (!/^[A-Z0-9]{4,16}$/.test(code)) return;
+  const code = normalizeMarketerRefCode(params.get("mref"));
+  if (!code) return;
 
   const visitorId = getVisitorId();
   const existing = readStoredRef();

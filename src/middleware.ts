@@ -13,8 +13,11 @@ function requestHosts(request: NextRequest) {
  * هیچ redirectای از / به /admin نگذار — لندینگ باید روی آدرس اصلی بماند.
  * روی دامنهٔ تعمیرات (مثل omidtamir.ir) همهٔ مسیرها زیر /repair می‌روند.
  */
-/** لینک بازاریاب منوی آنلاین → مستقیم لندینگ منو (با حفظ ?mref=) */
-const MENU_LANDING_MREF = "4Z3T6F";
+/**
+ * لینک بازاریاب منوی آنلاین → مستقیم لندینگ منو (با حفظ ?mref=).
+ * کد جدید ۴ رقمی؛ 4Z3T6F برای لینک‌های قدیمی نگه داشته شده.
+ */
+const MENU_LANDING_MREFS = new Set(["4366", "4Z3T6F"]);
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -30,9 +33,13 @@ export function middleware(request: NextRequest) {
 
   if (pathname === "/") {
     const mref = (request.nextUrl.searchParams.get("mref") || "").trim().toUpperCase();
-    if (mref === MENU_LANDING_MREF) {
+    if (MENU_LANDING_MREFS.has(mref)) {
       const url = request.nextUrl.clone();
       url.pathname = "/landing/menu";
+      // لینک قدیمی را به کد ۴ رقمی نگاشت کن تا ردیابی بازاریاب کار کند
+      if (mref === "4Z3T6F") {
+        url.searchParams.set("mref", "4366");
+      }
       return NextResponse.redirect(url);
     }
   }

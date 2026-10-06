@@ -381,7 +381,7 @@ function Dashboard({ onLoggedOut }: { onLoggedOut: () => void }) {
             </Button>
           </Box>
           <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "12px", lineHeight: 1.9 }}>
-            کد معرف شما: <b style={{ direction: "ltr" }}>{marketer.code}</b> — هر کس با این لینک وارد سایت شود و تا{" "}
+            کد معرف شما (عدد ۴ رقمی): <b style={{ direction: "ltr" }}>{marketer.code}</b> — هر کس با این لینک وارد سایت شود و تا{" "}
             {toFaNumber(data.attribution_days ?? 60)} روز بعد ثبت‌نام کند، زیرمجموعهٔ شما می‌شود و از هر خرید اکانت پولی
             او {toFaNumber(marketer.commission_percent)}٪ پورسانت می‌گیرید. می‌توانید <span dir="ltr">?mref={marketer.code}</span>{" "}
             را به آخر هر صفحه‌ای از سایت هم اضافه کنید.
