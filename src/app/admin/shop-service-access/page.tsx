@@ -37,6 +37,7 @@ const FEATURE_SWITCHES: { key: FeatureKey; label: string }[] = [
   { key: "produced_goods_enabled", label: "کالای تولیدی" },
   { key: "accounting_enabled", label: "حسابداری" },
   { key: "customer_club_enabled", label: "باشگاه مشتریان" },
+  { key: "smart_customer_club_enabled", label: "باشگاه هوشمند" },
 ];
 
 function extractRows(res: unknown): ShopRow[] {
@@ -122,6 +123,7 @@ export default function ShopServiceAccessPage() {
                 produced_goods_enabled: Boolean(res.produced_goods_enabled),
                 accounting_enabled: Boolean(res.accounting_enabled),
                 customer_club_enabled: Boolean(res.customer_club_enabled),
+                smart_customer_club_enabled: Boolean(res.smart_customer_club_enabled),
                 [feature]: saved,
               }
             : item,

@@ -6,6 +6,7 @@ export type ShopFeatures = {
   produced_goods_enabled: boolean;
   accounting_enabled: boolean;
   customer_club_enabled: boolean;
+  smart_customer_club_enabled: boolean;
 };
 
 const FEATURE_KEYS = [
@@ -14,6 +15,7 @@ const FEATURE_KEYS = [
   "produced_goods_enabled",
   "accounting_enabled",
   "customer_club_enabled",
+  "smart_customer_club_enabled",
 ] as const;
 
 const DEFAULT_FEATURES: ShopFeatures = {
@@ -22,6 +24,7 @@ const DEFAULT_FEATURES: ShopFeatures = {
   produced_goods_enabled: false,
   accounting_enabled: false,
   customer_club_enabled: false,
+  smart_customer_club_enabled: false,
 };
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -58,12 +61,19 @@ export function normalizeShopFeatures(raw: unknown): ShopFeatures {
   if (!obj) return { ...DEFAULT_FEATURES };
   const nested = asRecord(obj.shop_features);
   const source = nested && hasAnyFeatureKey(nested) ? nested : obj;
+  const customerClub = asBool(source.customer_club_enabled);
+  // قبل از جدا شدن فلگ هوشمند، باشگاه معمولی همان دسترسی هوشمند را هم می‌داد
+  const smartClub =
+    "smart_customer_club_enabled" in source
+      ? asBool(source.smart_customer_club_enabled)
+      : customerClub;
   return {
     restaurant_cafe_enabled: asBool(source.restaurant_cafe_enabled),
     room_services_enabled: asBool(source.room_services_enabled),
     produced_goods_enabled: asBool(source.produced_goods_enabled),
     accounting_enabled: asBool(source.accounting_enabled),
-    customer_club_enabled: asBool(source.customer_club_enabled),
+    customer_club_enabled: customerClub,
+    smart_customer_club_enabled: smartClub,
   };
 }
 
@@ -149,11 +159,12 @@ export function shopFeatureAllowsPath(
   if (pathname === "/admin/shop-tables" || pathname.startsWith("/admin/shop-tables/")) {
     return features.restaurant_cafe_enabled || features.room_services_enabled;
   }
+  if (pathname === "/admin/smart-club" || pathname.startsWith("/admin/smart-club/")) {
+    return features.smart_customer_club_enabled;
+  }
   if (
     pathname === "/admin/customer-club" ||
     pathname.startsWith("/admin/customer-club/") ||
-    pathname === "/admin/smart-club" ||
-    pathname.startsWith("/admin/smart-club/") ||
     pathname === "/admin/customers" ||
     pathname.startsWith("/admin/customers/") ||
     pathname === "/admin/broadcast-sms" ||

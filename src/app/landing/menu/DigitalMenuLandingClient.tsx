@@ -148,7 +148,7 @@ const PLANS = [
       "سفارش آنلاین میز و اتاق",
       "نسیه، خرید و سود",
       "پرداخت آنلاین روی منو",
-      "پیجر گارسون و حقوق پرسنل",
+      "باشگاه مشتریان معمولی و اعتبار خرید",
     ],
   },
   {
@@ -160,8 +160,7 @@ const PLANS = [
     popular: false,
     features: [
       "همه امکانات فروش کامل",
-      "باشگاه مشتریان و اعتبار خرید",
-      "گروه‌بندی هوشمند و کمپین",
+      "باشگاه هوشمند، گروه‌بندی و کمپین",
       "پیامک هدفمند و گزارش اثر",
       "دفتر حسابداری و بستن سال",
     ],
@@ -206,7 +205,8 @@ export default function DigitalMenuLandingClient() {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [checkoutPlan, setCheckoutPlan] = useState<MenuCheckoutPlan | null>(null);
   const [plans, setPlans] = useState<LandingPlan[]>(PLANS);
-  const paymentNotice = useMenuPaymentReturnNotice();
+  const { notice: paymentNotice, countdown: paymentCountdown, building: paymentBuilding } =
+    useMenuPaymentReturnNotice();
 
   useEffect(() => {
     let cancelled = false;
@@ -521,8 +521,16 @@ export default function DigitalMenuLandingClient() {
             </p>
           </motion.div>
           {paymentNotice ? (
-            <div className="mb-6 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100 text-center">
-              {paymentNotice}
+            <div className="mb-6 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-4 text-sm text-emerald-100 text-center space-y-2">
+              <p className="font-medium">{paymentNotice}</p>
+              {paymentBuilding && paymentCountdown != null ? (
+                <>
+                  <p className="text-emerald-50/90">در حال ساخت نهایی پنل شما</p>
+                  <p className="text-2xl font-bold tabular-nums text-white" dir="ltr">
+                    {paymentCountdown}
+                  </p>
+                </>
+              ) : null}
             </div>
           ) : null}
           <div className="grid md:grid-cols-3 gap-4 items-stretch">

@@ -143,6 +143,7 @@ export default function AdminHamburgerSidebar({
   const [producedGoodsMenuEnabled, setProducedGoodsMenuEnabled] = useState(false);
   const [accountingEnabled, setAccountingEnabled] = useState(false);
   const [customerClubEnabled, setCustomerClubEnabled] = useState(false);
+  const [smartClubEnabled, setSmartClubEnabled] = useState(false);
   const [proformaEnabled, setProformaEnabled] = useState(() => Boolean(readAdminPosSettings().proformaEnabled));
 
   useEffect(() => {
@@ -153,6 +154,7 @@ export default function AdminHamburgerSidebar({
       setProducedGoodsMenuEnabled(features.produced_goods_enabled);
       setAccountingEnabled(features.accounting_enabled);
       setCustomerClubEnabled(features.customer_club_enabled);
+      setSmartClubEnabled(features.smart_customer_club_enabled);
     };
     sync();
     window.addEventListener(SHOP_FEATURES_CHANGED_EVENT, sync);
@@ -481,7 +483,7 @@ export default function AdminHamburgerSidebar({
 
   const smartClubChildren: NavLeaf[] = useMemo(
     () =>
-      customerClubEnabled
+      smartClubEnabled
         ? [
             {
               id: "smart-club-home",
@@ -520,7 +522,7 @@ export default function AdminHamburgerSidebar({
             },
           ]
         : [],
-    [customerClubEnabled],
+    [smartClubEnabled],
   );
 
   const adminChildren: NavLeaf[] = useMemo(
@@ -714,7 +716,7 @@ export default function AdminHamburgerSidebar({
         icon: customerClubEnabled ? <GroupsIcon /> : <SmsIcon />,
         children: smsChildren.filter((child) => can(child.permission)),
       },
-      ...(customerClubEnabled && smartClubChildren.length > 0
+      ...(smartClubEnabled && smartClubChildren.length > 0
         ? [
             {
               id: "smart-club",
@@ -734,7 +736,7 @@ export default function AdminHamburgerSidebar({
       });
     }
     return base;
-  }, [accountingChildren, accountingEnabled, adminChildren, can, customerClubEnabled, financialChildren, isRealOwner, isSuperAdmin, payrollChildren, productChildren, smartClubChildren, smsChildren]);
+  }, [accountingChildren, accountingEnabled, adminChildren, can, customerClubEnabled, financialChildren, isRealOwner, isSuperAdmin, payrollChildren, productChildren, smartClubChildren, smartClubEnabled, smsChildren]);
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
 

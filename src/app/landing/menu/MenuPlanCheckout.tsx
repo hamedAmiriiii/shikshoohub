@@ -481,26 +481,37 @@ export default function MenuPlanCheckout({ plan, onClose, onConsult }: Props) {
   );
 }
 
-export function useMenuPaymentReturnNotice() {
+export type MenuPaymentReturnState = {
+  notice: string;
+  /** شمارش معکوس ساخت نهایی پنل (فقط بعد از پرداخت موفق) */
+  countdown: number | null;
+  building: boolean;
+};
+
+export function useMenuPaymentReturnNotice(): MenuPaymentReturnState {
   const [notice, setNotice] = useState("");
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [building, setBuilding] = useState(false);
+  const redirectPathRef = useRef<string | null>(null);
 
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
     const payment = q.get("payment");
     if (payment === "ok") {
       setNotice("پرداخت موفق بود. پنل شما فعال شد.");
+      setBuilding(true);
+      setCountdown(10);
       const token = localStorage.getItem("token");
       const userRaw = localStorage.getItem("user");
       if (token && userRaw) {
         try {
           const user = JSON.parse(userRaw) as Record<string, unknown>;
-          const path = getFirstAllowedAdminPath(user);
-          window.setTimeout(() => {
-            window.location.href = path || "/admin";
-          }, 1200);
+          redirectPathRef.current = getFirstAllowedAdminPath(user) || "/admin";
         } catch {
-          /* stay */
+          redirectPathRef.current = "/admin";
         }
+      } else {
+        redirectPathRef.current = "/admin/login";
       }
     } else if (payment === "failed") {
       setNotice(q.get("message") || "پرداخت انجام نشد یا لغو شد. می‌توانید دوباره از بخش قیمت‌ها اقدام کنید.");
@@ -518,5 +529,16 @@ export function useMenuPaymentReturnNotice() {
     }
   }, []);
 
-  return notice;
+  useEffect(() => {
+    if (countdown === null) return;
+    if (countdown <= 0) {
+      const path = redirectPathRef.current || "/admin";
+      window.location.href = path;
+      return;
+    }
+    const t = window.setTimeout(() => setCountdown((c) => (c == null ? null : c - 1)), 1000);
+    return () => window.clearTimeout(t);
+  }, [countdown]);
+
+  return { notice, countdown, building };
 }
