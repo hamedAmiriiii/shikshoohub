@@ -28,7 +28,10 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import SearchIcon from "@mui/icons-material/Search";
 import { toast } from "react-toastify";
 import {
+  accountLevelLabel,
+  childLevelOf,
   createAccountingAccount,
+  fetchNextAccountCode,
   fetchAccountingAccounts,
   updateAccountingAccount,
   type AccountingAccount,
@@ -108,7 +111,7 @@ function AccountNode({
   depth: number;
   parentColor?: string;
   forceOpen: boolean;
-  onCreate: (parent: AccountingAccount, level: "moein" | "tafsili") => void;
+  onCreate: (parent: AccountingAccount) => void;
   onEdit: (account: AccountingAccount) => void;
 }) {
   const hasChildren = account.children.length > 0;
@@ -118,8 +121,7 @@ function AccountNode({
     setOpen(forceOpen && hasChildren);
   }, [forceOpen, hasChildren]);
   const linked = linkedLabel(account);
-  const canCreateMoein = account.level === "kol";
-  const canCreateTafsili = account.level === "moein";
+  const childLevelLabel = accountLevelLabel(childLevelOf(account));
   const color = KIND_COLOR[account.kind] ?? parentColor ?? DEFAULT_TREE_COLOR;
   const style = LEVEL_ROW[account.level] ?? LEVEL_ROW.tafsili;
   const rowBg =
@@ -229,24 +231,14 @@ function AccountNode({
           </Box>
         </Box>
         <Box sx={{ display: "flex", gap: 0.5, flexShrink: 0 }}>
-          {canCreateMoein ? (
+          {account.is_active ? (
             <Button
               size="small"
               startIcon={<AddIcon />}
-              onClick={() => onCreate(account, "moein")}
+              onClick={() => onCreate(account)}
               sx={{ fontSize: 11, color: "var(--admin-accent)" }}
             >
-              معین
-            </Button>
-          ) : null}
-          {canCreateTafsili ? (
-            <Button
-              size="small"
-              startIcon={<AddIcon />}
-              onClick={() => onCreate(account, "tafsili")}
-              sx={{ fontSize: 11, color: "var(--admin-accent)" }}
-            >
-              تفصیلی
+              {childLevelLabel}
             </Button>
           ) : null}
           {!account.is_system ? (
@@ -290,7 +282,8 @@ export default function AccountingAccountsPage() {
   const [loading, setLoading] = useState(true);
   const [includeInactive, setIncludeInactive] = useState(false);
   const [createParent, setCreateParent] = useState<AccountingAccount | null>(null);
-  const [createLevel, setCreateLevel] = useState<"moein" | "tafsili">("moein");
+  const [createLevel, setCreateLevel] = useState<string>("moein");
+  const [createCodeLoading, setCreateCodeLoading] = useState(false);
   const [createCode, setCreateCode] = useState("");
   const [createName, setCreateName] = useState("");
   const [saving, setSaving] = useState(false);
@@ -315,11 +308,19 @@ export default function AccountingAccountsPage() {
     load();
   }, [load]);
 
-  const openCreate = (parent: AccountingAccount, level: "moein" | "tafsili") => {
+  const openCreate = (parent: AccountingAccount) => {
     setCreateParent(parent);
-    setCreateLevel(level);
+    setCreateLevel(childLevelOf(parent));
     setCreateCode("");
     setCreateName("");
+    setCreateCodeLoading(true);
+    fetchNextAccountCode(parent.id)
+      .then((next) => {
+        if (next.code) setCreateCode(next.code);
+        if (next.level) setCreateLevel(next.level);
+      })
+      .catch(() => undefined)
+      .finally(() => setCreateCodeLoading(false));
   };
 
   const openEdit = (account: AccountingAccount) => {
@@ -342,7 +343,6 @@ export default function AccountingAccountsPage() {
         parent_id: createParent.id,
         code,
         name,
-        level: createLevel,
       });
       toast.success("حساب ایجاد شد.");
       setCreateParent(null);
@@ -374,7 +374,7 @@ export default function AccountingAccountsPage() {
     }
   };
 
-  const createLevelLabel = createLevel === "moein" ? "معین" : "تفصیلی";
+  const createLevelLabel = accountLevelLabel(createLevel);
 
   const query = normalizeAccountSearch(search);
   const visibleTree = useMemo(() => filterAccountTree(tree, query), [tree, query]);
@@ -383,7 +383,7 @@ export default function AccountingAccountsPage() {
   return (
     <AccountingPageShell
       title="درخت حساب"
-      subtitle="حساب‌های سیستمی قفل‌اند. معین زیر کل و تفصیلی زیر معین ساخته می‌شود."
+      subtitle="حساب‌های سیستمی قفل‌اند. زیر هر حساب می‌توانید بدون محدودیت زیرحساب بسازید؛ کد پیشنهادی از روی موقعیت حساب داده می‌شود."
       actions={
         <>
           <FormControlLabel
@@ -468,6 +468,7 @@ export default function AccountingAccountsPage() {
             label="کد"
             value={createCode}
             onChange={(e) => setCreateCode(e.target.value)}
+            helperText={createCodeLoading ? "در حال محاسبهٔ کد پیشنهادی…" : "کد پیشنهادی بر اساس موقعیت حساب؛ در صورت نیاز تغییر دهید."}
             sx={{ ...accountingFieldSx, mb: 1.5, mt: 0.5 }}
           />
           <TextField

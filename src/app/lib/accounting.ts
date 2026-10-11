@@ -434,10 +434,28 @@ export function flattenAccounts(nodes: AccountingAccount[]): AccountingAccount[]
   return out;
 }
 
+/** حساب نهایی (بدون زیرحساب فعال) که می‌شود روی آن سند دستی زد. */
 export function postingAccounts(nodes: AccountingAccount[]): AccountingAccount[] {
   return flattenAccounts(nodes).filter(
-    (item) => item.is_active && (item.level === "moein" || item.level === "tafsili"),
+    (item) =>
+      item.is_active &&
+      item.level !== "group" &&
+      !(item.children || []).some((child) => child.is_active),
   );
+}
+
+/** سطحی که زیرحساب جدید زیر این حساب خواهد داشت. */
+export function childLevelOf(account: Pick<AccountingAccount, "level">): "kol" | "moein" | "tafsili" {
+  if (account.level === "group") return "kol";
+  if (account.level === "kol") return "moein";
+  return "tafsili";
+}
+
+export function accountLevelLabel(level: string): string {
+  if (level === "group") return "گروه";
+  if (level === "kol") return "کل";
+  if (level === "moein") return "معین";
+  return "تفصیلی";
 }
 
 function parseAccount(raw: unknown): AccountingAccount | null {
@@ -525,11 +543,26 @@ export async function fetchAccountingAccounts(options?: {
   return list.map(parseAccount).filter((item): item is AccountingAccount => item != null);
 }
 
+export async function fetchNextAccountCode(
+  parentId: number,
+): Promise<{ code: string; level: string; level_label: string }> {
+  const res = await FetchWithJwtClient(
+    "GET",
+    `/api/accounting/accounts/${parentId}/next-code`,
+    authToken(),
+  );
+  const obj = asRecord(unwrapData(res)) ?? {};
+  return {
+    code: asString(obj.code),
+    level: asString(obj.level),
+    level_label: asString(obj.level_label),
+  };
+}
+
 export async function createAccountingAccount(body: {
   parent_id: number;
   code: string;
   name: string;
-  level: "moein" | "tafsili";
 }): Promise<AccountingAccount> {
   const res = await FetchWithJwtClient("POST", "/api/accounting/accounts", authToken(), {}, {
     body: JSON.stringify(body),

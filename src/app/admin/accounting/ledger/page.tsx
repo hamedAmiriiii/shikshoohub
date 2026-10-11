@@ -48,7 +48,7 @@ export default function LedgerPage() {
 
   useEffect(() => {
     fetchAccountingAccounts()
-      .then((tree) => setAccounts(flattenAccounts(tree).filter((item) => item.level === "moein" || item.level === "tafsili")))
+      .then((tree) => setAccounts(flattenAccounts(tree).filter((item) => item.level !== "group")))
       .catch((e) => toast.error(e instanceof Error ? e.message : "خطا در دریافت حساب‌ها"));
   }, []);
 
