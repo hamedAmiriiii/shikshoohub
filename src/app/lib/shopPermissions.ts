@@ -46,7 +46,7 @@ const TITLE_BY_KEY: Record<string, string> = Object.fromEntries(
   SHOP_PERMISSION_CATALOG.map((item) => [item.key, item.title]),
 );
 
-const PUBLIC_ADMIN_PATHS = ["/admin/login", "/admin/register-shop", "/admin/select-shop"];
+const PUBLIC_ADMIN_PATHS = ["/admin/login", "/admin/register-shop", "/admin/select-shop", "/admin/contract"];
 
 export const AUDITOR_SELECT_SHOP_PATH = "/admin/select-shop";
 

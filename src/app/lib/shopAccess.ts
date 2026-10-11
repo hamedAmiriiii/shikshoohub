@@ -2,6 +2,7 @@ import DateObject from "react-date-object";
 import gregorian from "react-date-object/calendars/gregorian";
 import persian from "react-date-object/calendars/persian";
 import { isSuperAdminUser } from "@/app/lib/superAdmin";
+import { setShopContractRequired } from "@/app/lib/shopContract";
 
 function toEnglishDigits(value: string): string {
   const persianDigits = "۰۱۲۳۴۵۶۷۸۹";
@@ -237,6 +238,7 @@ export function notifyShopAccessIfExpired(res: Record<string, unknown> | null | 
 }
 
 export function syncShopAccessFromLogin(payload: Record<string, unknown>): void {
+  setShopContractRequired(payload.shop_contract_required === true);
   const access = getShopAccessFromUser(payload);
   if (access && isShopAccessExpiredInfo(access)) {
     persistShopAccessExpired(payload);

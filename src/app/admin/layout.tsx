@@ -27,6 +27,11 @@ import { persistSalePriceRoundingFromSettings } from '@/app/lib/salePriceRoundin
 import tokenCode from '@/app/coponent/tokenCode';
 import { FetchWithJwtClient } from '@/app/coponent/fetchWithJwtClient';
 import WebinoChatbot from '@/app/coponent/WebinoChatbot';
+import {
+  SHOP_CONTRACT_PATH,
+  isShopContractRequiredStored,
+  setShopContractRequired,
+} from '@/app/lib/shopContract';
 
 // Map pathname to page title
 const getPageTitle = (pathname: string | null): string | undefined => {
@@ -163,7 +168,8 @@ export default function ShikshooLayout({
   const isPublicAdminPage =
     pathname?.includes('/admin/login') ||
     pathname?.includes('/admin/register-shop') ||
-    pathname?.includes(AUDITOR_SELECT_SHOP_PATH);
+    pathname?.includes(AUDITOR_SELECT_SHOP_PATH) ||
+    pathname?.startsWith(SHOP_CONTRACT_PATH);
   const [isChecking, setIsChecking] = useState(true);
   const shopFeaturesSyncedRef = useRef(false);
   const firstPathnameRef = useRef(pathname);
@@ -189,6 +195,11 @@ export default function ShikshooLayout({
       router.push('/admin/login');
       return;
     }
+    // قرارداد وبینو هنوز تأیید نشده: تا تأیید، هیچ صفحهٔ دیگری باز نمی‌شود
+    if (token && !isPublicAdminPage && isShopContractRequiredStored()) {
+      router.replace(SHOP_CONTRACT_PATH);
+      return;
+    }
     if (token && !isPublicAdminPage && auditorNeedsShopSelection()) {
       router.replace(AUDITOR_SELECT_SHOP_PATH);
       return;
@@ -207,6 +218,12 @@ export default function ShikshooLayout({
         FetchWithJwtClient("GET", "/api/settings", auth),
       ]).then(([userRes, settingsRes]) => {
         if (userRes && !userRes.hasError) {
+          const contractRequired = userRes.shop_contract_required === true;
+          setShopContractRequired(contractRequired);
+          if (contractRequired) {
+            router.replace(SHOP_CONTRACT_PATH);
+            return;
+          }
           persistShopFeaturesFromPayload(userRes as Record<string, unknown>);
           if (userRes.shop_is_auditor && userRes.requires_shop_selection) {
             router.replace(AUDITOR_SELECT_SHOP_PATH);

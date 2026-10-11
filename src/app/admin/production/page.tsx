@@ -1325,29 +1325,137 @@ export default function ProductionCostingPage() {
             sx={fieldSx}
           />
           {previewLoading && <CircularProgress size={22} />}
-          {producePreview && (
-            <Box sx={{ p: 1.5, borderRadius: "12px", backgroundColor: "var(--admin-surface-alt)", border: "1px solid var(--admin-border)" }}>
-              <Typography sx={{ fontWeight: 800, color: producePreview.stock_sufficient === false ? "#ef5350" : "var(--admin-accent)" }}>
-                پیش‌نمایش هزینه هر واحد: {formatToman(producePreview.cost_per_kg || 0)} تومان
-              </Typography>
-              <Typography sx={{ fontSize: 13, color: "var(--admin-text-muted)", mb: 1 }}>
-                جمع هزینه این تولید: {formatToman(producePreview.total_cost || 0)} تومان — موجودی کم نمی‌شود تا ثبت کنید.
-              </Typography>
-              {(producePreview.ingredient_costs || []).map((line) => (
-                <Box key={line.raw_material_id} sx={{ mb: 1 }}>
-                  <Typography sx={{ fontSize: 13, color: line.shortage_kg ? "#ef5350" : "var(--admin-text-muted)" }}>
-                    {line.name}: مصرف {formatKg(line.needed_kg || 0)} {materialUnitLabel(line)}
-                    {line.shortage_kg ? ` · کمبود ${formatKg(line.shortage_kg)} ${materialUnitLabel(line)}` : ""}
-                  </Typography>
-                  {(line.lots || []).map((lot) => (
-                    <Typography key={lot.lot_id} sx={{ fontSize: 12, color: "var(--admin-text-muted)", pr: 1 }}>
-                      لات {lot.lot_id}: {formatKg(lot.quantity_kg)} {materialUnitLabel(line)} × {formatToman(lot.price_per_kg)} = {formatToman(lot.cost)}
+          {producePreview && (() => {
+            const hasShortage = producePreview.stock_sufficient === false;
+            const goodUnitLabel = materialUnitLabel(produceGood);
+            const accent = hasShortage ? "#ef5350" : "var(--admin-accent)";
+            const ingredients = producePreview.ingredient_costs || [];
+            const shortageCount = ingredients.filter((l) => (l.shortage_kg || 0) > 0).length;
+            return (
+              <Box sx={{ display: "grid", gap: 1.5 }}>
+                {hasShortage && (
+                  <Box
+                    sx={{
+                      p: 1.25,
+                      borderRadius: "12px",
+                      border: "1px solid rgba(239,83,80,0.45)",
+                      backgroundColor: "rgba(239,83,80,0.1)",
+                    }}
+                  >
+                    <Typography sx={{ fontSize: 13, fontWeight: 800, color: "#ef5350" }}>
+                      موجودی انبار برای {shortageCount > 0 ? `${shortageCount} ماده` : "این تولید"} کافی نیست
                     </Typography>
+                    <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)", mt: 0.25 }}>
+                      ابتدا موجودی مواد کم‌شده را در انبار افزایش دهید یا مقدار تولید را کمتر کنید؛ تا آن موقع ثبت تولید ممکن نیست.
+                    </Typography>
+                  </Box>
+                )}
+
+                <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }}>
+                  {[
+                    { label: `هزینه هر ${goodUnitLabel}`, value: producePreview.cost_per_kg || 0, strong: true },
+                    { label: "جمع هزینه این تولید", value: producePreview.total_cost || 0, strong: false },
+                  ].map((stat) => (
+                    <Box
+                      key={stat.label}
+                      sx={{
+                        p: 1.25,
+                        borderRadius: "12px",
+                        backgroundColor: "var(--admin-surface-alt)",
+                        border: "1px solid var(--admin-border)",
+                      }}
+                    >
+                      <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)" }}>{stat.label}</Typography>
+                      <Typography sx={{ fontSize: stat.strong ? 18 : 16, fontWeight: 800, color: stat.strong ? accent : "var(--admin-text)" }}>
+                        {formatToman(stat.value)}{" "}
+                        <Typography component="span" sx={{ fontSize: 12, fontWeight: 400, color: "var(--admin-text-muted)" }}>
+                          تومان
+                        </Typography>
+                      </Typography>
+                    </Box>
                   ))}
                 </Box>
-              ))}
-            </Box>
-          )}
+
+                {ingredients.length > 0 && (
+                  <Box sx={{ display: "grid", gap: 0.75 }}>
+                    <Typography sx={{ fontSize: 13, fontWeight: 700, color: "var(--admin-text)" }}>
+                      مواد مصرفی
+                    </Typography>
+                    {ingredients.map((line) => {
+                      const unit = materialUnitLabel(
+                        line.unit_type ? line : materials.find((m) => m.id === line.raw_material_id)
+                      );
+                      const short = (line.shortage_kg || 0) > 0;
+                      const lots = line.lots || [];
+                      const lineCost =
+                        line.cost != null ? line.cost : lots.reduce((sum, lot) => sum + (Number(lot.cost) || 0), 0);
+                      return (
+                        <Box
+                          key={line.raw_material_id}
+                          sx={{
+                            p: 1.25,
+                            borderRadius: "12px",
+                            backgroundColor: "var(--admin-surface-alt)",
+                            border: `1px solid ${short ? "rgba(239,83,80,0.5)" : "var(--admin-border)"}`,
+                          }}
+                        >
+                          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, flexWrap: "wrap" }}>
+                            <Typography sx={{ fontSize: 14, fontWeight: 700, color: "var(--admin-text)" }}>
+                              {line.name || `ماده ${line.raw_material_id}`}
+                            </Typography>
+                            <Typography sx={{ fontSize: 13, fontWeight: 700, color: "var(--admin-text)" }}>
+                              {formatToman(lineCost)} <span style={{ fontWeight: 400, color: "var(--admin-text-muted)", fontSize: 11 }}>تومان</span>
+                            </Typography>
+                          </Box>
+                          <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap", mt: 0.75 }}>
+                            <Chip size="small" label={`مصرف: ${formatKg(line.needed_kg || 0)} ${unit}`} />
+                            {short && (
+                              <Chip
+                                size="small"
+                                label={`کمبود: ${formatKg(line.shortage_kg || 0)} ${unit}`}
+                                sx={{ backgroundColor: "rgba(239,83,80,0.15)", color: "#ef5350", fontWeight: 700 }}
+                              />
+                            )}
+                          </Box>
+                          {lots.length > 0 && (
+                            <Box sx={{ mt: 1, pt: 0.75, borderTop: "1px dashed var(--admin-border)", display: "grid", gap: 0.5 }}>
+                              {lots.map((lot, i) => {
+                                const virtual = !lot.lot_id;
+                                return (
+                                  <Box
+                                    key={`${lot.lot_id ?? "short"}-${i}`}
+                                    sx={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      alignItems: "center",
+                                      gap: 1,
+                                      fontSize: 12,
+                                      color: virtual ? "#ef5350" : "var(--admin-text-muted)",
+                                    }}
+                                  >
+                                    <span>
+                                      {virtual ? "بدون موجودی (قیمت تخمینی)" : `لات ${lot.lot_id}`}
+                                      {" · "}
+                                      {formatKg(lot.quantity_kg)} {unit} × {formatToman(lot.price_per_kg)}
+                                    </span>
+                                    <span style={{ fontWeight: 700 }}>{formatToman(lot.cost)}</span>
+                                  </Box>
+                                );
+                              })}
+                            </Box>
+                          )}
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                )}
+
+                <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)" }}>
+                  این فقط پیش‌نمایش است؛ موجودی انبار تا زمانی که تولید را ثبت نکنید کم نمی‌شود.
+                </Typography>
+              </Box>
+            );
+          })()}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setProduceGood(null)}>انصراف</Button>
