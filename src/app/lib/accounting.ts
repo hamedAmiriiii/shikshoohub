@@ -636,6 +636,33 @@ export async function reverseAccountingVoucher(id: number): Promise<AccountingVo
   return parsed;
 }
 
+/** سند تسویهٔ نسیه (document_payment) فقط با برگشت تسویه از مدرک اصلی قابل برگشت است. */
+export function canReverseSettlementVoucher(voucher: AccountingVoucher): boolean {
+  return (
+    voucher.status === "posted" &&
+    voucher.reverses_voucher_id == null &&
+    voucher.source_type === "document_payment"
+  );
+}
+
+export async function reverseDocumentSettlementVoucher(
+  id: number,
+): Promise<{ message: string; reversalVoucherId: number | null }> {
+  const res = await FetchWithJwtClient(
+    "POST",
+    `/api/accounting/vouchers/${id}/reverse-settlement`,
+    authToken(),
+  );
+  const obj = asRecord(res);
+  if (!obj || obj.hasError) throwApiError(res, "برگشت تسویه ناموفق بود.");
+  const data = asRecord(obj.data);
+  const reversalId = data ? asNumber(data.id, 0) : 0;
+  return {
+    message: asString(obj.message, "تسویه برگشت خورد."),
+    reversalVoucherId: reversalId > 0 ? reversalId : null,
+  };
+}
+
 export async function fetchAccountingPeriods(): Promise<AccountingPeriodsInfo> {
   const res = await FetchWithJwtClient("GET", "/api/accounting/periods", authToken());
   const obj = asRecord(unwrapData(res)) ?? {};

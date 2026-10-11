@@ -32,7 +32,9 @@ import {
   auditorReverseVoucher,
   canAuditorCorrectVoucher,
   canAuditorReverseVoucher,
+  canReverseSettlementVoucher,
   canReverseVoucherFromUi,
+  reverseDocumentSettlementVoucher,
   fetchAccountingAuditLog,
   fetchAccountingPeriods,
   fetchAccountingVoucher,
@@ -59,6 +61,7 @@ export default function AccountingVoucherDetailPage() {
   const [voucher, setVoucher] = useState<AccountingVoucher | null>(null);
   const [loading, setLoading] = useState(true);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [settlementConfirmOpen, setSettlementConfirmOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [canEditClosed, setCanEditClosed] = useState(false);
   const [reason, setReason] = useState("");
@@ -115,6 +118,29 @@ export default function AccountingVoucherDetailPage() {
     }
   };
 
+  const settlementReverse = Boolean(
+    voucher && canReverseSettlementVoucher(voucher) && (!voucher.locked || canEditClosed),
+  );
+
+  const handleReverseSettlement = async () => {
+    if (!voucher) return;
+    setSaving(true);
+    try {
+      const result = await reverseDocumentSettlementVoucher(voucher.id);
+      toast.success(result.message);
+      setSettlementConfirmOpen(false);
+      if (result.reversalVoucherId) {
+        router.push(`/admin/accounting/vouchers/${result.reversalVoucherId}`);
+      } else {
+        await load();
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "خطا در برگشت تسویه");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const sourceHref = voucher ? voucherSourceHref(voucher) : null;
   const showAdjusting =
     Boolean(voucher) &&
@@ -150,6 +176,17 @@ export default function AccountingVoucherDetailPage() {
                 sx={accountingButtonSx}
               >
                 سند اصلاحی
+              </Button>
+            ) : null}
+            {settlementReverse ? (
+              <Button
+                variant="outlined"
+                color="warning"
+                startIcon={<UndoIcon />}
+                onClick={() => setSettlementConfirmOpen(true)}
+                sx={{ borderColor: "#e6a23c", color: "#e6a23c" }}
+              >
+                برگشت تسویه
               </Button>
             ) : null}
             {auditorReverse || ownerReverse ? (
@@ -200,7 +237,12 @@ export default function AccountingVoucherDetailPage() {
             </Alert>
           ) : null}
 
-          {isOperationalVoucher(voucher) && !canEditClosed ? (
+          {settlementReverse ? (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              اگر این تسویه اشتباه ثبت شده، با «برگشت تسویه» سند برگشت می‌خورد، مبلغ از حساب فروشگاه به موجودی
+              برمی‌گردد و بدهی نسیهٔ فاکتور/هزینه دوباره باز می‌شود.
+            </Alert>
+          ) : isOperationalVoucher(voucher) && !canEditClosed ? (
             <Alert severity="warning" sx={{ mb: 2 }}>
               این سند از عملیات ساخته شده است. برگشت دستی دفتر را از عملیات جدا می‌کند؛ مدرک اصلی را از همان بخش حذف کنید.
             </Alert>
@@ -311,6 +353,22 @@ export default function AccountingVoucherDetailPage() {
           ) : null}
         </>
       )}
+
+      <Dialog open={settlementConfirmOpen} onClose={() => setSettlementConfirmOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle>برگشت تسویه</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ fontSize: 13 }}>
+            سند معکوس ساخته می‌شود، پرداخت از حساب لغو می‌شود و مبلغ دوباره به‌عنوان نسیهٔ پرداخت‌نشده روی فاکتور/هزینه
+            برمی‌گردد. ادامه می‌دهید؟
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSettlementConfirmOpen(false)}>انصراف</Button>
+          <Button onClick={handleReverseSettlement} disabled={saving} sx={accountingButtonSx}>
+            {saving ? "در حال برگشت…" : "برگشت تسویه"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} fullWidth maxWidth="xs">
         <DialogTitle>برگشت سند</DialogTitle>
