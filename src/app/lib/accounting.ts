@@ -244,6 +244,8 @@ export const ACCOUNTING_SOURCE_TYPES = [
   { value: "purchase", label: "فروش" },
   { value: "installment_pay", label: "وصول قسط" },
   { value: "debt_settle", label: "تسویه نسیه" },
+  { value: "debt_payment", label: "پرداخت نسیه فروش" },
+  { value: "payroll_payment", label: "پرداخت حقوق" },
   { value: "cheque_clear", label: "وصول چک" },
   { value: "recon_deposit", label: "تطبیق روزانه" },
   { value: "account_transfer", label: "شارژ تنخواه" },
@@ -266,6 +268,8 @@ const OPERATIONAL_SOURCE_TYPES = new Set([
   "purchase",
   "installment_pay",
   "debt_settle",
+  "debt_payment",
+  "payroll_payment",
   "cheque_clear",
   "recon_deposit",
   "account_transfer",
@@ -396,6 +400,7 @@ export function voucherSourceHref(voucher: Pick<AccountingVoucher, "source_type"
     case "installment_pay":
       return "/admin/installments";
     case "debt_settle":
+    case "debt_payment":
       return "/admin/purchase-debts";
     case "production":
       return "/admin/production";
@@ -636,21 +641,50 @@ export async function reverseAccountingVoucher(id: number): Promise<AccountingVo
   return parsed;
 }
 
-/** سند تسویهٔ نسیه (document_payment) فقط با برگشت تسویه از مدرک اصلی قابل برگشت است. */
-export function canReverseSettlementVoucher(voucher: AccountingVoucher): boolean {
+/**
+ * اسنادی که از عملیات ساخته می‌شوند فقط با «برگشت عملیات» قابل برگشت‌اند
+ * (مدرک اصلی هم به وضعیت قبل برمی‌گردد).
+ */
+const OPERATION_REVERSAL_LABELS: Record<string, string> = {
+  document_payment: "برگشت تسویه",
+  debt_payment: "برگشت پرداخت نسیه",
+  debt_settle: "برگشت تسویه نسیه",
+  cheque_clear: "برگشت وصول چک",
+};
+
+const OPERATION_REVERSAL_HINTS: Record<string, string> = {
+  document_payment:
+    "اگر این تسویه اشتباه ثبت شده، سند برگشت می‌خورد، مبلغ به موجودی حساب فروشگاه برمی‌گردد و بدهی نسیهٔ فاکتور/هزینه دوباره باز می‌شود.",
+  debt_payment:
+    "اگر این وصول نسیه اشتباه ثبت شده، سند برگشت می‌خورد، مبلغ از حساب فروشگاه کم می‌شود و بدهی مشتری دوباره باز می‌شود.",
+  debt_settle:
+    "اگر این تسویهٔ نسیه اشتباه ثبت شده، سند برگشت می‌خورد، مبلغ از حساب کم می‌شود و بدهی مشتری دوباره باز می‌شود.",
+  cheque_clear:
+    "اگر وصول این چک اشتباه ثبت شده، سند برگشت می‌خورد، چک به «در انتظار وصول» برمی‌گردد و مبلغ از موجودی حساب اصلاح می‌شود (فاکتور، فروش یا هزینهٔ مربوط دوباره پرداخت‌نشده می‌شود).",
+};
+
+export function canReverseOperationVoucher(voucher: AccountingVoucher): boolean {
   return (
     voucher.status === "posted" &&
     voucher.reverses_voucher_id == null &&
-    voucher.source_type === "document_payment"
+    voucher.source_type in OPERATION_REVERSAL_LABELS
   );
 }
 
-export async function reverseDocumentSettlementVoucher(
+export function operationReversalLabel(voucher: Pick<AccountingVoucher, "source_type">): string {
+  return OPERATION_REVERSAL_LABELS[voucher.source_type] || "برگشت عملیات";
+}
+
+export function operationReversalHint(voucher: Pick<AccountingVoucher, "source_type">): string {
+  return OPERATION_REVERSAL_HINTS[voucher.source_type] || "";
+}
+
+export async function reverseOperationVoucher(
   id: number,
 ): Promise<{ message: string; reversalVoucherId: number | null }> {
   const res = await FetchWithJwtClient(
     "POST",
-    `/api/accounting/vouchers/${id}/reverse-settlement`,
+    `/api/accounting/vouchers/${id}/reverse-operation`,
     authToken(),
   );
   const obj = asRecord(res);

@@ -32,9 +32,11 @@ import {
   auditorReverseVoucher,
   canAuditorCorrectVoucher,
   canAuditorReverseVoucher,
-  canReverseSettlementVoucher,
+  canReverseOperationVoucher,
   canReverseVoucherFromUi,
-  reverseDocumentSettlementVoucher,
+  operationReversalHint,
+  operationReversalLabel,
+  reverseOperationVoucher,
   fetchAccountingAuditLog,
   fetchAccountingPeriods,
   fetchAccountingVoucher,
@@ -119,14 +121,14 @@ export default function AccountingVoucherDetailPage() {
   };
 
   const settlementReverse = Boolean(
-    voucher && canReverseSettlementVoucher(voucher) && (!voucher.locked || canEditClosed),
+    voucher && canReverseOperationVoucher(voucher) && (!voucher.locked || canEditClosed),
   );
 
   const handleReverseSettlement = async () => {
     if (!voucher) return;
     setSaving(true);
     try {
-      const result = await reverseDocumentSettlementVoucher(voucher.id);
+      const result = await reverseOperationVoucher(voucher.id);
       toast.success(result.message);
       setSettlementConfirmOpen(false);
       if (result.reversalVoucherId) {
@@ -186,7 +188,7 @@ export default function AccountingVoucherDetailPage() {
                 onClick={() => setSettlementConfirmOpen(true)}
                 sx={{ borderColor: "#e6a23c", color: "#e6a23c" }}
               >
-                برگشت تسویه
+                {operationReversalLabel(voucher)}
               </Button>
             ) : null}
             {auditorReverse || ownerReverse ? (
@@ -239,8 +241,7 @@ export default function AccountingVoucherDetailPage() {
 
           {settlementReverse ? (
             <Alert severity="info" sx={{ mb: 2 }}>
-              اگر این تسویه اشتباه ثبت شده، با «برگشت تسویه» سند برگشت می‌خورد، مبلغ از حساب فروشگاه به موجودی
-              برمی‌گردد و بدهی نسیهٔ فاکتور/هزینه دوباره باز می‌شود.
+              {operationReversalHint(voucher)}
             </Alert>
           ) : isOperationalVoucher(voucher) && !canEditClosed ? (
             <Alert severity="warning" sx={{ mb: 2 }}>
@@ -355,17 +356,16 @@ export default function AccountingVoucherDetailPage() {
       )}
 
       <Dialog open={settlementConfirmOpen} onClose={() => setSettlementConfirmOpen(false)} fullWidth maxWidth="xs">
-        <DialogTitle>برگشت تسویه</DialogTitle>
+        <DialogTitle>{voucher ? operationReversalLabel(voucher) : "برگشت"}</DialogTitle>
         <DialogContent>
           <Typography sx={{ fontSize: 13 }}>
-            سند معکوس ساخته می‌شود، پرداخت از حساب لغو می‌شود و مبلغ دوباره به‌عنوان نسیهٔ پرداخت‌نشده روی فاکتور/هزینه
-            برمی‌گردد. ادامه می‌دهید؟
+            {voucher ? operationReversalHint(voucher) : ""} ادامه می‌دهید؟
           </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setSettlementConfirmOpen(false)}>انصراف</Button>
           <Button onClick={handleReverseSettlement} disabled={saving} sx={accountingButtonSx}>
-            {saving ? "در حال برگشت…" : "برگشت تسویه"}
+            {saving ? "در حال برگشت…" : voucher ? operationReversalLabel(voucher) : "برگشت"}
           </Button>
         </DialogActions>
       </Dialog>
