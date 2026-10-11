@@ -12,7 +12,10 @@ export type RawMaterialLot = {
   invoice_link?: "whole" | "item" | string | null;
 };
 
+export type RawMaterialUnit = "kg" | "piece";
+
 export type RawMaterial = {
+  unit_type?: RawMaterialUnit | string | null;
   id: number;
   name: string;
   sale_price?: number;
@@ -31,6 +34,7 @@ export type IngredientCostLot = {
 };
 
 export type IngredientCost = {
+  unit_type?: RawMaterialUnit | string | null;
   id?: number;
   raw_material_id: number;
   name?: string | null;
@@ -51,6 +55,7 @@ export type MaterialShortage = {
 export type SalePriceMode = "percent" | "manual";
 
 export type ProducedGood = {
+  unit_type?: RawMaterialUnit | string | null;
   id: number;
   name: string;
   sale_price?: number;
@@ -103,6 +108,7 @@ export type ProductionConsumption = {
 };
 
 export type ProductionRecord = {
+  unit_type?: RawMaterialUnit | string | null;
   id: number;
   produced_good_id: number;
   produced_good_name?: string;
@@ -118,6 +124,20 @@ export type RecipeLine = {
   raw_material_id: number | "";
   grams_per_kg: number;
 };
+
+export function isPieceMaterial(material?: { unit_type?: string | null } | null): boolean {
+  return material?.unit_type === "piece";
+}
+
+/** «کیلو» یا «عدد» */
+export function materialUnitLabel(material?: { unit_type?: string | null } | null): string {
+  return isPieceMaterial(material) ? "عدد" : "کیلو";
+}
+
+/** «قیمت هر کیلو» یا «قیمت هر عدد» */
+export function materialPriceLabel(material?: { unit_type?: string | null } | null): string {
+  return isPieceMaterial(material) ? "قیمت هر عدد" : "قیمت هر کیلو";
+}
 
 function normalizeDigits(value: string): string {
   return String(value)
