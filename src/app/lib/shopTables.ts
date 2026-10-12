@@ -279,11 +279,13 @@ export function tableOrderToSaleReceipt(order: TableOrder, shopName?: string): S
     const itemNote = String(
       (product as { note?: string | null }).note ||
         (product as { notes?: string | null }).notes ||
+        tableOrderRemovedLabel(product) ||
         "",
     ).trim();
+    const baseName = product.product_name || product.name || "محصول";
     return {
       id: product.id ?? product.product_id,
-      name: product.product_name || product.name || "محصول",
+      name: itemNote && !baseName.includes(itemNote) ? `${baseName} (${itemNote})` : baseName,
       quantity,
       unitPrice,
       lineTotal,
