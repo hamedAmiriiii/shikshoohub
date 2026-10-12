@@ -1,6 +1,8 @@
 ﻿"use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { readDocumentOpenRequest } from "@/app/lib/documentReturn";
 import {
   Box,
   Button,
@@ -445,6 +447,18 @@ export default function ExpensesPage() {
     setOpenForm(true);
   };
 
+  // باز شدن مستقیم یک هزینه (از گردش مالی مشتری) و برگشت به همان صفحه بعد از بستن
+  const router = useRouter();
+  const returnToRef = useRef<string | null>(null);
+
+  const leaveToReturnPage = () => {
+    const returnTo = returnToRef.current;
+    if (returnTo) {
+      returnToRef.current = null;
+      router.push(returnTo);
+    }
+  };
+
   const openEdit = (expense: Expense) => {
     setEditingExpense(expense);
     setType((expense.type as "جاری" | "سرمایه") || "جاری");
@@ -460,6 +474,26 @@ export default function ExpensesPage() {
     setBeneficiaryOption(beneficiary);
     setOpenForm(true);
   };
+
+  useEffect(() => {
+    const { id: openId, returnTo } = readDocumentOpenRequest();
+    if (!openId) return;
+    returnToRef.current = returnTo;
+    let cancelled = false;
+    void FetchWithJwtClient("GET", `/api/expenses/${openId}`, tokenCode()).then((res) => {
+      if (cancelled) return;
+      if (!res || res.hasError) {
+        toast.error(getApiErrorMessage(res, "هزینه پیدا نشد"));
+        if (returnTo) router.replace(returnTo);
+        return;
+      }
+      openEdit((res.data ?? res) as Expense);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSave = async () => {
     if (!title.trim() || !amount.trim()) {
@@ -502,6 +536,10 @@ export default function ExpensesPage() {
       toast.success(editingExpense ? "هزینه ویرایش شد" : "هزینه ثبت شد");
       setOpenForm(false);
       resetForm();
+      if (returnToRef.current) {
+        leaveToReturnPage();
+        return;
+      }
       await fetchExpenses();
     } catch {
       toast.error(editingExpense ? "خطا در ویرایش هزینه" : "خطا در ثبت هزینه");
@@ -902,6 +940,7 @@ export default function ExpensesPage() {
           onClose={() => {
             setOpenForm(false);
             resetForm();
+            leaveToReturnPage();
           }}
           maxWidth="sm"
           fullWidth
@@ -975,6 +1014,7 @@ export default function ExpensesPage() {
               onClick={() => {
                 setOpenForm(false);
                 resetForm();
+                leaveToReturnPage();
               }}
               sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}
             >

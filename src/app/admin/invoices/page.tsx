@@ -1,5 +1,7 @@
 ﻿"use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { readDocumentOpenRequest } from '@/app/lib/documentReturn';
 import { 
   Box, 
   Container, 
@@ -220,6 +222,39 @@ export default function InvoicesPage() {
     const id = Number(new URLSearchParams(window.location.search).get("beneficiary_id"));
     if (Number.isFinite(id) && id > 0) setFilterBeneficiaryId(id);
   }, []);
+
+  // باز شدن مستقیم یک فاکتور (از گردش مالی مشتری) و برگشت به همان صفحه بعد از بستن
+  const router = useRouter();
+  const returnToRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const { id: openId, returnTo } = readDocumentOpenRequest();
+    if (!openId) return;
+    returnToRef.current = returnTo;
+    let cancelled = false;
+    void FetchWithJwtClient('GET', `/api/invoices/${openId}`, tokenCode()).then((res) => {
+      if (cancelled) return;
+      if (!res || res.hasError) {
+        toast.error(getApiErrorMessage(res, 'فاکتور پیدا نشد'));
+        if (returnTo) router.replace(returnTo);
+        return;
+      }
+      setDetailsInvoice((res.data ?? res) as Invoice);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const closeDetails = () => {
+    setDetailsInvoice(null);
+    const returnTo = returnToRef.current;
+    if (returnTo) {
+      returnToRef.current = null;
+      router.push(returnTo);
+    }
+  };
 
   const buildUrl = () => {
     let url = "/api/invoices";
@@ -1337,7 +1372,7 @@ export default function InvoicesPage() {
         <InvoiceDetailsDialog
           open={!!detailsInvoice}
           invoice={detailsInvoice}
-          onClose={() => setDetailsInvoice(null)}
+          onClose={closeDetails}
           onSaved={fetchInvoices}
         />
 

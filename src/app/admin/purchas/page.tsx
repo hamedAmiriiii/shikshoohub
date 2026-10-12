@@ -1,6 +1,12 @@
 ﻿"use client";
 import List from "@/app/coponent/grid/Grid";
-import React, { useEffect, useMemo, useState, Suspense } from "react";
+import React, { useEffect, useMemo, useRef, useState, Suspense } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
+import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
+import tokenCode from "@/app/coponent/tokenCode";
+import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
+import { readDocumentOpenRequest } from "@/app/lib/documentReturn";
 
 import {
   Box,
@@ -84,8 +90,39 @@ export default function ListPurches() {
       return () => window.removeEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, sync);
     }, []);
 
+    const router = useRouter();
+    const returnToRef = useRef<string | null>(null);
+
+    // باز شدن مستقیم یک فروش (از گردش مالی مشتری) و برگشت به همان صفحه بعد از بستن
+    useEffect(() => {
+      const { id: openId, returnTo } = readDocumentOpenRequest();
+      if (!openId) return;
+      returnToRef.current = returnTo;
+      let cancelled = false;
+      void FetchWithJwtClient("GET", `/api/purchased-products/${openId}`, tokenCode()).then((res) => {
+        if (cancelled) return;
+        if (!res || res.hasError) {
+          toast.error(getApiErrorMessage(res, "فروش پیدا نشد"));
+          if (returnTo) router.replace(returnTo);
+          return;
+        }
+        setDetailsItem(res.data ?? res);
+      });
+      return () => {
+        cancelled = true;
+      };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     const openDetails = (item: any) => setDetailsItem(item);
-    const closeDetails = () => setDetailsItem(null);
+    const closeDetails = () => {
+      setDetailsItem(null);
+      const returnTo = returnToRef.current;
+      if (returnTo) {
+        returnToRef.current = null;
+        router.push(returnTo);
+      }
+    };
     const handleRefresh = () => setRefreshGrid((v) => !v);
 
     const formatRowNumber = (row?: { index: number; page: number; perPage: number }) => {

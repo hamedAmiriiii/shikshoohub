@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Box,
   Button,
   Card,
   CardContent,
+  Chip,
   CircularProgress,
   Container,
   Paper,
@@ -15,12 +16,14 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
 } from "@mui/material";
 import PrintIcon from "@mui/icons-material/Print";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
@@ -28,22 +31,31 @@ import tokenCode from "@/app/coponent/tokenCode";
 import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
 import { paymentTypeLabel } from "@/app/lib/paymentTypes";
 import { isIranMobile, normalizeIranMobile } from "@/app/lib/purchaseReturns";
+import { buildDocumentLink, type LedgerDocumentType } from "@/app/lib/documentReturn";
 import { adminButtonStartIconSx, adminPageSx } from "@/app/admin/theme/adminTheme";
 
-type HistoryItem = {
-  display_name?: string | null;
-  item_name?: string | null;
-  quantity?: number | string | null;
-  product?: { name?: string | null } | null;
+type LedgerSide = "debtor" | "creditor" | "settled";
+
+type LedgerEntry = {
+  key: string;
+  type: LedgerDocumentType;
+  id: number;
+  date?: string | null;
+  description?: string | null;
+  payment_type?: string | null;
+  amount: number | string;
+  debtor_amount: number | string;
+  creditor_amount: number | string;
+  side: LedgerSide;
 };
 
-type HistoryPurchase = {
-  id: number;
-  created_at?: string | null;
-  total_amount?: number | string | null;
-  payment_type?: string | null;
-  payment_type_label?: string | null;
-  purchased_products?: HistoryItem[];
+type LedgerSummary = {
+  sales_total?: number | string;
+  documents_total?: number | string;
+  debtor_total?: number | string;
+  creditor_total?: number | string;
+  net?: number | string;
+  net_side?: LedgerSide;
 };
 
 type HistoryStats = {
@@ -55,12 +67,27 @@ type HistoryStats = {
   current_credit?: number | string;
 };
 
-type BeneficiaryTotals = {
-  purchased_total?: number;
-  paid_total?: number;
-  unpaid_total?: number;
-  invoice_count?: number;
-  expense_count?: number;
+type LedgerFilter = "all" | LedgerDocumentType | "open";
+
+const DEBTOR_COLOR = "#ef5350";
+const CREDITOR_COLOR = "#43a047";
+
+const TYPE_LABEL: Record<LedgerDocumentType, string> = {
+  sale: "فروش",
+  invoice: "فاکتور",
+  expense: "هزینه",
+};
+
+const SIDE_LABEL: Record<LedgerSide, string> = {
+  debtor: "بدهکار",
+  creditor: "بستانکار",
+  settled: "تسویه‌شده",
+};
+
+const SIDE_COLOR: Record<LedgerSide, string> = {
+  debtor: DEBTOR_COLOR,
+  creditor: CREDITOR_COLOR,
+  settled: "var(--admin-text-muted)",
 };
 
 const cellSx = {
@@ -87,21 +114,15 @@ function formatMoney(value: unknown): string {
   return `${new Intl.NumberFormat("fa-IR").format(Math.floor(asAmount(value)))} تومان`;
 }
 
-function itemLabel(item: HistoryItem): string {
-  const name = String(item.display_name || item.item_name || item.product?.name || "").trim();
-  if (!name) return "";
-  const qty = asAmount(item.quantity);
-  if (qty > 1) return `${name} × ${new Intl.NumberFormat("fa-IR").format(qty)}`;
-  return name;
+function formatMoneyOrDash(value: unknown): string {
+  return asAmount(value) > 0 ? formatMoney(value) : "—";
 }
 
-function purchaseItems(purchase: HistoryPurchase): string {
-  const labels = (purchase.purchased_products || []).map(itemLabel).filter(Boolean);
-  return labels.length ? labels.join("، ") : "—";
-}
-
-function paymentLabel(purchase: HistoryPurchase): string {
-  return purchase.payment_type_label || paymentTypeLabel(purchase.payment_type || "");
+function entryKind(entry: LedgerEntry): string {
+  if (entry.type === "sale" && entry.payment_type) {
+    return `${TYPE_LABEL.sale} · ${paymentTypeLabel(entry.payment_type)}`;
+  }
+  return TYPE_LABEL[entry.type];
 }
 
 function escapeHtml(value: unknown): string {
@@ -112,66 +133,76 @@ function escapeHtml(value: unknown): string {
     .replace(/"/g, "&quot;");
 }
 
-function printCustomerHistory(input: {
+function netText(summary: LedgerSummary | null): string {
+  const side = summary?.net_side ?? "settled";
+  if (side === "settled") return "تسویه";
+  return `${SIDE_LABEL[side]} ${formatMoney(Math.abs(asAmount(summary?.net)))}`;
+}
+
+function netHint(summary: LedgerSummary | null): string {
+  const side = summary?.net_side ?? "settled";
+  if (side === "debtor") return "این شخص به شما بدهکار است";
+  if (side === "creditor") return "شما به این شخص بدهکارید";
+  return "حساب این شخص صاف است";
+}
+
+function printLedger(input: {
   title: string;
-  phone: string;
-  purchaseCount: string;
-  totalSpent: string;
+  summary: LedgerSummary | null;
   credit: string;
-  purchases: HistoryPurchase[];
-  boughtFromCustomer: boolean;
-  purchasedTotal: string;
-  unpaidTotal: string;
+  entries: LedgerEntry[];
 }) {
-  const rows = input.purchases
+  const rows = input.entries
     .map(
-      (purchase) => `<tr>
-        <td>#${escapeHtml(purchase.id)}</td>
-        <td>${escapeHtml(purchase.created_at || "—")}</td>
-        <td>${escapeHtml(paymentLabel(purchase))}</td>
-        <td>${escapeHtml(formatMoney(purchase.total_amount))}</td>
-        <td class="items">${escapeHtml(purchaseItems(purchase))}</td>
+      (entry) => `<tr>
+        <td>#${escapeHtml(entry.id)}</td>
+        <td>${escapeHtml(entry.date || "—")}</td>
+        <td>${escapeHtml(entryKind(entry))}</td>
+        <td class="items">${escapeHtml(entry.description || "—")}</td>
+        <td>${escapeHtml(formatMoney(entry.amount))}</td>
+        <td class="debtor">${escapeHtml(formatMoneyOrDash(entry.debtor_amount))}</td>
+        <td class="creditor">${escapeHtml(formatMoneyOrDash(entry.creditor_amount))}</td>
+        <td>${escapeHtml(SIDE_LABEL[entry.side])}</td>
       </tr>`,
     )
     .join("");
-  const bought = input.boughtFromCustomer
-    ? `<p class="note">خرید از این شخص: ${escapeHtml(input.purchasedTotal)} — بدهی ${escapeHtml(input.unpaidTotal)}</p>`
-    : "";
   const html = `<!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="utf-8" />
-  <title>سابقه ${escapeHtml(input.title)}</title>
+  <title>گردش مالی ${escapeHtml(input.title)}</title>
   <style>
     body { font-family: Tahoma, "IRANSans", sans-serif; direction: rtl; padding: 24px; color: #111; }
     h1 { font-size: 18px; margin: 0 0 4px; }
     .sub { font-size: 12px; color: #555; margin-bottom: 14px; }
-    .stats { display: flex; gap: 16px; font-size: 13px; margin-bottom: 16px; }
+    .stats { display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; margin-bottom: 16px; }
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
     th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: center; }
     th { background: #f3f3f3; }
     td.items { text-align: right; }
-    .note { margin-top: 14px; font-size: 12px; color: #333; }
+    td.debtor { color: #c62828; }
+    td.creditor { color: #2e7d32; }
     @media print { body { padding: 0; } }
   </style>
 </head>
 <body>
   <h1>${escapeHtml(input.title)}</h1>
-  <div class="sub">فروش‌های ثبت‌شده برای این مشتری</div>
+  <div class="sub">گردش مالی کامل: فروش، فاکتور و هزینه</div>
   <div class="stats">
-    <span>تعداد فروش: ${escapeHtml(input.purchaseCount)}</span>
-    <span>مجموع فروش: ${escapeHtml(input.totalSpent)}</span>
-    <span>اعتبار فعلی: ${escapeHtml(input.credit)}</span>
+    <span><b>وضعیت حساب:</b> ${escapeHtml(netText(input.summary))}</span>
+    <span>جمع بدهکاری: ${escapeHtml(formatMoney(input.summary?.debtor_total))}</span>
+    <span>جمع بستانکاری: ${escapeHtml(formatMoney(input.summary?.creditor_total))}</span>
+    <span>مجموع فروش: ${escapeHtml(formatMoney(input.summary?.sales_total))}</span>
+    <span>اعتبار باشگاه: ${escapeHtml(input.credit)}</span>
   </div>
   <table>
     <thead>
-      <tr><th>شماره</th><th>تاریخ</th><th>پرداخت</th><th>مبلغ</th><th>اقلام</th></tr>
+      <tr><th>شماره</th><th>تاریخ</th><th>نوع</th><th>شرح</th><th>مبلغ</th><th>بدهکار</th><th>بستانکار</th><th>وضعیت</th></tr>
     </thead>
     <tbody>
-      ${rows || `<tr><td colspan="5">فروشی ثبت نشده</td></tr>`}
+      ${rows || `<tr><td colspan="8">تراکنشی ثبت نشده</td></tr>`}
     </tbody>
   </table>
-  ${bought}
 </body>
 </html>`;
   const iframe = document.createElement("iframe");
@@ -194,53 +225,55 @@ function printCustomerHistory(input: {
   return true;
 }
 
-async function downloadCustomerHistoryExcel(input: {
+async function downloadLedgerExcel(input: {
   title: string;
   phone: string;
-  purchaseCount: number;
-  totalSpent: number;
-  credit: number;
-  purchases: HistoryPurchase[];
-  boughtFromCustomer: boolean;
-  purchasedTotal: number;
-  unpaidTotal: number;
+  summary: LedgerSummary | null;
+  entries: LedgerEntry[];
 }) {
   const XLSX = await import("xlsx");
   const rows: Array<Array<string | number>> = [
     ["مشتری", input.title],
     ["شماره", input.phone],
-    ["تعداد فروش", input.purchaseCount],
-    ["مجموع فروش (تومان)", input.totalSpent],
-    ["اعتبار فعلی (تومان)", input.credit],
+    ["وضعیت حساب", netText(input.summary)],
+    ["جمع بدهکاری (تومان)", Math.floor(asAmount(input.summary?.debtor_total))],
+    ["جمع بستانکاری (تومان)", Math.floor(asAmount(input.summary?.creditor_total))],
+    ["مجموع فروش (تومان)", Math.floor(asAmount(input.summary?.sales_total))],
+    [],
+    ["شماره", "تاریخ", "نوع", "شرح", "مبلغ (تومان)", "بدهکار (تومان)", "بستانکار (تومان)", "وضعیت"],
   ];
-  if (input.boughtFromCustomer) {
-    rows.push(["خرید از این شخص (تومان)", input.purchasedTotal], ["بدهی (تومان)", input.unpaidTotal]);
-  }
-  rows.push([], ["شماره", "تاریخ", "پرداخت", "مبلغ (تومان)", "اقلام"]);
-  for (const purchase of input.purchases) {
+  for (const entry of input.entries) {
     rows.push([
-      purchase.id,
-      purchase.created_at || "",
-      paymentLabel(purchase),
-      Math.floor(asAmount(purchase.total_amount)),
-      purchaseItems(purchase) === "—" ? "" : purchaseItems(purchase),
+      entry.id,
+      entry.date || "",
+      entryKind(entry),
+      entry.description || "",
+      Math.floor(asAmount(entry.amount)),
+      Math.floor(asAmount(entry.debtor_amount)),
+      Math.floor(asAmount(entry.creditor_amount)),
+      SIDE_LABEL[entry.side],
     ]);
   }
   const sheet = XLSX.utils.aoa_to_sheet(rows);
-  sheet["!cols"] = [{ wch: 22 }, { wch: 22 }, { wch: 16 }, { wch: 18 }, { wch: 48 }];
+  sheet["!cols"] = [{ wch: 14 }, { wch: 22 }, { wch: 18 }, { wch: 44 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 14 }];
   const book = XLSX.utils.book_new();
   book.Workbook = { Views: [{ RTL: true }] };
-  XLSX.utils.book_append_sheet(book, sheet, "سابقه");
-  XLSX.writeFile(book, `سابقه-مشتری-${input.phone}.xlsx`);
+  XLSX.utils.book_append_sheet(book, sheet, "گردش مالی");
+  XLSX.writeFile(book, `گردش-مالی-${input.phone}.xlsx`);
 }
 
 export default function CustomerPurchaseHistoryPage() {
   const params = useParams();
+  const router = useRouter();
   const phone = normalizeIranMobile(String(params?.phone || ""));
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<HistoryStats | null>(null);
-  const [purchases, setPurchases] = useState<HistoryPurchase[]>([]);
-  const [beneficiary, setBeneficiary] = useState<BeneficiaryTotals | null>(null);
+  const [ledger, setLedger] = useState<LedgerEntry[]>([]);
+  const [summary, setSummary] = useState<LedgerSummary | null>(null);
+  const [beneficiaryId, setBeneficiaryId] = useState<number>(0);
+  const [filter, setFilter] = useState<LedgerFilter>("all");
+
+  const pagePath = `/admin/purchas/customer/${phone}`;
 
   useEffect(() => {
     if (!isIranMobile(phone)) {
@@ -254,24 +287,21 @@ export default function CustomerPurchaseHistoryPage() {
       const res = await FetchWithJwtClient("GET", `/api/customers/${phone}`, token);
       if (cancelled) return;
       if (!res || res.hasError) {
-        toast.error(getApiErrorMessage(res, "سابقه مشتری دریافت نشد"));
+        toast.error(getApiErrorMessage(res, "گردش مالی مشتری دریافت نشد"));
         setStats(null);
-        setPurchases([]);
+        setLedger([]);
+        setSummary(null);
         setLoading(false);
         return;
       }
       const body = asRecord(res);
       const nested = asRecord(body?.data);
-      const statsRow = (asRecord(body?.stats) ?? asRecord(nested?.stats) ?? null) as HistoryStats | null;
-      const list = Array.isArray(body?.purchases)
-        ? body.purchases
-        : Array.isArray(nested?.purchases)
-          ? nested.purchases
-          : [];
-      const beneficiaryRow = (asRecord(body?.as_beneficiary) ?? asRecord(nested?.as_beneficiary) ?? null) as BeneficiaryTotals | null;
+      const source = body?.ledger !== undefined || body?.stats !== undefined ? body : nested;
+      const statsRow = (asRecord(source?.stats) ?? null) as HistoryStats | null;
       setStats(statsRow);
-      setPurchases(list as HistoryPurchase[]);
-      setBeneficiary(beneficiaryRow);
+      setLedger(Array.isArray(source?.ledger) ? (source?.ledger as LedgerEntry[]) : []);
+      setSummary((asRecord(source?.ledger_summary) ?? null) as LedgerSummary | null);
+      setBeneficiaryId(Number(statsRow?.id) || 0);
       setLoading(false);
     })();
     return () => {
@@ -279,45 +309,50 @@ export default function CustomerPurchaseHistoryPage() {
     };
   }, [phone]);
 
+  const visibleEntries = useMemo(() => {
+    if (filter === "all") return ledger;
+    if (filter === "open") return ledger.filter((entry) => entry.side !== "settled");
+    return ledger.filter((entry) => entry.type === filter);
+  }, [ledger, filter]);
+
   const name = String(stats?.name || "").trim();
   const title = name ? `${name} — ${phone}` : phone;
-  const boughtFromCustomer =
-    asAmount(beneficiary?.purchased_total) > 0 ||
-    asAmount(beneficiary?.invoice_count) > 0 ||
-    asAmount(beneficiary?.expense_count) > 0;
-  const beneficiaryId = Number(stats?.id);
-  const purchaseCountLabel = new Intl.NumberFormat("fa-IR").format(
-    purchases.length || asAmount(stats?.total_purchases),
-  );
-  const exportInput = {
-    title,
-    phone,
-    purchaseCount: purchases.length || asAmount(stats?.total_purchases),
-    totalSpent: Math.floor(asAmount(stats?.total_spent)),
-    credit: Math.floor(asAmount(stats?.current_credit)),
-    purchases,
-    boughtFromCustomer,
-    purchasedTotal: Math.floor(asAmount(beneficiary?.purchased_total)),
-    unpaidTotal: Math.floor(asAmount(beneficiary?.unpaid_total)),
+  const netSide = summary?.net_side ?? "settled";
+  const hasDocuments = ledger.some((entry) => entry.type !== "sale");
+
+  const openEntry = (entry: LedgerEntry) => {
+    router.push(buildDocumentLink(entry.type, entry.id, pagePath));
   };
 
   const handlePrint = () => {
-    const ok = printCustomerHistory({
-      ...exportInput,
-      purchaseCount: purchaseCountLabel,
-      totalSpent: formatMoney(stats?.total_spent),
+    const ok = printLedger({
+      title,
+      summary,
       credit: formatMoney(stats?.current_credit),
-      purchasedTotal: formatMoney(beneficiary?.purchased_total),
-      unpaidTotal: formatMoney(beneficiary?.unpaid_total),
+      entries: visibleEntries,
     });
     if (!ok) toast.error("پنجره پرینت باز نشد");
   };
 
   const handleExcel = () => {
-    void downloadCustomerHistoryExcel(exportInput).catch(() => {
+    void downloadLedgerExcel({ title, phone, summary, entries: visibleEntries }).catch(() => {
       toast.error("خروجی اکسل ساخته نشد");
     });
   };
+
+  const summaryCards = [
+    {
+      label: "وضعیت حساب",
+      value: netText(summary),
+      hint: netHint(summary),
+      color: SIDE_COLOR[netSide],
+      emphasis: true,
+    },
+    { label: "جمع بدهکاری", value: formatMoney(summary?.debtor_total), hint: "طلب شما از این شخص", color: DEBTOR_COLOR },
+    { label: "جمع بستانکاری", value: formatMoney(summary?.creditor_total), hint: "بدهی شما به این شخص", color: CREDITOR_COLOR },
+    { label: "مجموع فروش", value: formatMoney(summary?.sales_total ?? stats?.total_spent), color: "var(--admin-accent)" },
+    { label: "اعتبار باشگاه", value: formatMoney(stats?.current_credit), color: "var(--admin-accent)" },
+  ];
 
   return (
     <Box sx={{ ...adminPageSx, pt: { xs: 1.25, md: 2 }, pb: { xs: "100px", md: 4 } }}>
@@ -337,7 +372,7 @@ export default function CustomerPurchaseHistoryPage() {
                   {title}
                 </Typography>
                 <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>
-                  فروش‌های ثبت‌شده برای این مشتری
+                  گردش مالی کامل: فروش، فاکتور و هزینه
                 </Typography>
               </Box>
               <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
@@ -346,12 +381,7 @@ export default function CustomerPurchaseHistoryPage() {
                   variant="outlined"
                   startIcon={<PrintIcon />}
                   onClick={handlePrint}
-                  sx={{
-                    ...adminButtonStartIconSx,
-                    color: "var(--admin-text)",
-                    borderColor: "var(--admin-border)",
-                    fontSize: 12,
-                  }}
+                  sx={{ ...adminButtonStartIconSx, color: "var(--admin-text)", borderColor: "var(--admin-border)", fontSize: 12 }}
                 >
                   پرینت
                 </Button>
@@ -360,51 +390,93 @@ export default function CustomerPurchaseHistoryPage() {
                   variant="outlined"
                   startIcon={<FileDownloadIcon />}
                   onClick={handleExcel}
-                  sx={{
-                    ...adminButtonStartIconSx,
-                    color: "var(--admin-text)",
-                    borderColor: "var(--admin-border)",
-                    fontSize: 12,
-                  }}
+                  sx={{ ...adminButtonStartIconSx, color: "var(--admin-text)", borderColor: "var(--admin-border)", fontSize: 12 }}
                 >
                   خروجی اکسل
                 </Button>
+                {beneficiaryId > 0 && hasDocuments ? (
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    component={Link}
+                    href={`/admin/beneficiaries/${beneficiaryId}`}
+                    sx={{ ...adminButtonStartIconSx, color: "var(--admin-text)", borderColor: "var(--admin-border)", fontSize: 12 }}
+                  >
+                    اسناد خرید
+                  </Button>
+                ) : null}
               </Box>
             </Box>
 
             <Box
               sx={{
                 display: "grid",
-                gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr 1fr" },
+                gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(5, 1fr)" },
                 gap: 1,
                 mb: 1.5,
               }}
             >
-              {[
-                { label: "تعداد فروش", value: purchaseCountLabel },
-                { label: "مجموع فروش", value: formatMoney(stats?.total_spent) },
-                { label: "اعتبار فعلی", value: formatMoney(stats?.current_credit) },
-              ].map((item) => (
+              {summaryCards.map((item) => (
                 <Card
                   key={item.label}
                   sx={{
                     backgroundColor: "var(--admin-surface)",
                     border: "1px solid var(--admin-border)",
+                    borderColor: item.emphasis ? item.color : "var(--admin-border)",
                     borderRadius: "10px",
                     boxShadow: "none",
+                    gridColumn: item.emphasis ? { xs: "1 / -1", md: "auto" } : "auto",
                   }}
                 >
                   <CardContent sx={{ py: 1, px: 1.5, "&:last-child": { pb: 1 } }}>
                     <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>{item.label}</Typography>
-                    <Typography sx={{ color: "var(--admin-accent)", fontSize: 14, fontWeight: 700 }}>{item.value}</Typography>
+                    <Typography sx={{ color: item.color, fontSize: item.emphasis ? 16 : 14, fontWeight: 700 }}>
+                      {item.value}
+                    </Typography>
+                    {item.hint ? (
+                      <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, mt: 0.25 }}>{item.hint}</Typography>
+                    ) : null}
                   </CardContent>
                 </Card>
               ))}
             </Box>
 
-            {purchases.length === 0 ? (
+            <ToggleButtonGroup
+              exclusive
+              size="small"
+              value={filter}
+              onChange={(_, value: LedgerFilter | null) => value && setFilter(value)}
+              sx={{ mb: 1.25, flexWrap: "wrap", direction: "rtl" }}
+            >
+              {(
+                [
+                  ["all", "همه"],
+                  ["open", "فقط مانده‌دار"],
+                  ["sale", "فروش"],
+                  ["invoice", "فاکتور"],
+                  ["expense", "هزینه"],
+                ] as Array<[LedgerFilter, string]>
+              ).map(([value, label]) => (
+                <ToggleButton
+                  key={value}
+                  value={value}
+                  sx={{
+                    fontSize: 12,
+                    px: 1.5,
+                    py: 0.4,
+                    color: "var(--admin-text-muted)",
+                    borderColor: "var(--admin-border)",
+                    "&.Mui-selected": { color: "var(--admin-text)", backgroundColor: "var(--admin-menu-hover)" },
+                  }}
+                >
+                  {label}
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+
+            {visibleEntries.length === 0 ? (
               <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 13, py: 2, textAlign: "center" }}>
-                فروشی برای این مشتری ثبت نشده
+                {ledger.length === 0 ? "تراکنشی برای این شخص ثبت نشده" : "موردی با این فیلتر پیدا نشد"}
               </Typography>
             ) : (
               <TableContainer
@@ -421,7 +493,7 @@ export default function CustomerPurchaseHistoryPage() {
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      {["شماره", "تاریخ", "پرداخت", "مبلغ", "اقلام"].map((label) => (
+                      {["شماره", "تاریخ", "نوع", "شرح", "مبلغ", "بدهکار", "بستانکار", "وضعیت"].map((label) => (
                         <TableCell key={label} sx={{ ...cellSx, fontWeight: 600, backgroundColor: "var(--admin-surface-alt)" }}>
                           {label}
                         </TableCell>
@@ -429,18 +501,50 @@ export default function CustomerPurchaseHistoryPage() {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {purchases.map((purchase) => (
-                      <TableRow key={purchase.id}>
-                        <TableCell sx={cellSx}>#{purchase.id}</TableCell>
-                        <TableCell sx={cellSx}>{purchase.created_at || "—"}</TableCell>
+                    {visibleEntries.map((entry) => (
+                      <TableRow
+                        key={entry.key}
+                        hover
+                        onClick={() => openEntry(entry)}
+                        sx={{ cursor: "pointer" }}
+                      >
                         <TableCell sx={cellSx}>
-                          {purchase.payment_type_label || paymentTypeLabel(purchase.payment_type || "")}
+                          <Link
+                            href={buildDocumentLink(entry.type, entry.id, pagePath)}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ color: "var(--admin-accent)", fontWeight: 700, textDecoration: "none" }}
+                          >
+                            #{entry.id}
+                          </Link>
                         </TableCell>
-                        <TableCell sx={{ ...cellSx, color: "var(--admin-accent)", fontWeight: 700 }}>
-                          {formatMoney(purchase.total_amount)}
+                        <TableCell sx={cellSx}>{entry.date || "—"}</TableCell>
+                        <TableCell sx={cellSx}>{entryKind(entry)}</TableCell>
+                        <TableCell sx={{ ...cellSx, whiteSpace: "normal", textAlign: "right", minWidth: 140 }}>
+                          {entry.description || "—"}
                         </TableCell>
-                        <TableCell sx={{ ...cellSx, whiteSpace: "normal", textAlign: "right" }}>
-                          {purchaseItems(purchase)}
+                        <TableCell sx={{ ...cellSx, fontWeight: 700 }}>{formatMoney(entry.amount)}</TableCell>
+                        <TableCell sx={{ ...cellSx, color: DEBTOR_COLOR, fontWeight: 700 }}>
+                          {formatMoneyOrDash(entry.debtor_amount)}
+                        </TableCell>
+                        <TableCell sx={{ ...cellSx, color: CREDITOR_COLOR, fontWeight: 700 }}>
+                          {formatMoneyOrDash(entry.creditor_amount)}
+                        </TableCell>
+                        <TableCell sx={cellSx}>
+                          <Chip
+                            size="small"
+                            label={SIDE_LABEL[entry.side]}
+                            sx={{
+                              fontSize: 11,
+                              fontWeight: 700,
+                              color: SIDE_COLOR[entry.side],
+                              backgroundColor:
+                                entry.side === "debtor"
+                                  ? "rgba(239,83,80,0.12)"
+                                  : entry.side === "creditor"
+                                    ? "rgba(67,160,71,0.14)"
+                                    : "var(--admin-surface-alt)",
+                            }}
+                          />
                         </TableCell>
                       </TableRow>
                     ))}
@@ -448,28 +552,6 @@ export default function CustomerPurchaseHistoryPage() {
                 </Table>
               </TableContainer>
             )}
-
-            {boughtFromCustomer && Number.isFinite(beneficiaryId) && beneficiaryId > 0 ? (
-              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, alignItems: "center" }}>
-                <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>
-                  خرید از این شخص: {formatMoney(beneficiary?.purchased_total)} — بدهی {formatMoney(beneficiary?.unpaid_total)}
-                </Typography>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  component={Link}
-                  href={`/admin/beneficiaries/${beneficiaryId}`}
-                  sx={{
-                    ...adminButtonStartIconSx,
-                    color: "var(--admin-text)",
-                    borderColor: "var(--admin-border)",
-                    fontSize: 12,
-                  }}
-                >
-                  اسناد خرید
-                </Button>
-              </Box>
-            ) : null}
           </>
         )}
       </Container>
