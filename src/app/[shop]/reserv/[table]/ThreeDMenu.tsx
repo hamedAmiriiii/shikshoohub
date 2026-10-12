@@ -1,15 +1,16 @@
 "use client";
 
 import AddIcon from "@mui/icons-material/Add";
+import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import ChevronLeftRoundedIcon from "@mui/icons-material/ChevronLeftRounded";
 import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
-import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import LockRoundedIcon from "@mui/icons-material/LockRounded";
 import RemoveIcon from "@mui/icons-material/Remove";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import { Box, ButtonBase, IconButton, Typography } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { createPortal } from "react-dom";
 import { APP_FONT_FAMILY } from "@/app/lib/appFont";
 import type { ReservMenuItem, ReservMenuLayoutProps } from "./ReservMenuLayouts";
 import { useReservI18n } from "./reservI18n";
@@ -374,27 +375,28 @@ function IngredientRow({
       onClick={onToggle}
       sx={{
         width: "100%",
+        height: "100%",
         display: "flex",
         alignItems: "center",
-        gap: 1.2,
+        gap: 0.7,
         textAlign: "start",
-        p: 0.9,
-        borderRadius: "18px",
+        p: 0.7,
+        borderRadius: "14px",
         fontFamily: APP_FONT_FAMILY,
         color: "#fff",
         bgcolor: checked ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.025)",
         border: `1px solid ${checked ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.06)"}`,
         transition: "background-color 220ms ease, border-color 220ms ease",
-        animation: `td3Rise 420ms ${EASE_OUT} ${120 + index * 55}ms both`,
+        animation: `td3Rise 420ms ${EASE_OUT} ${120 + index * 40}ms both`,
         "&.Mui-disabled": { color: "#fff", opacity: 0.9 },
       }}
     >
       <Box
         sx={{
-          width: 46,
-          height: 46,
+          width: 34,
+          height: 34,
           flexShrink: 0,
-          borderRadius: "14px",
+          borderRadius: "10px",
           display: "grid",
           placeItems: "center",
           bgcolor: "rgba(255,255,255,0.08)",
@@ -407,62 +409,63 @@ function IngredientRow({
         {ingredient.image_url ? (
           <Box component="img" src={ingredient.image_url} alt="" sx={{ width: "88%", height: "88%", objectFit: "contain" }} />
         ) : (
-          <RestaurantMenuIcon sx={{ fontSize: 20, color: "rgba(255,255,255,0.6)" }} />
+          <RestaurantMenuIcon sx={{ fontSize: 16, color: "rgba(255,255,255,0.6)" }} />
         )}
       </Box>
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Typography
           sx={{
             fontWeight: 800,
-            fontSize: 14,
-            lineHeight: 1.4,
+            fontSize: 12.5,
+            lineHeight: 1.3,
             textDecoration: checked ? "none" : "line-through",
             opacity: checked ? 1 : 0.55,
             transition: "opacity 200ms ease",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
           }}
         >
           {ingredient.name}
         </Typography>
-        <Typography sx={{ fontSize: 11.5, color: "rgba(255,255,255,0.6)", opacity: checked ? 1 : 0.5 }}>
+        <Typography sx={{ fontSize: 10.5, color: "rgba(255,255,255,0.6)", opacity: checked ? 1 : 0.5 }}>
           {formatNumber(ingredient.price)} {t("toman")}
         </Typography>
       </Box>
       {locked ? (
         <Box
+          title={t("threedFixed")}
           sx={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 0.4,
-            px: 1,
-            py: 0.4,
-            borderRadius: 999,
-            fontSize: 11,
-            fontWeight: 700,
+            width: 24,
+            height: 24,
+            flexShrink: 0,
+            borderRadius: "8px",
+            display: "grid",
+            placeItems: "center",
             bgcolor: "rgba(255,255,255,0.09)",
             color: "rgba(255,255,255,0.75)",
           }}
         >
           <LockRoundedIcon sx={{ fontSize: 13 }} />
-          {t("threedFixed")}
         </Box>
       ) : (
         <Box
           sx={{
-            width: 28,
-            height: 28,
+            width: 24,
+            height: 24,
             flexShrink: 0,
-            borderRadius: "10px",
+            borderRadius: "8px",
             display: "grid",
             placeItems: "center",
             color: "#1b1206",
             background: checked ? ACCENT_GRADIENT : "transparent",
             border: checked ? "1px solid transparent" : "2px solid rgba(255,255,255,0.3)",
-            boxShadow: checked ? "0 6px 16px rgba(255,94,98,0.4)" : "none",
+            boxShadow: checked ? "0 4px 12px rgba(255,94,98,0.35)" : "none",
             transform: checked ? "scale(1)" : "scale(0.92)",
             transition: `transform 260ms ${EASE_SPRING}, background 200ms ease, box-shadow 200ms ease`,
           }}
         >
-          <CheckRoundedIcon sx={{ fontSize: 19, opacity: checked ? 1 : 0, transition: "opacity 160ms ease" }} />
+          <CheckRoundedIcon sx={{ fontSize: 16, opacity: checked ? 1 : 0, transition: "opacity 160ms ease" }} />
         </Box>
       )}
     </ButtonBase>
@@ -588,7 +591,7 @@ function ThreeDDetail({
 
   const stackWidth = compact ? "min(46%, 170px)" : "min(58vw, 36vh, 330px)";
 
-  return (
+  const detail = (
     <Box
       role="dialog"
       aria-modal="true"
@@ -596,7 +599,7 @@ function ThreeDDetail({
       sx={{
         position: compact ? "absolute" : "fixed",
         inset: 0,
-        zIndex: compact ? 40 : 1250,
+        zIndex: compact ? 40 : 1400,
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
@@ -619,50 +622,48 @@ function ThreeDDetail({
           animation: "td3Fade 700ms ease both",
         }}
       />
-      <Typography
-        key={`mark-${item.key}`}
-        aria-hidden
-        sx={{
-          position: "absolute",
-          top: compact ? 44 : "9%",
-          insetInline: 0,
-          textAlign: "center",
-          fontWeight: 900,
-          fontSize: compact ? 54 : "clamp(64px, 17vw, 150px)",
-          lineHeight: 1,
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          color: "transparent",
-          WebkitTextStroke: "1px rgba(255,255,255,0.08)",
-          pointerEvents: "none",
-          userSelect: "none",
-          animation: `td3Fade 800ms ease both`,
-        }}
-      >
-        {item.name}
-      </Typography>
 
       {/* نوار بالا */}
       <Box
         sx={{
           position: "relative",
-          zIndex: 3,
+          zIndex: 5,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          px: 1.5,
+          gap: 1,
+          px: 1.25,
           pt: compact ? 1.2 : "max(12px, env(safe-area-inset-top))",
         }}
       >
-        <IconButton
+        <ButtonBase
           onClick={onClose}
-          aria-label={t("threedClose")}
-          sx={{ color: "#fff", bgcolor: "rgba(255,255,255,0.1)", border: `1px solid ${GLASS_BORDER}`, "&:hover": { bgcolor: "rgba(255,255,255,0.18)" } }}
+          aria-label={t("threedBackToMenu")}
+          sx={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 0.5,
+            px: 1.2,
+            py: 0.75,
+            borderRadius: 999,
+            fontFamily: APP_FONT_FAMILY,
+            fontWeight: 800,
+            fontSize: 13,
+            color: "#fff",
+            bgcolor: "rgba(255,255,255,0.12)",
+            border: `1px solid ${GLASS_BORDER}`,
+            backdropFilter: "blur(10px)",
+            WebkitBackdropFilter: "blur(10px)",
+            boxShadow: "0 8px 22px rgba(0,0,0,0.35)",
+            "&:hover": { bgcolor: "rgba(255,255,255,0.2)" },
+            "&:active": { transform: "scale(0.97)" },
+          }}
         >
-          <CloseRoundedIcon />
-        </IconButton>
+          <ArrowForwardRoundedIcon sx={{ fontSize: 18 }} />
+          {t("threedBackToMenu")}
+        </ButtonBase>
         {hasOthers ? (
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.6 }} aria-label={`${index + 1}/${list.length}`}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.55 }} aria-label={`${index + 1}/${list.length}`}>
             {list.slice(0, 9).map((entry, i) => (
               <Box
                 key={entry.key}
@@ -907,10 +908,11 @@ function ThreeDDetail({
 
         <Box
           sx={{
-            px: 1.5,
+            px: 1.25,
             pb: 1,
             display: "grid",
-            gap: 0.7,
+            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+            gap: 0.65,
             overflowY: "auto",
             minHeight: 0,
             scrollbarWidth: "thin",
@@ -927,7 +929,9 @@ function ThreeDDetail({
             />
           ))}
           {data.ingredients.some((row) => row.is_removable) ? (
-            <Typography sx={{ fontSize: 11, color: "rgba(255,255,255,0.5)", px: 0.5, pt: 0.3 }}>{t("threedHint")}</Typography>
+            <Typography sx={{ gridColumn: "1 / -1", fontSize: 11, color: "rgba(255,255,255,0.5)", px: 0.5, pt: 0.2 }}>
+              {t("threedHint")}
+            </Typography>
           ) : null}
         </Box>
 
@@ -1007,6 +1011,10 @@ function ThreeDDetail({
       </Box>
     </Box>
   );
+
+  // خارج از لایه‌های صفحهٔ منو رندر می‌شود تا دکمهٔ برگشت همیشه قابل لمس باشد
+  if (compact || typeof document === "undefined") return detail;
+  return createPortal(detail, document.body);
 }
 
 /* ───────────── چیدمان منو ───────────── */
