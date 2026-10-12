@@ -620,6 +620,19 @@ export default function purchas(props: any) {
             {data?.total_amount !== undefined && (
               <PurchaseInfoRow label="مجموع مبلغ" value={`${formatNumber(data.total_amount)} تومان`} />
             )}
+            {Number(data?.discount_amount) > 0 && (
+              <>
+                <PurchaseInfoRow label="مبلغ تخفیف" value={`${formatNumber(data.discount_amount)} تومان`} />
+                {!isInstallment && (
+                  <PurchaseInfoRow
+                    label="مبلغ پس از تخفیف"
+                    value={`${formatNumber(
+                      Math.max(0, Number(data.total_amount) - Number(data.discount_amount) - (Number(data.credit_used) || 0)),
+                    )} تومان`}
+                  />
+                )}
+              </>
+            )}
             {data?.customer_name && (
               <PurchaseInfoRow
                 label="نام مشتری"
