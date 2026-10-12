@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import Link from "next/link";
+import { isIranMobile, normalizeIranMobile } from "@/app/lib/purchaseReturns";
 import {
   Box,
   Button,
@@ -58,6 +60,21 @@ import {
 } from "@/app/lib/purchaseDebts";
 
 const formatNumber = (n: number) => new Intl.NumberFormat("fa-IR").format(n);
+
+/** نام یا شمارهٔ مشتری → صفحهٔ گردش مالی او؛ اگر شماره معتبر نبود فقط متن */
+function CustomerHistoryLink({ phone, children }: { phone?: string | null; children: ReactNode }) {
+  const normalized = normalizeIranMobile(String(phone || ""));
+  if (!isIranMobile(normalized)) return <>{children}</>;
+  return (
+    <Link
+      href={`/admin/purchas/customer/${normalized}`}
+      style={{ color: "var(--admin-accent)", fontWeight: 600, textDecoration: "none" }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {children}
+    </Link>
+  );
+}
 
 function normalizeDebtSearch(value: string): string {
   const persian = "۰۱۲۳۴۵۶۷۸۹";
@@ -346,8 +363,12 @@ export default function PurchaseDebtsPage() {
             <TableBody>
               {debtors.map((row) => (
                 <TableRow key={row.phone} hover>
-                  <TableCell align="center">{getDebtorDisplayName(row) || "—"}</TableCell>
-                  <TableCell align="center" sx={{ direction: "ltr" }}>{row.phone}</TableCell>
+                  <TableCell align="center">
+                    <CustomerHistoryLink phone={row.phone}>{getDebtorDisplayName(row) || "—"}</CustomerHistoryLink>
+                  </TableCell>
+                  <TableCell align="center" sx={{ direction: "ltr" }}>
+                    <CustomerHistoryLink phone={row.phone}>{row.phone}</CustomerHistoryLink>
+                  </TableCell>
                   <TableCell align="center">{formatNumber(row.debt_count)}</TableCell>
                   <TableCell align="center" sx={{ color: "var(--admin-accent)", fontWeight: 700 }}>
                     {formatNumber(row.total_debt_amount ?? 0)} تومان
@@ -375,7 +396,10 @@ export default function PurchaseDebtsPage() {
       >
         <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <Typography sx={{ fontWeight: 700, color: "var(--admin-text)" }}>
-            فاکتورهای نسیه — {selectedName ? `${selectedName} — ` : ""}{selectedPhone}
+            فاکتورهای نسیه —{" "}
+            <CustomerHistoryLink phone={selectedPhone}>
+              {selectedName ? `${selectedName} — ` : ""}{selectedPhone}
+            </CustomerHistoryLink>
           </Typography>
           <IconButton size="small" onClick={() => {
             setSelectedPhone(null);
