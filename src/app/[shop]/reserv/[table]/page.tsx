@@ -46,8 +46,8 @@ import "react-toastify/dist/ReactToastify.css";
 import {
   catalogCartApiLine,
   catalogItemKey,
+  customizationVariant,
   isProducedGoodItem,
-  removedIngredientsVariant,
 } from "@/app/lib/catalogItems";
 import { isCatalogItemOutOfStock } from "@/app/lib/productsCache";
 import {
@@ -159,6 +159,7 @@ type CartLine = {
   /** ترکیب سفارشی (مواد برداشته‌شده) — خط جدا در سبد */
   variant?: string | null;
   removed_ingredient_ids?: number[];
+  extra_ingredient_ids?: number[];
 };
 
 type GuestOrderItem = {
@@ -166,6 +167,7 @@ type GuestOrderItem = {
   product_name?: string;
   note?: string | null;
   removed_ingredients?: Array<{ name?: string }>;
+  extra_ingredients?: Array<{ name?: string }>;
   quantity?: number;
   sale_price?: number;
   price?: number;
@@ -927,24 +929,43 @@ function TableReservPageBody() {
   };
 
   const removedIngredientsLabel = (item: GuestOrderItem): string => {
-    const names = (item.removed_ingredients || [])
+    const parts: string[] = [];
+    const removed = (item.removed_ingredients || [])
       .map((row) => String(row?.name || "").trim())
       .filter(Boolean);
-    return names.length ? t("threedWithout", { names: names.join("، ") }) : "";
+    const extras = (item.extra_ingredients || [])
+      .map((row) => String(row?.name || "").trim())
+      .filter(Boolean);
+    if (removed.length) parts.push(t("threedWithout", { names: removed.join("، ") }));
+    if (extras.length) parts.push(t("threedWithExtra", { names: extras.join("، ") }));
+    if (!parts.length && item.note?.trim()) return item.note.trim();
+    return parts.join(" · ");
   };
 
-  /** منوی سه‌بعدی: کالای تولیدی با موادِ برداشته‌شده به‌صورت خط جدا در سبد می‌نشیند. */
-  const addCustomizedLine = (product: Product, removedIds: number[], quantity: number) => {
+  /** منوی سه‌بعدی: ترکیب سفارشی (حذف/اضافه ماده) به‌صورت خط جدا در سبد. */
+  const addCustomizedLine = (
+    product: Product,
+    removedIds: number[],
+    quantity: number,
+    extraIds: number[] = [],
+  ) => {
     if (isCatalogItemOutOfStock(product) || quantity <= 0) return;
     const removable = (product.ingredients || []).filter(
       (row) => row.is_removable === true && removedIds.includes(Number(row.raw_material_id)),
     );
-    const variant = removedIngredientsVariant(removable.map((row) => Number(row.raw_material_id)));
+    const removedIdList = removable.map((row) => Number(row.raw_material_id));
+    const extras = (product.ingredients || []).filter((row) => {
+      const id = Number(row.raw_material_id);
+      return extraIds.includes(id) && !removedIdList.includes(id);
+    });
+    const extraIdList = extras.map((row) => Number(row.raw_material_id));
+    const variant = customizationVariant(removedIdList, extraIdList);
     if (!variant) {
       setQty(product, qtyOf(product) + quantity);
       return;
     }
     const discount = removable.reduce((sum, row) => sum + (Number(row.price) || 0), 0);
+    const surcharge = extras.reduce((sum, row) => sum + (Number(row.price) || 0), 0);
     const base = Number(product.sale_price) || 0;
     const key = catalogItemKey({ ...product, variant });
     const existing = cart.find((line) => catalogItemKey(line) === key);
@@ -952,18 +973,26 @@ function TableReservPageBody() {
       persistCart(cart.map((line) => (catalogItemKey(line) === key ? { ...line, quantity: line.quantity + quantity } : line)));
       return;
     }
+    const labelParts: string[] = [];
+    if (removable.length) {
+      labelParts.push(t("threedWithout", { names: removable.map((row) => row.name).join("، ") }));
+    }
+    if (extras.length) {
+      labelParts.push(t("threedWithExtra", { names: extras.map((row) => row.name).join("، ") }));
+    }
     persistCart([
       ...cart,
       {
         product_id: null,
         produced_good_id: product.produced_good_id ?? product.id,
         item_type: "produced_good",
-        name: `${product.name} (${t("threedWithout", { names: removable.map((row) => row.name).join("، ") })})`,
-        sale_price: Math.max(0, base - discount),
+        name: labelParts.length ? `${product.name} (${labelParts.join(" · ")})` : product.name,
+        sale_price: Math.max(0, base - discount + surcharge),
         quantity,
         image: productImage(product, categoryImageById),
         variant,
-        removed_ingredient_ids: removable.map((row) => Number(row.raw_material_id)),
+        removed_ingredient_ids: removedIdList,
+        extra_ingredient_ids: extraIdList,
       },
     ]);
   };
@@ -1046,9 +1075,14 @@ function TableReservPageBody() {
       const product = productByKey.get(key);
       if (product) setDetailProduct(product);
     },
-    onAddCustom: (key: string, removedIngredientIds: number[], quantity: number) => {
+    onAddCustom: (
+      key: string,
+      removedIngredientIds: number[],
+      quantity: number,
+      extraIngredientIds: number[] = [],
+    ) => {
       const product = productByKey.get(key);
-      if (product) addCustomizedLine(product, removedIngredientIds, quantity);
+      if (product) addCustomizedLine(product, removedIngredientIds, quantity, extraIngredientIds);
     },
   };
 

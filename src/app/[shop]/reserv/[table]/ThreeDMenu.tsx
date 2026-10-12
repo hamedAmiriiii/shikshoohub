@@ -8,6 +8,7 @@ import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
 import LockRoundedIcon from "@mui/icons-material/LockRounded";
 import RemoveIcon from "@mui/icons-material/Remove";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
+import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
 import { Box, ButtonBase, IconButton, Typography } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { createPortal } from "react-dom";
@@ -174,6 +175,27 @@ function EmptyStack({ compact }: { compact?: boolean }) {
   );
 }
 
+type StackLayer = ThreeDLayer & { gone: boolean; isExtra?: boolean };
+
+/** لایه‌های قابل نمایش: حذف‌شده‌ها gone، موادِ اضافه‌شده یک لایهٔ تکراری می‌گیرند. */
+function buildStackLayers(
+  layers: ThreeDLayer[],
+  removed: ReadonlySet<number>,
+  extras: ReadonlySet<number>,
+): StackLayer[] {
+  const out: StackLayer[] = [];
+  const duplicated = new Set<number>();
+  for (const layer of layers) {
+    const gone = removed.has(layer.raw_material_id);
+    out.push({ ...layer, gone });
+    if (!gone && extras.has(layer.raw_material_id) && !duplicated.has(layer.raw_material_id)) {
+      duplicated.add(layer.raw_material_id);
+      out.push({ ...layer, key: `${layer.key}-extra`, gone: false, isExtra: true });
+    }
+  }
+  return out;
+}
+
 /**
  * لایه‌ها از بالا به پایین روی هم می‌نشینند؛ لایهٔ برداشته‌شده با انیمیشن
  * به کنار پرواز می‌کند و بقیه روی هم می‌نشینند.
@@ -181,18 +203,24 @@ function EmptyStack({ compact }: { compact?: boolean }) {
 function LayerStack({
   layers,
   removed,
+  extras,
   compact,
 }: {
   layers: ThreeDLayer[];
   removed: ReadonlySet<number>;
+  extras?: ReadonlySet<number>;
   compact?: boolean;
 }) {
+  const stack = useMemo(
+    () => buildStackLayers(layers, removed, extras ?? new Set()),
+    [layers, removed, extras],
+  );
   if (layers.length === 0) return <EmptyStack compact={compact} />;
-  const total = layers.length;
+  const total = stack.length;
   return (
     <Box sx={{ width: "100%", position: "relative", transformStyle: "preserve-3d" }}>
-      {layers.map((layer, index) => {
-        const gone = removed.has(layer.raw_material_id);
+      {stack.map((layer, index) => {
+        const gone = layer.gone;
         const side = index % 2 === 0 ? -1 : 1;
         const depth = (total - index) * 5;
         return (
@@ -206,7 +234,7 @@ function LayerStack({
               zIndex: total - index,
               transformStyle: "preserve-3d",
               transition: `grid-template-rows 560ms ${EASE_OUT}, margin-top 560ms ${EASE_OUT}`,
-              animation: `td3Drop 640ms ${EASE_SPRING} ${index * 85}ms both`,
+              animation: `td3Drop 640ms ${EASE_SPRING} ${index * 70}ms both`,
             }}
           >
             <Box sx={{ minHeight: 0, transformStyle: "preserve-3d" }}>
@@ -331,20 +359,37 @@ function ThreeDCard({
               {t("toman")}
             </Box>
           </Typography>
-          <Box
-            sx={{
-              fontSize: 10.5,
-              fontWeight: 700,
-              px: 1,
-              py: 0.3,
-              borderRadius: 999,
-              bgcolor: "rgba(255,255,255,0.1)",
-              color: "rgba(255,255,255,0.8)",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {item.outOfStock ? t("outOfStock") : t("threedTap")}
-          </Box>
+          {item.outOfStock ? (
+            <Box
+              sx={{
+                fontSize: 10.5,
+                fontWeight: 700,
+                px: 1,
+                py: 0.3,
+                borderRadius: 999,
+                bgcolor: "rgba(255,255,255,0.1)",
+                color: "rgba(255,255,255,0.8)",
+              }}
+            >
+              {t("outOfStock")}
+            </Box>
+          ) : (
+            <Box
+              aria-hidden
+              sx={{
+                width: 30,
+                height: 30,
+                borderRadius: "10px",
+                display: "grid",
+                placeItems: "center",
+                bgcolor: "rgba(255,255,255,0.12)",
+                color: "rgba(255,255,255,0.9)",
+                border: `1px solid ${GLASS_BORDER}`,
+              }}
+            >
+              <VisibilityRoundedIcon sx={{ fontSize: 17 }} />
+            </Box>
+          )}
         </Box>
       </Box>
     </ButtonBase>
@@ -356,31 +401,30 @@ function ThreeDCard({
 function IngredientRow({
   ingredient,
   checked,
+  extra,
   onToggle,
+  onToggleExtra,
   index,
 }: {
   ingredient: ThreeDIngredient;
   checked: boolean;
+  extra: boolean;
   onToggle: () => void;
+  onToggleExtra: () => void;
   index: number;
 }) {
   const { t, formatNumber } = useReservI18n();
   const locked = !ingredient.is_removable;
+  const qtyLabel = checked ? (extra ? "×۲" : "×۱") : "×۰";
   return (
-    <ButtonBase
-      role="checkbox"
-      aria-checked={checked}
-      aria-disabled={locked}
-      disabled={locked}
-      onClick={onToggle}
+    <Box
       sx={{
         width: "100%",
         height: "100%",
         display: "flex",
         alignItems: "center",
-        gap: 0.7,
-        textAlign: "start",
-        p: 0.7,
+        gap: 0.45,
+        p: 0.55,
         borderRadius: "14px",
         fontFamily: APP_FONT_FAMILY,
         color: "#fff",
@@ -388,87 +432,128 @@ function IngredientRow({
         border: `1px solid ${checked ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.06)"}`,
         transition: "background-color 220ms ease, border-color 220ms ease",
         animation: `td3Rise 420ms ${EASE_OUT} ${120 + index * 40}ms both`,
-        "&.Mui-disabled": { color: "#fff", opacity: 0.9 },
       }}
     >
-      <Box
+      <ButtonBase
+        role="checkbox"
+        aria-checked={checked}
+        aria-disabled={locked}
+        disabled={locked}
+        onClick={onToggle}
         sx={{
-          width: 34,
-          height: 34,
-          flexShrink: 0,
+          flex: 1,
+          minWidth: 0,
+          display: "flex",
+          alignItems: "center",
+          gap: 0.65,
+          textAlign: "start",
+          color: "#fff",
           borderRadius: "10px",
-          display: "grid",
-          placeItems: "center",
-          bgcolor: "rgba(255,255,255,0.08)",
-          overflow: "hidden",
-          filter: checked ? "none" : "grayscale(1)",
-          opacity: checked ? 1 : 0.45,
-          transition: "opacity 260ms ease, filter 260ms ease",
+          py: 0.15,
+          fontFamily: APP_FONT_FAMILY,
+          "&.Mui-disabled": { color: "#fff", opacity: 0.95 },
         }}
       >
-        {ingredient.image_url ? (
-          <Box component="img" src={ingredient.image_url} alt="" sx={{ width: "88%", height: "88%", objectFit: "contain" }} />
-        ) : (
-          <RestaurantMenuIcon sx={{ fontSize: 16, color: "rgba(255,255,255,0.6)" }} />
-        )}
-      </Box>
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography
+        <Box
           sx={{
-            fontWeight: 800,
-            fontSize: 12.5,
-            lineHeight: 1.3,
-            textDecoration: checked ? "none" : "line-through",
-            opacity: checked ? 1 : 0.55,
-            transition: "opacity 200ms ease",
+            width: 32,
+            height: 32,
+            flexShrink: 0,
+            borderRadius: "10px",
+            display: "grid",
+            placeItems: "center",
+            bgcolor: "rgba(255,255,255,0.08)",
             overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
+            filter: checked ? "none" : "grayscale(1)",
+            opacity: checked ? 1 : 0.45,
+            transition: "opacity 260ms ease, filter 260ms ease",
           }}
         >
-          {ingredient.name}
-        </Typography>
-        <Typography sx={{ fontSize: 10.5, color: "rgba(255,255,255,0.6)", opacity: checked ? 1 : 0.5 }}>
-          {formatNumber(ingredient.price)} {t("toman")}
-        </Typography>
-      </Box>
-      {locked ? (
-        <Box
-          title={t("threedFixed")}
-          sx={{
-            width: 24,
-            height: 24,
-            flexShrink: 0,
-            borderRadius: "8px",
-            display: "grid",
-            placeItems: "center",
-            bgcolor: "rgba(255,255,255,0.09)",
-            color: "rgba(255,255,255,0.75)",
-          }}
-        >
-          <LockRoundedIcon sx={{ fontSize: 13 }} />
+          {ingredient.image_url ? (
+            <Box component="img" src={ingredient.image_url} alt="" sx={{ width: "88%", height: "88%", objectFit: "contain" }} />
+          ) : (
+            <RestaurantMenuIcon sx={{ fontSize: 15, color: "rgba(255,255,255,0.6)" }} />
+          )}
         </Box>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography
+            sx={{
+              fontWeight: 800,
+              fontSize: 12,
+              lineHeight: 1.25,
+              textDecoration: checked ? "none" : "line-through",
+              opacity: checked ? 1 : 0.55,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {ingredient.name}
+            <Box component="span" sx={{ marginInlineStart: 0.4, fontSize: 10, fontWeight: 700, color: extra ? ACCENT : "rgba(255,255,255,0.45)" }}>
+              {qtyLabel}
+            </Box>
+          </Typography>
+          <Typography sx={{ fontSize: 10, color: "rgba(255,255,255,0.6)", opacity: checked ? 1 : 0.5 }}>
+            {formatNumber(ingredient.price * (extra ? 2 : checked ? 1 : 0))} {t("toman")}
+          </Typography>
+        </Box>
+        {locked ? (
+          <Box
+            title={t("threedFixed")}
+            sx={{
+              width: 22,
+              height: 22,
+              flexShrink: 0,
+              borderRadius: "7px",
+              display: "grid",
+              placeItems: "center",
+              bgcolor: "rgba(255,255,255,0.09)",
+              color: "rgba(255,255,255,0.75)",
+            }}
+          >
+            <LockRoundedIcon sx={{ fontSize: 12 }} />
+          </Box>
+        ) : (
+          <Box
+            sx={{
+              width: 22,
+              height: 22,
+              flexShrink: 0,
+              borderRadius: "7px",
+              display: "grid",
+              placeItems: "center",
+              color: "#1b1206",
+              background: checked ? ACCENT_GRADIENT : "transparent",
+              border: checked ? "1px solid transparent" : "2px solid rgba(255,255,255,0.3)",
+              boxShadow: checked ? "0 4px 10px rgba(255,94,98,0.35)" : "none",
+            }}
+          >
+            <CheckRoundedIcon sx={{ fontSize: 14, opacity: checked ? 1 : 0 }} />
+          </Box>
+        )}
+      </ButtonBase>
+      {checked ? (
+        <IconButton
+          size="small"
+          aria-label={extra ? t("threedRemoveExtra") : t("threedAddExtra")}
+          onClick={onToggleExtra}
+          sx={{
+            width: 28,
+            height: 28,
+            flexShrink: 0,
+            color: extra ? "#1b1206" : "#fff",
+            background: extra ? ACCENT_GRADIENT : "rgba(255,255,255,0.1)",
+            border: `1px solid ${extra ? "transparent" : GLASS_BORDER}`,
+            boxShadow: extra ? "0 4px 12px rgba(255,94,98,0.4)" : "none",
+            "&:hover": { bgcolor: extra ? undefined : "rgba(255,255,255,0.18)" },
+          }}
+        >
+          {extra ? <RemoveIcon sx={{ fontSize: 16 }} /> : <AddIcon sx={{ fontSize: 16 }} />}
+        </IconButton>
       ) : (
-        <Box
-          sx={{
-            width: 24,
-            height: 24,
-            flexShrink: 0,
-            borderRadius: "8px",
-            display: "grid",
-            placeItems: "center",
-            color: "#1b1206",
-            background: checked ? ACCENT_GRADIENT : "transparent",
-            border: checked ? "1px solid transparent" : "2px solid rgba(255,255,255,0.3)",
-            boxShadow: checked ? "0 4px 12px rgba(255,94,98,0.35)" : "none",
-            transform: checked ? "scale(1)" : "scale(0.92)",
-            transition: `transform 260ms ${EASE_SPRING}, background 200ms ease, box-shadow 200ms ease`,
-          }}
-        >
-          <CheckRoundedIcon sx={{ fontSize: 16, opacity: checked ? 1 : 0, transition: "opacity 160ms ease" }} />
-        </Box>
+        <Box sx={{ width: 28, height: 28, flexShrink: 0 }} />
       )}
-    </ButtonBase>
+    </Box>
   );
 }
 
@@ -478,7 +563,9 @@ function ThreeDDetail({
   list,
   index,
   removed,
+  extras,
   onToggle,
+  onToggleExtra,
   onClose,
   onGo,
   onAdd,
@@ -487,7 +574,9 @@ function ThreeDDetail({
   list: ReservMenuItem[];
   index: number;
   removed: ReadonlySet<number>;
+  extras: ReadonlySet<number>;
   onToggle: (materialId: number) => void;
+  onToggleExtra: (materialId: number) => void;
   onClose: () => void;
   onGo: (nextIndex: number, direction: "next" | "prev") => void;
   onAdd: (qty: number) => void;
@@ -526,9 +615,17 @@ function ThreeDDetail({
     (sum, row) => (row.is_removable && removed.has(row.raw_material_id) ? sum + row.price : sum),
     0,
   );
-  const unitPrice = Math.max(0, item.price - removedPrice);
+  const extraPrice = data.ingredients.reduce(
+    (sum, row) =>
+      !removed.has(row.raw_material_id) && extras.has(row.raw_material_id) ? sum + row.price : sum,
+    0,
+  );
+  const unitPrice = Math.max(0, item.price - removedPrice + extraPrice);
   const removedNames = data.ingredients
     .filter((row) => row.is_removable && removed.has(row.raw_material_id))
+    .map((row) => row.name);
+  const extraNames = data.ingredients
+    .filter((row) => !removed.has(row.raw_material_id) && extras.has(row.raw_material_id))
     .map((row) => row.name);
 
   const go = useCallback(
@@ -793,7 +890,7 @@ function ThreeDDetail({
                 transition: "transform 240ms ease-out",
               }}
             >
-              <LayerStack layers={data.layers} removed={removed} compact={compact} />
+              <LayerStack layers={data.layers} removed={removed} extras={extras} compact={compact} />
             </Box>
           </Box>
           <Box
@@ -925,14 +1022,14 @@ function ThreeDDetail({
               ingredient={ingredient}
               index={i}
               checked={!removed.has(ingredient.raw_material_id)}
+              extra={extras.has(ingredient.raw_material_id) && !removed.has(ingredient.raw_material_id)}
               onToggle={() => onToggle(ingredient.raw_material_id)}
+              onToggleExtra={() => onToggleExtra(ingredient.raw_material_id)}
             />
           ))}
-          {data.ingredients.some((row) => row.is_removable) ? (
-            <Typography sx={{ gridColumn: "1 / -1", fontSize: 11, color: "rgba(255,255,255,0.5)", px: 0.5, pt: 0.2 }}>
-              {t("threedHint")}
-            </Typography>
-          ) : null}
+          <Typography sx={{ gridColumn: "1 / -1", fontSize: 11, color: "rgba(255,255,255,0.5)", px: 0.5, pt: 0.2 }}>
+            {t("threedHint")}
+          </Typography>
         </Box>
 
         <Box sx={{ px: 1.5, pt: 0.6, display: "flex", alignItems: "center", gap: 1 }}>
@@ -1003,9 +1100,14 @@ function ThreeDDetail({
             )}
           </ButtonBase>
         </Box>
-        {removedNames.length > 0 ? (
+        {removedNames.length > 0 || extraNames.length > 0 ? (
           <Typography sx={{ px: 2, pt: 0.8, fontSize: 11.5, color: ACCENT, fontWeight: 700 }}>
-            {t("threedWithout", { names: removedNames.join("، ") })}
+            {[
+              removedNames.length ? t("threedWithout", { names: removedNames.join("، ") }) : "",
+              extraNames.length ? t("threedWithExtra", { names: extraNames.join("، ") }) : "",
+            ]
+              .filter(Boolean)
+              .join(" · ")}
           </Typography>
         ) : null}
       </Box>
@@ -1028,11 +1130,16 @@ export function ThreeDLayout(props: ReservMenuLayoutProps) {
   );
   const [openKey, setOpenKey] = useState<string | null>(null);
   const [removedByKey, setRemovedByKey] = useState<Record<string, number[]>>({});
+  const [extraByKey, setExtraByKey] = useState<Record<string, number[]>>({});
 
   const openIndex = openKey ? list.findIndex((item) => item.key === openKey) : -1;
   const removedSet = useMemo(
     () => new Set<number>(openKey ? removedByKey[openKey] || [] : []),
     [openKey, removedByKey],
+  );
+  const extraSet = useMemo(
+    () => new Set<number>(openKey ? extraByKey[openKey] || [] : []),
+    [openKey, extraByKey],
   );
 
   const toggle = useCallback(
@@ -1045,6 +1152,31 @@ export function ThreeDLayout(props: ReservMenuLayoutProps) {
           : [...current, materialId];
         return { ...prev, [openKey]: next };
       });
+      // با برداشتن ماده، اضافهٔ آن هم پاک می‌شود
+      setExtraByKey((prev) => ({
+        ...prev,
+        [openKey]: (prev[openKey] || []).filter((id) => id !== materialId),
+      }));
+    },
+    [openKey],
+  );
+
+  const toggleExtra = useCallback(
+    (materialId: number) => {
+      if (!openKey) return;
+      setExtraByKey((prev) => {
+        const current = prev[openKey] || [];
+        // حداکثر یک واحد اضافه
+        const next = current.includes(materialId)
+          ? current.filter((id) => id !== materialId)
+          : [...current, materialId];
+        return { ...prev, [openKey]: next };
+      });
+      // اگر ماده حذف شده بود، با زدن اضافه دوباره برمی‌گردد
+      setRemovedByKey((prev) => ({
+        ...prev,
+        [openKey]: (prev[openKey] || []).filter((id) => id !== materialId),
+      }));
     },
     [openKey],
   );
@@ -1058,15 +1190,21 @@ export function ThreeDLayout(props: ReservMenuLayoutProps) {
       const removedIds = (removedByKey[openKey] || []).filter((id) =>
         data.ingredients.some((row) => row.raw_material_id === id && row.is_removable),
       );
-      if (onAddCustom) onAddCustom(openKey, removedIds, qty);
+      const extraIds = (extraByKey[openKey] || []).filter(
+        (id) =>
+          !removedIds.includes(id) &&
+          data.ingredients.some((row) => row.raw_material_id === id),
+      );
+      if (onAddCustom) onAddCustom(openKey, removedIds, qty, extraIds);
       else for (let i = 0; i < qty; i += 1) onAdd(openKey);
     },
-    [list, onAdd, onAddCustom, openKey, removedByKey],
+    [extraByKey, list, onAdd, onAddCustom, openKey, removedByKey],
   );
 
   const openCard = (key: string) => {
     // هر بار که کارت را باز می‌کنیم، با ترکیب کامل شروع می‌شود
     setRemovedByKey((prev) => ({ ...prev, [key]: [] }));
+    setExtraByKey((prev) => ({ ...prev, [key]: [] }));
     setOpenKey(key);
   };
 
@@ -1155,8 +1293,10 @@ export function ThreeDLayout(props: ReservMenuLayoutProps) {
           list={list}
           index={openIndex}
           removed={removedSet}
+          extras={extraSet}
           compact={compact}
           onToggle={toggle}
+          onToggleExtra={toggleExtra}
           onClose={() => setOpenKey(null)}
           onGo={(to) => setOpenKey(list[to]?.key ?? null)}
           onAdd={handleAdd}

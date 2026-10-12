@@ -54,14 +54,26 @@ export type TableOrderProduct = PurchaseDebtProduct & {
   sale_price?: number;
   /** منوی سه‌بعدی: موادی که مشتری از کالای تولیدی برداشته است */
   removed_ingredients?: Array<{ raw_material_id?: number; name?: string; price?: number }>;
+  /** منوی سه‌بعدی: موادی که یک واحد اضافه سفارش شده */
+  extra_ingredients?: Array<{ raw_material_id?: number; name?: string; price?: number }>;
 };
 
-/** «بدون: خیارشور، پنیر» یا رشتهٔ خالی */
+/** «بدون: … · اضافه: …» یا رشتهٔ خالی */
 export function tableOrderRemovedLabel(product: TableOrderProduct): string {
-  const names = (product.removed_ingredients || [])
+  const parts: string[] = [];
+  const removed = (product.removed_ingredients || [])
     .map((row) => String(row?.name || "").trim())
     .filter(Boolean);
-  return names.length ? `بدون: ${names.join("، ")}` : "";
+  const extras = (product.extra_ingredients || [])
+    .map((row) => String(row?.name || "").trim())
+    .filter(Boolean);
+  if (removed.length) parts.push(`بدون: ${removed.join("، ")}`);
+  if (extras.length) parts.push(`اضافه: ${extras.join("، ")}`);
+  if (!parts.length) {
+    const note = String((product as { note?: string | null }).note || "").trim();
+    return note;
+  }
+  return parts.join(" · ");
 }
 
 export type TableOrder = {

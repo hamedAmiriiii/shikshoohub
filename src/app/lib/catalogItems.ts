@@ -8,12 +8,29 @@ export type CatalogIdentity = {
   variant?: string | null;
 };
 
-/** کلید خط سبد برای ترکیب سفارشی: مواد برداشته‌شده مرتب و یکتا */
-export function removedIngredientsVariant(ids: number[] | null | undefined): string | null {
-  const clean = Array.from(new Set((ids || []).map(Number).filter((n) => Number.isFinite(n) && n > 0))).sort(
+function sortedUniqueIds(ids: number[] | null | undefined): number[] {
+  return Array.from(new Set((ids || []).map(Number).filter((n) => Number.isFinite(n) && n > 0))).sort(
     (a, b) => a - b,
   );
+}
+
+/** کلید خط سبد برای ترکیب سفارشی: مواد برداشته‌شده مرتب و یکتا */
+export function removedIngredientsVariant(ids: number[] | null | undefined): string | null {
+  const clean = sortedUniqueIds(ids);
   return clean.length ? `no:${clean.join("-")}` : null;
+}
+
+/** کلید خط سبد برای حذف + اضافه (منوی سه‌بعدی) */
+export function customizationVariant(
+  removedIds: number[] | null | undefined,
+  extraIds: number[] | null | undefined,
+): string | null {
+  const no = sortedUniqueIds(removedIds);
+  const extra = sortedUniqueIds(extraIds).filter((id) => !no.includes(id));
+  const parts: string[] = [];
+  if (no.length) parts.push(`no:${no.join("-")}`);
+  if (extra.length) parts.push(`extra:${extra.join("-")}`);
+  return parts.length ? parts.join("|") : null;
 }
 
 export function isProducedGoodItem(item: CatalogIdentity | null | undefined): boolean {
@@ -62,6 +79,7 @@ export function catalogCartApiLine(item: CatalogIdentity & {
   size?: string | null;
   color?: string | null;
   removed_ingredient_ids?: number[] | null;
+  extra_ingredient_ids?: number[] | null;
 }): Record<string, unknown> {
   const extra: Record<string, unknown> = {};
   if (item.size) extra.size = item.size;
@@ -69,6 +87,9 @@ export function catalogCartApiLine(item: CatalogIdentity & {
   if (isProducedGoodItem(item)) {
     if (item.removed_ingredient_ids && item.removed_ingredient_ids.length > 0) {
       extra.removed_ingredient_ids = item.removed_ingredient_ids;
+    }
+    if (item.extra_ingredient_ids && item.extra_ingredient_ids.length > 0) {
+      extra.extra_ingredient_ids = item.extra_ingredient_ids;
     }
     return {
       produced_good_id: Number(item.produced_good_id ?? item.id),

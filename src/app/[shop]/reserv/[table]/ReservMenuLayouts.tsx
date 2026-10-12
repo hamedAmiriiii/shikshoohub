@@ -72,7 +72,12 @@ export type ReservMenuLayoutProps = ItemActions & {
   /** اکشن‌های هدر برای تم ویترین طلایی — ستون سمت راست */
   showcaseToolbar?: ReservShowcaseToolbarProps | null;
   /** منوی سه‌بعدی: افزودن به سبد با موادِ برداشته‌شده */
-  onAddCustom?: (key: string, removedIngredientIds: number[], quantity: number) => void;
+  onAddCustom?: (
+    key: string,
+    removedIngredientIds: number[],
+    quantity: number,
+    extraIngredientIds?: number[],
+  ) => void;
 };
 
 const motionSafe = {
