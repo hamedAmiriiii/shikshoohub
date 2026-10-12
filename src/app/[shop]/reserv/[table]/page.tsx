@@ -43,7 +43,12 @@ import {
 } from "@/app/lib/shopCategories";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { catalogCartApiLine, catalogItemKey, isProducedGoodItem } from "@/app/lib/catalogItems";
+import {
+  catalogCartApiLine,
+  catalogItemKey,
+  isProducedGoodItem,
+  removedIngredientsVariant,
+} from "@/app/lib/catalogItems";
 import { isCatalogItemOutOfStock } from "@/app/lib/productsCache";
 import {
   extractRoomServicesEnabled,
@@ -82,6 +87,7 @@ import {
   RESERV_MENU_PREVIEW_QUERY,
   normalizeReservMenuThemeId,
   parseReservMenuTheme,
+  resolveApiMediaUrl,
   type ReservMenuThemeConfig,
   type ReservMenuThemeId,
 } from "@/app/lib/reservMenuThemes";
@@ -124,6 +130,20 @@ type Product = {
     is_active?: boolean;
   }>;
   quantity?: number;
+  /** منوی سه‌بعدی: مواد فرمول (سهم قیمت و قابل‌حذف بودن) و لایه‌های عکس */
+  ingredients?: Array<{
+    raw_material_id: number;
+    name: string;
+    image_url?: string | null;
+    is_removable?: boolean;
+    price?: number;
+  }>;
+  layers?: Array<{
+    key?: string;
+    raw_material_id: number;
+    name: string;
+    image_url: string;
+  }>;
 };
 
 type OnlinePayState = null | "redirecting" | "paid" | "failed";
@@ -136,11 +156,16 @@ type CartLine = {
   sale_price: number;
   quantity: number;
   image?: string;
+  /** ترکیب سفارشی (مواد برداشته‌شده) — خط جدا در سبد */
+  variant?: string | null;
+  removed_ingredient_ids?: number[];
 };
 
 type GuestOrderItem = {
   name?: string;
   product_name?: string;
+  note?: string | null;
+  removed_ingredients?: Array<{ name?: string }>;
   quantity?: number;
   sale_price?: number;
   price?: number;
@@ -900,6 +925,48 @@ function TableReservPageBody() {
     );
   };
 
+  const removedIngredientsLabel = (item: GuestOrderItem): string => {
+    const names = (item.removed_ingredients || [])
+      .map((row) => String(row?.name || "").trim())
+      .filter(Boolean);
+    return names.length ? t("threedWithout", { names: names.join("، ") }) : "";
+  };
+
+  /** منوی سه‌بعدی: کالای تولیدی با موادِ برداشته‌شده به‌صورت خط جدا در سبد می‌نشیند. */
+  const addCustomizedLine = (product: Product, removedIds: number[], quantity: number) => {
+    if (isCatalogItemOutOfStock(product) || quantity <= 0) return;
+    const removable = (product.ingredients || []).filter(
+      (row) => row.is_removable === true && removedIds.includes(Number(row.raw_material_id)),
+    );
+    const variant = removedIngredientsVariant(removable.map((row) => Number(row.raw_material_id)));
+    if (!variant) {
+      setQty(product, qtyOf(product) + quantity);
+      return;
+    }
+    const discount = removable.reduce((sum, row) => sum + (Number(row.price) || 0), 0);
+    const base = Number(product.sale_price) || 0;
+    const key = catalogItemKey({ ...product, variant });
+    const existing = cart.find((line) => catalogItemKey(line) === key);
+    if (existing) {
+      persistCart(cart.map((line) => (catalogItemKey(line) === key ? { ...line, quantity: line.quantity + quantity } : line)));
+      return;
+    }
+    persistCart([
+      ...cart,
+      {
+        product_id: null,
+        produced_good_id: product.produced_good_id ?? product.id,
+        item_type: "produced_good",
+        name: `${product.name} (${t("threedWithout", { names: removable.map((row) => row.name).join("، ") })})`,
+        sale_price: Math.max(0, base - discount),
+        quantity,
+        image: productImage(product, categoryImageById),
+        variant,
+        removed_ingredient_ids: removable.map((row) => Number(row.raw_material_id)),
+      },
+    ]);
+  };
+
   const adjustCartLine = (lineKey: string, quantity: number) => {
     if (quantity <= 0) {
       persistCart(cart.filter((line) => catalogItemKey(line) !== lineKey));
@@ -926,6 +993,24 @@ function TableReservPageBody() {
         image: productImage(product, categoryImageById),
         categoryIds,
         outOfStock: isCatalogItemOutOfStock(product),
+        threed:
+          isProducedGoodItem(product) && Array.isArray(product.ingredients) && product.ingredients.length > 0
+            ? {
+                ingredients: product.ingredients.map((row) => ({
+                  raw_material_id: Number(row.raw_material_id),
+                  name: row.name,
+                  image_url: row.image_url ? resolveApiMediaUrl(row.image_url) : null,
+                  is_removable: row.is_removable === true,
+                  price: Number(row.price) || 0,
+                })),
+                layers: (product.layers || []).map((layer, index) => ({
+                  key: layer.key || `${layer.raw_material_id}-${index}`,
+                  raw_material_id: Number(layer.raw_material_id),
+                  name: layer.name,
+                  image_url: resolveApiMediaUrl(layer.image_url),
+                })),
+              }
+            : undefined,
       };
     },
     [categoryImageById],
@@ -956,6 +1041,10 @@ function TableReservPageBody() {
     onOpen: (key: string) => {
       const product = productByKey.get(key);
       if (product) setDetailProduct(product);
+    },
+    onAddCustom: (key: string, removedIngredientIds: number[], quantity: number) => {
+      const product = productByKey.get(key);
+      if (product) addCustomizedLine(product, removedIngredientIds, quantity);
     },
   };
 
@@ -2431,6 +2520,11 @@ function TableReservPageBody() {
                         <Typography key={`${order.id}-${itemIndex}`} sx={{ fontSize: 12, color: MUTED, lineHeight: 1.7 }}>
                           {(item.name || item.product_name || t("product")) +
                             (item.quantity ? ` × ${formatNumber(item.quantity)}` : "")}
+                          {removedIngredientsLabel(item) ? (
+                            <Box component="span" sx={{ display: "block", color: ACCENT, fontWeight: 700 }}>
+                              {removedIngredientsLabel(item)}
+                            </Box>
+                          ) : null}
                         </Typography>
                       ))}
                     </Box>
@@ -2515,6 +2609,11 @@ function TableReservPageBody() {
                   >
                     <Typography sx={{ fontSize: 13, color: TEXT }}>
                       {product.name || product.product_name || t("product")} × {formatNumber(Number(product.quantity) || 1)}
+                      {removedIngredientsLabel(product as GuestOrderItem) ? (
+                        <Box component="span" sx={{ display: "block", fontSize: 11.5, color: ACCENT, fontWeight: 700 }}>
+                          {removedIngredientsLabel(product as GuestOrderItem)}
+                        </Box>
+                      ) : null}
                     </Typography>
                     <Typography sx={{ fontSize: 13, color: MUTED }}>
                       {formatNumber(

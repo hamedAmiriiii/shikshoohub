@@ -1,4 +1,4 @@
-export type ReservMenuThemeId = "classic" | "list" | "showcase" | "grid" | "cover" | "motion" | "video";
+export type ReservMenuThemeId = "classic" | "list" | "showcase" | "grid" | "cover" | "motion" | "video" | "threed";
 
 export type ReservMenuBackgroundType = "video" | "image";
 
@@ -29,6 +29,7 @@ export const RESERV_MENU_THEMES: Array<{
   { id: "cover", title: "صفحه خوش‌آمد", hint: "اول یک صفحهٔ ورود با کاور و دکمهٔ مشاهده منو" },
   { id: "motion", title: "متحرک", hint: "پس‌زمینهٔ شفق متحرک و ردیف‌های کشویی با انیمیشن" },
   { id: "video", title: "ویدیو پس‌زمینه", hint: "ویدیو یا گیف خودتان زیر منو، کارت‌های شیشه‌ای" },
+  { id: "threed", title: "منو سه‌بعدی", hint: "فقط کالاهای تولیدی؛ ساندویچ لایه‌لایه با مواد قابل حذف و قیمت زنده" },
 ];
 
 const THEME_IDS = new Set<string>(RESERV_MENU_THEMES.map((theme) => theme.id));
@@ -38,7 +39,7 @@ export function normalizeReservMenuThemeId(value: unknown): ReservMenuThemeId {
   return THEME_IDS.has(id) ? (id as ReservMenuThemeId) : "classic";
 }
 
-function resolveApiMediaUrl(url: string): string {
+export function resolveApiMediaUrl(url: string): string {
   if (url.startsWith("/storage/")) return `https://api.webinoo-plus.ir${url}`;
   return url;
 }

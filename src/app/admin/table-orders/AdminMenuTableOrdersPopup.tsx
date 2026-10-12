@@ -40,6 +40,7 @@ import {
   extractTableOrders,
   getTableOrderAmount,
   getTableOrderProducts,
+  tableOrderRemovedLabel,
   tableOrderToSaleReceipt,
   tablePaymentMethodLabel,
   type TableOrder,
@@ -481,9 +482,16 @@ export default function AdminMenuTableOrdersPopup() {
                       borderBottom: "1px solid var(--admin-border)",
                     }}
                   >
-                    <Typography sx={{ fontSize: 13 }}>
-                      {getDebtProductName(product)} × {formatNumber(Number(product.quantity) || 1)}
-                    </Typography>
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography sx={{ fontSize: 13 }}>
+                        {getDebtProductName(product)} × {formatNumber(Number(product.quantity) || 1)}
+                      </Typography>
+                      {tableOrderRemovedLabel(product) ? (
+                        <Typography sx={{ fontSize: 12, fontWeight: 800, color: "#e53935", mt: 0.3 }}>
+                          {tableOrderRemovedLabel(product)}
+                        </Typography>
+                      ) : null}
+                    </Box>
                     <Typography sx={{ fontSize: 13, color: "var(--admin-text-secondary)", whiteSpace: "nowrap" }}>
                       {formatNumber(
                         Number(

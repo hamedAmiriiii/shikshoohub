@@ -52,7 +52,17 @@ export type ShopTableInfo = {
 export type TableOrderProduct = PurchaseDebtProduct & {
   quantity?: number;
   sale_price?: number;
+  /** منوی سه‌بعدی: موادی که مشتری از کالای تولیدی برداشته است */
+  removed_ingredients?: Array<{ raw_material_id?: number; name?: string; price?: number }>;
 };
+
+/** «بدون: خیارشور، پنیر» یا رشتهٔ خالی */
+export function tableOrderRemovedLabel(product: TableOrderProduct): string {
+  const names = (product.removed_ingredients || [])
+    .map((row) => String(row?.name || "").trim())
+    .filter(Boolean);
+  return names.length ? `بدون: ${names.join("، ")}` : "";
+}
 
 export type TableOrder = {
   id: number;

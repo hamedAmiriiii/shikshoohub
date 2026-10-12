@@ -45,6 +45,9 @@ import KitchenIcon from "@mui/icons-material/Kitchen";
 import PrecisionManufacturingIcon from "@mui/icons-material/PrecisionManufacturing";
 import WarehouseIcon from "@mui/icons-material/Warehouse";
 import LocalOfferIcon from "@mui/icons-material/LocalOffer";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import tokenCode from "@/app/coponent/tokenCode";
@@ -64,6 +67,7 @@ import {
   materialUnitLabel,
   isPercentSaleMode,
   isRoundSalePrice,
+  layerOrderFromGood,
   parseAmount,
   profitPercentFromSale,
   recipeLinesFromGood,
@@ -192,7 +196,22 @@ const actionBtnSx = {
 
 type TabKey = "stock" | "materials" | "goods";
 
-const emptyLine = (): RecipeLine => ({ raw_material_id: "", grams_per_kg: 0 });
+const emptyLine = (): RecipeLine => ({ raw_material_id: "", grams_per_kg: 0, is_removable: false });
+
+const LAYER_IMAGE_MAX_BYTES = 3 * 1024 * 1024;
+
+const checkerSx = {
+  backgroundColor: "#ffffff",
+  backgroundImage:
+    "linear-gradient(45deg, #d9d9d9 25%, transparent 25%), linear-gradient(-45deg, #d9d9d9 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #d9d9d9 75%), linear-gradient(-45deg, transparent 75%, #d9d9d9 75%)",
+  backgroundSize: "12px 12px",
+  backgroundPosition: "0 0, 0 6px, 6px -6px, -6px 0",
+} as const;
+
+function layerImageSrc(url?: string | null): string | null {
+  if (!url) return null;
+  return url.startsWith("/storage/") ? `https://api.webinoo-plus.ir${url}` : url;
+}
 
 export default function ProductionCostingPage() {
   const { can } = useShopPermissionGate();
@@ -221,6 +240,10 @@ export default function ProductionCostingPage() {
   const [goodName, setGoodName] = useState("");
   const [goodUnit, setGoodUnit] = useState<"kg" | "piece">("kg");
   const [recipeLines, setRecipeLines] = useState<RecipeLine[]>([emptyLine()]);
+  const [layerOrder, setLayerOrder] = useState<number[]>([]);
+  // عکس لایهٔ ماده اولیه (منوی سه‌بعدی)
+  const [layerDataUrl, setLayerDataUrl] = useState<string | null>(null);
+  const [layerRemoved, setLayerRemoved] = useState(false);
   const [goodCategoryIds, setGoodCategoryIds] = useState<number[]>([]);
   const [shopCategories, setShopCategories] = useState<ShopCategoryOption[]>([]);
 
@@ -345,6 +368,8 @@ export default function ProductionCostingPage() {
     setLotQty("");
     setLotPrice("");
     setInvoiceLink(emptyInvoiceLinkState());
+    setLayerDataUrl(null);
+    setLayerRemoved(false);
     setMaterialDialogOpen(true);
   };
 
@@ -355,7 +380,51 @@ export default function ProductionCostingPage() {
     setLotQty("");
     setLotPrice("");
     setInvoiceLink(emptyInvoiceLinkState());
+    setLayerDataUrl(null);
+    setLayerRemoved(false);
     setMaterialDialogOpen(true);
+  };
+
+  const pickLayerFile = (file: File | undefined | null) => {
+    if (!file) return;
+    if (file.type !== "image/png" && file.type !== "image/webp") {
+      toast.error("عکس لایه باید PNG یا WebP با پس‌زمینهٔ شفاف باشد");
+      return;
+    }
+    if (file.size > LAYER_IMAGE_MAX_BYTES) {
+      toast.error("حجم عکس لایه نباید بیشتر از ۳ مگابایت باشد");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setLayerDataUrl(typeof reader.result === "string" ? reader.result : null);
+      setLayerRemoved(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  /** بعد از ذخیرهٔ ماده: آپلود یا حذف عکس لایه. false یعنی خطا (پیام داده شده). */
+  const syncLayerImage = async (materialId: number, token: string): Promise<boolean> => {
+    if (layerDataUrl) {
+      const res = await FetchWithJwtClient(
+        "POST",
+        `/api/raw-materials/${materialId}/layer-image`,
+        token,
+        {},
+        { body: JSON.stringify({ image_base64: layerDataUrl }) },
+      );
+      if (res?.hasError) {
+        toast.error(getApiErrorMessage(res, "ماده ذخیره شد ولی عکس لایه آپلود نشد"));
+        return false;
+      }
+    } else if (layerRemoved && editingMaterial?.layer_image_url) {
+      const res = await FetchWithJwtClient("DELETE", `/api/raw-materials/${materialId}/layer-image`, token, {});
+      if (res?.hasError) {
+        toast.error(getApiErrorMessage(res, "حذف عکس لایه ناموفق بود"));
+        return false;
+      }
+    }
+    return true;
   };
 
   const saveMaterial = async () => {
@@ -380,7 +449,8 @@ export default function ProductionCostingPage() {
           toast.error(getApiErrorMessage(res, "ویرایش ماده اولیه ناموفق بود"));
           return;
         }
-        toast.success("نام ماده اولیه به‌روز شد");
+        await syncLayerImage(editingMaterial.id, token);
+        toast.success("ماده اولیه به‌روز شد");
       } else {
         const qty = parseAmount(lotQty);
         const price = parseAmount(lotPrice);
@@ -419,6 +489,8 @@ export default function ProductionCostingPage() {
             toast.error(getApiErrorMessage(res, "ثبت ماده اولیه ناموفق بود"));
             return;
           }
+          const createdWithInvoice = asRawMaterial(res);
+          if (createdWithInvoice) await syncLayerImage(createdWithInvoice.id, token);
         } else {
           const res = await FetchWithJwtClient(
             "POST",
@@ -432,6 +504,7 @@ export default function ProductionCostingPage() {
             return;
           }
           const created = asRawMaterial(res);
+          if (created) await syncLayerImage(created.id, token);
           if (created && qty > 0 && price > 0) {
             const lotRes = await FetchWithJwtClient(
               "POST",
@@ -544,6 +617,7 @@ export default function ProductionCostingPage() {
     setGoodName("");
     setGoodUnit("kg");
     setRecipeLines([emptyLine()]);
+    setLayerOrder([]);
     setGoodCategoryIds([]);
     setGoodDialogOpen(true);
   };
@@ -553,6 +627,7 @@ export default function ProductionCostingPage() {
     setGoodName(good.name);
     setGoodUnit(isPieceMaterial(good) ? "piece" : "kg");
     setRecipeLines(recipeLinesFromGood(good));
+    setLayerOrder(layerOrderFromGood(good));
     setGoodCategoryIds(categoryIdsFromGood(good));
     setGoodDialogOpen(true);
   };
@@ -568,6 +643,7 @@ export default function ProductionCostingPage() {
       .map((line) => ({
         raw_material_id: Number(line.raw_material_id),
         grams_per_kg: line.grams_per_kg,
+        is_removable: line.is_removable === true,
       }));
     if (!ingredients.length) {
       toast.error("حداقل یک ماده با مقدار گرم وارد کنید");
@@ -581,7 +657,13 @@ export default function ProductionCostingPage() {
     if (!token) return;
     setSaving(true);
     try {
-      const payload: Record<string, unknown> = { name, ingredients, category_ids: goodCategoryIds };
+      const recipeIds = new Set(ingredients.map((line) => line.raw_material_id));
+      const payload: Record<string, unknown> = {
+        name,
+        ingredients,
+        category_ids: goodCategoryIds,
+        layer_order: layerOrder.filter((id) => recipeIds.has(id)),
+      };
       if (!editingGood) payload.unit_type = goodUnit;
       if (editingGood && isPercentSaleMode(editingGood)) {
         const markup = storedMarkupPercent(editingGood);
@@ -1174,6 +1256,83 @@ export default function ProductionCostingPage() {
               </Box>
             </>
           )}
+          {(() => {
+            const existing = layerRemoved ? null : layerImageSrc(editingMaterial?.layer_image_url);
+            const shown = layerDataUrl || existing;
+            return (
+              <Box
+                sx={{
+                  gridColumn: "1 / -1",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.5,
+                  p: 1,
+                  borderRadius: "12px",
+                  border: "1px dashed var(--admin-border)",
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 84,
+                    height: 64,
+                    flexShrink: 0,
+                    borderRadius: "10px",
+                    display: "grid",
+                    placeItems: "center",
+                    overflow: "hidden",
+                    ...checkerSx,
+                  }}
+                >
+                  {shown ? (
+                    <Box component="img" src={shown} alt="" sx={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
+                  ) : (
+                    <Typography sx={{ fontSize: 10, color: "#888" }}>بدون عکس</Typography>
+                  )}
+                </Box>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography sx={{ fontSize: 12, fontWeight: 700, color: "var(--admin-text)" }}>
+                    عکس لایه برای منوی سه‌بعدی
+                  </Typography>
+                  <Typography sx={{ fontSize: 10.5, color: "var(--admin-text-muted)", lineHeight: 1.7 }}>
+                    PNG یا WebP با پس‌زمینهٔ شفاف، نمای از کنار (مثلاً یک برش نان یا یک پتی). حداکثر ۳ مگابایت.
+                  </Typography>
+                  <Box sx={{ display: "flex", gap: 0.8, mt: 0.6, flexWrap: "wrap" }}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      component="label"
+                      startIcon={<CloudUploadIcon />}
+                      sx={{ fontSize: 11 }}
+                    >
+                      {shown ? "تغییر عکس" : "انتخاب عکس"}
+                      <input
+                        hidden
+                        type="file"
+                        accept="image/png,image/webp"
+                        onChange={(e) => {
+                          pickLayerFile(e.target.files?.[0]);
+                          e.target.value = "";
+                        }}
+                      />
+                    </Button>
+                    {shown ? (
+                      <Button
+                        size="small"
+                        color="error"
+                        onClick={() => {
+                          setLayerDataUrl(null);
+                          setLayerRemoved(true);
+                        }}
+                        sx={{ fontSize: 11 }}
+                      >
+                        حذف عکس
+                      </Button>
+                    ) : null}
+                  </Box>
+                </Box>
+              </Box>
+            );
+          })()}
         </DialogContent>
         <DialogActions sx={{ px: 1.5, py: 1 }}>
           <Button size="small" onClick={() => setMaterialDialogOpen(false)}>انصراف</Button>
@@ -1300,11 +1459,133 @@ export default function ProductionCostingPage() {
               >
                 <DeleteOutlineIcon />
               </IconButton>
+              <FormControlLabel
+                sx={{ gridColumn: "1 / -1", m: 0, justifyContent: "flex-start" }}
+                control={
+                  <Switch
+                    size="small"
+                    checked={line.is_removable === true}
+                    disabled={line.raw_material_id === ""}
+                    onChange={(e) => {
+                      const next = [...recipeLines];
+                      next[index] = { ...next[index], is_removable: e.target.checked };
+                      setRecipeLines(next);
+                    }}
+                  />
+                }
+                label={
+                  <Typography sx={{ fontSize: 11.5, color: "var(--admin-text-muted)" }}>
+                    مشتری در منوی سه‌بعدی بتواند این ماده را بردارد
+                  </Typography>
+                }
+              />
             </Box>
           ))}
           <Button startIcon={<AddIcon />} onClick={() => setRecipeLines([...recipeLines, emptyLine()])} sx={adminButtonStartIconSx}>
             ماده بعدی
           </Button>
+
+          {(() => {
+            const recipeMaterialIds = Array.from(
+              new Set(recipeLines.map((line) => Number(line.raw_material_id)).filter((id) => id > 0)),
+            );
+            const materialById = new Map(materials.map((m) => [m.id, m] as const));
+            const rows = layerOrder.filter((id) => recipeMaterialIds.includes(id));
+            const move = (from: number, to: number) => {
+              if (to < 0 || to >= rows.length) return;
+              const next = [...rows];
+              const [item] = next.splice(from, 1);
+              next.splice(to, 0, item);
+              setLayerOrder(next);
+            };
+            return (
+              <Box sx={{ mt: 1, p: 1.25, borderRadius: "14px", border: "1px solid var(--admin-border)" }}>
+                <Typography sx={{ fontSize: 13, fontWeight: 800, color: "var(--admin-text)" }}>
+                  ترتیب لایه‌ها در عکس منوی سه‌بعدی
+                </Typography>
+                <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)", lineHeight: 1.8, mb: 1 }}>
+                  از بالا به پایین. هر ماده می‌تواند چند بار بیاید (مثلاً نان برای بالا و پایین ساندویچ). عکس هر ماده را
+                  در تب مواد اولیه آپلود کنید.
+                </Typography>
+                {rows.length === 0 ? (
+                  <Typography sx={{ fontSize: 11.5, color: "var(--admin-text-muted)", mb: 1 }}>
+                    خالی است؛ ترتیب فرمول استفاده می‌شود.
+                  </Typography>
+                ) : null}
+                {rows.map((id, i) => {
+                  const material = materialById.get(id);
+                  const src = layerImageSrc(material?.layer_image_url);
+                  return (
+                    <Box
+                      key={`${id}-${i}`}
+                      sx={{ display: "flex", alignItems: "center", gap: 0.8, py: 0.5, borderBottom: "1px solid var(--admin-border)" }}
+                    >
+                      <Typography sx={{ width: 22, fontSize: 12, fontWeight: 800, color: "var(--admin-accent)", textAlign: "center" }}>
+                        {i}
+                      </Typography>
+                      <Box
+                        sx={{
+                          width: 56,
+                          height: 34,
+                          borderRadius: "8px",
+                          display: "grid",
+                          placeItems: "center",
+                          overflow: "hidden",
+                          flexShrink: 0,
+                          ...checkerSx,
+                        }}
+                      >
+                        {src ? (
+                          <Box component="img" src={src} alt="" sx={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
+                        ) : (
+                          <Typography sx={{ fontSize: 9, color: "#c62828" }}>بدون عکس</Typography>
+                        )}
+                      </Box>
+                      <Typography sx={{ flex: 1, fontSize: 12.5, color: "var(--admin-text)" }}>
+                        {material?.name || `#${id}`}
+                      </Typography>
+                      <IconButton size="small" disabled={i === 0} onClick={() => move(i, i - 1)}>
+                        <ArrowUpwardIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                      <IconButton size="small" disabled={i === rows.length - 1} onClick={() => move(i, i + 1)}>
+                        <ArrowDownwardIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        sx={{ color: "#ef5350" }}
+                        onClick={() => setLayerOrder(rows.filter((_, idx) => idx !== i))}
+                      >
+                        <DeleteOutlineIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </Box>
+                  );
+                })}
+                <Box sx={{ display: "flex", gap: 0.8, flexWrap: "wrap", mt: 1 }}>
+                  <TextField
+                    select
+                    size="small"
+                    label="افزودن لایه"
+                    value=""
+                    onChange={(e) => {
+                      const id = Number(e.target.value);
+                      if (id > 0) setLayerOrder([...rows, id]);
+                    }}
+                    disabled={recipeMaterialIds.length === 0}
+                    sx={{ ...fieldSx, minWidth: 170 }}
+                  >
+                    {recipeMaterialIds.map((id) => (
+                      <MenuItem key={id} value={id}>
+                        {materialById.get(id)?.name || `#${id}`}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                  <Button size="small" onClick={() => setLayerOrder(recipeMaterialIds)} sx={{ fontSize: 11 }}>
+                    پر کردن از فرمول
+                  </Button>
+                </Box>
+              </Box>
+            );
+          })()}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setGoodDialogOpen(false)}>انصراف</Button>

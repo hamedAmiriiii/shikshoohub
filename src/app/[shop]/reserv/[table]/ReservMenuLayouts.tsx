@@ -18,8 +18,11 @@ import { APP_FONT_FAMILY } from "@/app/lib/appFont";
 import type { ReservMenuBackgroundType, ReservMenuThemeId } from "@/app/lib/reservMenuThemes";
 import { THEMES, type CategoryChip, type ReservTheme, type ReservThemeMode } from "./ReservOrderingParts";
 import { RESERV_LOCALES, useReservI18n } from "./reservI18n";
+import { ThreeDBackdrop, ThreeDLayout, type ThreeDData } from "./ThreeDMenu";
 
 export type ReservMenuItem = {
+  /** فقط کالاهای تولیدی؛ مواد و لایه‌های عکس برای تم «منو سه‌بعدی» */
+  threed?: ThreeDData;
   key: string;
   name: string;
   description?: string;
@@ -68,6 +71,8 @@ export type ReservMenuLayoutProps = ItemActions & {
   compact?: boolean;
   /** اکشن‌های هدر برای تم ویترین طلایی — ستون سمت راست */
   showcaseToolbar?: ReservShowcaseToolbarProps | null;
+  /** منوی سه‌بعدی: افزودن به سبد با موادِ برداشته‌شده */
+  onAddCustom?: (key: string, removedIngredientIds: number[], quantity: number) => void;
 };
 
 const motionSafe = {
@@ -197,9 +202,23 @@ const VIDEO_PALETTE: ReservTheme = {
   SHADOW: "0 12px 32px rgba(0,0,0,0.5)",
 };
 
+const THREED_PALETTE: ReservTheme = {
+  BG: "#07070d",
+  BG_GRADIENT: "none",
+  SURFACE: "#16121f",
+  SURFACE_ALT: "#201b2e",
+  TEXT: "#ffffff",
+  MUTED: "rgba(255,255,255,0.68)",
+  BORDER: "rgba(255,255,255,0.14)",
+  HEADER_BG: "rgba(10,9,18,0.72)",
+  CART_BAR_BG: "linear-gradient(135deg, #ff9f43 0%, #ff5e62 100%)",
+  CART_BAR_TEXT: "#1b1206",
+  SHADOW: "0 14px 36px rgba(0,0,0,0.55)",
+};
+
 /** تم‌هایی که همیشه تیره‌اند و دکمهٔ روشن/تیره ندارند */
 export function reservThemeForcedMode(themeId: ReservMenuThemeId): ReservThemeMode | null {
-  return themeId === "motion" || themeId === "video" ? "dark" : null;
+  return themeId === "motion" || themeId === "video" || themeId === "threed" ? "dark" : null;
 }
 
 export function reservPaletteFor(themeId: ReservMenuThemeId, mode: ReservThemeMode): ReservTheme {
@@ -216,6 +235,8 @@ export function reservPaletteFor(themeId: ReservMenuThemeId, mode: ReservThemeMo
       return MOTION_PALETTE;
     case "video":
       return VIDEO_PALETTE;
+    case "threed":
+      return THREED_PALETTE;
     default:
       return THEMES[mode];
   }
@@ -1929,6 +1950,8 @@ export function ReservMenuLayout(props: ReservMenuLayoutProps) {
       return <MotionLayout {...props} />;
     case "video":
       return <VideoLayout {...props} />;
+    case "threed":
+      return <ThreeDLayout {...props} />;
     default:
       return null;
   }
@@ -2031,6 +2054,7 @@ export function ReservThemeBackdrop({
   contained?: boolean;
 }) {
   if (themeId === "motion") return <AuroraBackdrop contained={contained} />;
+  if (themeId === "threed") return <ThreeDBackdrop contained={contained} />;
   if (themeId === "video") {
     return <MediaBackdrop url={backgroundUrl || null} type={backgroundType || null} contained={contained} />;
   }

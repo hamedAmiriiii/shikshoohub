@@ -193,6 +193,19 @@ const FA: Dict = {
   itemsCount: "{n} آیتم",
   previewBanner: "پیش‌نمایش تم منو — ثبت سفارش در این حالت غیرفعال است",
   previewNoSubmit: "در حالت پیش‌نمایش نمی‌توان سفارش ثبت کرد",
+  threedIngredients: "مواد تشکیل‌دهنده",
+  threedHint: "مواد را تیک بزنید یا بردارید؛ ترکیب و قیمت همان لحظه عوض می‌شود",
+  threedFixed: "ثابت",
+  threedWithout: "بدون {names}",
+  threedAddToOrder: "افزودن به سفارش",
+  threedNext: "بعدی",
+  threedPrev: "قبلی",
+  threedClose: "بستن",
+  threedBasePrice: "قیمت کامل",
+  threedSaved: "{amount} تومان کمتر",
+  threedEmpty: "هنوز کالای تولیدی با تصویر لایه‌ای برای منوی سه‌بعدی ثبت نشده است",
+  threedTap: "برای دیدن ترکیب، لمس کنید",
+  threedNoLayers: "تصویر لایه‌ای این کالا هنوز ثبت نشده",
 };
 
 const EN: Dict = {
@@ -380,6 +393,19 @@ const EN: Dict = {
   itemsCount: "{n} items",
   previewBanner: "Menu theme preview — ordering is disabled",
   previewNoSubmit: "Orders can't be placed in preview mode",
+  threedIngredients: "Ingredients",
+  threedHint: "Tick or untick ingredients — the stack and price update instantly",
+  threedFixed: "Included",
+  threedWithout: "Without {names}",
+  threedAddToOrder: "Add to order",
+  threedNext: "Next",
+  threedPrev: "Previous",
+  threedClose: "Close",
+  threedBasePrice: "Full price",
+  threedSaved: "{amount} Toman less",
+  threedEmpty: "No produced items with layer images have been set up for the 3D menu yet",
+  threedTap: "Tap to see the build",
+  threedNoLayers: "No layered image for this item yet",
 };
 
 const AR: Dict = {
@@ -567,6 +593,19 @@ const AR: Dict = {
   itemsCount: "{n} عنصر",
   previewBanner: "معاينة شكل القائمة — الطلب معطّل",
   previewNoSubmit: "لا يمكن تسجيل الطلب في وضع المعاينة",
+  threedIngredients: "المكونات",
+  threedHint: "حدّد المكونات أو ألغِها؛ يتغيّر الشكل والسعر فوراً",
+  threedFixed: "أساسي",
+  threedWithout: "بدون {names}",
+  threedAddToOrder: "أضف إلى الطلب",
+  threedNext: "التالي",
+  threedPrev: "السابق",
+  threedClose: "إغلاق",
+  threedBasePrice: "السعر الكامل",
+  threedSaved: "أقل بـ {amount} تومان",
+  threedEmpty: "لا توجد بعد أصناف مُنتَجة بصور طبقات للقائمة ثلاثية الأبعاد",
+  threedTap: "المس لرؤية التركيب",
+  threedNoLayers: "لا توجد صورة طبقات لهذا الصنف بعد",
 };
 
 const DICTS: Record<ReservLocale, Dict> = { fa: FA, en: EN, ar: AR };

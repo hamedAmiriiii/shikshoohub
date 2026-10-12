@@ -24,6 +24,8 @@ export type RawMaterial = {
   open_lots_count?: number;
   next_price_per_kg?: number | null;
   lots?: RawMaterialLot[];
+  /** عکس لایهٔ منوی سه‌بعدی (PNG شفاف نمای کنار) */
+  layer_image_url?: string | null;
 };
 
 export type IngredientCostLot = {
@@ -39,6 +41,7 @@ export type IngredientCost = {
   raw_material_id: number;
   name?: string | null;
   grams_per_kg: number;
+  is_removable?: boolean;
   needed_kg?: number;
   cost?: number;
   lots?: IngredientCostLot[];
@@ -72,6 +75,8 @@ export type ProducedGood = {
   stock_sufficient?: boolean;
   shortages?: MaterialShortage[];
   ingredient_costs?: IngredientCost[];
+  /** ترتیب لایه‌های عکس منوی سه‌بعدی (شناسهٔ ماده، بالا به پایین؛ تکرار مجاز) */
+  layer_order?: number[] | null;
   category_ids?: Array<number | string>;
   categories?: Array<{ id?: number | string; name?: string } | number | string>;
 };
@@ -123,6 +128,8 @@ export type ProductionRecord = {
 export type RecipeLine = {
   raw_material_id: number | "";
   grams_per_kg: number;
+  /** مشتری در منوی سه‌بعدی بتواند این ماده را بردارد */
+  is_removable?: boolean;
 };
 
 export function isPieceMaterial(material?: { unit_type?: string | null } | null): boolean {
@@ -204,7 +211,15 @@ export function recipeLinesFromGood(good: ProducedGood): RecipeLine[] {
   return lines.map((line) => ({
     raw_material_id: line.raw_material_id,
     grams_per_kg: Number(line.grams_per_kg) || 0,
+    is_removable: line.is_removable === true,
   }));
+}
+
+/** ترتیب اولیهٔ لایه‌ها: ترتیب ذخیره‌شده، وگرنه ترتیب فرمول */
+export function layerOrderFromGood(good: ProducedGood): number[] {
+  const stored = Array.isArray(good.layer_order) ? good.layer_order.map(Number).filter((n) => n > 0) : [];
+  if (stored.length) return stored;
+  return (good.ingredient_costs || []).map((line) => Number(line.raw_material_id)).filter((n) => n > 0);
 }
 
 export function salePriceFromProfitPercent(costPerKg: number, percent: number): number {

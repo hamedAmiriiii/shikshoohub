@@ -15,6 +15,7 @@ import {
   reservThemeForcedMode,
   type ReservMenuItem,
 } from "@/app/[shop]/reserv/[table]/ReservMenuLayouts";
+import { THREED_SAMPLE_ITEMS } from "@/app/[shop]/reserv/[table]/ThreeDMenu";
 import {
   type CategoryChip,
 } from "@/app/[shop]/reserv/[table]/ReservOrderingParts";
@@ -107,8 +108,10 @@ export function ReservMenuThemePreview({
   const [selectedCategory, setSelectedCategory] = useState("all");
   const mode = reservThemeForcedMode(themeId) ?? "light";
   const palette = reservPaletteFor(themeId, mode);
-  const items =
-    selectedCategory === "all"
+  const isThreeD = themeId === "threed";
+  const items = isThreeD
+    ? THREED_SAMPLE_ITEMS
+    : selectedCategory === "all"
       ? SAMPLE_ITEMS
       : SAMPLE_ITEMS.filter((item) => item.categoryIds.includes(selectedCategory));
 
@@ -199,11 +202,20 @@ export function ReservMenuThemePreview({
           </Box>
         </Box>
       </Box>
-      <Box sx={{ position: "relative", zIndex: 1, px: 1.5, pt: 1.5, pb: 3 }}>
+      <Box
+        sx={{
+          zIndex: 1,
+          px: 1.5,
+          pt: 1.5,
+          pb: 3,
+          // برای تم سه‌بعدی، صفحهٔ جزئیات روی کل قاب باز می‌شود
+          ...(isThreeD ? { position: "relative", minHeight: height - 62 } : { position: "relative" }),
+        }}
+      >
           <ReservMenuLayout
             themeId={themeId}
             items={items}
-            categories={SAMPLE_CATEGORIES}
+            categories={isThreeD ? [SAMPLE_CATEGORIES[0]] : SAMPLE_CATEGORIES}
             selectedCategory={selectedCategory}
             onSelectCategory={setSelectedCategory}
             searchActive={false}
