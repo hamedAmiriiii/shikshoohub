@@ -851,6 +851,7 @@ function TableReservPageBody() {
   const visibleProducts = useMemo(() => {
     const term = search.trim().toLowerCase();
     return menuProducts.filter((product) => {
+      if (isCatalogItemOutOfStock(product)) return false;
       if (selectedCategory !== "all") {
         const inCategory =
           String(product.category_id) === selectedCategory ||
@@ -1025,7 +1026,10 @@ function TableReservPageBody() {
     [toLayoutItem, visibleProducts],
   );
   const coverItems = useMemo(
-    () => (activeThemeId === "cover" ? menuProducts.map(toLayoutItem) : []),
+    () =>
+      activeThemeId === "cover"
+        ? menuProducts.filter((product) => !isCatalogItemOutOfStock(product)).map(toLayoutItem)
+        : [],
     [activeThemeId, menuProducts, toLayoutItem],
   );
   const layoutActions = {

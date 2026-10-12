@@ -1022,7 +1022,10 @@ function ThreeDDetail({
 export function ThreeDLayout(props: ReservMenuLayoutProps) {
   const { t } = useReservI18n();
   const { items, categories, selectedCategory, onSelectCategory, searchActive, compact, onAddCustom, onAdd } = props;
-  const list = useMemo(() => items.filter((item) => item.threed), [items]);
+  const list = useMemo(
+    () => items.filter((item) => item.threed && !item.outOfStock),
+    [items],
+  );
   const [openKey, setOpenKey] = useState<string | null>(null);
   const [removedByKey, setRemovedByKey] = useState<Record<string, number[]>>({});
 
