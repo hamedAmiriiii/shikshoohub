@@ -418,6 +418,21 @@ export default function SettingsPage() {
         const days = (res as { days?: unknown }).days;
         setSaleReturnDays(days == null || days === "" ? "" : String(days));
       });
+      void apiRequestError(
+        "Get",
+        {},
+        {},
+        `/api/settings/installment-interest-rate`,
+        true,
+        true,
+        token,
+      ).then((res) => {
+        if (!res || res.hasError) return;
+        const rate = Number((res as { rate?: unknown }).rate);
+        if (Number.isFinite(rate) && rate >= 0) {
+          setInstallmentInterestRate(rate);
+        }
+      });
     }
     return () => window.removeEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, syncPosSettings);
   }, []);
@@ -1202,6 +1217,41 @@ export default function SettingsPage() {
             checked={installmentPaymentEnabled}
             onChange={handleToggleInstallmentPayment}
           />
+          <Box sx={{ gridColumn: "1 / -1", py: 1, borderBottom: "1px solid var(--admin-border)" }}>
+            <Typography sx={{ color: "var(--admin-text)", fontSize: 13, fontWeight: 600 }}>
+              درصد سود ماهانه فروش اقساطی
+            </Typography>
+            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, mb: 0.75 }}>
+              روی مبلغ باقی‌مانده بعد از پیش‌پرداخت اعمال می‌شود. صفر یعنی بدون سود. مثلاً ۲ یعنی ۲٪ در ماه.
+            </Typography>
+            <Box sx={{ display: "flex", gap: 1, alignItems: "center", maxWidth: 360 }}>
+              <TextField
+                size="small"
+                label="درصد ماهانه"
+                type="number"
+                value={installmentInterestRate}
+                onChange={(event) => {
+                  const next = Number(event.target.value);
+                  if (!Number.isFinite(next)) {
+                    setInstallmentInterestRate(0);
+                    return;
+                  }
+                  setInstallmentInterestRate(Math.min(100, Math.max(0, next)));
+                }}
+                inputProps={{ min: 0, max: 100, step: 0.1 }}
+                sx={{ flex: 1 }}
+              />
+              <Button
+                size="small"
+                variant="contained"
+                disabled={isSavingInterestRate}
+                onClick={() => void handleSaveInterestRate()}
+                sx={{ backgroundColor: "var(--admin-accent)", minWidth: 72 }}
+              >
+                {isSavingInterestRate ? <CircularProgress size={14} color="inherit" /> : "ذخیره"}
+              </Button>
+            </Box>
+          </Box>
           <SettingsToggleRow
             icon={<AccountBalanceWalletIcon sx={{ fontSize: 18 }} />}
             title="فروش نسیه"
