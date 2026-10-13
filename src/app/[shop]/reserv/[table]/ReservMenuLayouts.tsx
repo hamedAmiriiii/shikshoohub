@@ -766,22 +766,21 @@ function HorizontalCard({
           {item.name}
           {item.outOfStock ? <OutOfStockTag color={palette.MUTED} bg={palette.SURFACE_ALT} /> : null}
         </Typography>
-        {item.description ? (
-          <Typography
-            sx={{
-              mt: 0.3,
-              fontSize: 11.5,
-              lineHeight: 1.6,
-              color: palette.MUTED,
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
-            }}
-          >
-            {item.description}
-          </Typography>
-        ) : null}
+        <Typography
+          sx={{
+            mt: 0.3,
+            fontSize: 11.5,
+            lineHeight: 1.6,
+            color: palette.MUTED,
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+            minHeight: "3.2em",
+          }}
+        >
+          {item.description || "\u00a0"}
+        </Typography>
         <Box sx={{ mt: "auto", pt: 0.75, display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 1 }}>
           <Price item={item} color={palette.TEXT} muted={palette.MUTED} size={16} />
           <QtyControl

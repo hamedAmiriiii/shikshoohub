@@ -1011,6 +1011,84 @@ export function ReservProductSkeletonList({ theme }: { theme: ReservTheme }) {
   );
 }
 
+/** لودینگ اولیه منوی آنلاین — مستقل از تم، تا تم و منو آماده شوند */
+export function ReservMenuBootSplash({ title, hint }: { title: string; hint: string }) {
+  return (
+    <Box
+      sx={{
+        minHeight: "100dvh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 1.75,
+        px: 3,
+        textAlign: "center",
+        bgcolor: "#0b1220",
+        color: "#f8fafc",
+        fontFamily: APP_FONT_FAMILY,
+        backgroundImage:
+          "radial-gradient(ellipse at 50% 0%, rgba(37,99,235,0.22) 0%, transparent 55%), radial-gradient(ellipse at 80% 100%, rgba(5,150,105,0.18) 0%, transparent 50%)",
+      }}
+    >
+      <Box
+        sx={{
+          width: 76,
+          height: 76,
+          borderRadius: "22px",
+          background: WL_GRADIENT,
+          display: "grid",
+          placeItems: "center",
+          boxShadow: "0 16px 40px rgba(37,99,235,0.28)",
+          animation: "reservBootPulse 1.5s ease-in-out infinite",
+          "@keyframes reservBootPulse": {
+            "0%, 100%": { transform: "scale(1)", opacity: 1 },
+            "50%": { transform: "scale(1.05)", opacity: 0.88 },
+          },
+          "@media (prefers-reduced-motion: reduce)": {
+            animation: "none",
+          },
+        }}
+      >
+        <RestaurantMenuIcon sx={{ fontSize: 36, color: "#fff" }} />
+      </Box>
+      <Typography sx={{ fontWeight: 900, fontSize: { xs: 22, sm: 26 }, letterSpacing: "-0.02em", lineHeight: 1.3 }}>
+        {title}
+      </Typography>
+      <Typography sx={{ color: "#94a3b8", fontSize: 13.5, fontWeight: 600 }}>{hint}</Typography>
+      <Box
+        sx={{
+          mt: 0.5,
+          width: 132,
+          height: 3,
+          borderRadius: 999,
+          bgcolor: "rgba(255,255,255,0.08)",
+          overflow: "hidden",
+        }}
+      >
+        <Box
+          sx={{
+            width: "42%",
+            height: "100%",
+            borderRadius: 999,
+            background: WL_GRADIENT,
+            animation: "reservBootBar 1.15s ease-in-out infinite",
+            "@keyframes reservBootBar": {
+              "0%": { transform: "translateX(-130%)" },
+              "100%": { transform: "translateX(260%)" },
+            },
+            "@media (prefers-reduced-motion: reduce)": {
+              animation: "none",
+              width: "100%",
+              opacity: 0.55,
+            },
+          }}
+        />
+      </Box>
+    </Box>
+  );
+}
+
 type EmptyProps = {
   title: string;
   theme: ReservTheme;

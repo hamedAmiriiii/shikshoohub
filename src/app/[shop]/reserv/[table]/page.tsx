@@ -69,6 +69,7 @@ import {
   ReservDesktopCartPanel,
   ReservEmptyState,
   ReservHeader,
+  ReservMenuBootSplash,
   ReservProductSkeletonList,
   ReservSearchBar,
   type ReservThemeMode,
@@ -143,6 +144,7 @@ type Product = {
     raw_material_id: number;
     name: string;
     image_url: string;
+    scale?: number;
   }>;
   layer_compose?: "side" | "overlay" | string | null;
 };
@@ -1039,6 +1041,7 @@ function TableReservPageBody() {
                   raw_material_id: Number(layer.raw_material_id),
                   name: layer.name,
                   image_url: resolveApiMediaUrl(layer.image_url),
+                  scale: Number.isFinite(Number(layer.scale)) ? Number(layer.scale) : 1,
                 })),
                 layer_compose: product.layer_compose === "overlay" ? "overlay" : "side",
               }
@@ -1908,6 +1911,29 @@ function TableReservPageBody() {
       : `${t("amountToman", { amount: formatNumber(cartTotal) })}`;
   const activeCurrentCount = currentOrders.filter((order) => order.status !== "cancelled").length;
   const activeServiceCount = serviceRequests.length;
+
+  const bootTitleFromUrl = (() => {
+    const raw = typeof shopCode === "string" ? shopCode.trim() : "";
+    if (!raw) return "";
+    try {
+      return decodeURIComponent(raw);
+    } catch {
+      return raw;
+    }
+  })();
+  const bootTitle =
+    (shopTitle && shopTitle !== t("shop") ? shopTitle : "") || bootTitleFromUrl || t("shop");
+  const menuBooting = productsLoading && products.length === 0 && allowMenu;
+  const servicesOnlyBooting =
+    !allowMenu && allowServices && servicesLoading && services.length === 0;
+  if (menuBooting || servicesOnlyBooting) {
+    return (
+      <Box lang={locale} sx={{ direction: dir }}>
+        <ReservMenuBootSplash title={bootTitle} hint={t("menuBootLoading")} />
+        <ToastContainer position="bottom-center" autoClose={3000} theme="dark" rtl={dir === "rtl"} />
+      </Box>
+    );
+  }
 
   return (
     <Box

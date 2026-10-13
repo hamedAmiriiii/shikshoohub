@@ -30,6 +30,36 @@ export type RawMaterial = {
 
 export type LayerComposeMode = "side" | "overlay";
 
+/** یک لایه در چینش عکس منوی سه‌بعدی */
+export type LayerOrderEntry = {
+  raw_material_id: number;
+  /** مقیاس نمایش نسبت به قاب (۱ = عادی)؛ معمولاً ۰٫۴ تا ۲ */
+  scale: number;
+};
+
+export const LAYER_SCALE_MIN = 0.4;
+export const LAYER_SCALE_MAX = 2;
+export const LAYER_SCALE_STEP = 0.05;
+
+export function clampLayerScale(value: unknown): number {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 1;
+  return Math.min(LAYER_SCALE_MAX, Math.max(LAYER_SCALE_MIN, Math.round(n * 100) / 100));
+}
+
+export function parseLayerOrderEntry(raw: unknown): LayerOrderEntry | null {
+  if (typeof raw === "number" || typeof raw === "string") {
+    const id = Number(raw);
+    if (!Number.isFinite(id) || id <= 0) return null;
+    return { raw_material_id: id, scale: 1 };
+  }
+  if (!raw || typeof raw !== "object") return null;
+  const row = raw as Record<string, unknown>;
+  const id = Number(row.raw_material_id ?? row.id);
+  if (!Number.isFinite(id) || id <= 0) return null;
+  return { raw_material_id: id, scale: clampLayerScale(row.scale ?? 1) };
+}
+
 export type IngredientCostLot = {
   lot_id: number;
   quantity_kg: number;
@@ -77,8 +107,11 @@ export type ProducedGood = {
   stock_sufficient?: boolean;
   shortages?: MaterialShortage[];
   ingredient_costs?: IngredientCost[];
-  /** ترتیب لایه‌های عکس منوی سه‌بعدی (شناسهٔ ماده، بالا به پایین؛ تکرار مجاز) */
-  layer_order?: number[] | null;
+  /**
+   * ترتیب لایه‌های عکس منوی سه‌بعدی (بالا به پایین؛ تکرار مجاز).
+   * عدد = فقط شناسه ماده | آبجکت = شناسه + مقیاس نمایش
+   */
+  layer_order?: Array<number | LayerOrderEntry | Record<string, unknown>> | null;
   /** side = ساندویچ نمای کنار | overlay = پیتزا نمای بالا */
   layer_compose?: LayerComposeMode | string | null;
   category_ids?: Array<number | string>;
@@ -224,10 +257,15 @@ export function recipeLinesFromGood(good: ProducedGood): RecipeLine[] {
 }
 
 /** ترتیب اولیهٔ لایه‌ها: ترتیب ذخیره‌شده، وگرنه ترتیب فرمول */
-export function layerOrderFromGood(good: ProducedGood): number[] {
-  const stored = Array.isArray(good.layer_order) ? good.layer_order.map(Number).filter((n) => n > 0) : [];
+export function layerOrderFromGood(good: ProducedGood): LayerOrderEntry[] {
+  const stored = Array.isArray(good.layer_order)
+    ? good.layer_order.map(parseLayerOrderEntry).filter((row): row is LayerOrderEntry => row != null)
+    : [];
   if (stored.length) return stored;
-  return (good.ingredient_costs || []).map((line) => Number(line.raw_material_id)).filter((n) => n > 0);
+  return (good.ingredient_costs || [])
+    .map((line) => Number(line.raw_material_id))
+    .filter((n) => n > 0)
+    .map((id) => ({ raw_material_id: id, scale: 1 }));
 }
 
 export function salePriceFromProfitPercent(costPerKg: number, percent: number): number {

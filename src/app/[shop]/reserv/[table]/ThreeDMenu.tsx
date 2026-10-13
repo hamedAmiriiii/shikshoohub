@@ -8,7 +8,6 @@ import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
 import LockRoundedIcon from "@mui/icons-material/LockRounded";
 import RemoveIcon from "@mui/icons-material/Remove";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
-import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
 import { Box, ButtonBase, IconButton, Typography } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { createPortal } from "react-dom";
@@ -32,6 +31,8 @@ export type ThreeDLayer = {
   raw_material_id: number;
   name: string;
   image_url: string;
+  /** مقیاس نمایش (۱ = عادی) */
+  scale?: number;
 };
 
 export type ThreeDCompose = "side" | "overlay";
@@ -240,7 +241,9 @@ function LayerStack({
           const gone = layer.gone;
           const side = index % 2 === 0 ? -1 : 1;
           const depth = (total - index) * 4;
-          const extraNudge = layer.isExtra ? "translate(-2%, -2%) scale(1.04)" : "";
+          const scale = Number.isFinite(Number(layer.scale)) ? Number(layer.scale) : 1;
+          const extraBoost = layer.isExtra ? 1.04 : 1;
+          const shownScale = scale * extraBoost;
           return (
             <Box
               key={layer.key}
@@ -269,8 +272,8 @@ function LayerStack({
                   filter: gone ? "none" : "drop-shadow(0 4px 10px rgba(0,0,0,0.28))",
                   opacity: gone ? 0 : 1,
                   transform: gone
-                    ? `translate3d(${side * 110}%, ${side * -40}%, ${depth + 40}px) rotate(${side * 28}deg) scale(0.55)`
-                    : `translate3d(0, 0, ${depth}px) ${extraNudge}`,
+                    ? `translate3d(${side * 110}%, ${side * -40}%, ${depth + 40}px) rotate(${side * 28}deg) scale(${shownScale * 0.55})`
+                    : `translate3d(${layer.isExtra ? "-2%" : "0"}, ${layer.isExtra ? "-2%" : "0"}, ${depth}px) scale(${shownScale})`,
                   transition: `transform 620ms cubic-bezier(0.55, -0.15, 0.3, 1.1), opacity 420ms ease ${gone ? "80ms" : "0ms"}`,
                 }}
               />
@@ -287,6 +290,7 @@ function LayerStack({
         const gone = layer.gone;
         const side = index % 2 === 0 ? -1 : 1;
         const depth = (total - index) * 5;
+        const scale = Number.isFinite(Number(layer.scale)) ? Number(layer.scale) : 1;
         return (
           <Box
             key={layer.key}
@@ -316,8 +320,8 @@ function LayerStack({
                   filter: "drop-shadow(0 6px 8px rgba(0,0,0,0.38))",
                   opacity: gone ? 0 : 1,
                   transform: gone
-                    ? `translate3d(${side * 130}%, -26%, ${depth + 30}px) rotate(${side * 22}deg) scale(0.72)`
-                    : `translate3d(0, 0, ${depth}px)`,
+                    ? `translate3d(${side * 130}%, -26%, ${depth + 30}px) rotate(${side * 22}deg) scale(${scale * 0.72})`
+                    : `translate3d(0, 0, ${depth}px) scale(${scale})`,
                   transition: `transform 620ms cubic-bezier(0.55, -0.15, 0.3, 1.1), opacity 420ms ease ${gone ? "80ms" : "0ms"}`,
                 }}
               />
@@ -335,11 +339,17 @@ function ThreeDCard({
   item,
   index,
   onOpen,
+  onAdd,
+  onRemove,
+  quantity,
   compact,
 }: {
   item: ReservMenuItem;
   index: number;
   onOpen: () => void;
+  onAdd: () => void;
+  onRemove: () => void;
+  quantity: number;
   compact?: boolean;
 }) {
   const { t, formatNumber } = useReservI18n();
@@ -347,6 +357,7 @@ function ThreeDCard({
   const hue = hueFor(item.name);
   const none = useMemo(() => new Set<number>(), []);
   const overlay = data.layer_compose === "overlay";
+  const mediaH = compact ? 132 : 168;
   return (
     <ButtonBase
       onClick={onOpen}
@@ -361,6 +372,7 @@ function ThreeDCard({
         borderRadius: "28px",
         overflow: "hidden",
         position: "relative",
+        height: "100%",
         bgcolor: GLASS,
         border: `1px solid ${GLASS_BORDER}`,
         backdropFilter: "blur(14px)",
@@ -381,50 +393,84 @@ function ThreeDCard({
       <Box
         sx={{
           position: "relative",
-          pt: compact ? 2 : 2.5,
-          pb: 1,
-          px: compact ? 2 : 3,
+          height: mediaH,
+          flexShrink: 0,
+          px: compact ? 1.5 : 2.2,
+          pt: compact ? 1.4 : 1.8,
+          pb: 0.6,
           perspective: "700px",
+          overflow: "hidden",
           background: `radial-gradient(70% 60% at 50% 55%, hsla(${hue}, 90%, 58%, 0.30) 0%, transparent 70%)`,
         }}
       >
         <Box
           className="td3-card-stack"
           sx={{
+            height: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             transform: overlay ? "rotateX(22deg) rotateY(0deg)" : "rotateX(10deg) rotateY(0deg)",
             transformStyle: "preserve-3d",
             transition: `transform 420ms ${EASE_OUT}`,
+            "& > *": { maxHeight: "100%", width: "100%" },
           }}
         >
           <LayerStack layers={data.layers} removed={none} compact compose={data.layer_compose} />
         </Box>
-        <Box
-          aria-hidden
-          sx={{
-            mx: "auto",
-            mt: 1.2,
-            width: "62%",
-            height: 10,
-            borderRadius: "50%",
-            background: "radial-gradient(ellipse, rgba(0,0,0,0.55) 0%, transparent 70%)",
-          }}
-        />
       </Box>
-      <Box sx={{ px: 1.4, pb: 1.4, pt: 0.2 }}>
-        <Typography sx={{ fontWeight: 900, fontSize: 15, lineHeight: 1.45 }}>{item.name}</Typography>
-        <Box sx={{ mt: 0.4, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
+      <Box
+        sx={{
+          px: 1.4,
+          pb: 1.25,
+          pt: 0.6,
+          mt: "auto",
+          minHeight: 78,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          gap: 0.6,
+          borderTop: `1px solid ${GLASS_BORDER}`,
+          bgcolor: "rgba(0,0,0,0.18)",
+        }}
+      >
+        <Typography
+          sx={{
+            fontWeight: 900,
+            fontSize: 14,
+            lineHeight: 1.35,
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+            minHeight: "2.7em",
+          }}
+        >
+          {item.name}
+        </Typography>
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
           <Typography
             sx={{
               fontWeight: 900,
-              fontSize: 15,
+              fontSize: 14,
               background: ACCENT_GRADIENT,
               WebkitBackgroundClip: "text",
               backgroundClip: "text",
               color: "transparent",
+              whiteSpace: "nowrap",
             }}
           >
             {formatNumber(item.price)}
-            <Box component="span" sx={{ fontSize: 10.5, fontWeight: 700, color: "rgba(255,255,255,0.65)", marginInlineStart: 0.5, WebkitTextFillColor: "rgba(255,255,255,0.65)" }}>
+            <Box
+              component="span"
+              sx={{
+                fontSize: 10.5,
+                fontWeight: 700,
+                color: "rgba(255,255,255,0.65)",
+                marginInlineStart: 0.5,
+                WebkitTextFillColor: "rgba(255,255,255,0.65)",
+              }}
+            >
               {t("toman")}
             </Box>
           </Typography>
@@ -442,22 +488,66 @@ function ThreeDCard({
             >
               {t("outOfStock")}
             </Box>
-          ) : (
+          ) : quantity > 0 ? (
             <Box
-              aria-hidden
+              onClick={(event) => event.stopPropagation()}
               sx={{
-                width: 30,
-                height: 30,
-                borderRadius: "10px",
-                display: "grid",
-                placeItems: "center",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 0.25,
+                p: "2px",
+                borderRadius: 999,
                 bgcolor: "rgba(255,255,255,0.12)",
-                color: "rgba(255,255,255,0.9)",
                 border: `1px solid ${GLASS_BORDER}`,
               }}
             >
-              <VisibilityRoundedIcon sx={{ fontSize: 17 }} />
+              <IconButton
+                size="small"
+                aria-label={t("decrease", { name: item.name })}
+                onClick={onRemove}
+                sx={{ color: "#fff", width: 28, height: 28 }}
+              >
+                <RemoveIcon sx={{ fontSize: 16 }} />
+              </IconButton>
+              <Typography sx={{ minWidth: 16, textAlign: "center", fontWeight: 800, fontSize: 12.5 }}>
+                {formatNumber(quantity)}
+              </Typography>
+              <IconButton
+                size="small"
+                aria-label={t("addItem", { name: item.name })}
+                onClick={onAdd}
+                sx={{
+                  color: "#1b1206",
+                  width: 28,
+                  height: 28,
+                  bgcolor: ACCENT,
+                  "&:hover": { bgcolor: ACCENT },
+                }}
+              >
+                <AddIcon sx={{ fontSize: 16 }} />
+              </IconButton>
             </Box>
+          ) : (
+            <IconButton
+              size="small"
+              aria-label={t("addItem", { name: item.name })}
+              onClick={(event) => {
+                event.stopPropagation();
+                onAdd();
+              }}
+              sx={{
+                width: 34,
+                height: 34,
+                borderRadius: "12px",
+                color: "#1b1206",
+                bgcolor: ACCENT,
+                border: "1px solid transparent",
+                boxShadow: "0 6px 14px rgba(255,159,67,0.35)",
+                "&:hover": { bgcolor: ACCENT, filter: "brightness(1.06)" },
+              }}
+            >
+              <AddIcon sx={{ fontSize: 18 }} />
+            </IconButton>
           )}
         </Box>
       </Box>
@@ -1206,7 +1296,18 @@ function ThreeDDetail({
 
 export function ThreeDLayout(props: ReservMenuLayoutProps) {
   const { t } = useReservI18n();
-  const { items, categories, selectedCategory, onSelectCategory, searchActive, compact, onAddCustom, onAdd } = props;
+  const {
+    items,
+    categories,
+    selectedCategory,
+    onSelectCategory,
+    searchActive,
+    compact,
+    onAddCustom,
+    onAdd,
+    onRemove,
+    qtyOf,
+  } = props;
   const list = useMemo(
     () => items.filter((item) => item.threed && !item.outOfStock),
     [items],
@@ -1366,7 +1467,16 @@ export function ThreeDLayout(props: ReservMenuLayoutProps) {
           }}
         >
           {list.map((item, index) => (
-            <ThreeDCard key={item.key} item={item} index={index} compact={compact} onOpen={() => openCard(item.key)} />
+            <ThreeDCard
+              key={item.key}
+              item={item}
+              index={index}
+              compact={compact}
+              quantity={qtyOf(item.key)}
+              onOpen={() => openCard(item.key)}
+              onAdd={() => onAdd(item.key)}
+              onRemove={() => onRemove(item.key)}
+            />
           ))}
         </Box>
       )}

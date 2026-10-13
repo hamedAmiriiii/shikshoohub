@@ -32,6 +32,7 @@ import {
   Typography,
   Autocomplete,
   Chip,
+  Slider,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import { tableCellClasses } from "@mui/material/TableCell";
@@ -48,6 +49,9 @@ import LocalOfferIcon from "@mui/icons-material/LocalOffer";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import ZoomInIcon from "@mui/icons-material/ZoomIn";
+import ZoomOutIcon from "@mui/icons-material/ZoomOut";
+import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import tokenCode from "@/app/coponent/tokenCode";
@@ -67,9 +71,14 @@ import {
   materialUnitLabel,
   isPercentSaleMode,
   isRoundSalePrice,
+  clampLayerScale,
+  LAYER_SCALE_MAX,
+  LAYER_SCALE_MIN,
+  LAYER_SCALE_STEP,
   layerComposeFromGood,
   layerOrderFromGood,
   type LayerComposeMode,
+  type LayerOrderEntry,
   parseAmount,
   profitPercentFromSale,
   recipeLinesFromGood,
@@ -243,8 +252,9 @@ export default function ProductionCostingPage() {
   const [goodName, setGoodName] = useState("");
   const [goodUnit, setGoodUnit] = useState<"kg" | "piece">("kg");
   const [recipeLines, setRecipeLines] = useState<RecipeLine[]>([emptyLine()]);
-  const [layerOrder, setLayerOrder] = useState<number[]>([]);
+  const [layerOrder, setLayerOrder] = useState<LayerOrderEntry[]>([]);
   const [layerCompose, setLayerCompose] = useState<LayerComposeMode>("side");
+  const [selectedLayerIndex, setSelectedLayerIndex] = useState<number | null>(null);
   // عکس لایهٔ ماده اولیه (منوی سه‌بعدی)
   const [layerDataUrl, setLayerDataUrl] = useState<string | null>(null);
   const [layerRemoved, setLayerRemoved] = useState(false);
@@ -623,6 +633,7 @@ export default function ProductionCostingPage() {
     setRecipeLines([emptyLine()]);
     setLayerOrder([]);
     setLayerCompose("side");
+    setSelectedLayerIndex(null);
     setGoodCategoryIds([]);
     setGoodDialogOpen(true);
   };
@@ -634,6 +645,7 @@ export default function ProductionCostingPage() {
     setRecipeLines(recipeLinesFromGood(good));
     setLayerOrder(layerOrderFromGood(good));
     setLayerCompose(layerComposeFromGood(good));
+    setSelectedLayerIndex(null);
     setGoodCategoryIds(categoryIdsFromGood(good));
     setGoodDialogOpen(true);
   };
@@ -668,7 +680,12 @@ export default function ProductionCostingPage() {
         name,
         ingredients,
         category_ids: goodCategoryIds,
-        layer_order: layerOrder.filter((id) => recipeIds.has(id)),
+        layer_order: layerOrder
+          .filter((row) => recipeIds.has(row.raw_material_id))
+          .map((row) => ({
+            raw_material_id: row.raw_material_id,
+            scale: clampLayerScale(row.scale),
+          })),
         layer_compose: layerCompose,
       };
       if (!editingGood) payload.unit_type = goodUnit;
@@ -1436,6 +1453,22 @@ export default function ProductionCostingPage() {
               <TextField {...params} label="دسته‌بندی‌ها" sx={fieldSx} />
             )}
           />
+          <TextField
+            select
+            fullWidth
+            label="نوع چینش لایه‌ها (منوی سه‌بعدی)"
+            value={layerCompose}
+            onChange={(e) => setLayerCompose(e.target.value === "overlay" ? "overlay" : "side")}
+            helperText={
+              layerCompose === "overlay"
+                ? "پیتزا و عکس از بالا: لایه‌ها دقیقاً روی هم می‌افتند."
+                : "ساندویچ و برگر: عکس‌ها از نمای کنار زیر هم چیده می‌شوند."
+            }
+            sx={fieldSx}
+          >
+            <MenuItem value="side">نمای کنار (ساندویچ / برگر)</MenuItem>
+            <MenuItem value="overlay">نمای بالا (پیتزا)</MenuItem>
+          </TextField>
           <Typography sx={{ fontSize: 13, color: "var(--admin-text-muted)" }}>
             {goodUnit === "piece"
               ? "مصرف هر ماده را برای ساخت «یک عدد» کالا وارد کنید: ماده کیلویی به گرم، ماده تعدادی (مثل برگر) به عدد."
@@ -1509,68 +1542,82 @@ export default function ProductionCostingPage() {
               new Set(recipeLines.map((line) => Number(line.raw_material_id)).filter((id) => id > 0)),
             );
             const materialById = new Map(materials.map((m) => [m.id, m] as const));
-            const rows = layerOrder.filter((id) => recipeMaterialIds.includes(id));
+            const rows = layerOrder.filter((row) => recipeMaterialIds.includes(row.raw_material_id));
+            const activeIndex =
+              selectedLayerIndex != null && selectedLayerIndex >= 0 && selectedLayerIndex < rows.length
+                ? selectedLayerIndex
+                : rows.length
+                  ? 0
+                  : null;
+            const activeRow = activeIndex != null ? rows[activeIndex] : null;
             const move = (from: number, to: number) => {
               if (to < 0 || to >= rows.length) return;
               const next = [...rows];
               const [item] = next.splice(from, 1);
               next.splice(to, 0, item);
               setLayerOrder(next);
+              setSelectedLayerIndex(to);
+            };
+            const setScaleAt = (index: number, scale: number) => {
+              const next = rows.map((row, i) =>
+                i === index ? { ...row, scale: clampLayerScale(scale) } : row,
+              );
+              setLayerOrder(next);
+            };
+            const bumpScale = (delta: number) => {
+              if (activeIndex == null || !activeRow) return;
+              setScaleAt(activeIndex, activeRow.scale + delta);
             };
             return (
               <Box sx={{ mt: 1, p: 1.25, borderRadius: "14px", border: "1px solid var(--admin-border)" }}>
-                <Typography sx={{ fontSize: 13, fontWeight: 800, color: "var(--admin-text)" }}>
+                <Typography sx={{ fontSize: 13, fontWeight: 800, color: "var(--admin-text)", mb: 1 }}>
                   ترتیب لایه‌ها در عکس منوی سه‌بعدی
                 </Typography>
-                <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)", lineHeight: 1.8, mb: 1 }}>
-                  از بالا به پایین. هر ماده می‌تواند چند بار بیاید (مثلاً نان برای بالا و پایین ساندویچ). عکس هر ماده را
-                  در تب مواد اولیه آپلود کنید.
-                </Typography>
-                <ToggleButtonGroup
-                  exclusive
+                <TextField
+                  select
+                  fullWidth
                   size="small"
+                  label="نوع چینش لایه‌ها"
                   value={layerCompose}
-                  onChange={(_, value: LayerComposeMode | null) => {
-                    if (value) setLayerCompose(value);
-                  }}
-                  sx={{
-                    mb: 1.25,
-                    direction: "rtl",
-                    "& .MuiToggleButton-root": {
-                      fontSize: 11.5,
-                      px: 1.2,
-                      py: 0.4,
-                      color: "var(--admin-text)",
-                      borderColor: "var(--admin-border)",
-                      "&.Mui-selected": {
-                        bgcolor: "var(--admin-accent)",
-                        color: "#fff",
-                        borderColor: "var(--admin-accent)",
-                        "&:hover": { bgcolor: "var(--admin-accent)" },
-                      },
-                    },
-                  }}
+                  onChange={(e) => setLayerCompose(e.target.value === "overlay" ? "overlay" : "side")}
+                  helperText={
+                    layerCompose === "overlay"
+                      ? "برای پیتزا و عکس از بالا: لایه‌ها دقیقاً روی هم می‌افتند. خمیر پایین‌ترین لایه باشد."
+                      : "برای ساندویچ: عکس‌ها از نمای کنار زیر هم چیده می‌شوند."
+                  }
+                  sx={{ ...fieldSx, mb: 1.25 }}
                 >
-                  <ToggleButton value="side">نمای کنار (ساندویچ)</ToggleButton>
-                  <ToggleButton value="overlay">نمای بالا (پیتزا)</ToggleButton>
-                </ToggleButtonGroup>
-                <Typography sx={{ fontSize: 10.5, color: "var(--admin-text-muted)", lineHeight: 1.7, mb: 1 }}>
-                  {layerCompose === "overlay"
-                    ? "عکس‌ها از بالا روی هم می‌افتند؛ خمیر پایین‌ترین لایه و مواد رویی بالاتر باشند."
-                    : "عکس‌ها مثل برش ساندویچ زیر هم چیده می‌شوند و کمی روی هم می‌آیند."}
+                  <MenuItem value="side">نمای کنار (ساندویچ / برگر)</MenuItem>
+                  <MenuItem value="overlay">نمای بالا (پیتزا)</MenuItem>
+                </TextField>
+                <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)", lineHeight: 1.8, mb: 1 }}>
+                  از بالا به پایین مرتب کنید. روی هر لایه بزنید تا بزرگ/کوچکش کنید. عکس را در تب مواد اولیه آپلود کنید.
                 </Typography>
                 {rows.length === 0 ? (
                   <Typography sx={{ fontSize: 11.5, color: "var(--admin-text-muted)", mb: 1 }}>
                     خالی است؛ ترتیب فرمول استفاده می‌شود.
                   </Typography>
                 ) : null}
-                {rows.map((id, i) => {
-                  const material = materialById.get(id);
+                {rows.map((row, i) => {
+                  const material = materialById.get(row.raw_material_id);
                   const src = layerImageSrc(material?.layer_image_url);
+                  const selected = activeIndex === i;
                   return (
                     <Box
-                      key={`${id}-${i}`}
-                      sx={{ display: "flex", alignItems: "center", gap: 0.8, py: 0.5, borderBottom: "1px solid var(--admin-border)" }}
+                      key={`${row.raw_material_id}-${i}`}
+                      onClick={() => setSelectedLayerIndex(i)}
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 0.8,
+                        py: 0.5,
+                        px: 0.5,
+                        borderBottom: "1px solid var(--admin-border)",
+                        borderRadius: "8px",
+                        cursor: "pointer",
+                        bgcolor: selected ? "rgba(var(--admin-accent-rgb, 99, 102, 241), 0.12)" : "transparent",
+                        outline: selected ? "1px solid var(--admin-accent)" : "none",
+                      }}
                     >
                       <Typography sx={{ width: 22, fontSize: 12, fontWeight: 800, color: "var(--admin-accent)", textAlign: "center" }}>
                         {i}
@@ -1588,30 +1635,111 @@ export default function ProductionCostingPage() {
                         }}
                       >
                         {src ? (
-                          <Box component="img" src={src} alt="" sx={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
+                          <Box
+                            component="img"
+                            src={src}
+                            alt=""
+                            sx={{
+                              maxWidth: "100%",
+                              maxHeight: "100%",
+                              objectFit: "contain",
+                              transform: `scale(${row.scale})`,
+                            }}
+                          />
                         ) : (
                           <Typography sx={{ fontSize: 9, color: "#c62828" }}>بدون عکس</Typography>
                         )}
                       </Box>
-                      <Typography sx={{ flex: 1, fontSize: 12.5, color: "var(--admin-text)" }}>
-                        {material?.name || `#${id}`}
-                      </Typography>
-                      <IconButton size="small" disabled={i === 0} onClick={() => move(i, i - 1)}>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography sx={{ fontSize: 12.5, color: "var(--admin-text)" }}>
+                          {material?.name || `#${row.raw_material_id}`}
+                        </Typography>
+                        <Typography sx={{ fontSize: 10.5, color: "var(--admin-text-muted)" }}>
+                          اندازه {Math.round(row.scale * 100)}٪
+                        </Typography>
+                      </Box>
+                      <IconButton
+                        size="small"
+                        disabled={i === 0}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          move(i, i - 1);
+                        }}
+                      >
                         <ArrowUpwardIcon sx={{ fontSize: 16 }} />
                       </IconButton>
-                      <IconButton size="small" disabled={i === rows.length - 1} onClick={() => move(i, i + 1)}>
+                      <IconButton
+                        size="small"
+                        disabled={i === rows.length - 1}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          move(i, i + 1);
+                        }}
+                      >
                         <ArrowDownwardIcon sx={{ fontSize: 16 }} />
                       </IconButton>
                       <IconButton
                         size="small"
                         sx={{ color: "#ef5350" }}
-                        onClick={() => setLayerOrder(rows.filter((_, idx) => idx !== i))}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const next = rows.filter((_, idx) => idx !== i);
+                          setLayerOrder(next);
+                          setSelectedLayerIndex(null);
+                        }}
                       >
                         <DeleteOutlineIcon sx={{ fontSize: 16 }} />
                       </IconButton>
                     </Box>
                   );
                 })}
+                {activeRow ? (
+                  <Box
+                    sx={{
+                      mt: 1.25,
+                      p: 1.1,
+                      borderRadius: "12px",
+                      border: "1px dashed var(--admin-border)",
+                      bgcolor: "var(--admin-surface-alt)",
+                    }}
+                  >
+                    <Typography sx={{ fontSize: 12, fontWeight: 700, color: "var(--admin-text)", mb: 0.75 }}>
+                      ویرایش اندازه: {materialById.get(activeRow.raw_material_id)?.name || `#${activeRow.raw_material_id}`}
+                    </Typography>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                      <IconButton size="small" onClick={() => bumpScale(-LAYER_SCALE_STEP)} aria-label="کوچک‌تر">
+                        <ZoomOutIcon sx={{ fontSize: 18 }} />
+                      </IconButton>
+                      <Slider
+                        size="small"
+                        min={LAYER_SCALE_MIN}
+                        max={LAYER_SCALE_MAX}
+                        step={LAYER_SCALE_STEP}
+                        value={activeRow.scale}
+                        onChange={(_, value) => {
+                          if (activeIndex == null) return;
+                          setScaleAt(activeIndex, Array.isArray(value) ? value[0] : value);
+                        }}
+                        valueLabelDisplay="auto"
+                        valueLabelFormat={(v) => `${Math.round(Number(v) * 100)}٪`}
+                        sx={{ flex: 1, color: "var(--admin-accent)" }}
+                      />
+                      <IconButton size="small" onClick={() => bumpScale(LAYER_SCALE_STEP)} aria-label="بزرگ‌تر">
+                        <ZoomInIcon sx={{ fontSize: 18 }} />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          if (activeIndex == null) return;
+                          setScaleAt(activeIndex, 1);
+                        }}
+                        aria-label="بازنشانی"
+                      >
+                        <RestartAltIcon sx={{ fontSize: 18 }} />
+                      </IconButton>
+                    </Box>
+                  </Box>
+                ) : null}
                 <Box sx={{ display: "flex", gap: 0.8, flexWrap: "wrap", mt: 1 }}>
                   <TextField
                     select
@@ -1620,7 +1748,11 @@ export default function ProductionCostingPage() {
                     value=""
                     onChange={(e) => {
                       const id = Number(e.target.value);
-                      if (id > 0) setLayerOrder([...rows, id]);
+                      if (id > 0) {
+                        const next = [...rows, { raw_material_id: id, scale: 1 }];
+                        setLayerOrder(next);
+                        setSelectedLayerIndex(next.length - 1);
+                      }
                     }}
                     disabled={recipeMaterialIds.length === 0}
                     sx={{ ...fieldSx, minWidth: 170 }}
@@ -1631,19 +1763,26 @@ export default function ProductionCostingPage() {
                       </MenuItem>
                     ))}
                   </TextField>
-                  <Button size="small" onClick={() => setLayerOrder(recipeMaterialIds)} sx={{ fontSize: 11 }}>
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      setLayerOrder(recipeMaterialIds.map((id) => ({ raw_material_id: id, scale: 1 })));
+                      setSelectedLayerIndex(null);
+                    }}
+                    sx={{ fontSize: 11 }}
+                  >
                     پر کردن از فرمول
                   </Button>
                 </Box>
-                {rows.some((id) => !!layerImageSrc(materialById.get(id)?.layer_image_url)) ? (
+                {rows.some((row) => !!layerImageSrc(materialById.get(row.raw_material_id)?.layer_image_url)) ? (
                   <Box sx={{ mt: 1.5 }}>
                     <Typography sx={{ fontSize: 11, fontWeight: 700, color: "var(--admin-text-muted)", mb: 0.75 }}>
-                      پیش‌نمایش ترکیب
+                      پیش‌نمایش ترکیب — روی لایه بزنید تا انتخاب شود
                     </Typography>
                     <Box
                       sx={{
-                        width: layerCompose === "overlay" ? 160 : "100%",
-                        maxWidth: 280,
+                        width: layerCompose === "overlay" ? 200 : "100%",
+                        maxWidth: 300,
                         mx: "auto",
                         borderRadius: "14px",
                         overflow: "hidden",
@@ -1656,44 +1795,76 @@ export default function ProductionCostingPage() {
                       }}
                     >
                       {layerCompose === "overlay"
-                        ? rows.map((id, i) => {
-                            const src = layerImageSrc(materialById.get(id)?.layer_image_url);
+                        ? rows.map((row, i) => {
+                            const src = layerImageSrc(materialById.get(row.raw_material_id)?.layer_image_url);
                             if (!src) return null;
+                            const selected = activeIndex === i;
                             return (
                               <Box
-                                key={`${id}-prev-${i}`}
-                                component="img"
-                                src={src}
-                                alt=""
+                                key={`${row.raw_material_id}-prev-${i}`}
+                                onClick={() => setSelectedLayerIndex(i)}
                                 sx={{
                                   position: "absolute",
                                   inset: 8,
                                   width: "calc(100% - 16px)",
                                   height: "calc(100% - 16px)",
-                                  objectFit: "contain",
+                                  display: "grid",
+                                  placeItems: "center",
                                   zIndex: rows.length - i,
+                                  cursor: "pointer",
+                                  outline: selected ? "2px solid var(--admin-accent)" : "none",
+                                  outlineOffset: -2,
+                                  borderRadius: "8px",
                                 }}
-                              />
+                              >
+                                <Box
+                                  component="img"
+                                  src={src}
+                                  alt=""
+                                  sx={{
+                                    width: "100%",
+                                    height: "100%",
+                                    objectFit: "contain",
+                                    transform: `scale(${row.scale})`,
+                                    pointerEvents: "none",
+                                  }}
+                                />
+                              </Box>
                             );
                           })
-                        : rows.map((id, i) => {
-                            const src = layerImageSrc(materialById.get(id)?.layer_image_url);
+                        : rows.map((row, i) => {
+                            const src = layerImageSrc(materialById.get(row.raw_material_id)?.layer_image_url);
                             if (!src) return null;
+                            const selected = activeIndex === i;
                             return (
                               <Box
-                                key={`${id}-prev-${i}`}
-                                component="img"
-                                src={src}
-                                alt=""
+                                key={`${row.raw_material_id}-prev-${i}`}
+                                onClick={() => setSelectedLayerIndex(i)}
                                 sx={{
                                   display: "block",
                                   width: "100%",
-                                  height: "auto",
                                   mt: i === 0 ? 0 : "-8%",
                                   position: "relative",
                                   zIndex: rows.length - i,
+                                  cursor: "pointer",
+                                  outline: selected ? "2px solid var(--admin-accent)" : "none",
+                                  borderRadius: "6px",
                                 }}
-                              />
+                              >
+                                <Box
+                                  component="img"
+                                  src={src}
+                                  alt=""
+                                  sx={{
+                                    display: "block",
+                                    width: "100%",
+                                    height: "auto",
+                                    transform: `scale(${row.scale})`,
+                                    transformOrigin: "center center",
+                                    pointerEvents: "none",
+                                  }}
+                                />
+                              </Box>
                             );
                           })}
                     </Box>
