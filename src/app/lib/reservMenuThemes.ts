@@ -29,7 +29,7 @@ export const RESERV_MENU_THEMES: Array<{
   { id: "cover", title: "صفحه خوش‌آمد", hint: "اول یک صفحهٔ ورود با کاور و دکمهٔ مشاهده منو" },
   { id: "motion", title: "متحرک", hint: "پس‌زمینهٔ شفق متحرک و ردیف‌های کشویی با انیمیشن" },
   { id: "video", title: "ویدیو پس‌زمینه", hint: "ویدیو یا گیف خودتان زیر منو، کارت‌های شیشه‌ای" },
-  { id: "threed", title: "منو سه‌بعدی", hint: "فقط کالاهای تولیدی؛ ساندویچ لایه‌لایه با مواد قابل حذف و قیمت زنده" },
+  { id: "threed", title: "منو سه‌بعدی", hint: "فقط کالاهای تولیدی؛ لایه‌لایه (ساندویچ یا پیتزا) با مواد قابل حذف و قیمت زنده" },
 ];
 
 const THEME_IDS = new Set<string>(RESERV_MENU_THEMES.map((theme) => theme.id));

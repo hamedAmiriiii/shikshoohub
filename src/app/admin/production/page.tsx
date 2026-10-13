@@ -67,7 +67,9 @@ import {
   materialUnitLabel,
   isPercentSaleMode,
   isRoundSalePrice,
+  layerComposeFromGood,
   layerOrderFromGood,
+  type LayerComposeMode,
   parseAmount,
   profitPercentFromSale,
   recipeLinesFromGood,
@@ -242,6 +244,7 @@ export default function ProductionCostingPage() {
   const [goodUnit, setGoodUnit] = useState<"kg" | "piece">("kg");
   const [recipeLines, setRecipeLines] = useState<RecipeLine[]>([emptyLine()]);
   const [layerOrder, setLayerOrder] = useState<number[]>([]);
+  const [layerCompose, setLayerCompose] = useState<LayerComposeMode>("side");
   // عکس لایهٔ ماده اولیه (منوی سه‌بعدی)
   const [layerDataUrl, setLayerDataUrl] = useState<string | null>(null);
   const [layerRemoved, setLayerRemoved] = useState(false);
@@ -619,6 +622,7 @@ export default function ProductionCostingPage() {
     setGoodUnit("kg");
     setRecipeLines([emptyLine()]);
     setLayerOrder([]);
+    setLayerCompose("side");
     setGoodCategoryIds([]);
     setGoodDialogOpen(true);
   };
@@ -629,6 +633,7 @@ export default function ProductionCostingPage() {
     setGoodUnit(isPieceMaterial(good) ? "piece" : "kg");
     setRecipeLines(recipeLinesFromGood(good));
     setLayerOrder(layerOrderFromGood(good));
+    setLayerCompose(layerComposeFromGood(good));
     setGoodCategoryIds(categoryIdsFromGood(good));
     setGoodDialogOpen(true);
   };
@@ -664,6 +669,7 @@ export default function ProductionCostingPage() {
         ingredients,
         category_ids: goodCategoryIds,
         layer_order: layerOrder.filter((id) => recipeIds.has(id)),
+        layer_compose: layerCompose,
       };
       if (!editingGood) payload.unit_type = goodUnit;
       if (editingGood && isPercentSaleMode(editingGood)) {
@@ -1307,7 +1313,7 @@ export default function ProductionCostingPage() {
                     عکس لایه برای منوی سه‌بعدی
                   </Typography>
                   <Typography sx={{ fontSize: 10.5, color: "var(--admin-text-muted)", lineHeight: 1.7 }}>
-                    PNG یا WebP با پس‌زمینهٔ شفاف، نمای از کنار (مثلاً یک برش نان یا یک پتی). حداکثر ۳ مگابایت.
+                    PNG یا WebP با پس‌زمینهٔ شفاف. برای ساندویچ نمای کنار؛ برای پیتزا نمای بالا. حداکثر ۳ مگابایت.
                   </Typography>
                   <Box sx={{ display: "flex", gap: 0.8, mt: 0.6, flexWrap: "wrap" }}>
                     <Button
@@ -1520,6 +1526,39 @@ export default function ProductionCostingPage() {
                   از بالا به پایین. هر ماده می‌تواند چند بار بیاید (مثلاً نان برای بالا و پایین ساندویچ). عکس هر ماده را
                   در تب مواد اولیه آپلود کنید.
                 </Typography>
+                <ToggleButtonGroup
+                  exclusive
+                  size="small"
+                  value={layerCompose}
+                  onChange={(_, value: LayerComposeMode | null) => {
+                    if (value) setLayerCompose(value);
+                  }}
+                  sx={{
+                    mb: 1.25,
+                    direction: "rtl",
+                    "& .MuiToggleButton-root": {
+                      fontSize: 11.5,
+                      px: 1.2,
+                      py: 0.4,
+                      color: "var(--admin-text)",
+                      borderColor: "var(--admin-border)",
+                      "&.Mui-selected": {
+                        bgcolor: "var(--admin-accent)",
+                        color: "#fff",
+                        borderColor: "var(--admin-accent)",
+                        "&:hover": { bgcolor: "var(--admin-accent)" },
+                      },
+                    },
+                  }}
+                >
+                  <ToggleButton value="side">نمای کنار (ساندویچ)</ToggleButton>
+                  <ToggleButton value="overlay">نمای بالا (پیتزا)</ToggleButton>
+                </ToggleButtonGroup>
+                <Typography sx={{ fontSize: 10.5, color: "var(--admin-text-muted)", lineHeight: 1.7, mb: 1 }}>
+                  {layerCompose === "overlay"
+                    ? "عکس‌ها از بالا روی هم می‌افتند؛ خمیر پایین‌ترین لایه و مواد رویی بالاتر باشند."
+                    : "عکس‌ها مثل برش ساندویچ زیر هم چیده می‌شوند و کمی روی هم می‌آیند."}
+                </Typography>
                 {rows.length === 0 ? (
                   <Typography sx={{ fontSize: 11.5, color: "var(--admin-text-muted)", mb: 1 }}>
                     خالی است؛ ترتیب فرمول استفاده می‌شود.
@@ -1596,6 +1635,70 @@ export default function ProductionCostingPage() {
                     پر کردن از فرمول
                   </Button>
                 </Box>
+                {rows.some((id) => !!layerImageSrc(materialById.get(id)?.layer_image_url)) ? (
+                  <Box sx={{ mt: 1.5 }}>
+                    <Typography sx={{ fontSize: 11, fontWeight: 700, color: "var(--admin-text-muted)", mb: 0.75 }}>
+                      پیش‌نمایش ترکیب
+                    </Typography>
+                    <Box
+                      sx={{
+                        width: layerCompose === "overlay" ? 160 : "100%",
+                        maxWidth: 280,
+                        mx: "auto",
+                        borderRadius: "14px",
+                        overflow: "hidden",
+                        border: "1px solid var(--admin-border)",
+                        p: 1,
+                        ...checkerSx,
+                        ...(layerCompose === "overlay"
+                          ? { aspectRatio: "1 / 1", position: "relative" }
+                          : { position: "relative" }),
+                      }}
+                    >
+                      {layerCompose === "overlay"
+                        ? rows.map((id, i) => {
+                            const src = layerImageSrc(materialById.get(id)?.layer_image_url);
+                            if (!src) return null;
+                            return (
+                              <Box
+                                key={`${id}-prev-${i}`}
+                                component="img"
+                                src={src}
+                                alt=""
+                                sx={{
+                                  position: "absolute",
+                                  inset: 8,
+                                  width: "calc(100% - 16px)",
+                                  height: "calc(100% - 16px)",
+                                  objectFit: "contain",
+                                  zIndex: rows.length - i,
+                                }}
+                              />
+                            );
+                          })
+                        : rows.map((id, i) => {
+                            const src = layerImageSrc(materialById.get(id)?.layer_image_url);
+                            if (!src) return null;
+                            return (
+                              <Box
+                                key={`${id}-prev-${i}`}
+                                component="img"
+                                src={src}
+                                alt=""
+                                sx={{
+                                  display: "block",
+                                  width: "100%",
+                                  height: "auto",
+                                  mt: i === 0 ? 0 : "-8%",
+                                  position: "relative",
+                                  zIndex: rows.length - i,
+                                }}
+                              />
+                            );
+                          })}
+                    </Box>
+                  </Box>
+                ) : null}
               </Box>
             );
           })()}

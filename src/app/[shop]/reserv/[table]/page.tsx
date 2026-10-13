@@ -144,6 +144,7 @@ type Product = {
     name: string;
     image_url: string;
   }>;
+  layer_compose?: "side" | "overlay" | string | null;
 };
 
 type OnlinePayState = null | "redirecting" | "paid" | "failed";
@@ -1039,6 +1040,7 @@ function TableReservPageBody() {
                   name: layer.name,
                   image_url: resolveApiMediaUrl(layer.image_url),
                 })),
+                layer_compose: product.layer_compose === "overlay" ? "overlay" : "side",
               }
             : undefined,
       };

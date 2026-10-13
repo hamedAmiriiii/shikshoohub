@@ -34,9 +34,13 @@ export type ThreeDLayer = {
   image_url: string;
 };
 
+export type ThreeDCompose = "side" | "overlay";
+
 export type ThreeDData = {
   ingredients: ThreeDIngredient[];
   layers: ThreeDLayer[];
+  /** side = ساندویچ نمای کنار | overlay = پیتزا نمای بالا */
+  layer_compose?: ThreeDCompose;
 };
 
 /* ───────────── رنگ و انیمیشن ───────────── */
@@ -199,17 +203,20 @@ function buildStackLayers(
 /**
  * لایه‌ها از بالا به پایین روی هم می‌نشینند؛ لایهٔ برداشته‌شده با انیمیشن
  * به کنار پرواز می‌کند و بقیه روی هم می‌نشینند.
+ * compose=overlay: نمای بالا (پیتزا) — همه لایه‌ها دقیقاً روی هم.
  */
 function LayerStack({
   layers,
   removed,
   extras,
   compact,
+  compose = "side",
 }: {
   layers: ThreeDLayer[];
   removed: ReadonlySet<number>;
   extras?: ReadonlySet<number>;
   compact?: boolean;
+  compose?: ThreeDCompose;
 }) {
   const stack = useMemo(
     () => buildStackLayers(layers, removed, extras ?? new Set()),
@@ -217,6 +224,63 @@ function LayerStack({
   );
   if (layers.length === 0) return <EmptyStack compact={compact} />;
   const total = stack.length;
+  const overlay = compose === "overlay";
+
+  if (overlay) {
+    return (
+      <Box
+        sx={{
+          width: "100%",
+          aspectRatio: "1 / 1",
+          position: "relative",
+          transformStyle: "preserve-3d",
+        }}
+      >
+        {stack.map((layer, index) => {
+          const gone = layer.gone;
+          const side = index % 2 === 0 ? -1 : 1;
+          const depth = (total - index) * 4;
+          const extraNudge = layer.isExtra ? "translate(-2%, -2%) scale(1.04)" : "";
+          return (
+            <Box
+              key={layer.key}
+              sx={{
+                position: "absolute",
+                inset: 0,
+                zIndex: total - index,
+                display: "grid",
+                placeItems: "center",
+                pointerEvents: "none",
+                animation: `td3Drop 640ms ${EASE_SPRING} ${index * 55}ms both`,
+              }}
+            >
+              <Box
+                component="img"
+                src={layer.image_url}
+                alt={layer.name}
+                draggable={false}
+                sx={{
+                  display: "block",
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                  userSelect: "none",
+                  pointerEvents: "none",
+                  filter: gone ? "none" : "drop-shadow(0 4px 10px rgba(0,0,0,0.28))",
+                  opacity: gone ? 0 : 1,
+                  transform: gone
+                    ? `translate3d(${side * 110}%, ${side * -40}%, ${depth + 40}px) rotate(${side * 28}deg) scale(0.55)`
+                    : `translate3d(0, 0, ${depth}px) ${extraNudge}`,
+                  transition: `transform 620ms cubic-bezier(0.55, -0.15, 0.3, 1.1), opacity 420ms ease ${gone ? "80ms" : "0ms"}`,
+                }}
+              />
+            </Box>
+          );
+        })}
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ width: "100%", position: "relative", transformStyle: "preserve-3d" }}>
       {stack.map((layer, index) => {
@@ -282,6 +346,7 @@ function ThreeDCard({
   const data = item.threed as ThreeDData;
   const hue = hueFor(item.name);
   const none = useMemo(() => new Set<number>(), []);
+  const overlay = data.layer_compose === "overlay";
   return (
     <ButtonBase
       onClick={onOpen}
@@ -305,7 +370,11 @@ function ThreeDCard({
         transition: `transform 260ms ${EASE_OUT}, border-color 200ms ease`,
         "&:hover": { transform: "translateY(-4px)", borderColor: "rgba(255,159,67,0.55)" },
         "&:active": { transform: "scale(0.98)" },
-        "&:hover .td3-card-stack": { transform: "rotateX(14deg) rotateY(-14deg) scale(1.05)" },
+        "&:hover .td3-card-stack": {
+          transform: overlay
+            ? "rotateX(28deg) rotateY(-6deg) scale(1.04)"
+            : "rotateX(14deg) rotateY(-14deg) scale(1.05)",
+        },
         opacity: item.outOfStock ? 0.6 : 1,
       }}
     >
@@ -322,12 +391,12 @@ function ThreeDCard({
         <Box
           className="td3-card-stack"
           sx={{
-            transform: "rotateX(10deg) rotateY(0deg)",
+            transform: overlay ? "rotateX(22deg) rotateY(0deg)" : "rotateX(10deg) rotateY(0deg)",
             transformStyle: "preserve-3d",
             transition: `transform 420ms ${EASE_OUT}`,
           }}
         >
-          <LayerStack layers={data.layers} removed={none} compact />
+          <LayerStack layers={data.layers} removed={none} compact compose={data.layer_compose} />
         </Box>
         <Box
           aria-hidden
@@ -585,6 +654,8 @@ function ThreeDDetail({
   const { t, formatNumber } = useReservI18n();
   const item = list[index];
   const data = item.threed as ThreeDData;
+  const overlay = data.layer_compose === "overlay";
+  const baseTiltX = overlay ? 24 : 7;
   const hue = hueFor(item.name);
   const hasOthers = list.length > 1;
   const nextIndex = (index + 1) % list.length;
@@ -594,7 +665,7 @@ function ThreeDDetail({
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const [direction, setDirection] = useState<"next" | "prev">("next");
-  const [tilt, setTilt] = useState({ x: 7, y: 0 });
+  const [tilt, setTilt] = useState({ x: baseTiltX, y: 0 });
   const stageRef = useRef<HTMLDivElement | null>(null);
   const swipeStart = useRef<number | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -602,7 +673,8 @@ function ThreeDDetail({
   useEffect(() => {
     setQty(1);
     setAdded(false);
-  }, [item.key]);
+    setTilt({ x: baseTiltX, y: 0 });
+  }, [item.key, baseTiltX]);
 
   useEffect(
     () => () => {
@@ -662,7 +734,7 @@ function ThreeDDetail({
     const rect = el.getBoundingClientRect();
     const nx = Math.max(-1, Math.min(1, (event.clientX - rect.left - rect.width / 2) / (rect.width / 2)));
     const ny = Math.max(-1, Math.min(1, (event.clientY - rect.top - rect.height / 2) / (rect.height / 2)));
-    setTilt({ x: 7 - ny * 8, y: nx * 16 });
+    setTilt({ x: baseTiltX - ny * (overlay ? 6 : 8), y: nx * (overlay ? 10 : 16) });
   };
 
   const onStagePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -786,7 +858,7 @@ function ThreeDDetail({
       <Box
         ref={stageRef}
         onPointerMove={onStagePointerMove}
-        onPointerLeave={() => setTilt({ x: 7, y: 0 })}
+        onPointerLeave={() => setTilt({ x: baseTiltX, y: 0 })}
         onPointerDown={onStagePointerDown}
         onPointerUp={onStagePointerUp}
         onPointerCancel={() => {
@@ -841,7 +913,12 @@ function ThreeDDetail({
                   WebkitMaskImage: "linear-gradient(to right, transparent 0%, #000 55%)",
                 }}
               >
-                <LayerStack layers={(nextItem.threed as ThreeDData).layers} removed={new Set<number>()} compact />
+                <LayerStack
+                  layers={(nextItem.threed as ThreeDData).layers}
+                  removed={new Set<number>()}
+                  compact
+                  compose={(nextItem.threed as ThreeDData).layer_compose}
+                />
               </Box>
             </Box>
             <Box sx={{ mt: 0.6, display: "flex", alignItems: "center", gap: 0.3, fontSize: 11.5, fontWeight: 800 }}>
@@ -890,7 +967,13 @@ function ThreeDDetail({
                 transition: "transform 240ms ease-out",
               }}
             >
-              <LayerStack layers={data.layers} removed={removed} extras={extras} compact={compact} />
+              <LayerStack
+                layers={data.layers}
+                removed={removed}
+                extras={extras}
+                compact={compact}
+                compose={data.layer_compose}
+              />
             </Box>
           </Box>
           <Box

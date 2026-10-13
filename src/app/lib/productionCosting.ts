@@ -24,9 +24,11 @@ export type RawMaterial = {
   open_lots_count?: number;
   next_price_per_kg?: number | null;
   lots?: RawMaterialLot[];
-  /** عکس لایهٔ منوی سه‌بعدی (PNG شفاف نمای کنار) */
+  /** عکس لایهٔ منوی سه‌بعدی (PNG شفاف؛ نمای کنار یا بالا بسته به کالا) */
   layer_image_url?: string | null;
 };
+
+export type LayerComposeMode = "side" | "overlay";
 
 export type IngredientCostLot = {
   lot_id: number;
@@ -77,9 +79,15 @@ export type ProducedGood = {
   ingredient_costs?: IngredientCost[];
   /** ترتیب لایه‌های عکس منوی سه‌بعدی (شناسهٔ ماده، بالا به پایین؛ تکرار مجاز) */
   layer_order?: number[] | null;
+  /** side = ساندویچ نمای کنار | overlay = پیتزا نمای بالا */
+  layer_compose?: LayerComposeMode | string | null;
   category_ids?: Array<number | string>;
   categories?: Array<{ id?: number | string; name?: string } | number | string>;
 };
+
+export function layerComposeFromGood(good: ProducedGood): LayerComposeMode {
+  return good.layer_compose === "overlay" ? "overlay" : "side";
+}
 
 export function categoryIdsFromGood(good: ProducedGood): number[] {
   const ids: number[] = [];
