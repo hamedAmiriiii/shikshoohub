@@ -600,18 +600,18 @@ export default function ProfitLossPage() {
                 <AmountLine
                   label="فاکتور ثبت‌شده"
                   amount={data.totals.total_invoices}
-                  hint="مبلغ فاکتور خرید؛ تا نقد پرداخت نشود از موجودی حساب کم نمی‌شود"
+                  hint="مبلغ فاکتور خرید؛ پرداخت‌نشده از نقد عملیاتی کم نمی‌شود"
                 />
                 <AmountLine
-                  label="پرداخت نقدی فاکتور"
+                  label="پرداخت فاکتور"
                   amount={data.totals.invoice_cash_out ?? 0}
-                  hint="پولی که بابت فاکتور از حساب رفته"
+                  hint="نقد از حساب + ظهرنویسی چک + مصرف پیش‌پرداخت ذینفع"
                 />
                 <AmountLine
                   label="مانده پرداخت‌نشده"
                   amount={data.totals.invoice_unpaid ?? 0}
                   color={(data.totals.invoice_unpaid ?? 0) > 0 ? "var(--admin-warning)" : "var(--admin-text)"}
-                  hint="فاکتور ثبت‌شده منهای پرداخت نقدی"
+                  hint="فاکتور ثبت‌شده منهای پرداخت‌ها (نقد، ظهرنویسی، پیش‌پرداخت)"
                   strong
                 />
               </DetailBlock>
@@ -629,11 +629,15 @@ export default function ProfitLossPage() {
                   hint="فروش نسیه که هنوز تسویه نشده؛ داخل صندوق نیست"
                 />
                 <AmountLine label="قسط وصول‌نشده" amount={data.totals.uncollected_installments ?? 0} />
-                <AmountLine label="چک وصول‌نشده" amount={data.totals.open_cheques ?? 0} />
+                <AmountLine
+                  label="چک وصول‌نشده"
+                  amount={data.totals.open_cheques ?? 0}
+                  hint="چک فروش که هنوز نه پاس شده و نه ظهرنویسی شده"
+                />
                 <AmountLine
                   label="جمع وصول‌شده"
                   amount={data.totals.total_collected ?? 0}
-                  hint="نقد/کارت + وصول نسیه و قسط و چک پاس‌شده"
+                  hint="نقد/کارت + وصول نسیه و قسط و چک پاس‌شده یا ظهرنویسی‌شده"
                   strong
                 />
               </DetailBlock>
@@ -649,7 +653,7 @@ export default function ProfitLossPage() {
                 <AmountLine
                   label="نقد ساخته‌شده از فروش"
                   amount={data.totals.reconstructed_account_balance ?? 0}
-                  hint="فروش منهای نسیه و چک وصول‌نشده و پرداخت نقدی فاکتور و هزینه؛ موجودی واقعی نیست"
+                  hint="فروش منهای نسیه و چک باز و پرداخت فاکتور و هزینه؛ موجودی واقعی نیست"
                 />
               </DetailBlock>
             </Box>
