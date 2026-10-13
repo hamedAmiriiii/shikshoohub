@@ -33,6 +33,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import DoneAllIcon from "@mui/icons-material/DoneAll";
 import EditIcon from "@mui/icons-material/Edit";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import UndoIcon from "@mui/icons-material/Undo";
 import DatePicker from "react-multi-date-picker";
 import DateObject from "react-date-object";
@@ -52,6 +53,7 @@ import ChequeFormSheet, {
   chequeDatePickerBoxSx,
   chequeFormFieldSx,
 } from "./ChequeFormSheet";
+import ChequeTransferDialog from "./ChequeTransferDialog";
 import {
   CHEQUE_STATUS_OPTIONS,
   CHEQUE_TYPE_OPTIONS,
@@ -64,6 +66,7 @@ import {
   formatNumber,
   isChequeCleared,
   isChequePending,
+  isChequeTransferred,
   parseAmount,
   todayJalaliDateObject,
   type Cheque,
@@ -146,6 +149,10 @@ export default function ChequesPage() {
 
   const [unclearTarget, setUnclearTarget] = useState<Cheque | null>(null);
   const [unclearing, setUnclearing] = useState(false);
+
+  const [transferTarget, setTransferTarget] = useState<Cheque | null>(null);
+  const [untransferTarget, setUntransferTarget] = useState<Cheque | null>(null);
+  const [untransferring, setUntransferring] = useState(false);
 
   const hasFilters = useMemo(() => {
     return (
@@ -302,6 +309,31 @@ export default function ChequesPage() {
     }
   };
 
+  const confirmUntransfer = async () => {
+    if (!untransferTarget?.id) return;
+    setUntransferring(true);
+    try {
+      const res = await FetchWithJwtClient(
+        "POST",
+        `/api/cheques/${untransferTarget.id}/untransfer`,
+        {},
+      );
+      if (res?.hasError) {
+        toast.error(getApiErrorMessage(res, "خطا در برگشت ظهرنویسی"));
+        return;
+      }
+      toast.success(
+        typeof res?.message === "string"
+          ? res.message
+          : "ظهرنویسی برگشت خورد و بدهی سند دوباره باز شد",
+      );
+      setUntransferTarget(null);
+      await loadCheques();
+    } finally {
+      setUntransferring(false);
+    }
+  };
+
   const totalAmount = useMemo(
     () => cheques.reduce((sum, c) => sum + parseAmount(c.amount), 0),
     [cheques],
@@ -428,7 +460,9 @@ export default function ChequesPage() {
               {cheques.map((cheque) => {
                 const pending = isChequePending(cheque);
                 const cleared = isChequeCleared(cheque);
+                const transferred = isChequeTransferred(cheque);
                 const isIssued = cheque.type === "issued";
+                const isReceived = cheque.type === "received";
                 return (
                   <StyledTableRow key={cheque.id}>
                     <StyledTableCell align="right">
@@ -467,7 +501,11 @@ export default function ChequesPage() {
                         sx={{
                           height: 20,
                           fontSize: 11,
-                          bgcolor: cleared ? "rgba(5, 150, 105, 0.25)" : "rgba(255, 152, 0, 0.25)",
+                          bgcolor: cleared
+                            ? "rgba(5, 150, 105, 0.25)"
+                            : transferred
+                              ? "rgba(33, 150, 243, 0.25)"
+                              : "rgba(255, 152, 0, 0.25)",
                           color: "var(--admin-text)",
                         }}
                       />
@@ -484,6 +522,17 @@ export default function ChequesPage() {
                             hover="rgba(120, 181, 104, 0.3)"
                           >
                             <DoneAllIcon sx={{ fontSize: 16 }} />
+                          </ChequeActionButton>
+                        ) : null}
+                        {pending && isReceived ? (
+                          <ChequeActionButton
+                            title="ظهرنویسی"
+                            onClick={() => setTransferTarget(cheque)}
+                            color="#3d78c4"
+                            bgcolor="rgba(70, 130, 210, 0.15)"
+                            hover="rgba(70, 130, 210, 0.3)"
+                          >
+                            <SwapHorizIcon sx={{ fontSize: 16 }} />
                           </ChequeActionButton>
                         ) : null}
                         {pending ? (
@@ -508,7 +557,18 @@ export default function ChequesPage() {
                             <UndoIcon sx={{ fontSize: 16 }} />
                           </ChequeActionButton>
                         ) : null}
-                        {!cleared ? (
+                        {transferred ? (
+                          <ChequeActionButton
+                            title="برگشت ظهرنویسی"
+                            onClick={() => setUntransferTarget(cheque)}
+                            color="var(--admin-warning)"
+                            bgcolor="rgba(255, 152, 0, 0.15)"
+                            hover="rgba(255, 152, 0, 0.3)"
+                          >
+                            <UndoIcon sx={{ fontSize: 16 }} />
+                          </ChequeActionButton>
+                        ) : null}
+                        {!cleared && !transferred ? (
                           <ChequeActionButton
                             title="حذف"
                             onClick={() => setDeleteTarget(cheque)}
@@ -790,6 +850,59 @@ export default function ChequesPage() {
               "&:hover": { bgcolor: "var(--admin-warning-hover)" },
             }}
             startIcon={unclearing ? <CircularProgress size={16} color="inherit" /> : undefined}
+          >
+            تایید برگشت
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <ChequeTransferDialog
+        open={Boolean(transferTarget)}
+        cheque={transferTarget}
+        onClose={() => setTransferTarget(null)}
+        onSuccess={() => void loadCheques()}
+      />
+
+      <Dialog
+        open={Boolean(untransferTarget)}
+        onClose={() => !untransferring && setUntransferTarget(null)}
+        PaperProps={{
+          sx: {
+            bgcolor: "var(--admin-surface)",
+            borderRadius: "16px",
+            direction: "rtl",
+            minWidth: { xs: "90%", sm: 400 },
+          },
+        }}
+      >
+        <DialogTitle sx={{ color: "var(--admin-text)", textAlign: "center" }}>
+          برگشت ظهرنویسی
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ color: "var(--admin-text-muted)", textAlign: "center" }}>
+            ظهرنویسی چک شماره {untransferTarget?.cheque_number} به مبلغ{" "}
+            {formatNumber(parseAmount(untransferTarget?.amount))} تومان برگشت داده شود؟ بدهی سند دوباره
+            باز می‌شود و چک به «در انتظار وصول» برمی‌گردد. صندوق تغییری نمی‌کند.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: "center", gap: 1, pb: 2 }}>
+          <Button
+            onClick={() => setUntransferTarget(null)}
+            disabled={untransferring}
+            sx={{ color: "var(--admin-text)" }}
+          >
+            انصراف
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => void confirmUntransfer()}
+            disabled={untransferring}
+            sx={{
+              bgcolor: "var(--admin-warning)",
+              color: "var(--admin-on-accent)",
+              "&:hover": { bgcolor: "var(--admin-warning-hover)" },
+            }}
+            startIcon={untransferring ? <CircularProgress size={16} color="inherit" /> : undefined}
           >
             تایید برگشت
           </Button>

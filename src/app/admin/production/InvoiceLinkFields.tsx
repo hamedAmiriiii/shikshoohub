@@ -51,7 +51,7 @@ export type InvoiceLinkState = {
 
 export function emptyInvoiceLinkState(): InvoiceLinkState {
   return {
-    createInvoice: false,
+    createInvoice: true,
     mode: "new",
     invoiceId: "",
     invoiceItemId: "",
@@ -62,6 +62,11 @@ export function emptyInvoiceLinkState(): InvoiceLinkState {
     beneficiaryId: "",
     beneficiaryOption: null,
   };
+}
+
+export function purchaseInvoiceTitle(materialName: string): string {
+  const name = materialName.trim();
+  return name ? `خرید ${name}` : "";
 }
 
 function jalaliDateString(d: DateObject | null | undefined): string | null {
@@ -298,7 +303,6 @@ export default function InvoiceLinkFields({ value, onChange, lotTotal = 0 }: Pro
                 mode: "new",
                 invoiceId: "",
                 invoiceItemId: "",
-                invoiceTitle: "",
                 invoiceDate: todayJalaliDateObject(),
                 invoiceDescription: "",
                 payment: emptyDocumentPaymentForm(),

@@ -85,6 +85,7 @@ import { useShopPermissionGate } from "@/app/lib/shopPermissions";
 import InvoiceLinkFields, {
   buildInvoiceLinkPayload,
   emptyInvoiceLinkState,
+  purchaseInvoiceTitle,
   validateInvoiceLink,
   type InvoiceLinkState,
 } from "@/app/admin/production/InvoiceLinkFields";
@@ -1041,7 +1042,10 @@ export default function ProductionCostingPage() {
                                   setLotDialogMaterial(material);
                                   setLotQty("");
                                   setLotPrice("");
-                                  setInvoiceLink(emptyInvoiceLinkState());
+                                  setInvoiceLink({
+                                    ...emptyInvoiceLinkState(),
+                                    invoiceTitle: purchaseInvoiceTitle(material.name),
+                                  });
                                 }}
                                 sx={{ ...actionBtnSx, color: "var(--admin-accent)" }}
                               >
@@ -1206,7 +1210,16 @@ export default function ProductionCostingPage() {
             size="small"
             label="نام"
             value={materialName}
-            onChange={(e) => setMaterialName(e.target.value)}
+            onChange={(e) => {
+              const name = e.target.value;
+              setMaterialName(name);
+              if (!editingMaterial) {
+                setInvoiceLink((prev) => ({
+                  ...prev,
+                  invoiceTitle: purchaseInvoiceTitle(name),
+                }));
+              }
+            }}
             sx={{ ...fieldSx, gridColumn: editingMaterial ? "1 / -1" : undefined }}
           />
           {!editingMaterial && (

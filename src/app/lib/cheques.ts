@@ -3,7 +3,7 @@ import persian from "react-date-object/calendars/persian";
 import persian_fa from "react-date-object/locales/persian_fa";
 
 export type ChequeType = "issued" | "received";
-export type ChequeStatus = "pending" | "cleared" | string;
+export type ChequeStatus = "pending" | "cleared" | "transferred" | "cancelled" | string;
 export type ExpenseType = "جاری" | "سرمایه";
 
 export type JalaliDatePayload = {
@@ -30,6 +30,11 @@ export type Cheque = {
   due_date_jalali?: string | null;
   clear_date_jalali?: string | null;
   shop_account_id?: number | null;
+  transferred_at?: string | null;
+  transferred_to_beneficiary_id?: number | null;
+  transferred_to_invoice_id?: number | null;
+  transferred_to_expense_id?: number | null;
+  transfer_note?: string | null;
   created_at?: string;
 };
 
@@ -42,6 +47,7 @@ export const CHEQUE_STATUS_OPTIONS = [
   { value: "all", label: "همه" },
   { value: "pending", label: "در انتظار" },
   { value: "cleared", label: "وصول‌شده" },
+  { value: "transferred", label: "ظهرنویسی‌شده" },
 ];
 
 export const EXPENSE_TYPE_OPTIONS = [
@@ -173,6 +179,19 @@ export function buildAvailableChequesForSaleUrl(): string {
   return "/api/cheques?available_for_sale=1&type=received&status=pending";
 }
 
+export function buildAvailableChequesForTransferUrl(maxAmount?: number): string {
+  const params = new URLSearchParams({
+    available_for_transfer: "1",
+    type: "received",
+    status: "pending",
+    per_page: "50",
+  });
+  if (maxAmount != null && maxAmount > 0) {
+    params.set("max_amount", String(Math.round(maxAmount)));
+  }
+  return `/api/cheques?${params.toString()}`;
+}
+
 export function filterChequesMatchingAmount(cheques: Cheque[], amount: number): Cheque[] {
   if (amount <= 0) return [];
   return cheques.filter((c) => parseAmount(c.amount) === amount);
@@ -207,6 +226,8 @@ export function chequeTypeLabel(type?: string | null): string {
 export function chequeStatusLabel(status?: string | null): string {
   if (status === "pending") return "در انتظار";
   if (status === "cleared") return "وصول‌شده";
+  if (status === "transferred") return "ظهرنویسی‌شده";
+  if (status === "cancelled") return "باطل‌شده";
   return status || "—";
 }
 
@@ -216,4 +237,8 @@ export function isChequePending(cheque: Cheque): boolean {
 
 export function isChequeCleared(cheque: Cheque): boolean {
   return cheque.status === "cleared";
+}
+
+export function isChequeTransferred(cheque: Cheque): boolean {
+  return cheque.status === "transferred";
 }
