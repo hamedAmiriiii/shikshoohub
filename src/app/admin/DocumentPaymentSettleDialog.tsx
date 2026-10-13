@@ -31,13 +31,15 @@ import {
   type Cheque,
 } from "@/app/lib/cheques";
 
-type SettleMode = "account" | "transfer";
+type SettleMode = "account" | "transfer" | "advance";
 
 type Props = {
   open: boolean;
   kind: DocumentPaymentKind;
   documentId: number | null;
   remainingAmount: number;
+  /** اعتبار ظهرنویسی موجود برای ذینفع این سند */
+  advanceAvailable?: number;
   onClose: () => void;
   onSuccess: () => void;
 };
@@ -47,6 +49,7 @@ export default function DocumentPaymentSettleDialog({
   kind,
   documentId,
   remainingAmount,
+  advanceAvailable = 0,
   onClose,
   onSuccess,
 }: Props) {
@@ -57,30 +60,56 @@ export default function DocumentPaymentSettleDialog({
   const [selectedCheque, setSelectedCheque] = useState<Cheque | null>(null);
   const [loadingCheques, setLoadingCheques] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [fetchedAdvance, setFetchedAdvance] = useState(0);
+
+  const advanceBalance = fetchedAdvance > 0.02 ? fetchedAdvance : advanceAvailable;
 
   const eligibleCheques = useMemo(
-    () => cheques.filter((c) => parseAmount(c.amount) > 0 && parseAmount(c.amount) <= remainingAmount + 0.02),
-    [cheques, remainingAmount],
+    () => cheques.filter((c) => parseAmount(c.amount) > 0),
+    [cheques],
   );
+
+  const selectedChequeAmount = selectedCheque ? parseAmount(selectedCheque.amount) : 0;
+  const transferExcess =
+    mode === "transfer" && selectedChequeAmount > remainingAmount + 0.02
+      ? Math.round(selectedChequeAmount - remainingAmount)
+      : 0;
 
   useEffect(() => {
     if (!open) return;
-    setMode("account");
     setAmount(remainingAmount > 0 ? formatAmountNumber(remainingAmount) : "");
     setShopAccountId("");
     setSelectedCheque(null);
     setCheques([]);
+    setFetchedAdvance(0);
   }, [open, remainingAmount]);
+
+  useEffect(() => {
+    if (!open || !documentId) return;
+    const token = tokenCode();
+    if (!token) return;
+    const path = kind === "invoice" ? `/api/invoices/${documentId}` : `/api/expenses/${documentId}`;
+    FetchWithJwtClient("GET", path, token).then((res) => {
+      if (!res || res.hasError) return;
+      const doc = (res.data ?? res.invoice ?? res.expense ?? res) as {
+        beneficiary_advance_available?: number | string;
+      };
+      const avail = Number(doc?.beneficiary_advance_available) || 0;
+      setFetchedAdvance(avail);
+      setMode(avail > 0.02 ? "advance" : "account");
+    });
+  }, [open, documentId, kind]);
 
   useEffect(() => {
     if (!open || mode !== "transfer") return;
     const token = tokenCode();
     if (!token) return;
     setLoadingCheques(true);
-    FetchWithJwtClient("GET", buildAvailableChequesForTransferUrl(remainingAmount), token)
+    // بدون سقف مبلغ — چک بزرگ‌تر از بدهی هم مجاز است (مابقی = اعتبار)
+    FetchWithJwtClient("GET", buildAvailableChequesForTransferUrl(), token)
       .then((res) => setCheques(extractChequeList(res)))
       .finally(() => setLoadingCheques(false));
-  }, [open, mode, remainingAmount]);
+  }, [open, mode]);
 
   const handleSubmit = async () => {
     if (!documentId) return;
@@ -90,14 +119,45 @@ export default function DocumentPaymentSettleDialog({
       return;
     }
 
+    if (mode === "advance") {
+      const amountNum = Math.round(parseAmountInput(amount));
+      if (amountNum <= 0) {
+        toast.error("مبلغ مصرف اعتبار را وارد کنید");
+        return;
+      }
+      if (amountNum > remainingAmount) {
+        toast.error(`مبلغ نمی‌تواند بیشتر از ${formatAmountNumber(remainingAmount)} تومان باشد`);
+        return;
+      }
+      if (amountNum > advanceBalance) {
+        toast.error(`اعتبار موجود ${formatAmountNumber(advanceBalance)} تومان است`);
+        return;
+      }
+      setSaving(true);
+      try {
+        const path =
+          kind === "invoice"
+            ? `/api/invoices/${documentId}/apply-advance`
+            : `/api/expenses/${documentId}/apply-advance`;
+        const res = await FetchWithJwtClient("POST", path, { amount: amountNum });
+        if (!res || res.hasError) {
+          toast.error(getApiErrorMessage(res, "خطا در مصرف اعتبار"));
+          return;
+        }
+        toast.success(typeof res.message === "string" ? res.message : "اعتبار مصرف شد");
+        onClose();
+        onSuccess();
+      } catch {
+        toast.error("خطا در مصرف اعتبار");
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
     if (mode === "transfer") {
       if (!selectedCheque?.id) {
         toast.error("چک دریافتی را انتخاب کنید");
-        return;
-      }
-      const chequeAmount = parseAmount(selectedCheque.amount);
-      if (chequeAmount - remainingAmount > 0.02) {
-        toast.error("مبلغ چک بیشتر از مانده نسیه است");
         return;
       }
       setSaving(true);
@@ -177,12 +237,17 @@ export default function DocumentPaymentSettleDialog({
         <Typography sx={{ color: "var(--admin-accent)", fontWeight: 700, fontSize: 14 }}>
           باقی‌مانده: {formatAmountNumber(remainingAmount)} تومان
         </Typography>
+        {advanceBalance > 0.02 ? (
+          <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>
+            اعتبار ظهرنویسی ذینفع: {formatAmountNumber(advanceBalance)} تومان
+          </Typography>
+        ) : null}
 
         <RadioGroup
           row
           value={mode}
           onChange={(e) => setMode(e.target.value as SettleMode)}
-          sx={{ gap: 0.5 }}
+          sx={{ gap: 0.5, flexWrap: "wrap" }}
         >
           <FormControlLabel
             value="account"
@@ -203,9 +268,22 @@ export default function DocumentPaymentSettleDialog({
                 sx={{ color: "var(--admin-accent)", "&.Mui-checked": { color: "var(--admin-accent)" } }}
               />
             }
-            label="ظهرنویسی چک دریافتی"
+            label="ظهرنویسی چک"
             sx={{ m: 0, color: "var(--admin-text)", "& .MuiFormControlLabel-label": { fontSize: 12 } }}
           />
+          {advanceBalance > 0.02 ? (
+            <FormControlLabel
+              value="advance"
+              control={
+                <Radio
+                  size="small"
+                  sx={{ color: "var(--admin-accent)", "&.Mui-checked": { color: "var(--admin-accent)" } }}
+                />
+              }
+              label="از اعتبار ظهرنویسی"
+              sx={{ m: 0, color: "var(--admin-text)", "& .MuiFormControlLabel-label": { fontSize: 12 } }}
+            />
+          ) : null}
         </RadioGroup>
 
         {mode === "account" ? (
@@ -224,11 +302,28 @@ export default function DocumentPaymentSettleDialog({
               helperText="نقد تسویه از این حساب کم می‌شود"
             />
           </>
-        ) : (
+        ) : null}
+
+        {mode === "advance" ? (
           <>
             <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11 }}>
-              چک دریافتی نزد شما بدون برداشت از صندوق به بستانکار این سند منتقل می‌شود. مبلغ چک باید حداکثر برابر
-              مانده نسیه باشد.
+              از اعتبار قبلی ظهرنویسی همین ذینفع روی بدهی این سند مصرف می‌شود — بدون حرکت صندوق.
+            </Typography>
+            <TextField
+              size="small"
+              label="مبلغ مصرف اعتبار"
+              value={amount}
+              onChange={(e) => setAmount(formatAmountInput(e.target.value))}
+              sx={chequeFormFieldSx}
+            />
+          </>
+        ) : null}
+
+        {mode === "transfer" ? (
+          <>
+            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11 }}>
+              چک دریافتی بدون برداشت از صندوق منتقل می‌شود. اگر مبلغ چک بیشتر از بدهی باشد، مابقی اعتبار
+              ذینفع می‌شود.
             </Typography>
             <Autocomplete
               size="small"
@@ -257,8 +352,13 @@ export default function DocumentPaymentSettleDialog({
                 />
               )}
             />
+            {transferExcess > 0 ? (
+              <Typography sx={{ color: "var(--admin-accent)", fontSize: 12, fontWeight: 700 }}>
+                مابقی {formatAmountNumber(transferExcess)} تومان → اعتبار ذینفع
+              </Typography>
+            ) : null}
           </>
-        )}
+        ) : null}
       </DialogContent>
       <DialogActions sx={{ px: 2, pb: 1.5 }}>
         <Button size="small" disabled={saving} onClick={onClose} sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>
@@ -271,7 +371,13 @@ export default function DocumentPaymentSettleDialog({
           onClick={() => void handleSubmit()}
           sx={{ backgroundColor: "var(--admin-accent)", fontSize: 12, "&:hover": { backgroundColor: "var(--admin-accent-hover)" } }}
         >
-          {saving ? "..." : mode === "transfer" ? "ظهرنویسی و تسویه" : "تسویه"}
+          {saving
+            ? "..."
+            : mode === "transfer"
+              ? "ظهرنویسی و تسویه"
+              : mode === "advance"
+                ? "مصرف اعتبار"
+                : "تسویه"}
         </Button>
       </DialogActions>
     </Dialog>

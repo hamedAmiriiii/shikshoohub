@@ -1422,6 +1422,7 @@ export default function ExpensesPage() {
           kind="expense"
           documentId={settleExpense?.id ?? null}
           remainingAmount={documentCreditRemaining(settleExpense)}
+          advanceAvailable={Number(settleExpense?.beneficiary_advance_available) || 0}
           onClose={() => setSettleExpense(null)}
           onSuccess={() => {
             setSettleExpense(null);

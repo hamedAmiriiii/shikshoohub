@@ -1388,6 +1388,7 @@ export default function InvoicesPage() {
           kind="invoice"
           documentId={settleInvoice?.id ?? null}
           remainingAmount={documentCreditRemaining(settleInvoice)}
+          advanceAvailable={Number(settleInvoice?.beneficiary_advance_available) || 0}
           onClose={() => setSettleInvoice(null)}
           onSuccess={fetchInvoices}
         />

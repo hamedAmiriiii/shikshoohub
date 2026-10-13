@@ -714,6 +714,7 @@ export default function InvoiceDetailsDialog({
         kind="invoice"
         documentId={invoice?.id ?? null}
         remainingAmount={documentCreditRemaining(record || invoice)}
+        advanceAvailable={Number((record || invoice)?.beneficiary_advance_available) || 0}
         onClose={() => setSettleOpen(false)}
         onSuccess={() => {
           setSettleOpen(false);

@@ -42,6 +42,7 @@ export type DocumentPaymentFields = {
   shop_account_id?: number | null;
   shop_account?: { id?: number; name?: string } | null;
   amount?: number | string | null;
+  beneficiary_advance_available?: number | string | null;
 };
 
 export type DocumentChequeDraft = {

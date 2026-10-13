@@ -36,6 +36,7 @@ type DebtDoc = DocumentPaymentFields & {
   title?: string | null;
   amount?: number | string;
   date?: string | null;
+  beneficiary_id?: number | null;
   beneficiary?: { id?: number; name?: string | null; phone?: string | null } | null;
 };
 
@@ -79,9 +80,14 @@ export default function ChequeTransferDialog({ open, cheque, onClose, onSuccess 
   const chequeAmount = parseAmount(cheque?.amount);
 
   const eligibleDocs = useMemo(
-    () => docs.filter((doc) => documentCreditRemaining(doc) + 0.02 >= chequeAmount),
-    [docs, chequeAmount],
+    () => docs.filter((doc) => documentCreditRemaining(doc) > 0),
+    [docs],
   );
+
+  const selectedRemaining = selected ? documentCreditRemaining(selected) : 0;
+  const excessAmount = selected && chequeAmount > selectedRemaining + 0.02
+    ? Math.round(chequeAmount - selectedRemaining)
+    : 0;
 
   const loadDocs = (query = "") => {
     const token = tokenCode();
@@ -147,8 +153,13 @@ export default function ChequeTransferDialog({ open, cheque, onClose, onSuccess 
       return;
     }
     const remaining = documentCreditRemaining(selected);
-    if (chequeAmount - remaining > 0.02) {
-      toast.error("مبلغ چک بیشتر از مانده نسیه سند است");
+    if (remaining <= 0) {
+      toast.error("مانده نسیه برای این سند وجود ندارد");
+      return;
+    }
+    const beneficiaryId = selected.beneficiary?.id || selected.beneficiary_id;
+    if (chequeAmount - remaining > 0.02 && !beneficiaryId) {
+      toast.error("برای ثبت مابقی چک به‌عنوان اعتبار، ذینفع سند باید مشخص باشد");
       return;
     }
     const token = tokenCode();
@@ -162,7 +173,7 @@ export default function ChequeTransferDialog({ open, cheque, onClose, onSuccess 
         ...(kind === "invoice" ? { invoice_id: selected.id } : { expense_id: selected.id }),
       };
       if (note.trim()) body.note = note.trim();
-      if (selected.beneficiary?.id) body.beneficiary_id = selected.beneficiary.id;
+      if (beneficiaryId) body.beneficiary_id = beneficiaryId;
 
       const res = await FetchWithJwtClient("POST", `/api/cheques/${cheque.id}/transfer`, body);
       if (!res || res.hasError) {
@@ -200,7 +211,7 @@ export default function ChequeTransferDialog({ open, cheque, onClose, onSuccess 
       <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 1.5, pt: "12px !important" }}>
         <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, textAlign: "center" }}>
           چک شماره {cheque?.cheque_number || "—"} به مبلغ {formatNumber(chequeAmount)} تومان بدون برداشت از
-          صندوق، بابت بدهی نفر دیگر تسویه می‌شود.
+          صندوق، بابت بدهی نفر دیگر تسویه می‌شود. اگر مبلغ چک بیشتر باشد، مابقی اعتبار ذینفع می‌شود.
         </Typography>
 
         <RadioGroup
@@ -239,7 +250,7 @@ export default function ChequeTransferDialog({ open, cheque, onClose, onSuccess 
           onChange={(_e, next) => setSelected(next)}
           isOptionEqualToValue={(a, b) => a.id === b.id}
           getOptionLabel={(doc) => docLabel(doc, kind)}
-          noOptionsText={loading ? "در حال جستجو..." : "سند نسیه‌ای با مانده کافی پیدا نشد"}
+              noOptionsText={loading ? "در حال جستجو..." : "سند نسیه‌ای پیدا نشد"}
           renderInput={(params) => (
             <TextField
               {...params}
@@ -270,8 +281,13 @@ export default function ChequeTransferDialog({ open, cheque, onClose, onSuccess 
         {selected ? (
           <Box sx={{ p: 1, borderRadius: "10px", bgcolor: "var(--admin-surface-alt)" }}>
             <Typography sx={{ fontSize: 12, color: "var(--admin-text)" }}>
-              مانده نسیه: {formatNumber(documentCreditRemaining(selected))} تومان
+              مانده نسیه: {formatNumber(selectedRemaining)} تومان
             </Typography>
+            {excessAmount > 0 ? (
+              <Typography sx={{ fontSize: 12, color: "var(--admin-accent)", mt: 0.4, fontWeight: 700 }}>
+                مابقی چک {formatNumber(excessAmount)} تومان → اعتبار ذینفع برای فاکتورهای بعدی
+              </Typography>
+            ) : null}
             <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)", mt: 0.3 }}>
               بعد از ظهرنویسی، چک از لیست وصول شما خارج می‌شود و صندوق تغییر نمی‌کند.
             </Typography>

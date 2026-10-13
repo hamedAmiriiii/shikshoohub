@@ -95,7 +95,12 @@ import CartQuantityControl from '@/app/admin/CartQuantityControl';
 import MultiCartToolbar, { MAX_MULTI_CARTS } from '@/app/admin/MultiCartToolbar';
 import PosSegmentButtons from '@/app/admin/PosSegmentButtons';
 import { getPriceUnitLabel, getDefaultCartQuantity, getQuantityIncrement, normalizeQuantityValue, isMeasuredProduct } from '@/app/lib/productUnits';
-import { createEmptyCartSlot, type CartSlotSnapshot } from '@/app/admin/multiCartState';
+import {
+  createEmptyCartSlot,
+  readPersistedMultiCart,
+  writePersistedMultiCart,
+  type CartSlotSnapshot,
+} from '@/app/admin/multiCartState';
 import { publishAdminSaleCartSnapshot } from '@/app/admin/onboarding/adminSaleCartCheck';
 import CategoryIcon from '@mui/icons-material/Category';
 import {
@@ -198,6 +203,9 @@ export default function ShoppingPage() {
   const [cartCount, setCartCount] = useState(1);
   const [activeCartIndex, setActiveCartIndex] = useState(0);
   const cartSlotsRef = useRef<CartSlotSnapshot[]>([createEmptyCartSlot()]);
+  const cartHydratedRef = useRef(false);
+  const cartPersistReadyRef = useRef(false);
+  const suppressCartPersistRef = useRef(false);
   const pendingProformaIdRef = useRef<number | null>(null);
   const proformaCartEnrichedRef = useRef(false);
   const [proformaSavedOpen, setProformaSavedOpen] = useState(false);
@@ -551,31 +559,105 @@ export default function ShoppingPage() {
   }, []);
 
   useEffect(() => {
+    if (cartHydratedRef.current) return;
+
+    if (searchParams.get("editPurchase")?.trim()) {
+      suppressCartPersistRef.current = true;
+      cartHydratedRef.current = true;
+      return;
+    }
+
     const payload = consumeProformaCartLoad();
-    if (!payload) return;
-    const cartItems = proformaItemsToCart(payload.items);
-    if (!cartItems.length) return;
-    const nextTotal = cartItems.reduce(
-      (sum, item) => sum + Number(item.sale_price) * Number(item.quantity),
-      0,
-    );
-    const discount = Math.max(0, Number(payload.discount_amount) || 0);
-    const slot: CartSlotSnapshot = {
-      ...createEmptyCartSlot(),
-      cart: cartItems,
-      total: nextTotal,
-      phone: payload.phone || "",
-      discounttype: discount,
-      discountDisplay: discount > 0 ? formatAmountInput(String(Math.round(discount))) : "",
-    };
-    cartSlotsRef.current = [slot];
-    setCartCount(1);
-    setActiveCartIndex(0);
-    applyCartSlot(slot);
-    pendingProformaIdRef.current = payload.id;
-    proformaCartEnrichedRef.current = false;
-    toast.info("اقلام پیش‌فاکتور در سبد است. پرداخت و ثبت فروش را از همین‌جا انجام دهید");
+    if (payload) {
+      const cartItems = proformaItemsToCart(payload.items);
+      if (cartItems.length) {
+        const nextTotal = cartItems.reduce(
+          (sum, item) => sum + Number(item.sale_price) * Number(item.quantity),
+          0,
+        );
+        const discount = Math.max(0, Number(payload.discount_amount) || 0);
+        const slot: CartSlotSnapshot = {
+          ...createEmptyCartSlot(),
+          cart: cartItems,
+          total: nextTotal,
+          phone: payload.phone || "",
+          discounttype: discount,
+          discountDisplay: discount > 0 ? formatAmountInput(String(Math.round(discount))) : "",
+        };
+        cartSlotsRef.current = [slot];
+        setCartCount(1);
+        setActiveCartIndex(0);
+        applyCartSlot(slot);
+        pendingProformaIdRef.current = payload.id;
+        proformaCartEnrichedRef.current = false;
+        toast.info("اقلام پیش‌فاکتور در سبد است. پرداخت و ثبت فروش را از همین‌جا انجام دهید");
+        cartHydratedRef.current = true;
+        return;
+      }
+    }
+
+    const saved = readPersistedMultiCart();
+    if (saved?.slots?.length) {
+      cartSlotsRef.current = saved.slots;
+      setCartCount(saved.slots.length);
+      setActiveCartIndex(saved.activeIndex);
+      applyCartSlot(saved.slots[saved.activeIndex] ?? createEmptyCartSlot());
+      pendingProformaIdRef.current = saved.pendingProformaId ?? null;
+      if (saved.pendingProformaId != null) {
+        proformaCartEnrichedRef.current = false;
+      }
+    }
+    cartHydratedRef.current = true;
+    // فقط یک‌بار هنگام ورود به صفحه فروش
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [applyCartSlot]);
+
+  useEffect(() => {
+    if (!cartHydratedRef.current) return;
+    // یک دور بعد از hydrate رد شو تا setState بازیابی روی storage خالی نوشته نشود
+    if (!cartPersistReadyRef.current) {
+      cartPersistReadyRef.current = true;
+      return;
+    }
+    if (suppressCartPersistRef.current) return;
+    if (editingPurchaseId) return;
+    if (searchParams.get("editPurchase")?.trim()) return;
+
+    const slots = [...cartSlotsRef.current];
+    slots[activeCartIndex] = captureCurrentSlot();
+    cartSlotsRef.current = slots;
+    writePersistedMultiCart({
+      slots,
+      activeIndex: activeCartIndex,
+      pendingProformaId: pendingProformaIdRef.current,
+    });
+  }, [
+    captureCurrentSlot,
+    activeCartIndex,
+    cartCount,
+    editingPurchaseId,
+    searchParams,
+  ]);
+
+  // بعد از خروج از ویرایش فاکتور، سبدهای ذخیره‌شده POS را برگردان
+  useEffect(() => {
+    if (searchParams.get("editPurchase")?.trim()) {
+      suppressCartPersistRef.current = true;
+      return;
+    }
+    if (!suppressCartPersistRef.current || !cartHydratedRef.current) return;
+    if (editingPurchaseId) return;
+
+    const saved = readPersistedMultiCart();
+    if (saved?.slots?.length) {
+      cartSlotsRef.current = saved.slots;
+      setCartCount(saved.slots.length);
+      setActiveCartIndex(saved.activeIndex);
+      applyCartSlot(saved.slots[saved.activeIndex] ?? createEmptyCartSlot());
+      pendingProformaIdRef.current = saved.pendingProformaId ?? null;
+    }
+    suppressCartPersistRef.current = false;
+  }, [searchParams, editingPurchaseId, applyCartSlot]);
 
   useEffect(() => {
     if (proformaCartEnrichedRef.current || pendingProformaIdRef.current == null) return;
@@ -1280,6 +1362,7 @@ export default function ShoppingPage() {
   }, [paymentType, chequePaymentEnabled]);
 
   const cancelPurchaseEdit = useCallback(() => {
+    suppressCartPersistRef.current = true;
     editLoadedRef.current = null;
     setEditingPurchaseId(null);
     setEditStockBonus({});
@@ -1563,6 +1646,10 @@ export default function ShoppingPage() {
       }
       toast.success(successMessage);
       notifySmsQuotaIfExhausted(res);
+      if (editingPurchaseId) {
+        // سبد POS ذخیره‌شده را با خالی‌شدن سبد ویرایش بازنویسی نکن
+        suppressCartPersistRef.current = true;
+      }
       resetCartAfterSale();
       if (editingPurchaseId) {
         editLoadedRef.current = null;
