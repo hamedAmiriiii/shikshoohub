@@ -74,6 +74,7 @@ export type IngredientCost = {
   name?: string | null;
   grams_per_kg: number;
   is_removable?: boolean;
+  is_addable?: boolean;
   needed_kg?: number;
   cost?: number;
   lots?: IngredientCostLot[];
@@ -171,6 +172,8 @@ export type RecipeLine = {
   grams_per_kg: number;
   /** مشتری در منوی سه‌بعدی بتواند این ماده را بردارد */
   is_removable?: boolean;
+  /** مشتری در منوی سه‌بعدی بتواند یک واحد اضافه (مثلاً دوبل) سفارش دهد */
+  is_addable?: boolean;
 };
 
 export function isPieceMaterial(material?: { unit_type?: string | null } | null): boolean {
@@ -253,6 +256,7 @@ export function recipeLinesFromGood(good: ProducedGood): RecipeLine[] {
     raw_material_id: line.raw_material_id,
     grams_per_kg: Number(line.grams_per_kg) || 0,
     is_removable: line.is_removable === true,
+    is_addable: line.is_addable === true,
   }));
 }
 

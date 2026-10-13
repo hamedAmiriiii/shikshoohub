@@ -22,6 +22,8 @@ export type ThreeDIngredient = {
   name: string;
   image_url: string | null;
   is_removable: boolean;
+  /** اجازهٔ یک واحد اضافه (دوبل) */
+  is_addable?: boolean;
   /** سهم این ماده از قیمت کالا (تومان) */
   price: number;
 };
@@ -574,6 +576,7 @@ function IngredientRow({
 }) {
   const { t, formatNumber } = useReservI18n();
   const locked = !ingredient.is_removable;
+  const canAddExtra = ingredient.is_addable === true;
   const qtyLabel = checked ? (extra ? "×۲" : "×۱") : "×۰";
   return (
     <Box
@@ -691,7 +694,7 @@ function IngredientRow({
           </Box>
         )}
       </ButtonBase>
-      {checked ? (
+      {checked && canAddExtra ? (
         <IconButton
           size="small"
           aria-label={extra ? t("threedRemoveExtra") : t("threedAddExtra")}
@@ -1377,7 +1380,7 @@ export function ThreeDLayout(props: ReservMenuLayoutProps) {
       const extraIds = (extraByKey[openKey] || []).filter(
         (id) =>
           !removedIds.includes(id) &&
-          data.ingredients.some((row) => row.raw_material_id === id),
+          data.ingredients.some((row) => row.raw_material_id === id && row.is_addable === true),
       );
       if (onAddCustom) onAddCustom(openKey, removedIds, qty, extraIds);
       else for (let i = 0; i < qty; i += 1) onAdd(openKey);
@@ -1529,12 +1532,15 @@ function sampleBurger(
   price: number,
   order: Array<keyof typeof SAMPLE_SVG>,
 ): ReservMenuItem {
-  const meta: Record<keyof typeof SAMPLE_SVG, { id: number; name: string; removable: boolean; price: number }> = {
-    bunTop: { id: 1, name: "نان", removable: false, price: Math.round(price * 0.18) },
-    bunBottom: { id: 1, name: "نان", removable: false, price: Math.round(price * 0.18) },
-    patty: { id: 2, name: "برگر", removable: true, price: Math.round(price * 0.42) },
-    pickle: { id: 3, name: "خیارشور", removable: true, price: Math.round(price * 0.08) },
-    cheese: { id: 4, name: "پنیر", removable: true, price: Math.round(price * 0.14) },
+  const meta: Record<
+    keyof typeof SAMPLE_SVG,
+    { id: number; name: string; removable: boolean; addable: boolean; price: number }
+  > = {
+    bunTop: { id: 1, name: "نان", removable: false, addable: false, price: Math.round(price * 0.18) },
+    bunBottom: { id: 1, name: "نان", removable: false, addable: false, price: Math.round(price * 0.18) },
+    patty: { id: 2, name: "برگر", removable: true, addable: true, price: Math.round(price * 0.42) },
+    pickle: { id: 3, name: "خیارشور", removable: true, addable: false, price: Math.round(price * 0.08) },
+    cheese: { id: 4, name: "پنیر", removable: true, addable: true, price: Math.round(price * 0.14) },
   };
   const layers: ThreeDLayer[] = order.map((kind, i) => ({
     key: `${meta[kind].id}-${i}`,
@@ -1553,6 +1559,7 @@ function sampleBurger(
       name: m.name,
       image_url: SAMPLE_SVG[kind],
       is_removable: m.removable,
+      is_addable: m.addable,
       price: kind === "bunTop" || kind === "bunBottom" ? m.price * 2 : m.price,
     });
   }

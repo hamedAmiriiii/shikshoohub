@@ -137,6 +137,7 @@ type Product = {
     name: string;
     image_url?: string | null;
     is_removable?: boolean;
+    is_addable?: boolean;
     price?: number;
   }>;
   layers?: Array<{
@@ -298,14 +299,34 @@ function resolveMediaUrl(url?: string | null): string | null {
   return url;
 }
 
+function isPlaceholderMedia(url?: string | null): boolean {
+  if (!url?.trim()) return true;
+  return /noimageshop/i.test(url) || /\/landing\/2\.png/i.test(url);
+}
+
+/** عکس نمایشی کالا؛ برای کالای تولیدی از لایهٔ پایه (آخرین لایه) یا عکس ماده استفاده می‌شود. */
 function productImage(product: Product, categoryImageById?: Map<string, string>): string {
   const ownRaw = product.image?.trim() || product.images?.[0]?.image_url || "";
-  const ownIsPlaceholder =
-    !ownRaw ||
-    /noimageshop/i.test(ownRaw) ||
-    /\/landing\/2\.png/i.test(ownRaw);
-  const own = ownIsPlaceholder ? null : resolveMediaUrl(ownRaw) || ownRaw;
+  const own = !isPlaceholderMedia(ownRaw) ? resolveMediaUrl(ownRaw) || ownRaw : null;
   if (own) return own;
+
+  if (Array.isArray(product.layers) && product.layers.length) {
+    for (let i = product.layers.length - 1; i >= 0; i -= 1) {
+      const layerUrl = product.layers[i]?.image_url?.trim();
+      if (layerUrl && !isPlaceholderMedia(layerUrl)) {
+        return resolveMediaUrl(layerUrl) || layerUrl;
+      }
+    }
+  }
+  if (Array.isArray(product.ingredients)) {
+    for (const row of product.ingredients) {
+      const ingUrl = row.image_url?.trim();
+      if (ingUrl && !isPlaceholderMedia(ingUrl)) {
+        return resolveMediaUrl(ingUrl) || ingUrl;
+      }
+    }
+  }
+
   if (Array.isArray(product.categories)) {
     for (const cat of product.categories) {
       const url = resolveCategoryImageUrl(cat);
@@ -315,6 +336,38 @@ function productImage(product: Product, categoryImageById?: Map<string, string>)
   if (product.category_id != null) {
     const fromMap = categoryImageById?.get(String(product.category_id));
     if (fromMap) return fromMap;
+  }
+  return "/pic/noImageShop.jpg";
+}
+
+function findCatalogProductForCartLine(line: CartLine, products: Product[]): Product | undefined {
+  if (isProducedGoodItem(line)) {
+    const id = Number(line.produced_good_id);
+    if (!Number.isFinite(id) || id <= 0) return undefined;
+    return products.find(
+      (product) => isProducedGoodItem(product) && Number(product.produced_good_id ?? product.id) === id,
+    );
+  }
+  const id = Number(line.product_id);
+  if (!Number.isFinite(id) || id <= 0) return undefined;
+  return products.find(
+    (product) => !isProducedGoodItem(product) && Number(product.product_id ?? product.id) === id,
+  );
+}
+
+/** عکس خط سبد: ترجیح کاتالوگ زنده (لایهٔ کالای تولیدی)، وگرنه عکس ذخیره‌شده در خط. */
+function resolveCartLineImage(
+  line: CartLine,
+  products: Product[],
+  categoryImageById?: Map<string, string>,
+): string {
+  const product = findCatalogProductForCartLine(line, products);
+  if (product) {
+    const fromCatalog = productImage(product, categoryImageById);
+    if (fromCatalog && !isPlaceholderMedia(fromCatalog)) return fromCatalog;
+  }
+  if (line.image && !isPlaceholderMedia(line.image)) {
+    return resolveMediaUrl(line.image) || line.image;
   }
   return "/pic/noImageShop.jpg";
 }
@@ -789,6 +842,23 @@ function TableReservPageBody() {
     return map;
   }, [shopCategories]);
 
+  /** بعد از لود کاتالوگ، عکس خطوط سبد را از کالای زنده (لایهٔ تولیدی) تازه کن. */
+  useEffect(() => {
+    if (!products.length || !cart.length) return;
+    let changed = false;
+    const next = cart.map((line) => {
+      const image = resolveCartLineImage(line, products, categoryImageById);
+      if (image && image !== line.image) {
+        changed = true;
+        return { ...line, image };
+      }
+      return line;
+    });
+    if (changed) persistCart(next);
+    // فقط وقتی کاتالوگ یا نقشهٔ دسته عوض شود؛ وابسته به خود cart نباش تا حلقه نسازد
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products, categoryImageById]);
+
   const activeCategoryIds = useMemo(
     () => getActiveCategoryIdSet(shopCategories),
     [shopCategories],
@@ -1034,6 +1104,7 @@ function TableReservPageBody() {
                   name: row.name,
                   image_url: row.image_url ? resolveApiMediaUrl(row.image_url) : null,
                   is_removable: row.is_removable === true,
+                  is_addable: row.is_addable === true,
                   price: Number(row.price) || 0,
                 })),
                 layers: (product.layers || []).map((layer, index) => ({
@@ -1054,6 +1125,15 @@ function TableReservPageBody() {
   const productByKey = useMemo(
     () => new Map(menuProducts.map((product) => [catalogItemKey(product), product])),
     [menuProducts],
+  );
+  const cartDisplayLines = useMemo(
+    () =>
+      cart.map((line) => ({
+        ...line,
+        key: catalogItemKey(line),
+        image: resolveCartLineImage(line, products, categoryImageById),
+      })),
+    [cart, categoryImageById, products],
   );
   const layoutItems = useMemo(
     () => visibleProducts.map(toLayoutItem),
@@ -2184,7 +2264,7 @@ function TableReservPageBody() {
         {catalogMode !== "services" || cartCount > 0 ? (
         <ReservDesktopCartPanel
           theme={theme}
-          lines={cart.map((line) => ({ ...line, key: catalogItemKey(line) }))}
+          lines={cartDisplayLines}
           total={payableAmount}
           onInc={(key) => adjustCartLine(key, qtyOf(key) + 1)}
           onDec={(key) => adjustCartLine(key, qtyOf(key) - 1)}
@@ -2224,9 +2304,9 @@ function TableReservPageBody() {
         <Box sx={{ width: 42, height: 5, borderRadius: 99, bgcolor: effectiveMode === "dark" ? "#475569" : "#cbd5e1", mx: "auto", mb: 1.5 }} />
         <Typography sx={{ fontWeight: 800, mb: 1.5, fontSize: 18, color: TEXT }}>{t("orderFor", { label: displayPlaceLabel })}</Typography>
         <Box sx={{ maxHeight: "46vh", overflowY: "auto" }}>
-          {cart.map((line) => (
+          {cartDisplayLines.map((line) => (
             <Box
-              key={catalogItemKey(line)}
+              key={line.key}
               sx={{
                 display: "flex",
                 alignItems: "center",
@@ -2239,15 +2319,21 @@ function TableReservPageBody() {
                 border: `1px solid ${BORDER}`,
               }}
             >
-              {line.image ? (
-                <Box
-                  component="img"
-                  src={line.image}
-                  alt=""
-                  loading="lazy"
-                  sx={{ width: 48, height: 48, borderRadius: "12px", objectFit: "cover" }}
-                />
-              ) : null}
+              <Box
+                component="img"
+                src={line.image || "/pic/noImageShop.jpg"}
+                alt=""
+                loading="lazy"
+                sx={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: "12px",
+                  objectFit: "contain",
+                  bgcolor: SURFACE,
+                  border: `1px solid ${BORDER}`,
+                  flexShrink: 0,
+                }}
+              />
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography sx={{ fontWeight: 800, fontSize: 14, color: TEXT }}>{line.name}</Typography>
                 <Typography sx={{ color: MUTED, fontSize: 12 }}>
@@ -2257,7 +2343,7 @@ function TableReservPageBody() {
                   <IconButton
                     size="small"
                     aria-label={t("decreaseQty")}
-                    onClick={() => adjustCartLine(catalogItemKey(line), line.quantity - 1)}
+                    onClick={() => adjustCartLine(line.key, line.quantity - 1)}
                     sx={{ width: 25, height: 25, bgcolor: SURFACE, border: `1px solid ${BORDER}`, color: TEXT }}
                   >
                     <RemoveIcon sx={{ fontSize: 11 }} />
@@ -2268,7 +2354,7 @@ function TableReservPageBody() {
                   <IconButton
                     size="small"
                     aria-label={t("increaseQty")}
-                    onClick={() => adjustCartLine(catalogItemKey(line), line.quantity + 1)}
+                    onClick={() => adjustCartLine(line.key, line.quantity + 1)}
                     sx={{ width: 25, height: 25, bgcolor: ACCENT, color: ACCENT_ON }}
                   >
                     <AddIcon sx={{ fontSize: 11 }} />
@@ -2278,7 +2364,7 @@ function TableReservPageBody() {
               <IconButton
                 size="small"
                 aria-label={t("removeFromCart")}
-                onClick={() => adjustCartLine(catalogItemKey(line), 0)}
+                onClick={() => adjustCartLine(line.key, 0)}
                 sx={{ color: MUTED }}
               >
                 <DeleteOutlineIcon fontSize="small" />

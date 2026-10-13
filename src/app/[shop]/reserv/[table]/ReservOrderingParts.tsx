@@ -1166,17 +1166,23 @@ export function ReservDesktopCartPanel({
                   bgcolor: theme.SURFACE_ALT,
                 }}
               >
-                {line.image ? (
-                  <Box
-                    component="img"
-                    src={line.image}
-                    alt=""
-                    width={48}
-                    height={48}
-                    loading="lazy"
-                    sx={{ width: 48, height: 48, borderRadius: "10px", objectFit: "cover" }}
-                  />
-                ) : null}
+                <Box
+                  component="img"
+                  src={line.image || "/pic/noImageShop.jpg"}
+                  alt=""
+                  width={48}
+                  height={48}
+                  loading="lazy"
+                  sx={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: "10px",
+                    objectFit: "contain",
+                    bgcolor: theme.SURFACE,
+                    border: `1px solid ${theme.BORDER}`,
+                    flexShrink: 0,
+                  }}
+                />
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Typography sx={{ fontWeight: 700, fontSize: 13, color: theme.TEXT }}>{line.name}</Typography>
                   <Typography sx={{ color: theme.MUTED, fontSize: 12, mt: 0.2 }}>

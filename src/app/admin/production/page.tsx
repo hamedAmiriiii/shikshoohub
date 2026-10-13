@@ -208,7 +208,12 @@ const actionBtnSx = {
 
 type TabKey = "stock" | "materials" | "goods";
 
-const emptyLine = (): RecipeLine => ({ raw_material_id: "", grams_per_kg: 0, is_removable: false });
+const emptyLine = (): RecipeLine => ({
+  raw_material_id: "",
+  grams_per_kg: 0,
+  is_removable: false,
+  is_addable: false,
+});
 
 const LAYER_IMAGE_MAX_BYTES = 3 * 1024 * 1024;
 
@@ -662,6 +667,7 @@ export default function ProductionCostingPage() {
         raw_material_id: Number(line.raw_material_id),
         grams_per_kg: line.grams_per_kg,
         is_removable: line.is_removable === true,
+        is_addable: line.is_addable === true,
       }));
     if (!ingredients.length) {
       toast.error("حداقل یک ماده با مقدار گرم وارد کنید");
@@ -1527,7 +1533,27 @@ export default function ProductionCostingPage() {
                 }
                 label={
                   <Typography sx={{ fontSize: 11.5, color: "var(--admin-text-muted)" }}>
-                    مشتری در منوی سه‌بعدی بتواند این ماده را بردارد
+                    مشتری بتواند این ماده را بردارد
+                  </Typography>
+                }
+              />
+              <FormControlLabel
+                sx={{ gridColumn: "1 / -1", m: 0, justifyContent: "flex-start" }}
+                control={
+                  <Switch
+                    size="small"
+                    checked={line.is_addable === true}
+                    disabled={line.raw_material_id === ""}
+                    onChange={(e) => {
+                      const next = [...recipeLines];
+                      next[index] = { ...next[index], is_addable: e.target.checked };
+                      setRecipeLines(next);
+                    }}
+                  />
+                }
+                label={
+                  <Typography sx={{ fontSize: 11.5, color: "var(--admin-text-muted)" }}>
+                    مشتری بتواند یک واحد اضافه سفارش دهد (مثلاً دوبل)
                   </Typography>
                 }
               />
