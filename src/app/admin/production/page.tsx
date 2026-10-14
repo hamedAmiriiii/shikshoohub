@@ -71,12 +71,18 @@ import {
   materialUnitLabel,
   isPercentSaleMode,
   isRoundSalePrice,
+  clampLayerGap,
   clampLayerScale,
+  defaultLayerOrderEntry,
+  LAYER_GAP_MAX,
+  LAYER_GAP_MIN,
+  LAYER_GAP_STEP,
   LAYER_SCALE_MAX,
   LAYER_SCALE_MIN,
   LAYER_SCALE_STEP,
   layerComposeFromGood,
   layerOrderFromGood,
+  layerScaleTransform,
   type LayerComposeMode,
   type LayerOrderEntry,
   parseAmount,
@@ -688,10 +694,17 @@ export default function ProductionCostingPage() {
         category_ids: goodCategoryIds,
         layer_order: layerOrder
           .filter((row) => recipeIds.has(row.raw_material_id))
-          .map((row) => ({
-            raw_material_id: row.raw_material_id,
-            scale: clampLayerScale(row.scale),
-          })),
+          .map((row) => {
+            const scale_x = clampLayerScale(row.scale_x);
+            const scale_y = clampLayerScale(row.scale_y);
+            return {
+              raw_material_id: row.raw_material_id,
+              scale_x,
+              scale_y,
+              scale: scale_x === scale_y ? scale_x : Math.round(((scale_x + scale_y) / 2) * 100) / 100,
+              gap: clampLayerGap(row.gap),
+            };
+          }),
         layer_compose: layerCompose,
       };
       if (!editingGood) payload.unit_type = goodUnit;
@@ -1422,29 +1435,45 @@ export default function ProductionCostingPage() {
       </Dialog>
 
       <Dialog open={goodDialogOpen} onClose={() => setGoodDialogOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>{editingGood ? "ویرایش کالای تولیدی" : "کالای تولیدی جدید"}</DialogTitle>
-        <DialogContent sx={{ display: "grid", gap: 2, pt: "16px !important" }}>
-          <TextField label="نام کالا (مثلاً کلوچه یا ساندویچ)" value={goodName} onChange={(e) => setGoodName(e.target.value)} sx={fieldSx} />
+        <DialogTitle sx={{ fontSize: 15, fontWeight: 700, py: 1.25, direction: "rtl" }}>
+          {editingGood ? "ویرایش کالا" : "کالای تولیدی جدید"}
+        </DialogTitle>
+        <DialogContent sx={{ display: "grid", gap: 1.25, pt: "12px !important", direction: "rtl" }}>
           <TextField
-            select
-            label="واحد کالا"
-            value={goodUnit}
-            onChange={(e) => setGoodUnit(e.target.value === "piece" ? "piece" : "kg")}
-            disabled={!!editingGood}
-            helperText={
-              editingGood
-                ? "واحد کالا بعد از ثبت قابل تغییر نیست"
-                : goodUnit === "piece"
-                  ? "فرمول برای ۱ عدد کالا نوشته می‌شود (مثلاً ۱ ساندویچ = ۱ برگر)"
-                  : "فرمول برای ۱ کیلو کالا نوشته می‌شود"
-            }
+            size="small"
+            label="نام"
+            value={goodName}
+            onChange={(e) => setGoodName(e.target.value)}
             sx={fieldSx}
-          >
-            <MenuItem value="kg">کیلویی</MenuItem>
-            <MenuItem value="piece">تعدادی (عدد)</MenuItem>
-          </TextField>
+          />
+          <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }}>
+            <TextField
+              select
+              size="small"
+              label="واحد"
+              value={goodUnit}
+              onChange={(e) => setGoodUnit(e.target.value === "piece" ? "piece" : "kg")}
+              disabled={!!editingGood}
+              sx={fieldSx}
+            >
+              <MenuItem value="kg">کیلویی</MenuItem>
+              <MenuItem value="piece">تعدادی</MenuItem>
+            </TextField>
+            <TextField
+              select
+              size="small"
+              label="چینش لایه"
+              value={layerCompose}
+              onChange={(e) => setLayerCompose(e.target.value === "overlay" ? "overlay" : "side")}
+              sx={fieldSx}
+            >
+              <MenuItem value="side">کنار (ساندویچ)</MenuItem>
+              <MenuItem value="overlay">بالا (پیتزا)</MenuItem>
+            </TextField>
+          </Box>
           <Autocomplete
             multiple
+            size="small"
             options={flattenCategories(shopCategories)}
             value={flattenCategories(shopCategories).filter((cat) => goodCategoryIds.includes(cat.id))}
             onChange={(_, value) => setGoodCategoryIds(value.map((cat) => cat.id))}
@@ -1456,35 +1485,34 @@ export default function ProductionCostingPage() {
               ))
             }
             renderInput={(params) => (
-              <TextField {...params} label="دسته‌بندی‌ها" sx={fieldSx} />
+              <TextField {...params} size="small" label="دسته‌بندی" sx={fieldSx} />
             )}
           />
-          <TextField
-            select
-            fullWidth
-            label="نوع چینش لایه‌ها (منوی سه‌بعدی)"
-            value={layerCompose}
-            onChange={(e) => setLayerCompose(e.target.value === "overlay" ? "overlay" : "side")}
-            helperText={
-              layerCompose === "overlay"
-                ? "پیتزا و عکس از بالا: لایه‌ها دقیقاً روی هم می‌افتند."
-                : "ساندویچ و برگر: عکس‌ها از نمای کنار زیر هم چیده می‌شوند."
-            }
-            sx={fieldSx}
-          >
-            <MenuItem value="side">نمای کنار (ساندویچ / برگر)</MenuItem>
-            <MenuItem value="overlay">نمای بالا (پیتزا)</MenuItem>
-          </TextField>
-          <Typography sx={{ fontSize: 13, color: "var(--admin-text-muted)" }}>
-            {goodUnit === "piece"
-              ? "مصرف هر ماده را برای ساخت «یک عدد» کالا وارد کنید: ماده کیلویی به گرم، ماده تعدادی (مثل برگر) به عدد."
-              : "مصرف هر ماده را برای ساخت «یک کیلو» کالا وارد کنید: ماده کیلویی به گرم، ماده تعدادی (مثل برگر) به عدد."}
-          </Typography>
+
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mt: 0.5 }}>
+            <Typography sx={{ fontSize: 12, fontWeight: 700, color: "var(--admin-text)" }}>فرمول</Typography>
+            <Typography sx={{ fontSize: 10.5, color: "var(--admin-text-muted)" }}>
+              {goodUnit === "piece" ? "برای ۱ عدد · گرم / عدد" : "برای ۱ کیلو · گرم / عدد"}
+            </Typography>
+          </Box>
           {recipeLines.map((line, index) => (
-            <Box key={index} sx={{ display: "grid", gridTemplateColumns: "1fr 110px 40px", gap: 1, alignItems: "center" }}>
+            <Box
+              key={index}
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "1fr 88px 36px",
+                gap: 0.75,
+                alignItems: "center",
+                p: 1,
+                borderRadius: "12px",
+                border: "1px solid var(--admin-border)",
+                bgcolor: "var(--admin-surface-alt)",
+              }}
+            >
               <TextField
                 select
-                label="ماده اولیه"
+                size="small"
+                label="ماده"
                 value={line.raw_material_id}
                 onChange={(e) => {
                   const next = [...recipeLines];
@@ -1500,6 +1528,7 @@ export default function ProductionCostingPage() {
                 ))}
               </TextField>
               <TextField
+                size="small"
                 label={isPieceMaterial(materials.find((m) => m.id === line.raw_material_id)) ? "عدد" : "گرم"}
                 value={line.grams_per_kg || ""}
                 onChange={(e) => {
@@ -1511,56 +1540,56 @@ export default function ProductionCostingPage() {
                 sx={fieldSx}
               />
               <IconButton
+                size="small"
                 onClick={() => setRecipeLines(recipeLines.filter((_, i) => i !== index))}
                 disabled={recipeLines.length === 1}
                 sx={{ color: "#ef5350" }}
               >
-                <DeleteOutlineIcon />
+                <DeleteOutlineIcon sx={{ fontSize: 18 }} />
               </IconButton>
-              <FormControlLabel
-                sx={{ gridColumn: "1 / -1", m: 0, justifyContent: "flex-start" }}
-                control={
-                  <Switch
-                    size="small"
-                    checked={line.is_removable === true}
-                    disabled={line.raw_material_id === ""}
-                    onChange={(e) => {
-                      const next = [...recipeLines];
-                      next[index] = { ...next[index], is_removable: e.target.checked };
-                      setRecipeLines(next);
-                    }}
-                  />
-                }
-                label={
-                  <Typography sx={{ fontSize: 11.5, color: "var(--admin-text-muted)" }}>
-                    مشتری بتواند این ماده را بردارد
-                  </Typography>
-                }
-              />
-              <FormControlLabel
-                sx={{ gridColumn: "1 / -1", m: 0, justifyContent: "flex-start" }}
-                control={
-                  <Switch
-                    size="small"
-                    checked={line.is_addable === true}
-                    disabled={line.raw_material_id === ""}
-                    onChange={(e) => {
-                      const next = [...recipeLines];
-                      next[index] = { ...next[index], is_addable: e.target.checked };
-                      setRecipeLines(next);
-                    }}
-                  />
-                }
-                label={
-                  <Typography sx={{ fontSize: 11.5, color: "var(--admin-text-muted)" }}>
-                    مشتری بتواند یک واحد اضافه سفارش دهد (مثلاً دوبل)
-                  </Typography>
-                }
-              />
+              <Box sx={{ gridColumn: "1 / -1", display: "flex", gap: 1.5, flexWrap: "wrap" }}>
+                <FormControlLabel
+                  sx={{ m: 0 }}
+                  control={
+                    <Switch
+                      size="small"
+                      checked={line.is_removable === true}
+                      disabled={line.raw_material_id === ""}
+                      onChange={(e) => {
+                        const next = [...recipeLines];
+                        next[index] = { ...next[index], is_removable: e.target.checked };
+                        setRecipeLines(next);
+                      }}
+                    />
+                  }
+                  label={<Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)" }}>حذف‌پذیر</Typography>}
+                />
+                <FormControlLabel
+                  sx={{ m: 0 }}
+                  control={
+                    <Switch
+                      size="small"
+                      checked={line.is_addable === true}
+                      disabled={line.raw_material_id === ""}
+                      onChange={(e) => {
+                        const next = [...recipeLines];
+                        next[index] = { ...next[index], is_addable: e.target.checked };
+                        setRecipeLines(next);
+                      }}
+                    />
+                  }
+                  label={<Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)" }}>اضافه‌پذیر</Typography>}
+                />
+              </Box>
             </Box>
           ))}
-          <Button startIcon={<AddIcon />} onClick={() => setRecipeLines([...recipeLines, emptyLine()])} sx={adminButtonStartIconSx}>
-            ماده بعدی
+          <Button
+            size="small"
+            startIcon={<AddIcon />}
+            onClick={() => setRecipeLines([...recipeLines, emptyLine()])}
+            sx={{ ...adminButtonStartIconSx, justifySelf: "start" }}
+          >
+            ماده
           </Button>
 
           {(() => {
@@ -1584,44 +1613,45 @@ export default function ProductionCostingPage() {
               setLayerOrder(next);
               setSelectedLayerIndex(to);
             };
-            const setScaleAt = (index: number, scale: number) => {
-              const next = rows.map((row, i) =>
-                i === index ? { ...row, scale: clampLayerScale(scale) } : row,
-              );
+            const patchLayerAt = (index: number, patch: Partial<LayerOrderEntry>) => {
+              const next = rows.map((row, i) => {
+                if (i !== index) return row;
+                return {
+                  ...row,
+                  ...patch,
+                  scale_x: patch.scale_x != null ? clampLayerScale(patch.scale_x) : row.scale_x,
+                  scale_y: patch.scale_y != null ? clampLayerScale(patch.scale_y) : row.scale_y,
+                  gap: patch.gap != null ? clampLayerGap(patch.gap) : row.gap,
+                };
+              });
               setLayerOrder(next);
             };
-            const bumpScale = (delta: number) => {
+            const bumpBoth = (delta: number) => {
               if (activeIndex == null || !activeRow) return;
-              setScaleAt(activeIndex, activeRow.scale + delta);
+              patchLayerAt(activeIndex, {
+                scale_x: activeRow.scale_x + delta,
+                scale_y: activeRow.scale_y + delta,
+              });
             };
             return (
-              <Box sx={{ mt: 1, p: 1.25, borderRadius: "14px", border: "1px solid var(--admin-border)" }}>
-                <Typography sx={{ fontSize: 13, fontWeight: 800, color: "var(--admin-text)", mb: 1 }}>
-                  ترتیب لایه‌ها در عکس منوی سه‌بعدی
-                </Typography>
-                <TextField
-                  select
-                  fullWidth
-                  size="small"
-                  label="نوع چینش لایه‌ها"
-                  value={layerCompose}
-                  onChange={(e) => setLayerCompose(e.target.value === "overlay" ? "overlay" : "side")}
-                  helperText={
-                    layerCompose === "overlay"
-                      ? "برای پیتزا و عکس از بالا: لایه‌ها دقیقاً روی هم می‌افتند. خمیر پایین‌ترین لایه باشد."
-                      : "برای ساندویچ: عکس‌ها از نمای کنار زیر هم چیده می‌شوند."
-                  }
-                  sx={{ ...fieldSx, mb: 1.25 }}
-                >
-                  <MenuItem value="side">نمای کنار (ساندویچ / برگر)</MenuItem>
-                  <MenuItem value="overlay">نمای بالا (پیتزا)</MenuItem>
-                </TextField>
-                <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)", lineHeight: 1.8, mb: 1 }}>
-                  از بالا به پایین مرتب کنید. روی هر لایه بزنید تا بزرگ/کوچکش کنید. عکس را در تب مواد اولیه آپلود کنید.
-                </Typography>
+              <Box
+                sx={{
+                  mt: 0.5,
+                  p: 1.1,
+                  borderRadius: "14px",
+                  border: "1px solid var(--admin-border)",
+                  bgcolor: "var(--admin-surface)",
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}>
+                  <Typography sx={{ fontSize: 12, fontWeight: 700, color: "var(--admin-text)" }}>لایه‌ها</Typography>
+                  <Typography sx={{ fontSize: 10.5, color: "var(--admin-text-muted)" }}>
+                    {layerCompose === "overlay" ? "نمای بالا" : "نمای کنار"}
+                  </Typography>
+                </Box>
                 {rows.length === 0 ? (
-                  <Typography sx={{ fontSize: 11.5, color: "var(--admin-text-muted)", mb: 1 }}>
-                    خالی است؛ ترتیب فرمول استفاده می‌شود.
+                  <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)", mb: 1 }}>
+                    خالی — ترتیب فرمول
                   </Typography>
                 ) : null}
                 {rows.map((row, i) => {
@@ -1636,22 +1666,22 @@ export default function ProductionCostingPage() {
                         display: "flex",
                         alignItems: "center",
                         gap: 0.8,
-                        py: 0.5,
+                        py: 0.45,
                         px: 0.5,
-                        borderBottom: "1px solid var(--admin-border)",
-                        borderRadius: "8px",
+                        mb: 0.35,
+                        borderRadius: "10px",
                         cursor: "pointer",
                         bgcolor: selected ? "rgba(var(--admin-accent-rgb, 99, 102, 241), 0.12)" : "transparent",
                         outline: selected ? "1px solid var(--admin-accent)" : "none",
                       }}
                     >
-                      <Typography sx={{ width: 22, fontSize: 12, fontWeight: 800, color: "var(--admin-accent)", textAlign: "center" }}>
-                        {i}
+                      <Typography sx={{ width: 18, fontSize: 11, fontWeight: 800, color: "var(--admin-accent)", textAlign: "center" }}>
+                        {i + 1}
                       </Typography>
                       <Box
                         sx={{
-                          width: 56,
-                          height: 34,
+                          width: 48,
+                          height: 30,
                           borderRadius: "8px",
                           display: "grid",
                           placeItems: "center",
@@ -1669,19 +1699,20 @@ export default function ProductionCostingPage() {
                               maxWidth: "100%",
                               maxHeight: "100%",
                               objectFit: "contain",
-                              transform: `scale(${row.scale})`,
+                              transform: layerScaleTransform(row),
                             }}
                           />
                         ) : (
-                          <Typography sx={{ fontSize: 9, color: "#c62828" }}>بدون عکس</Typography>
+                          <Typography sx={{ fontSize: 9, color: "#c62828" }}>—</Typography>
                         )}
                       </Box>
                       <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography sx={{ fontSize: 12.5, color: "var(--admin-text)" }}>
+                        <Typography sx={{ fontSize: 12, color: "var(--admin-text)", lineHeight: 1.3 }}>
                           {material?.name || `#${row.raw_material_id}`}
                         </Typography>
-                        <Typography sx={{ fontSize: 10.5, color: "var(--admin-text-muted)" }}>
-                          اندازه {Math.round(row.scale * 100)}٪
+                        <Typography sx={{ fontSize: 10, color: "var(--admin-text-muted)" }}>
+                          {Math.round(row.scale_x * 100)}×{Math.round(row.scale_y * 100)}
+                          {row.gap ? ` · فاصله ${row.gap > 0 ? "+" : ""}${row.gap}` : ""}
                         </Typography>
                       </Box>
                       <IconButton
@@ -1692,7 +1723,7 @@ export default function ProductionCostingPage() {
                           move(i, i - 1);
                         }}
                       >
-                        <ArrowUpwardIcon sx={{ fontSize: 16 }} />
+                        <ArrowUpwardIcon sx={{ fontSize: 15 }} />
                       </IconButton>
                       <IconButton
                         size="small"
@@ -1702,7 +1733,7 @@ export default function ProductionCostingPage() {
                           move(i, i + 1);
                         }}
                       >
-                        <ArrowDownwardIcon sx={{ fontSize: 16 }} />
+                        <ArrowDownwardIcon sx={{ fontSize: 15 }} />
                       </IconButton>
                       <IconButton
                         size="small"
@@ -1714,74 +1745,148 @@ export default function ProductionCostingPage() {
                           setSelectedLayerIndex(null);
                         }}
                       >
-                        <DeleteOutlineIcon sx={{ fontSize: 16 }} />
+                        <DeleteOutlineIcon sx={{ fontSize: 15 }} />
                       </IconButton>
                     </Box>
                   );
                 })}
-                {activeRow ? (
+                {activeRow && activeIndex != null ? (
                   <Box
                     sx={{
-                      mt: 1.25,
-                      p: 1.1,
+                      mt: 1,
+                      p: 1,
                       borderRadius: "12px",
                       border: "1px dashed var(--admin-border)",
                       bgcolor: "var(--admin-surface-alt)",
+                      display: "grid",
+                      gap: 0.85,
                     }}
                   >
-                    <Typography sx={{ fontSize: 12, fontWeight: 700, color: "var(--admin-text)", mb: 0.75 }}>
-                      ویرایش اندازه: {materialById.get(activeRow.raw_material_id)?.name || `#${activeRow.raw_material_id}`}
-                    </Typography>
+                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
+                      <Typography sx={{ fontSize: 11.5, fontWeight: 700, color: "var(--admin-text)" }}>
+                        {materialById.get(activeRow.raw_material_id)?.name || `#${activeRow.raw_material_id}`}
+                      </Typography>
+                      <IconButton
+                        size="small"
+                        onClick={() => patchLayerAt(activeIndex, { scale_x: 1, scale_y: 1, gap: 0 })}
+                        aria-label="reset"
+                      >
+                        <RestartAltIcon sx={{ fontSize: 17 }} />
+                      </IconButton>
+                    </Box>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                      <IconButton size="small" onClick={() => bumpScale(-LAYER_SCALE_STEP)} aria-label="کوچک‌تر">
-                        <ZoomOutIcon sx={{ fontSize: 18 }} />
+                      <Typography sx={{ width: 42, fontSize: 10.5, color: "var(--admin-text-muted)" }}>عرض</Typography>
+                      <IconButton
+                        size="small"
+                        onClick={() => patchLayerAt(activeIndex, { scale_x: activeRow.scale_x - LAYER_SCALE_STEP })}
+                      >
+                        <ZoomOutIcon sx={{ fontSize: 16 }} />
                       </IconButton>
                       <Slider
                         size="small"
                         min={LAYER_SCALE_MIN}
                         max={LAYER_SCALE_MAX}
                         step={LAYER_SCALE_STEP}
-                        value={activeRow.scale}
+                        value={activeRow.scale_x}
+                        onChange={(_, value) =>
+                          patchLayerAt(activeIndex, { scale_x: Array.isArray(value) ? value[0] : value })
+                        }
+                        valueLabelDisplay="auto"
+                        valueLabelFormat={(v) => `${Math.round(Number(v) * 100)}٪`}
+                        sx={{ flex: 1, color: "var(--admin-accent)" }}
+                      />
+                      <IconButton
+                        size="small"
+                        onClick={() => patchLayerAt(activeIndex, { scale_x: activeRow.scale_x + LAYER_SCALE_STEP })}
+                      >
+                        <ZoomInIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </Box>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                      <Typography sx={{ width: 42, fontSize: 10.5, color: "var(--admin-text-muted)" }}>ارتفاع</Typography>
+                      <IconButton
+                        size="small"
+                        onClick={() => patchLayerAt(activeIndex, { scale_y: activeRow.scale_y - LAYER_SCALE_STEP })}
+                      >
+                        <ZoomOutIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                      <Slider
+                        size="small"
+                        min={LAYER_SCALE_MIN}
+                        max={LAYER_SCALE_MAX}
+                        step={LAYER_SCALE_STEP}
+                        value={activeRow.scale_y}
+                        onChange={(_, value) =>
+                          patchLayerAt(activeIndex, { scale_y: Array.isArray(value) ? value[0] : value })
+                        }
+                        valueLabelDisplay="auto"
+                        valueLabelFormat={(v) => `${Math.round(Number(v) * 100)}٪`}
+                        sx={{ flex: 1, color: "var(--admin-accent)" }}
+                      />
+                      <IconButton
+                        size="small"
+                        onClick={() => patchLayerAt(activeIndex, { scale_y: activeRow.scale_y + LAYER_SCALE_STEP })}
+                      >
+                        <ZoomInIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </Box>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                      <Typography sx={{ width: 42, fontSize: 10.5, color: "var(--admin-text-muted)" }}>هر دو</Typography>
+                      <IconButton size="small" onClick={() => bumpBoth(-LAYER_SCALE_STEP)}>
+                        <ZoomOutIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                      <Slider
+                        size="small"
+                        min={LAYER_SCALE_MIN}
+                        max={LAYER_SCALE_MAX}
+                        step={LAYER_SCALE_STEP}
+                        value={Math.min(activeRow.scale_x, activeRow.scale_y)}
                         onChange={(_, value) => {
-                          if (activeIndex == null) return;
-                          setScaleAt(activeIndex, Array.isArray(value) ? value[0] : value);
+                          const n = Array.isArray(value) ? value[0] : value;
+                          patchLayerAt(activeIndex, { scale_x: n, scale_y: n });
                         }}
                         valueLabelDisplay="auto"
                         valueLabelFormat={(v) => `${Math.round(Number(v) * 100)}٪`}
                         sx={{ flex: 1, color: "var(--admin-accent)" }}
                       />
-                      <IconButton size="small" onClick={() => bumpScale(LAYER_SCALE_STEP)} aria-label="بزرگ‌تر">
-                        <ZoomInIcon sx={{ fontSize: 18 }} />
+                      <IconButton size="small" onClick={() => bumpBoth(LAYER_SCALE_STEP)}>
+                        <ZoomInIcon sx={{ fontSize: 16 }} />
                       </IconButton>
-                      <IconButton
+                    </Box>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                      <Typography sx={{ width: 42, fontSize: 10.5, color: "var(--admin-text-muted)" }}>فاصله</Typography>
+                      <Slider
                         size="small"
-                        onClick={() => {
-                          if (activeIndex == null) return;
-                          setScaleAt(activeIndex, 1);
-                        }}
-                        aria-label="بازنشانی"
-                      >
-                        <RestartAltIcon sx={{ fontSize: 18 }} />
-                      </IconButton>
+                        min={LAYER_GAP_MIN}
+                        max={LAYER_GAP_MAX}
+                        step={LAYER_GAP_STEP}
+                        value={activeRow.gap}
+                        onChange={(_, value) =>
+                          patchLayerAt(activeIndex, { gap: Array.isArray(value) ? value[0] : value })
+                        }
+                        valueLabelDisplay="auto"
+                        valueLabelFormat={(v) => `${Number(v) > 0 ? "+" : ""}${v}`}
+                        sx={{ flex: 1, color: "var(--admin-accent)" }}
+                      />
                     </Box>
                   </Box>
                 ) : null}
-                <Box sx={{ display: "flex", gap: 0.8, flexWrap: "wrap", mt: 1 }}>
+                <Box sx={{ display: "flex", gap: 0.8, flexWrap: "wrap", mt: 1, alignItems: "center" }}>
                   <TextField
                     select
                     size="small"
-                    label="افزودن لایه"
+                    label="لایه"
                     value=""
                     onChange={(e) => {
                       const id = Number(e.target.value);
                       if (id > 0) {
-                        const next = [...rows, { raw_material_id: id, scale: 1 }];
+                        const next = [...rows, defaultLayerOrderEntry(id)];
                         setLayerOrder(next);
                         setSelectedLayerIndex(next.length - 1);
                       }
                     }}
                     disabled={recipeMaterialIds.length === 0}
-                    sx={{ ...fieldSx, minWidth: 170 }}
+                    sx={{ ...fieldSx, minWidth: 140, flex: 1 }}
                   >
                     {recipeMaterialIds.map((id) => (
                       <MenuItem key={id} value={id}>
@@ -1792,18 +1897,18 @@ export default function ProductionCostingPage() {
                   <Button
                     size="small"
                     onClick={() => {
-                      setLayerOrder(recipeMaterialIds.map((id) => ({ raw_material_id: id, scale: 1 })));
+                      setLayerOrder(recipeMaterialIds.map((id) => defaultLayerOrderEntry(id)));
                       setSelectedLayerIndex(null);
                     }}
-                    sx={{ fontSize: 11 }}
+                    sx={{ fontSize: 11, whiteSpace: "nowrap" }}
                   >
-                    پر کردن از فرمول
+                    از فرمول
                   </Button>
                 </Box>
                 {rows.some((row) => !!layerImageSrc(materialById.get(row.raw_material_id)?.layer_image_url)) ? (
-                  <Box sx={{ mt: 1.5 }}>
-                    <Typography sx={{ fontSize: 11, fontWeight: 700, color: "var(--admin-text-muted)", mb: 0.75 }}>
-                      پیش‌نمایش ترکیب — روی لایه بزنید تا انتخاب شود
+                  <Box sx={{ mt: 1.25 }}>
+                    <Typography sx={{ fontSize: 10.5, fontWeight: 600, color: "var(--admin-text-muted)", mb: 0.6 }}>
+                      پیش‌نمایش
                     </Typography>
                     <Box
                       sx={{
@@ -1851,7 +1956,7 @@ export default function ProductionCostingPage() {
                                     width: "100%",
                                     height: "100%",
                                     objectFit: "contain",
-                                    transform: `scale(${row.scale})`,
+                                    transform: layerScaleTransform(row),
                                     pointerEvents: "none",
                                   }}
                                 />
@@ -1869,7 +1974,7 @@ export default function ProductionCostingPage() {
                                 sx={{
                                   display: "block",
                                   width: "100%",
-                                  mt: i === 0 ? 0 : "-8%",
+                                  mt: i === 0 ? 0 : `${-6.5 + (Number(row.gap) || 0)}%`,
                                   position: "relative",
                                   zIndex: rows.length - i,
                                   cursor: "pointer",
@@ -1885,7 +1990,7 @@ export default function ProductionCostingPage() {
                                     display: "block",
                                     width: "100%",
                                     height: "auto",
-                                    transform: `scale(${row.scale})`,
+                                    transform: layerScaleTransform(row),
                                     transformOrigin: "center center",
                                     pointerEvents: "none",
                                   }}
@@ -1900,9 +2005,15 @@ export default function ProductionCostingPage() {
             );
           })()}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setGoodDialogOpen(false)}>انصراف</Button>
-          <Button disabled={saving} onClick={() => void saveGood()} variant="contained" sx={{ backgroundColor: "var(--admin-accent)" }}>
+        <DialogActions sx={{ px: 1.5, py: 1 }}>
+          <Button size="small" onClick={() => setGoodDialogOpen(false)}>انصراف</Button>
+          <Button
+            disabled={saving}
+            onClick={() => void saveGood()}
+            variant="contained"
+            size="small"
+            sx={{ backgroundColor: "var(--admin-accent)" }}
+          >
             ذخیره
           </Button>
         </DialogActions>

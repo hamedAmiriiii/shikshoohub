@@ -33,13 +33,23 @@ export type LayerComposeMode = "side" | "overlay";
 /** یک لایه در چینش عکس منوی سه‌بعدی */
 export type LayerOrderEntry = {
   raw_material_id: number;
-  /** مقیاس نمایش نسبت به قاب (۱ = عادی)؛ معمولاً ۰٫۴ تا ۲ */
-  scale: number;
+  /** مقیاس عرض (۱ = عادی) */
+  scale_x: number;
+  /** مقیاس ارتفاع (۱ = عادی) */
+  scale_y: number;
+  /**
+   * فاصلهٔ اضافه نسبت به هم‌پوشانی پیش‌فرض (٪).
+   * ۰ = حالت عادی · مثبت = جدا · منفی = فشرده‌تر
+   */
+  gap: number;
 };
 
 export const LAYER_SCALE_MIN = 0.4;
 export const LAYER_SCALE_MAX = 2;
 export const LAYER_SCALE_STEP = 0.05;
+export const LAYER_GAP_MIN = -20;
+export const LAYER_GAP_MAX = 40;
+export const LAYER_GAP_STEP = 1;
 
 export function clampLayerScale(value: unknown): number {
   const n = Number(value);
@@ -47,17 +57,40 @@ export function clampLayerScale(value: unknown): number {
   return Math.min(LAYER_SCALE_MAX, Math.max(LAYER_SCALE_MIN, Math.round(n * 100) / 100));
 }
 
+export function clampLayerGap(value: unknown): number {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.min(LAYER_GAP_MAX, Math.max(LAYER_GAP_MIN, Math.round(n)));
+}
+
+export function defaultLayerOrderEntry(rawMaterialId: number): LayerOrderEntry {
+  return { raw_material_id: rawMaterialId, scale_x: 1, scale_y: 1, gap: 0 };
+}
+
+/** CSS transform برای لایه (عرض / ارتفاع جدا) */
+export function layerScaleTransform(row: Pick<LayerOrderEntry, "scale_x" | "scale_y">): string {
+  return `scale(${clampLayerScale(row.scale_x)}, ${clampLayerScale(row.scale_y)})`;
+}
+
 export function parseLayerOrderEntry(raw: unknown): LayerOrderEntry | null {
   if (typeof raw === "number" || typeof raw === "string") {
     const id = Number(raw);
     if (!Number.isFinite(id) || id <= 0) return null;
-    return { raw_material_id: id, scale: 1 };
+    return defaultLayerOrderEntry(id);
   }
   if (!raw || typeof raw !== "object") return null;
   const row = raw as Record<string, unknown>;
   const id = Number(row.raw_material_id ?? row.id);
   if (!Number.isFinite(id) || id <= 0) return null;
-  return { raw_material_id: id, scale: clampLayerScale(row.scale ?? 1) };
+  const legacy = row.scale != null ? clampLayerScale(row.scale) : null;
+  const scaleX = row.scale_x != null ? clampLayerScale(row.scale_x) : legacy ?? 1;
+  const scaleY = row.scale_y != null ? clampLayerScale(row.scale_y) : legacy ?? 1;
+  return {
+    raw_material_id: id,
+    scale_x: scaleX,
+    scale_y: scaleY,
+    gap: clampLayerGap(row.gap ?? 0),
+  };
 }
 
 export type IngredientCostLot = {
@@ -110,7 +143,7 @@ export type ProducedGood = {
   ingredient_costs?: IngredientCost[];
   /**
    * ترتیب لایه‌های عکس منوی سه‌بعدی (بالا به پایین؛ تکرار مجاز).
-   * عدد = فقط شناسه ماده | آبجکت = شناسه + مقیاس نمایش
+   * عدد = فقط شناسه ماده | آبجکت = شناسه + scale_x/scale_y/gap
    */
   layer_order?: Array<number | LayerOrderEntry | Record<string, unknown>> | null;
   /** side = ساندویچ نمای کنار | overlay = پیتزا نمای بالا */
@@ -269,7 +302,7 @@ export function layerOrderFromGood(good: ProducedGood): LayerOrderEntry[] {
   return (good.ingredient_costs || [])
     .map((line) => Number(line.raw_material_id))
     .filter((n) => n > 0)
-    .map((id) => ({ raw_material_id: id, scale: 1 }));
+    .map((id) => defaultLayerOrderEntry(id));
 }
 
 export function salePriceFromProfitPercent(costPerKg: number, percent: number): number {

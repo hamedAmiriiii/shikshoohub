@@ -146,6 +146,9 @@ type Product = {
     name: string;
     image_url: string;
     scale?: number;
+    scale_x?: number;
+    scale_y?: number;
+    gap?: number;
   }>;
   layer_compose?: "side" | "overlay" | string | null;
 };
@@ -1107,13 +1110,22 @@ function TableReservPageBody() {
                   is_addable: row.is_addable === true,
                   price: Number(row.price) || 0,
                 })),
-                layers: (product.layers || []).map((layer, index) => ({
-                  key: layer.key || `${layer.raw_material_id}-${index}`,
-                  raw_material_id: Number(layer.raw_material_id),
-                  name: layer.name,
-                  image_url: resolveApiMediaUrl(layer.image_url),
-                  scale: Number.isFinite(Number(layer.scale)) ? Number(layer.scale) : 1,
-                })),
+                layers: (product.layers || []).map((layer, index) => {
+                  const legacy = Number.isFinite(Number(layer.scale)) ? Number(layer.scale) : 1;
+                  const scale_x = Number.isFinite(Number(layer.scale_x)) ? Number(layer.scale_x) : legacy;
+                  const scale_y = Number.isFinite(Number(layer.scale_y)) ? Number(layer.scale_y) : legacy;
+                  const gap = Number.isFinite(Number(layer.gap)) ? Number(layer.gap) : 0;
+                  return {
+                    key: layer.key || `${layer.raw_material_id}-${index}`,
+                    raw_material_id: Number(layer.raw_material_id),
+                    name: layer.name,
+                    image_url: resolveApiMediaUrl(layer.image_url),
+                    scale: scale_x === scale_y ? scale_x : (scale_x + scale_y) / 2,
+                    scale_x,
+                    scale_y,
+                    gap,
+                  };
+                }),
                 layer_compose: product.layer_compose === "overlay" ? "overlay" : "side",
               }
             : undefined,

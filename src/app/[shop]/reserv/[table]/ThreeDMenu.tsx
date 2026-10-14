@@ -33,9 +33,27 @@ export type ThreeDLayer = {
   raw_material_id: number;
   name: string;
   image_url: string;
-  /** مقیاس نمایش (۱ = عادی) */
+  /** مقیاس یکنواخت قدیمی (fallback) */
   scale?: number;
+  /** مقیاس عرض */
+  scale_x?: number;
+  /** مقیاس ارتفاع */
+  scale_y?: number;
+  /** فاصله اضافه نسبت به هم‌پوشانی پیش‌فرض (٪) */
+  gap?: number;
 };
+
+function layerScaleXY(layer: ThreeDLayer): { x: number; y: number } {
+  const legacy = Number.isFinite(Number(layer.scale)) ? Number(layer.scale) : 1;
+  const x = Number.isFinite(Number(layer.scale_x)) ? Number(layer.scale_x) : legacy;
+  const y = Number.isFinite(Number(layer.scale_y)) ? Number(layer.scale_y) : legacy;
+  return { x, y };
+}
+
+function layerGapPct(layer: ThreeDLayer): number {
+  const n = Number(layer.gap);
+  return Number.isFinite(n) ? n : 0;
+}
 
 export type ThreeDCompose = "side" | "overlay";
 
@@ -243,9 +261,12 @@ function LayerStack({
           const gone = layer.gone;
           const side = index % 2 === 0 ? -1 : 1;
           const depth = (total - index) * 4;
-          const scale = Number.isFinite(Number(layer.scale)) ? Number(layer.scale) : 1;
+          const { x, y } = layerScaleXY(layer);
+          const gap = layerGapPct(layer);
           const extraBoost = layer.isExtra ? 1.04 : 1;
-          const shownScale = scale * extraBoost;
+          const sx = x * extraBoost;
+          const sy = y * extraBoost;
+          const yNudge = layer.isExtra ? -2 : gap * 0.15;
           return (
             <Box
               key={layer.key}
@@ -274,8 +295,8 @@ function LayerStack({
                   filter: gone ? "none" : "drop-shadow(0 4px 10px rgba(0,0,0,0.28))",
                   opacity: gone ? 0 : 1,
                   transform: gone
-                    ? `translate3d(${side * 110}%, ${side * -40}%, ${depth + 40}px) rotate(${side * 28}deg) scale(${shownScale * 0.55})`
-                    : `translate3d(${layer.isExtra ? "-2%" : "0"}, ${layer.isExtra ? "-2%" : "0"}, ${depth}px) scale(${shownScale})`,
+                    ? `translate3d(${side * 110}%, ${side * -40}%, ${depth + 40}px) rotate(${side * 28}deg) scale(${sx * 0.55}, ${sy * 0.55})`
+                    : `translate3d(${layer.isExtra ? "-2%" : "0"}, ${yNudge}%, ${depth}px) scale(${sx}, ${sy})`,
                   transition: `transform 620ms cubic-bezier(0.55, -0.15, 0.3, 1.1), opacity 420ms ease ${gone ? "80ms" : "0ms"}`,
                 }}
               />
@@ -292,14 +313,16 @@ function LayerStack({
         const gone = layer.gone;
         const side = index % 2 === 0 ? -1 : 1;
         const depth = (total - index) * 5;
-        const scale = Number.isFinite(Number(layer.scale)) ? Number(layer.scale) : 1;
+        const { x, y } = layerScaleXY(layer);
+        const gap = layerGapPct(layer);
+        const marginTop = gone || index === 0 ? 0 : `${-6.5 + gap}%`;
         return (
           <Box
             key={layer.key}
             sx={{
               display: "grid",
               gridTemplateRows: gone ? "0fr" : "1fr",
-              marginTop: gone || index === 0 ? 0 : "-6.5%",
+              marginTop,
               position: "relative",
               zIndex: total - index,
               transformStyle: "preserve-3d",
@@ -322,8 +345,8 @@ function LayerStack({
                   filter: "drop-shadow(0 6px 8px rgba(0,0,0,0.38))",
                   opacity: gone ? 0 : 1,
                   transform: gone
-                    ? `translate3d(${side * 130}%, -26%, ${depth + 30}px) rotate(${side * 22}deg) scale(${scale * 0.72})`
-                    : `translate3d(0, 0, ${depth}px) scale(${scale})`,
+                    ? `translate3d(${side * 130}%, -26%, ${depth + 30}px) rotate(${side * 22}deg) scale(${x * 0.72}, ${y * 0.72})`
+                    : `translate3d(0, 0, ${depth}px) scale(${x}, ${y})`,
                   transition: `transform 620ms cubic-bezier(0.55, -0.15, 0.3, 1.1), opacity 420ms ease ${gone ? "80ms" : "0ms"}`,
                 }}
               />
