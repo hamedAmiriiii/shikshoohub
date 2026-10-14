@@ -46,6 +46,12 @@ const CLUB_LANDING_URL = "/landing/club";
 
 /** دموی زنده دقیقاً همان منوی واقعی مکث کباب */
 const DEMO_LIVE_MENU_BASE = "/max/reserv/1";
+/** منوی سه‌بعدی — فروشگاه برگرچی با لایه‌های واقعی */
+const DEMO_THREED_MENU_BASE = "/webino/reserv/1";
+
+function demoMenuBaseFor(themeId: ReservMenuThemeId) {
+  return themeId === "threed" ? DEMO_THREED_MENU_BASE : DEMO_LIVE_MENU_BASE;
+}
 
 /** ویدیو اول؛ بقیه تم‌ها بعدش */
 const DEMO_THEMES = [
@@ -65,7 +71,7 @@ function FitMenuPreview({
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.72);
-  const src = `${DEMO_LIVE_MENU_BASE}?${RESERV_MENU_PREVIEW_QUERY}=${themeId}`;
+  const src = `${demoMenuBaseFor(themeId)}?${RESERV_MENU_PREVIEW_QUERY}=${themeId}`;
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -118,6 +124,7 @@ const SAMPLE_MENUS = [
   { title: "رستوران سنتی", note: "کباب و غذای ایرانی", theme: "classic" as ReservMenuThemeId },
   { title: "کافی‌شاپ", note: "نوشیدنی و دسر", theme: "list" as ReservMenuThemeId },
   { title: "فست‌فود", note: "منوی سریع و تصویری", theme: "grid" as ReservMenuThemeId },
+  { title: "منو سه‌بعدی", note: "برگر لایه‌لایه با مواد قابل حذف", theme: "threed" as ReservMenuThemeId },
 ];
 
 const PLANS = [
@@ -391,7 +398,7 @@ export default function DigitalMenuLandingClient() {
             <p className="mt-3 text-center text-xs text-slate-400">
               پیش‌نمایش زنده تم «{activeThemeMeta.title}» —{" "}
               <a
-                href={`${DEMO_LIVE_MENU_BASE}?${RESERV_MENU_PREVIEW_QUERY}=${activeTheme}`}
+                href={`${demoMenuBaseFor(activeTheme)}?${RESERV_MENU_PREVIEW_QUERY}=${activeTheme}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-emerald-300 hover:underline"
@@ -410,7 +417,7 @@ export default function DigitalMenuLandingClient() {
             <h2 className="text-2xl md:text-3xl font-bold text-white">نمونه منوها</h2>
             <p className="text-slate-400 mt-2">برای هر کسب‌وکار، ظاهر مناسب را انتخاب کنید</p>
           </motion.div>
-          <div className="grid sm:grid-cols-3 gap-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {SAMPLE_MENUS.map((sample, i) => (
               <motion.button
                 key={sample.title}
