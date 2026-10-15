@@ -90,6 +90,9 @@ export type AdminMenuModeCartPanelProps = {
   phone: string;
   phoneInputKey?: string | number;
   onChangePhone: (value: string) => void;
+  askCustomerName?: boolean;
+  customerName?: string;
+  onChangeCustomerName?: (value: string) => void;
   checkingCredit: boolean;
   credit: number;
   useCreditAmount: number;
@@ -180,6 +183,9 @@ export default function AdminMenuModeCartPanel({
   phone,
   phoneInputKey,
   onChangePhone,
+  askCustomerName = false,
+  customerName = "",
+  onChangeCustomerName,
   checkingCredit,
   credit,
   useCreditAmount,
@@ -437,6 +443,16 @@ export default function AdminMenuModeCartPanel({
           onAdd={onAddCart}
           onClearOrRemove={onClearCart}
         />
+        {askCustomerName ? (
+          <TextField
+            value={customerName}
+            onChange={(e) => onChangeCustomerName?.(e.target.value)}
+            placeholder="نام مشتری"
+            size="small"
+            fullWidth
+            sx={fieldSx}
+          />
+        ) : null}
         <PhoneNumberInput
           key={phoneInputKey ?? `menu-phone-${activeCartIndex}`}
           name="menu-phone"

@@ -103,6 +103,9 @@ export default function AdminClassicPosView({
     phone,
     phoneInputKey,
     onChangePhone,
+    askCustomerName = false,
+    customerName = "",
+    onChangeCustomerName,
     checkingCredit,
     credit,
     useCreditAmount,
@@ -358,6 +361,16 @@ export default function AdminClassicPosView({
           ) : null}
 
           <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, flex: "1 1 160px", minWidth: 140, maxWidth: 220 }}>
+            {askCustomerName ? (
+              <TextField
+                value={customerName}
+                onChange={(e) => onChangeCustomerName?.(e.target.value)}
+                placeholder="نام مشتری"
+                size="small"
+                fullWidth
+                sx={compactFieldSx}
+              />
+            ) : null}
             <PhoneNumberInput
               key={phoneInputKey ?? `classic-phone-${activeCartIndex}`}
               name="classic-phone"

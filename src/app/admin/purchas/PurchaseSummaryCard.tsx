@@ -115,6 +115,7 @@ export default function PurchaseSummaryCard({
           </Typography>
           <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)", lineHeight: 1.5 }}>
             {itemsSummary} · {paymentLabel || "—"}
+            {data?.sold_by_name ? ` · ${data.sold_by_name}` : ""}
             {hasReturns ? " · برگشتی دارد" : ""}
           </Typography>
         </Box>

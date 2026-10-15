@@ -1,8 +1,7 @@
 "use client";
 
 import { Box, Divider, Typography } from "@mui/material";
-import { formatDailyTicketNumber } from "@/app/lib/dailyTicketNumber";
-import { readAdminPosSettings } from "@/app/lib/adminPosSettings";
+import { saleNumberLines } from "@/app/lib/dailyTicketNumber";
 import { normalizeReceiptTemplateId } from "@/app/lib/receiptTemplates";
 import {
   applyStationLayout,
@@ -18,9 +17,47 @@ import {
   type SaleReceiptPrintSettings,
 } from "@/app/lib/saleReceiptPrint";
 
-function dailyTicketLabel(receipt: SaleReceiptData): string | null {
-  if (!readAdminPosSettings().showDailyTicketNumber || receipt.dailyTicketNumber == null) return null;
-  return `فیش ${formatDailyTicketNumber(receipt.dailyTicketNumber)}`;
+function SaleNumberLines({
+  receipt,
+  showPurchaseId = true,
+  fontSize,
+  fontWeight = 800,
+  color,
+}: {
+  receipt: SaleReceiptData;
+  showPurchaseId?: boolean;
+  fontSize: string;
+  fontWeight?: number;
+  color?: string;
+}) {
+  const lines = saleNumberLines({ ...receipt, showPurchaseId });
+  if (!lines.length) return null;
+  return (
+    <>
+      {lines.map((line) => (
+        <Typography
+          key={line}
+          align="center"
+          sx={{ fontWeight, fontSize, mb: 0.25, ...(color ? { color: `${color} !important` } : {}) }}
+        >
+          {line}
+        </Typography>
+      ))}
+    </>
+  );
+}
+
+function WebinoPlusMark() {
+  return (
+    <Box sx={{ mt: 1.25, textAlign: "center" }}>
+      <Typography align="center" sx={{ fontWeight: 800, fontSize: "12px" }}>
+        وبینوپلاس
+      </Typography>
+      <Typography align="center" dir="ltr" sx={{ fontSize: "11px" }}>
+        www.webinoplus.ir
+      </Typography>
+    </Box>
+  );
 }
 
 function ticketSx(paperWidthMm: number, settings: SaleReceiptPrintSettings) {
@@ -139,11 +176,7 @@ function ClassicHallTicket({
           {settings.hallTitle}
         </Typography>
       ) : null}
-      {dailyTicketLabel(receipt) ? (
-        <Typography align="center" sx={{ fontWeight: 800, fontSize: `${settings.titleFontSize}px`, mb: 0.5 }}>
-          {dailyTicketLabel(receipt)}
-        </Typography>
-      ) : null}
+      <SaleNumberLines receipt={receipt} showPurchaseId={settings.showPurchaseId} fontSize={`${settings.titleFontSize}px`} />
 
       {settings.showDate && (
         <Typography align="center" sx={{ fontSize: `${settings.fontSize - 1}px`, mb: 1 }}>
@@ -153,11 +186,6 @@ function ClassicHallTicket({
 
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 1, mb: 0.5 }}>
         <Box sx={{ minWidth: 0 }}>
-          {settings.showPurchaseId && receipt.purchaseId != null && (
-            <Typography sx={{ fontSize: `${settings.fontSize - 1}px`, mb: 0.5 }}>
-              شماره فاکتور: {receipt.purchaseId}
-            </Typography>
-          )}
           {settings.showCustomerPhone && receipt.phone && (
             <Typography sx={{ fontSize: `${settings.fontSize - 1}px`, mb: 0.5 }}>
               مشتری: {receipt.phone}
@@ -221,6 +249,7 @@ function ClassicHallTicket({
           </Typography>
         </>
       )}
+      <WebinoPlusMark />
     </Box>
   );
 }
@@ -253,11 +282,14 @@ function RetailHallTicket({
             mb: 0.5,
           }}
         >
-          {settings.showPurchaseId && receipt.purchaseId != null ? (
-            <Typography sx={{ fontSize: `${fs}px` }}>شماره فاکتور: {receipt.purchaseId}</Typography>
-          ) : (
-            <span />
-          )}
+          <Box>
+            <SaleNumberLines
+              receipt={receipt}
+              showPurchaseId={settings.showPurchaseId}
+              fontSize={`${fs}px`}
+              fontWeight={700}
+            />
+          </Box>
           {settings.showDate ? (
             <Typography align="center" sx={{ fontSize: `${fs}px` }}>
               {formatReceiptTimeOnly(receipt.createdAt)}
@@ -368,6 +400,7 @@ function RetailHallTicket({
           {settings.footerText}
         </Typography>
       ) : null}
+      <WebinoPlusMark />
     </Box>
   );
 }
@@ -398,11 +431,7 @@ function MinimalHallTicket({
           {formatReceiptDate(receipt.createdAt)}
         </Typography>
       ) : null}
-      {settings.showPurchaseId && receipt.purchaseId != null ? (
-        <Typography align="center" sx={{ fontSize: `${settings.fontSize - 1}px`, mb: 1 }}>
-          #{receipt.purchaseId}
-        </Typography>
-      ) : null}
+      <SaleNumberLines receipt={receipt} showPurchaseId={settings.showPurchaseId} fontSize={`${settings.fontSize - 1}px`} />
       <Typography align="center" sx={{ fontSize: 10, letterSpacing: 2, mb: 1, userSelect: "none" }}>
         {dash}
       </Typography>
@@ -442,6 +471,7 @@ function MinimalHallTicket({
           {settings.shopPhone}
         </Typography>
       ) : null}
+      <WebinoPlusMark />
     </Box>
   );
 }
@@ -473,11 +503,13 @@ function BoldHallTicket({
         <Typography align="center" sx={{ fontWeight: 900, fontSize: `${settings.titleFontSize + 1}px` }}>
           {shopTitle}
         </Typography>
-        {dailyTicketLabel(receipt) ? (
-          <Typography align="center" sx={{ fontWeight: 700, fontSize: `${settings.fontSize}px`, mt: 0.25 }}>
-            {dailyTicketLabel(receipt)}
-          </Typography>
-        ) : null}
+        <SaleNumberLines
+          receipt={receipt}
+          showPurchaseId={settings.showPurchaseId}
+          fontSize={`${settings.fontSize}px`}
+          fontWeight={700}
+          color="#fff"
+        />
       </Box>
 
       <Box sx={{ px: `${settings.paddingMm}mm`, pb: `${settings.paddingMm}mm` }}>
@@ -487,13 +519,7 @@ function BoldHallTicket({
           </Typography>
         ) : null}
         <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-          {settings.showPurchaseId && receipt.purchaseId != null ? (
-            <Typography sx={{ fontSize: `${settings.fontSize - 1}px`, fontWeight: 700 }}>
-              فاکتور {receipt.purchaseId}
-            </Typography>
-          ) : (
-            <span />
-          )}
+          <span />
           {receipt.tableLabel ? (
             <Typography sx={{ fontSize: `${settings.fontSize}px`, fontWeight: 800 }}>{receipt.tableLabel}</Typography>
           ) : null}
@@ -549,6 +575,7 @@ function BoldHallTicket({
             ) : null}
           </Box>
         )}
+        <WebinoPlusMark />
       </Box>
     </Box>
   );
@@ -602,11 +629,7 @@ function PrepStationTicket({
           {shopTitle}
         </Typography>
       ) : null}
-      {dailyTicketLabel(receipt) ? (
-        <Typography align="center" sx={{ fontWeight: 800, fontSize: `${settings.titleFontSize}px`, mb: 0.5 }}>
-          {dailyTicketLabel(receipt)}
-        </Typography>
-      ) : null}
+      <SaleNumberLines receipt={receipt} showPurchaseId={settings.showPurchaseId} fontSize={`${settings.titleFontSize}px`} />
       {settings.showDate && (
         <Typography align="center" sx={{ fontSize: `${settings.fontSize - 1}px`, mb: 1 }}>
           {formatReceiptDate(receipt.createdAt)}
@@ -617,12 +640,6 @@ function PrepStationTicket({
           {receipt.tableLabel}
         </Typography>
       ) : null}
-      {settings.showPurchaseId && receipt.purchaseId != null && (
-        <Typography align="center" sx={{ fontSize: `${settings.fontSize - 1}px`, mb: 1 }}>
-          سفارش {receipt.purchaseId}
-        </Typography>
-      )}
-
       <Divider sx={{ my: 1, borderColor: "#000" }} />
 
       {receipt.items.map((item, index) => (

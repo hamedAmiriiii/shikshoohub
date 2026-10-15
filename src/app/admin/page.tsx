@@ -95,6 +95,7 @@ import CartQuantityControl from '@/app/admin/CartQuantityControl';
 import MultiCartToolbar, { MAX_MULTI_CARTS } from '@/app/admin/MultiCartToolbar';
 import PosSegmentButtons from '@/app/admin/PosSegmentButtons';
 import { getPriceUnitLabel, getDefaultCartQuantity, getQuantityIncrement, normalizeQuantityValue, isMeasuredProduct } from '@/app/lib/productUnits';
+import { cardReaderErrorMessage, chargeCardReader, readCardReaderSettings } from '@/app/lib/cardReader';
 import {
   createEmptyCartSlot,
   readPersistedMultiCart,
@@ -237,6 +238,8 @@ export default function ShoppingPage() {
   const [backPrice, setBackPrice] = useState(0);
   const [checkingCredit, setCheckingCredit] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cardReaderWait, setCardReaderWait] = useState<{ amount: number; message: string } | null>(null);
+  const cardReaderAbortRef = useRef<AbortController | null>(null);
   const [isOnline, setIsOnline] = useState(
     () => typeof navigator === "undefined" || navigator.onLine,
   );
@@ -253,6 +256,7 @@ export default function ShoppingPage() {
   const [installmentCreditError, setInstallmentCreditError] = useState<string>(''); // خطای اعتبار ناکافی
   const [registerPhone, setRegisterPhone] = useState('');
   const [registerName, setRegisterName] = useState('');
+  const [customerName, setCustomerName] = useState('');
   const [askCustomerName, setAskCustomerName] = useState(false);
   const [todayDashboard, setTodayDashboard] = useState<TodayDashboardSnapshot | null>(null);
   const [salesByDay, setSalesByDay] = useState<SalesByDaySnapshot | null>(null);
@@ -477,6 +481,7 @@ export default function ShoppingPage() {
     cart: Array.isArray(cart) ? [...cart] : [],
     total,
     phone,
+    customerName,
     credit,
     useCreditAmount,
     discounttype,
@@ -498,6 +503,7 @@ export default function ShoppingPage() {
     cart,
     total,
     phone,
+    customerName,
     credit,
     useCreditAmount,
     discounttype,
@@ -521,6 +527,7 @@ export default function ShoppingPage() {
     setCart(slot.cart ?? []);
     setTotal(slot.total ?? 0);
     setPhone(slot.phone ?? "");
+    setCustomerName(slot.customerName ?? "");
     setCredit(slot.credit ?? 0);
     setUseCreditAmount(slot.useCreditAmount ?? 0);
     setDiscounttype(slot.discounttype ?? 0);
@@ -1556,7 +1563,7 @@ export default function ShoppingPage() {
         createdAt: new Date().toISOString(),
         shopName: getShopNameFromUser(),
         phone: phone || undefined,
-        customerName: registerName.trim() || undefined,
+        customerName: customerName.trim() || undefined,
         items: cart.map((item: any) => {
           const unitPrice = Number(item.sale_price);
           return {
@@ -1607,7 +1614,7 @@ export default function ShoppingPage() {
       selectedCheque,
       getShopNameFromUser,
       parseAmountInput,
-      registerName,
+      customerName,
     ],
   );
 
@@ -1893,6 +1900,9 @@ export default function ShoppingPage() {
     if (phone) {
       loadData.phone = normalizeIranMobile(phone);
     }
+    if (askCustomerName && customerName.trim()) {
+      loadData.customer_name = customerName.trim();
+    }
 
     if (useCreditAmount > 0 || editReuseCredit) {
       loadData.use_credit = true;
@@ -1982,6 +1992,7 @@ export default function ShoppingPage() {
       setPaymentSplitError("");
     }
 
+    const sendPurchase = () => {
     const { clientId, payload: purchasePayload } = attachClientIdToPayload(loadData);
 
     // اگر offline است، در outbox ذخیره کن
@@ -2093,7 +2104,58 @@ export default function ShoppingPage() {
         "warn",
       );
     });
-  }, [cart, phone, useCreditAmount, effectiveOnline, discounttype, total, formatNumber, paymentType, installmentCount, payableNow, paymentFieldsValid, settlementMode, appendPaymentSettlement, resetPaymentSettlement, installmentCalculation, calculatingInstallments, installmentCreditError, finalizeSuccessfulSale, queueCurrentPurchase, withTimeout, selectedChequeId, selectedChequeIds, selectedCheques, selectedCheque, selectedChequeAmount, chequeRemainder, salePayableAmount, loadingAvailableCheques, buildPurchaseProductLine, parseAmountInput, cardAmountInput, cashAmountInput, editingPurchaseId, editReuseCredit, saleDateEditEnabled, saleDate, mixedDebtResidual]);
+    };
+
+    let cardToman = 0;
+    if (paymentType === "mixed") {
+      cardToman = parseAmountInput(cardAmountInput);
+    } else if (paymentType === "cheque") {
+      if (chequeRemainder > 0 && settlementMode === "card_all") cardToman = chequeRemainder;
+      else if (chequeRemainder > 0 && settlementMode === "split") cardToman = parseAmountInput(cardAmountInput);
+    } else if (paymentType !== "debt") {
+      if (settlementMode === "card_all") cardToman = payableNow;
+      else if (settlementMode === "split") cardToman = parseAmountInput(cardAmountInput);
+    }
+
+    const reader = readCardReaderSettings();
+    if (reader.enabled && cardToman > 0) {
+      if (reader.transport === "lan" && !reader.host.trim()) {
+        toast.error("IP کارتخوان را در تنظیمات وارد کنید. فروش ثبت نشد.");
+        setIsSubmitting(false);
+        return;
+      }
+      const ac = new AbortController();
+      cardReaderAbortRef.current = ac;
+      setCardReaderWait({ amount: cardToman, message: "مبلغ به کارتخوان ارسال شد. کارت را بکشید…" });
+      void chargeCardReader(cardToman, {
+        signal: ac.signal,
+        allowRequestPort: false,
+        onChunk: () => {
+          setCardReaderWait({ amount: cardToman, message: "پاسخ کارتخوان رسید. در حال بررسی…" });
+        },
+      })
+        .then((result) => {
+          if (ac.signal.aborted) return;
+          setCardReaderWait(null);
+          if (!result.approved) {
+            toast.error(result.message || "کارتخوان تأیید نکرد. فروش ثبت نشد.");
+            setIsSubmitting(false);
+            return;
+          }
+          toast.success(result.message || "کارتخوان تأیید کرد");
+          sendPurchase();
+        })
+        .catch((error) => {
+          if (ac.signal.aborted) return;
+          setCardReaderWait(null);
+          toast.error(cardReaderErrorMessage(error));
+          setIsSubmitting(false);
+        });
+      return;
+    }
+
+    sendPurchase();
+  }, [cart, phone, useCreditAmount, effectiveOnline, discounttype, total, formatNumber, paymentType, installmentCount, payableNow, paymentFieldsValid, settlementMode, appendPaymentSettlement, resetPaymentSettlement, installmentCalculation, calculatingInstallments, installmentCreditError, finalizeSuccessfulSale, queueCurrentPurchase, withTimeout, selectedChequeId, selectedChequeIds, selectedCheques, selectedCheque, selectedChequeAmount, chequeRemainder, salePayableAmount, loadingAvailableCheques, buildPurchaseProductLine, parseAmountInput, cardAmountInput, cashAmountInput, editingPurchaseId, editReuseCredit, saleDateEditEnabled, saleDate, mixedDebtResidual, askCustomerName, customerName]);
 
   // بررسی اعتبارسنجی تخفیف هنگام تغییر total
   useEffect(() => {
@@ -2709,6 +2771,9 @@ export default function ShoppingPage() {
     phone,
     phoneInputKey: `pos-phone-${activeCartIndex}`,
     onChangePhone,
+    askCustomerName,
+    customerName,
+    onChangeCustomerName: setCustomerName,
     checkingCredit,
     credit,
     useCreditAmount,
@@ -2809,6 +2874,8 @@ export default function ShoppingPage() {
     switchCart,
     addCartSlot,
     phone,
+    customerName,
+    askCustomerName,
     onChangePhone,
     checkingCredit,
     credit,
@@ -3666,6 +3733,27 @@ export default function ShoppingPage() {
                       onAdd={addCartSlot}
                       onClearOrRemove={clearMenuCart}
                     />
+                    {askCustomerName ? (
+                      <TextField
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        placeholder="نام مشتری"
+                        size="small"
+                        fullWidth
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                            backgroundColor: "var(--admin-surface-alt)",
+                            color: "var(--admin-text)",
+                            "& fieldset": { borderColor: "var(--admin-border)" },
+                          },
+                          "& .MuiInputBase-input": {
+                            color: "var(--admin-text)",
+                            fontSize: { xs: "12px", md: "13px" },
+                            padding: { xs: "8px 10px", md: "10px 12px" },
+                          },
+                        }}
+                      />
+                    ) : null}
                     <PhoneNumberInput
                       key={`phone-${activeCartIndex}`}
                       name="phone"
@@ -4931,6 +5019,34 @@ export default function ShoppingPage() {
         }}
       />
       ) : null}
+
+      <Dialog open={Boolean(cardReaderWait)} fullWidth maxWidth="xs">
+        <DialogTitle sx={{ direction: "rtl", textAlign: "right" }}>انتظار برای کارتخوان</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ direction: "rtl", textAlign: "right", color: "var(--admin-text)", mb: 1 }}>
+            {cardReaderWait?.message}
+          </Typography>
+          <Typography sx={{ direction: "rtl", textAlign: "right", fontWeight: 800, color: "var(--admin-accent)" }}>
+            {cardReaderWait ? `${formatNumber(cardReaderWait.amount)} تومان` : ""}
+          </Typography>
+          <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+            <CircularProgress size={28} />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ direction: "rtl", justifyContent: "flex-start", px: 2, pb: 2 }}>
+          <Button
+            color="inherit"
+            onClick={() => {
+              cardReaderAbortRef.current?.abort();
+              setCardReaderWait(null);
+              setIsSubmitting(false);
+              toast.info("ارسال به کارتخوان لغو شد. فروش ثبت نشد.");
+            }}
+          >
+            انصراف
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={networkWarningOpen}

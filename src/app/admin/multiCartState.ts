@@ -6,6 +6,7 @@ export type CartSlotSnapshot = {
   cart: any[];
   total: number;
   phone: string;
+  customerName?: string;
   credit: number;
   useCreditAmount: number;
   discounttype: number;
@@ -30,6 +31,7 @@ export function createEmptyCartSlot(): CartSlotSnapshot {
     cart: [],
     total: 0,
     phone: "",
+    customerName: "",
     credit: 0,
     useCreditAmount: 0,
     discounttype: 0,
@@ -86,6 +88,7 @@ function normalizeSlot(raw: unknown): CartSlotSnapshot {
     cart: Array.isArray(slot.cart) ? slot.cart : [],
     total: Number(slot.total) || 0,
     phone: String(slot.phone ?? ""),
+    customerName: String(slot.customerName ?? ""),
     credit: Number(slot.credit) || 0,
     useCreditAmount: Number(slot.useCreditAmount) || 0,
     discounttype: Number(slot.discounttype) || 0,

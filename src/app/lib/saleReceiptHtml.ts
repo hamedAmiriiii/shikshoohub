@@ -1,5 +1,4 @@
-import { formatDailyTicketNumber } from "@/app/lib/dailyTicketNumber";
-import { readAdminPosSettings } from "@/app/lib/adminPosSettings";
+import { saleNumberLines } from "@/app/lib/dailyTicketNumber";
 import { normalizeReceiptTemplateId } from "@/app/lib/receiptTemplates";
 import {
   formatReceiptDate,
@@ -26,9 +25,10 @@ function ltr(value: string): string {
   return `<span class="ltr">${escapeHtml(value)}</span>`;
 }
 
-function dailyTicketHtml(receipt: SaleReceiptData): string {
-  if (!readAdminPosSettings().showDailyTicketNumber || receipt.dailyTicketNumber == null) return "";
-  return `<div class="sub">فیش ${ltr(formatDailyTicketNumber(receipt.dailyTicketNumber))}</div>`;
+function saleNumberHtml(receipt: SaleReceiptData, showPurchaseId = true): string {
+  const lines = saleNumberLines({ ...receipt, showPurchaseId });
+  if (!lines.length) return "";
+  return lines.map((line) => `<div class="sub">${escapeHtml(line)}</div>`).join("");
 }
 
 const TICKET_LAYOUT_DPI = 96;
@@ -174,12 +174,11 @@ function classicHallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSe
   return `
     <h1>${shopTitle}</h1>
     ${settings.hallTitle ? `<div class="sub">${escapeHtml(settings.hallTitle)}</div>` : ""}
-    ${dailyTicketHtml(receipt)}
+    ${saleNumberHtml(receipt, settings.showPurchaseId)}
     ${settings.showDate ? `<div class="muted">${ltr(formatReceiptDate(receipt.createdAt))}</div>` : ""}
     <table class="row">
       <tr>
         <td class="label">
-          ${settings.showPurchaseId && receipt.purchaseId != null ? `<div class="block">شماره فاکتور: ${ltr(String(receipt.purchaseId))}</div>` : ""}
           ${settings.showCustomerPhone && receipt.phone ? `<div class="block">مشتری: ${ltr(receipt.phone)}</div>` : ""}
           ${receipt.customerName ? `<div class="block">نام مشتری: ${escapeHtml(receipt.customerName)}</div>` : ""}
         </td>
@@ -215,7 +214,7 @@ function retailHallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSet
       <h1 style="margin-bottom:6px">${shopTitle}</h1>
       <table class="row" style="font-size:92%">
         <tr>
-          <td class="label">${settings.showPurchaseId && receipt.purchaseId != null ? `شماره فاکتور: ${ltr(String(receipt.purchaseId))}` : ""}</td>
+          <td class="label">${saleNumberHtml(receipt, settings.showPurchaseId)}</td>
           <td style="text-align:center">${settings.showDate ? `${ltr(formatReceiptTimeOnly(receipt.createdAt))}<br/>${ltr(formatReceiptDateOnly(receipt.createdAt))}` : ""}</td>
           <td class="value">${receipt.cashierName ? `${cashierLabel}: ${escapeHtml(receipt.cashierName)}` : cashierLabel}</td>
         </tr>
@@ -265,7 +264,7 @@ function minimalHallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSe
     <h1 style="letter-spacing:1px">${shopTitle}</h1>
     <div class="muted">فاکتور فروش</div>
     ${settings.showDate ? `<div class="muted">${ltr(formatReceiptDate(receipt.createdAt))}</div>` : ""}
-    ${settings.showPurchaseId && receipt.purchaseId != null ? `<div class="muted">#${ltr(String(receipt.purchaseId))}</div>` : ""}
+    ${saleNumberHtml(receipt, settings.showPurchaseId)}
     <div class="muted" style="letter-spacing:2px">··············</div>
     ${items}
     <div class="muted" style="letter-spacing:2px">··············</div>
@@ -289,12 +288,12 @@ function boldHallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSetti
   return `
     <div style="background:#000;color:#fff;padding:10px 4px;margin:0 0 8px;text-align:center">
       <div style="font-size:1.2em;font-weight:900">${shopTitle}</div>
-      ${dailyTicketHtml(receipt)}
+      ${saleNumberHtml(receipt, settings.showPurchaseId)}
     </div>
     ${settings.showDate ? `<div class="muted">${ltr(formatReceiptDate(receipt.createdAt))}</div>` : ""}
     <table class="row">
       <tr>
-        <td class="label">${settings.showPurchaseId && receipt.purchaseId != null ? `<div class="bold">فاکتور ${ltr(String(receipt.purchaseId))}</div>` : ""}</td>
+        <td class="label"></td>
         ${receipt.tableLabel ? `<td class="value bold">${escapeHtml(receipt.tableLabel)}</td>` : ""}
       </tr>
     </table>
@@ -312,12 +311,21 @@ function boldHallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSetti
   `;
 }
 
+function webinoPlusFooterHtml(): string {
+  return `<div class="muted" style="margin-top:10px;font-weight:800">وبینوپلاس</div><div class="muted"><span class="ltr">www.webinoplus.ir</span></div>`;
+}
+
 function hallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSettings): string {
   const templateId = normalizeReceiptTemplateId(settings.templateId);
-  if (templateId === "retail") return retailHallInner(receipt, settings);
-  if (templateId === "minimal") return minimalHallInner(receipt, settings);
-  if (templateId === "bold") return boldHallInner(receipt, settings);
-  return classicHallInner(receipt, settings);
+  const body =
+    templateId === "retail"
+      ? retailHallInner(receipt, settings)
+      : templateId === "minimal"
+        ? minimalHallInner(receipt, settings)
+        : templateId === "bold"
+          ? boldHallInner(receipt, settings)
+          : classicHallInner(receipt, settings);
+  return `${body}${webinoPlusFooterHtml()}`;
 }
 
 function prepInner(
@@ -335,11 +343,10 @@ function prepInner(
 
   return `
     <h1>${escapeHtml(title)}</h1>
-    ${dailyTicketHtml(receipt)}
+    ${saleNumberHtml(receipt, settings.showPurchaseId)}
     ${shopTitle ? `<div class="muted">${escapeHtml(shopTitle)}</div>` : ""}
     ${settings.showDate ? `<div class="muted">${ltr(formatReceiptDate(receipt.createdAt))}</div>` : ""}
     ${receipt.tableLabel ? `<div class="sub">${escapeHtml(receipt.tableLabel)}</div>` : ""}
-    ${settings.showPurchaseId && receipt.purchaseId != null ? `<div class="muted">سفارش ${ltr(String(receipt.purchaseId))}</div>` : ""}
     <hr/>
     ${items}
     ${receipt.customerNote ? `<hr/><div class="note bold">توضیحات سفارش: ${escapeHtml(receipt.customerNote)}</div>` : ""}

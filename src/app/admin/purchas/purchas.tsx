@@ -640,6 +640,9 @@ export default function purchas(props: any) {
                 href={isIranMobile(purchasePhone) ? `/admin/purchas/customer/${purchasePhone}` : undefined}
               />
             )}
+            {data?.sold_by_name ? (
+              <PurchaseInfoRow label="فروشنده" value={data.sold_by_name} />
+            ) : null}
             {data?.phone && (
               <PurchaseInfoRow
                 label="شماره تلفن"

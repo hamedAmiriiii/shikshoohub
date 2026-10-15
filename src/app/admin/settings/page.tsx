@@ -84,6 +84,7 @@ import SavingsOutlinedIcon from "@mui/icons-material/SavingsOutlined";
 import PaletteOutlinedIcon from "@mui/icons-material/PaletteOutlined";
 import ReservMenuThemeSettings from "@/app/admin/settings/ReservMenuThemeSettings";
 import SadrScaleSettings from "@/app/admin/settings/SadrScaleSettings";
+import CardReaderSettings from "@/app/admin/settings/CardReaderSettings";
 
 const settingsCardSx = {
   backgroundColor: "var(--admin-surface)",
@@ -351,6 +352,7 @@ export default function SettingsPage() {
   const [printerOpen, setPrinterOpen] = useState(false);
   const [listPrinterOpen, setListPrinterOpen] = useState(false);
   const [scaleOpen, setScaleOpen] = useState(false);
+  const [cardReaderOpen, setCardReaderOpen] = useState(false);
   const [invoiceTemplateOpen, setInvoiceTemplateOpen] = useState(false);
   const [savingBrowserSettings, setSavingBrowserSettings] = useState(false);
   const [restoringBrowserSettings, setRestoringBrowserSettings] = useState(false);
@@ -1486,6 +1488,21 @@ export default function SettingsPage() {
         }
       >
         {scaleOpen ? <SadrScaleSettings /> : null}
+      </SettingsSectionCard>
+
+      <SettingsSectionCard
+        icon={<CreditCardIcon sx={{ fontSize: 18 }} />}
+        title="کارتخوان"
+        hint="مبلغ کارت به دستگاه می‌رود و فروش بعد از تأیید ثبت می‌شود"
+        action={
+          cardReaderOpen ? undefined : (
+            <Button size="small" variant="outlined" onClick={() => setCardReaderOpen(true)} sx={viewBtnSx}>
+              مشاهده
+            </Button>
+          )
+        }
+      >
+        {cardReaderOpen ? <CardReaderSettings /> : null}
       </SettingsSectionCard>
 
       {restaurantCafeEnabled ? (

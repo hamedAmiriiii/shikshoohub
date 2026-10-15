@@ -162,6 +162,11 @@ export default function ListPurches() {
                 width: "110px",
             },
             {
+                label: "فروشنده",
+                field: (item: any) => item?.sold_by_name || "—",
+                width: "120px",
+            },
+            {
                 label: "مشتری",
                 field: (item: any) => item?.customer_name || "—",
                 width: "120px",
