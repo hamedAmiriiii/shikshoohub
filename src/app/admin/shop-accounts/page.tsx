@@ -194,7 +194,7 @@ export default function ShopAccountsPage() {
         const res = await apiRequestError(
           "Post",
           {},
-          { name, type: "main" },
+          { name, type: "shop" },
           "/api/shop-accounts",
           true,
           true,

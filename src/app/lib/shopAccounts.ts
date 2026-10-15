@@ -1,6 +1,7 @@
 import { apiRequestError } from "@/app/lib/apiRequestError/client";
 
-export type ShopAccountType = "main" | "petty_cash" | string;
+/** مقادیر API: shop | petty_cash | till */
+export type ShopAccountType = "shop" | "petty_cash" | "till" | string;
 
 export type ShopAccount = {
   id: number;
@@ -22,8 +23,10 @@ export function isPettyCashAccount(account: Pick<ShopAccount, "type">): boolean 
   return account.type === "petty_cash";
 }
 
-export function isMainShopAccount(account: Pick<ShopAccount, "type">): boolean {
-  return !isPettyCashAccount(account);
+export function isMainShopAccount(account: Pick<ShopAccount, "type" | "is_till">): boolean {
+  if (account.is_till || account.type === "till") return false;
+  if (isPettyCashAccount(account)) return false;
+  return true;
 }
 
 export function remainingBalanceDeleteMessage(account: ShopAccount): string | null {
@@ -88,7 +91,7 @@ function extractAccountsPayload(res: unknown): unknown {
 }
 
 export async function fetchShopAccounts(options?: {
-  type?: "petty_cash" | "main";
+  type?: "petty_cash" | "shop";
   token?: string;
 }): Promise<ShopAccount[]> {
   const token = options?.token ?? (typeof window !== "undefined" ? localStorage.getItem("token") || "" : "");
