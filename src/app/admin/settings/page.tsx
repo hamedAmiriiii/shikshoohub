@@ -83,6 +83,7 @@ import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import SavingsOutlinedIcon from "@mui/icons-material/SavingsOutlined";
 import PaletteOutlinedIcon from "@mui/icons-material/PaletteOutlined";
 import ReservMenuThemeSettings from "@/app/admin/settings/ReservMenuThemeSettings";
+import SadrScaleSettings from "@/app/admin/settings/SadrScaleSettings";
 
 const settingsCardSx = {
   backgroundColor: "var(--admin-surface)",
@@ -349,6 +350,7 @@ export default function SettingsPage() {
   const [isSavingShopCard, setIsSavingShopCard] = useState(false);
   const [printerOpen, setPrinterOpen] = useState(false);
   const [listPrinterOpen, setListPrinterOpen] = useState(false);
+  const [scaleOpen, setScaleOpen] = useState(false);
   const [invoiceTemplateOpen, setInvoiceTemplateOpen] = useState(false);
   const [savingBrowserSettings, setSavingBrowserSettings] = useState(false);
   const [restoringBrowserSettings, setRestoringBrowserSettings] = useState(false);
@@ -1469,6 +1471,21 @@ export default function SettingsPage() {
             />
           </Box>
         ) : null}
+      </SettingsSectionCard>
+
+      <SettingsSectionCard
+        icon={<ScaleIcon sx={{ fontSize: 18 }} />}
+        title="ترازو صدر ویستا B"
+        hint="USB مستقیم بدون QZ — تست اتصال همین‌جا"
+        action={
+          scaleOpen ? undefined : (
+            <Button size="small" variant="outlined" onClick={() => setScaleOpen(true)} sx={viewBtnSx}>
+              مشاهده
+            </Button>
+          )
+        }
+      >
+        {scaleOpen ? <SadrScaleSettings /> : null}
       </SettingsSectionCard>
 
       {restaurantCafeEnabled ? (

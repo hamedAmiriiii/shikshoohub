@@ -1,19 +1,22 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Box, Button, Dialog, IconButton, InputBase, Typography } from "@mui/material";
+import { Box, Button, CircularProgress, Dialog, IconButton, InputBase, Typography } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
+import ScaleIcon from "@mui/icons-material/Scale";
 import {
   formatProductQuantity,
   getMinQuantity,
   getQuantityIncrement,
   getUnitLabel,
+  isKgProduct,
   normalizeQuantityValue,
   parseQuantityInput,
   type ProductUnitFields,
 } from "@/app/lib/productUnits";
 import { formatAmountInput, parseAmountInput } from "@/app/lib/amountInput";
+import { readSadrScaleSettings, readSadrScaleWeight } from "@/app/lib/sadrScale";
 
 type AddToCartQuantityDialogProps = {
   open: boolean;
@@ -42,17 +45,48 @@ export default function AddToCartQuantityDialog({
 }: AddToCartQuantityDialogProps) {
   const [value, setValue] = useState("1");
   const [priceValue, setPriceValue] = useState("");
+  const [scaleReading, setScaleReading] = useState(false);
+  const [scaleHint, setScaleHint] = useState("");
   const inputRef = useRef<HTMLInputElement | null>(null);
   const priceInputRef = useRef<HTMLInputElement | null>(null);
+  const scaleEnabled = isKgProduct(unitItem) && readSadrScaleSettings().enabled;
 
   useEffect(() => {
     if (!open) return;
     setValue(String(maxQuantity > 0 && maxQuantity < 1 ? maxQuantity : 1));
     setPriceValue(formatAmountInput(String(Math.floor(defaultPrice))));
+    setScaleHint("");
     const id = window.setTimeout(() => inputRef.current?.select(), 50);
     return () => window.clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !scaleEnabled) return;
+    let cancelled = false;
+    setScaleReading(true);
+    setScaleHint("در حال خواندن از ترازو…");
+    void readSadrScaleWeight(2800)
+      .then((kg) => {
+        if (cancelled) return;
+        if (kg != null && kg > 0) {
+          const clamped = Math.min(kg, maxQuantity > 0 ? maxQuantity : kg);
+          setValue(String(clamped));
+          setScaleHint(`از ترازو: ${clamped} کیلو`);
+        } else {
+          setScaleHint("وزنی از ترازو نیامد — دستی وارد کنید");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setScaleHint("اتصال ترازو برقرار نشد");
+      })
+      .finally(() => {
+        if (!cancelled) setScaleReading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, scaleEnabled, maxQuantity]);
 
   const unitLabel = getUnitLabel(unitItem);
   const minQuantity = getMinQuantity(unitItem);
@@ -188,6 +222,44 @@ export default function AddToCartQuantityDialog({
         <Typography sx={{ color: "var(--admin-error-soft, #e57373)", fontSize: 11, mt: 0.5 }}>
           {error}
         </Typography>
+      ) : null}
+
+      {scaleEnabled ? (
+        <Box sx={{ mt: 0.75, display: "flex", alignItems: "center", gap: 0.75 }}>
+          <Button
+            size="small"
+            startIcon={scaleReading ? <CircularProgress size={12} color="inherit" /> : <ScaleIcon sx={{ fontSize: 14 }} />}
+            disabled={scaleReading}
+            onClick={() => {
+              setScaleReading(true);
+              setScaleHint("در حال خواندن از ترازو…");
+              void readSadrScaleWeight(2800)
+                .then((kg) => {
+                  if (kg != null && kg > 0) {
+                    const clamped = Math.min(kg, maxQuantity > 0 ? maxQuantity : kg);
+                    setValue(String(clamped));
+                    setScaleHint(`از ترازو: ${clamped} کیلو`);
+                  } else {
+                    setScaleHint("وزنی از ترازو نیامد — دستی وارد کنید");
+                  }
+                })
+                .catch(() => setScaleHint("اتصال ترازو برقرار نشد"))
+                .finally(() => setScaleReading(false));
+            }}
+            sx={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: "var(--admin-accent)",
+              py: 0.25,
+              minWidth: 0,
+            }}
+          >
+            خواندن از ترازو
+          </Button>
+          {scaleHint ? (
+            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 10.5 }}>{scaleHint}</Typography>
+          ) : null}
+        </Box>
       ) : null}
 
       {priceEditEnabled ? (
