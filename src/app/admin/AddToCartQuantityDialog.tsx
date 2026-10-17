@@ -11,8 +11,11 @@ import {
   getQuantityIncrement,
   getUnitLabel,
   isKgProduct,
+  isMeasuredProduct,
   normalizeQuantityValue,
   parseQuantityInput,
+  quantityInputMode,
+  sanitizeQuantityDraft,
   type ProductUnitFields,
 } from "@/app/lib/productUnits";
 import { formatAmountInput, parseAmountInput } from "@/app/lib/amountInput";
@@ -53,7 +56,8 @@ export default function AddToCartQuantityDialog({
 
   useEffect(() => {
     if (!open) return;
-    setValue(String(maxQuantity > 0 && maxQuantity < 1 ? maxQuantity : 1));
+    const start = isMeasuredProduct(unitItem) && maxQuantity > 0 && maxQuantity < 1 ? maxQuantity : 1;
+    setValue(String(start));
     setPriceValue(formatAmountInput(String(Math.floor(defaultPrice))));
     setScaleHint("");
     const id = window.setTimeout(() => inputRef.current?.select(), 50);
@@ -198,10 +202,10 @@ export default function AddToCartQuantityDialog({
           fullWidth
           inputRef={inputRef}
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => setValue(sanitizeQuantityDraft(e.target.value, unitItem))}
           onFocus={(e) => e.target.select()}
           onKeyDown={handleQuantityEnter}
-          inputMode="decimal"
+          inputMode={quantityInputMode(unitItem)}
           inputProps={{ "aria-label": `تعداد (${unitLabel})` }}
           sx={{
             color: "var(--admin-text)",

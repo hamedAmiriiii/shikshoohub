@@ -29,6 +29,7 @@ import { readAdminPosSettings } from "@/app/lib/adminPosSettings";
 import type DateObject from "react-date-object";
 import { gregorianApiDateFromDateObject, parseAccessEndToDateObject } from "@/app/lib/shopAccess";
 import { readRoundSalePriceToThousand, roundToTen } from "@/app/lib/salePriceRounding";
+import { isMeasuredProduct, sanitizeQuantityDraft } from "@/app/lib/productUnits";
 
 const PRODUCT_SORT_OPTIONS = [
     { value: "", label: "جدیدترین" },
@@ -763,7 +764,8 @@ export default function ListData() {
 
       const purchasePriceNum = parseFloat(cleanPurchasePrice);
       const salePriceNum = parseFloat(cleanSalePrice);
-      const quantityNum = parseFloat(cleanQuantity);
+      const pieceStock = !isMeasuredProduct(editingProduct);
+      const quantityNum = pieceStock ? parseInt(cleanQuantity, 10) : parseFloat(cleanQuantity);
 
       if (isNaN(purchasePriceNum) || purchasePriceNum < 0) {
         toast.error("قیمت خرید معتبر نیست");
@@ -773,8 +775,8 @@ export default function ListData() {
         toast.error("قیمت فروش معتبر نیست");
         return;
       }
-      if (isNaN(quantityNum) || quantityNum < 0) {
-        toast.error("موجودی معتبر نیست");
+      if (isNaN(quantityNum) || quantityNum < 0 || (pieceStock && !/^\d+$/.test(cleanQuantity))) {
+        toast.error(pieceStock ? "موجودی محصولات تعدادی باید عدد صحیح باشد" : "موجودی معتبر نیست");
         return;
       }
 
@@ -1059,7 +1061,7 @@ export default function ListData() {
             if (pct != null) setProfitPercentage(pct);
           }}
           quantity={quantity}
-          onQuantityChange={setQuantity}
+          onQuantityChange={(value) => setQuantity(sanitizeQuantityDraft(value, editingProduct))}
           discountPercent={discountPercent}
           onDiscountPercentChange={setDiscountPercent}
           images={images}

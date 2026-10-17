@@ -54,7 +54,7 @@ import {
 import type DateObject from "react-date-object";
 import ProductPurchaseDateField from "../ProductPurchaseDateField";
 import { gregorianApiDateFromDateObject } from "@/app/lib/shopAccess";
-import { isMeasuredProduct, type ProductUnitType } from "@/app/lib/productUnits";
+import { isMeasuredProduct, sanitizeQuantityDraft, type ProductUnitType } from "@/app/lib/productUnits";
 import { readRoundSalePriceToThousand, roundToTen } from "@/app/lib/salePriceRounding";
 import { ToggleButton, ToggleButtonGroup, FormControl, FormLabel } from "@mui/material";
 
@@ -1006,7 +1006,13 @@ export default function Page() {
                           ? "موجودی (متر)"
                           : "موجودی (عدد)"
                     }
-                    onChange={(e) => setQuantity(e)}
+                    onChange={(e) =>
+                      setQuantity(
+                        sanitizeQuantityDraft(e, {
+                          unit_type: kgSalesEnabled ? unitType : "piece",
+                        }),
+                      )
+                    }
                     name="quantity"
                     type="number"
                   />

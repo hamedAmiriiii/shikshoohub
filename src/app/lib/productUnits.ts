@@ -70,19 +70,46 @@ export function getMinQuantity(item: ProductUnitFields | null | undefined): numb
   return isMeasuredProduct(item) ? 0.001 : 1;
 }
 
+function normalizeQuantityText(value: string): string {
+  const persianDigits = "۰۱۲۳۴۵۶۷۸۹";
+  const arabicDigits = "٠١٢٣٤٥٦٧٨٩";
+  return value
+    .trim()
+    .replace(/[۰-۹]/g, (c) => String(persianDigits.indexOf(c)))
+    .replace(/[٠-٩]/g, (c) => String(arabicDigits.indexOf(c)))
+    .replace(/[٫،,]/g, ".");
+}
+
+/** هنگام تایپ: عدد فقط رقم صحیح، کیلو و متر تا سه رقم اعشار */
+export function sanitizeQuantityDraft(
+  value: string,
+  item: ProductUnitFields | null | undefined,
+): string {
+  const normalized = normalizeQuantityText(value);
+  if (!isMeasuredProduct(item)) {
+    return normalized.match(/^\d*/)?.[0] ?? "";
+  }
+
+  const cleaned = normalized.replace(/[^\d.]/g, "");
+  const dot = cleaned.indexOf(".");
+  if (dot === -1) return cleaned;
+  const whole = cleaned.slice(0, dot);
+  const fraction = cleaned.slice(dot + 1).replace(/\./g, "").slice(0, 3);
+  return `${whole}.${fraction}`;
+}
+
+export function quantityInputMode(
+  item: ProductUnitFields | null | undefined,
+): "numeric" | "decimal" {
+  return isMeasuredProduct(item) ? "decimal" : "numeric";
+}
+
 /** پارس ورودی مقدار — برای کیلو و متر اعشاری، برای عدد صحیح */
 export function parseQuantityInput(
   value: string,
   item: ProductUnitFields | null | undefined,
 ): number | null {
-  const persianDigits = "۰۱۲۳۴۵۶۷۸۹";
-  const arabicDigits = "٠١٢٣٤٥٦٧٨٩";
-  let normalized = value
-    .trim()
-    .replace(/[۰-۹]/g, (c) => String(persianDigits.indexOf(c)))
-    .replace(/[٠-٩]/g, (c) => String(arabicDigits.indexOf(c)))
-    .replace(/,/g, ".")
-    .replace(/[^\d.]/g, "");
+  const normalized = normalizeQuantityText(value).replace(/[^\d.]/g, "");
 
   if (normalized === "" || normalized === ".") return null;
 
@@ -91,7 +118,9 @@ export function parseQuantityInput(
     return Number.isNaN(n) ? null : n;
   }
 
-  const n = parseInt(normalized.replace(/\./g, ""), 10);
+  const whole = normalized.split(".")[0];
+  if (!whole) return null;
+  const n = parseInt(whole, 10);
   return Number.isNaN(n) ? null : n;
 }
 

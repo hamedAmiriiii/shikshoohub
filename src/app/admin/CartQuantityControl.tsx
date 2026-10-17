@@ -11,6 +11,8 @@ import {
   isMeasuredProduct,
   normalizeQuantityValue,
   parseQuantityInput,
+  quantityInputMode,
+  sanitizeQuantityDraft,
   type ProductUnitFields,
 } from "@/app/lib/productUnits";
 import { catalogItemKey, type CatalogIdentity } from "@/app/lib/catalogItems";
@@ -33,16 +35,17 @@ export default function CartQuantityControl({
   fontBoost = 0,
   manualEntry = false,
 }: CartQuantityControlProps) {
-  const isKg = kgSalesEnabled && isMeasuredProduct(item);
+  const unitItem = kgSalesEnabled && isMeasuredProduct(item) ? item : { unit_type: "piece" as const };
+  const isKg = isMeasuredProduct(unitItem);
   const typedQuantity = isKg || manualEntry;
   const [draft, setDraft] = useState<string | null>(null);
 
-  const displayQty = draft ?? formatProductQuantity(item.quantity, item);
-  const step = getQuantityIncrement(item);
-  const minQty = getMinQuantity(item);
+  const displayQty = draft ?? formatProductQuantity(item.quantity, unitItem);
+  const step = getQuantityIncrement(unitItem);
+  const minQty = getMinQuantity(unitItem);
 
   const applyQuantity = (raw: number) => {
-    const normalized = normalizeQuantityValue(raw, isKg ? item : { unit_type: "piece" });
+    const normalized = normalizeQuantityValue(raw, unitItem);
     if (normalized < minQty) {
       onChange(catalogItemKey(item), 0);
       return;
@@ -108,10 +111,10 @@ export default function CartQuantityControl({
       <TextField
         size="small"
         value={displayQty}
-        onChange={(e) => setDraft(e.target.value)}
+        onChange={(e) => setDraft(sanitizeQuantityDraft(e.target.value, unitItem))}
         onBlur={() => {
           if (draft !== null) {
-            const parsed = parseQuantityInput(draft, isKg ? item : { unit_type: "piece" });
+            const parsed = parseQuantityInput(draft, unitItem);
             if (parsed !== null) applyQuantity(parsed);
           }
           setDraft(null);
@@ -120,7 +123,7 @@ export default function CartQuantityControl({
           if (e.key === "Enter") (e.target as HTMLInputElement).blur();
         }}
         inputProps={{
-          inputMode: "decimal",
+          inputMode: quantityInputMode(unitItem),
           style: { textAlign: "center", fontSize: compact ? 10 + fontBoost : 14, padding: compact ? "2px 4px" : undefined },
         }}
         sx={{
