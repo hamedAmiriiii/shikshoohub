@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { readDocumentOpenRequest } from "@/app/lib/documentReturn";
 import {
+  Autocomplete,
   Box,
   Button,
   Card,
@@ -75,6 +76,8 @@ import {
   type DocumentPaymentFields as DocumentPaymentInfo,
   type DocumentPaymentFormState,
 } from "@/app/lib/documentPayments";
+import { fetchExpenseAccounts, type ExpenseAccountOption } from "@/app/lib/accounting";
+import { readShopFeatures } from "@/app/lib/shopFeatures";
 import {
   creditSourceCountsInProfit,
   expenseCreditSource,
@@ -135,6 +138,8 @@ type Expense = DocumentPaymentInfo & {
   beneficiary_id?: number | null;
   user_shiksho_id?: number | null;
   beneficiary?: { id?: number | null; name?: string | null; phone?: string | null } | null;
+  accounting_account_id?: number | null;
+  accounting_account?: { id: number; code?: string; name?: string } | null;
   cheque_id?: number | null;
   cheque?: LinkedCheque | null;
 };
@@ -315,6 +320,8 @@ export default function ExpensesPage() {
   const [openFilterSheet, setOpenFilterSheet] = useState(false);
 
   const [type, setType] = useState<"جاری" | "سرمایه">("جاری");
+  const [expenseAccounts, setExpenseAccounts] = useState<ExpenseAccountOption[]>([]);
+  const [accountingAccountId, setAccountingAccountId] = useState<number | null>(null);
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
   const [userName, setUserName] = useState("");
@@ -426,8 +433,26 @@ export default function ExpensesPage() {
     void fetchExpenses();
   }, [fetchExpenses]);
 
+  useEffect(() => {
+    if (!openForm || !readShopFeatures().accounting_enabled) {
+      return;
+    }
+    let cancelled = false;
+    void fetchExpenseAccounts()
+      .then((rows) => {
+        if (!cancelled) setExpenseAccounts(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setExpenseAccounts([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [openForm]);
+
   const resetForm = () => {
     setType("جاری");
+    setAccountingAccountId(null);
     setTitle("");
     setAmount("");
     setPaymentForm(emptyDocumentPaymentForm());
@@ -462,6 +487,7 @@ export default function ExpensesPage() {
   const openEdit = (expense: Expense) => {
     setEditingExpense(expense);
     setType((expense.type as "جاری" | "سرمایه") || "جاری");
+    setAccountingAccountId(expense.accounting_account_id ?? expense.accounting_account?.id ?? null);
     setTitle(expense.title || "");
     setAmount(formatNumber(expenseAmount(expense)));
     setUserName(expense.user_name || "");
@@ -516,6 +542,9 @@ export default function ExpensesPage() {
       type,
       user_name: userName.trim() || undefined,
     };
+    if (readShopFeatures().accounting_enabled) {
+      payload.accounting_account_id = accountingAccountId;
+    }
     Object.assign(payload, beneficiaryPayload(beneficiaryId));
     const payment = buildDocumentPaymentPayload(paymentForm, amountNum);
     if (payment.error) {
@@ -730,6 +759,12 @@ export default function ExpensesPage() {
                         <Typography sx={{ fontWeight: 600, color: "var(--admin-text)", whiteSpace: "normal" }}>
                           {expense.title}
                         </Typography>
+                        {expense.accounting_account?.name ? (
+                          <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, mt: 0.25 }}>
+                            {expense.accounting_account.code ? `${expense.accounting_account.code} — ` : ""}
+                            {expense.accounting_account.name}
+                          </Typography>
+                        ) : null}
                         {creditSource ? (
                           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.4, mt: 0.4 }}>
                             <Chip
@@ -973,6 +1008,53 @@ export default function ExpensesPage() {
                 </RadioGroup>
               </Box>
               <TextField size="small" label="عنوان" value={title} onChange={(e) => setTitle(e.target.value)} fullWidth sx={fieldSx} />
+              {readShopFeatures().accounting_enabled && (expenseAccounts.length > 0 || accountingAccountId) ? (
+                <Autocomplete
+                  options={
+                    accountingAccountId &&
+                    !expenseAccounts.some((item) => item.id === accountingAccountId) &&
+                    editingExpense?.accounting_account?.id === accountingAccountId
+                      ? [
+                          {
+                            id: editingExpense.accounting_account.id,
+                            code: editingExpense.accounting_account.code || "",
+                            name: editingExpense.accounting_account.name || "",
+                          },
+                          ...expenseAccounts,
+                        ]
+                      : expenseAccounts
+                  }
+                  value={
+                    [
+                      ...(editingExpense?.accounting_account?.id === accountingAccountId &&
+                      editingExpense.accounting_account
+                        ? [
+                            {
+                              id: editingExpense.accounting_account.id,
+                              code: editingExpense.accounting_account.code || "",
+                              name: editingExpense.accounting_account.name || "",
+                            },
+                          ]
+                        : []),
+                      ...expenseAccounts,
+                    ].find((item) => item.id === accountingAccountId) ?? null
+                  }
+                  onChange={(_event, option) => setAccountingAccountId(option?.id ?? null)}
+                  getOptionLabel={(option) =>
+                    option.code ? `${option.code} — ${option.name}` : option.name
+                  }
+                  isOptionEqualToValue={(option, value) => option.id === value.id}
+                  noOptionsText="حساب هزینه‌ای در درخت نیست"
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      size="small"
+                      label="حساب درخت (اختیاری)"
+                      sx={fieldSx}
+                    />
+                  )}
+                />
+              ) : null}
               <TextField
                 size="small"
                 label="مبلغ"

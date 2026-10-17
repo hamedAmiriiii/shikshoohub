@@ -18,6 +18,7 @@ export type ProformaStoredItem = {
 export type ProformaCartLoad = {
   id: number;
   phone?: string | null;
+  customer_name?: string | null;
   discount_amount?: number | string;
   total_amount?: number | string;
   created_at?: string;
@@ -96,6 +97,7 @@ export function proformaToSaleReceipt(
     createdAt: row.created_at || new Date().toISOString(),
     shopName,
     phone: row.phone || undefined,
+    customerName: row.customer_name || undefined,
     items,
     subtotal,
     discount,

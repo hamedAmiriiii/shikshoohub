@@ -588,6 +588,7 @@ export default function ShoppingPage() {
           cart: cartItems,
           total: nextTotal,
           phone: payload.phone || "",
+          customerName: payload.customer_name || "",
           discounttype: discount,
           discountDisplay: discount > 0 ? formatAmountInput(String(Math.round(discount))) : "",
         };
@@ -2712,6 +2713,7 @@ export default function ShoppingPage() {
     setSavingProforma(true);
     void FetchWithJwtClient("POST", "/api/proforma-invoices", {
       phone: phone ? normalizeIranMobile(phone) : undefined,
+      customer_name: customerName.trim() || undefined,
       discount_amount: discounttype > 0 ? discounttype : 0,
       items,
     }).then((res) => {
@@ -2740,7 +2742,7 @@ export default function ShoppingPage() {
       setSavingProforma(false);
       toast.error("ثبت پیش‌فاکتور انجام نشد");
     });
-  }, [cart, savingProforma, phone, discounttype, clearOrRemoveActiveCart, getShopNameFromUser]);
+  }, [cart, savingProforma, phone, customerName, discounttype, clearOrRemoveActiveCart, getShopNameFromUser]);
 
   const applyCartProfitPercent = useCallback((raw: string, commit = false) => {
     if (!cartProfitEnabledRef.current && parseProfitPercent(raw) > 0) return;

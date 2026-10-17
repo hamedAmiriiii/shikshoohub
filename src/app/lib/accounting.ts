@@ -543,6 +543,32 @@ export async function fetchAccountingAccounts(options?: {
   return list.map(parseAccount).filter((item): item is AccountingAccount => item != null);
 }
 
+export type ExpenseAccountOption = {
+  id: number;
+  code: string;
+  name: string;
+};
+
+/** حساب‌های نهایی درخت که ثبت هزینه می‌تواند به آن‌ها وصل شود. خرید کالا در این فهرست نیست. */
+export async function fetchExpenseAccounts(): Promise<ExpenseAccountOption[]> {
+  const res = await FetchWithJwtClient("GET", "/api/accounting/expense-accounts", authToken());
+  const payload = unwrapData(res);
+  const list = Array.isArray(payload)
+    ? payload
+    : Array.isArray(asRecord(payload)?.data)
+      ? (asRecord(payload)!.data as unknown[])
+      : [];
+  return list
+    .map((raw) => {
+      const obj = asRecord(raw);
+      if (!obj) return null;
+      const id = asNumber(obj.id, 0);
+      if (!id) return null;
+      return { id, code: asString(obj.code), name: asString(obj.name) };
+    })
+    .filter((item): item is ExpenseAccountOption => item != null);
+}
+
 export async function fetchNextAccountCode(
   parentId: number,
 ): Promise<{ code: string; level: string; level_label: string }> {
