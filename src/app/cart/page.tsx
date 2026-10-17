@@ -416,7 +416,7 @@ export default function CartPage() {
       }
       return item.image;
     }
-    return '/pic/noImageShop.jpg';
+    return '/pic/nooImage.jfif';
   };
 
   const formatPrice = (price: string | number): string => {

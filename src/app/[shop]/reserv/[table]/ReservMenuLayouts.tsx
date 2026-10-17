@@ -254,7 +254,7 @@ function discountPercent(item: ReservMenuItem): number {
 }
 
 function isPlaceholderImage(url: string) {
-  return !url || /noimageshop/i.test(url);
+  return !url || /nooImage/i.test(url);
 }
 
 /** عکس کاور صفحهٔ خوش‌آمد: عکس اولین دسته، وگرنه اولین عکس واقعی کالا */

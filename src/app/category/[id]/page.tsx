@@ -229,7 +229,7 @@ console.log("res2222 : ",res);
       }
       return product.image;
     }
-    return '/pic/noImageShop.jpg';
+    return '/pic/nooImage.jfif';
   };
 
   const formatPrice = (price: string | number): string => {

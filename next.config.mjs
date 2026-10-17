@@ -23,6 +23,11 @@ const nextConfig = {
         hostname: 'api.webinoplus.ir',
         pathname: '/storage/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'api.webinoo-plus.ir',
+        pathname: '/storage/**',
+      },
     ],
   },
   async redirects() {

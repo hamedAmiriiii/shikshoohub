@@ -304,7 +304,7 @@ function resolveMediaUrl(url?: string | null): string | null {
 
 function isPlaceholderMedia(url?: string | null): boolean {
   if (!url?.trim()) return true;
-  return /noimageshop/i.test(url) || /\/landing\/2\.png/i.test(url);
+  return /nooImage/i.test(url) || /\/landing\/2\.png/i.test(url);
 }
 
 /** عکس نمایشی کالا؛ برای کالای تولیدی از لایهٔ پایه (آخرین لایه) یا عکس ماده استفاده می‌شود. */
@@ -340,7 +340,7 @@ function productImage(product: Product, categoryImageById?: Map<string, string>)
     const fromMap = categoryImageById?.get(String(product.category_id));
     if (fromMap) return fromMap;
   }
-  return "/pic/noImageShop.jpg";
+  return "/pic/nooImage.jfif";
 }
 
 function findCatalogProductForCartLine(line: CartLine, products: Product[]): Product | undefined {
@@ -372,7 +372,7 @@ function resolveCartLineImage(
   if (line.image && !isPlaceholderMedia(line.image)) {
     return resolveMediaUrl(line.image) || line.image;
   }
-  return "/pic/noImageShop.jpg";
+  return "/pic/nooImage.jfif";
 }
 
 function cartStorageKey(shopCode: string, tableNumber: number, kind: string) {
@@ -2333,7 +2333,7 @@ function TableReservPageBody() {
             >
               <Box
                 component="img"
-                src={line.image || "/pic/noImageShop.jpg"}
+                src={line.image || "/pic/nooImage.jfif"}
                 alt=""
                 loading="lazy"
                 sx={{

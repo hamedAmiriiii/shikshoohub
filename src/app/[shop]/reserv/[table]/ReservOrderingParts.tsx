@@ -1168,7 +1168,7 @@ export function ReservDesktopCartPanel({
               >
                 <Box
                   component="img"
-                  src={line.image || "/pic/noImageShop.jpg"}
+                  src={line.image || "/pic/nooImage.jfif"}
                   alt=""
                   width={48}
                   height={48}

@@ -193,7 +193,7 @@ console.log("res" , res);
         return `https://api.webinoo-plus.ir${imageUrl}`;
       }
     }
-    return "/pic/noImageShop.jpg";
+    return "/pic/nooImage.jfif";
   };
 
   const getFullName = (order: Order): string => {

@@ -131,7 +131,7 @@ export function resolveCategoryImageUrl(
 }
 
 export function getCategoryImageUrl(category: ShopCategory): string {
-  return resolveCategoryImageUrl(category) || "/pic/noImageShop.jpg";
+  return resolveCategoryImageUrl(category) || "/pic/nooImage.jfif";
 }
 
 export function getCategoryBackgroundColor(

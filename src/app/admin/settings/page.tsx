@@ -54,10 +54,15 @@ import {
   writeAdminPosSettings,
 } from "@/app/lib/adminPosSettings";
 import { readShopFeatures } from "@/app/lib/shopFeatures";
+import {
+  getShopAccessFromUser,
+  isShopAccessExpiredInfo,
+} from "@/app/lib/shopAccess";
 import LoyaltyCreditTiersSettings from "@/app/admin/settings/LoyaltyCreditTiersSettings";
 import ShopBackupSettings from "@/app/admin/settings/ShopBackupSettings";
 import ShopGoogleSheetSettings from "@/app/admin/settings/ShopGoogleSheetSettings";
 import ShopGoogleSheetTablesButton from "@/app/admin/settings/ShopGoogleSheetTablesButton";
+import OnlineStorefrontSettingsPanel from "@/app/admin/settings/OnlineStorefrontSettings";
 import {
   DEFAULT_LIST_RECEIPT_PRINT_SETTINGS,
   DEFAULT_SALE_RECEIPT_PRINT_SETTINGS,
@@ -82,6 +87,7 @@ import {
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import SavingsOutlinedIcon from "@mui/icons-material/SavingsOutlined";
 import PaletteOutlinedIcon from "@mui/icons-material/PaletteOutlined";
+import StorefrontOutlinedIcon from "@mui/icons-material/StorefrontOutlined";
 import ReservMenuThemeSettings from "@/app/admin/settings/ReservMenuThemeSettings";
 import SadrScaleSettings from "@/app/admin/settings/SadrScaleSettings";
 import CardReaderSettings from "@/app/admin/settings/CardReaderSettings";
@@ -302,6 +308,8 @@ export default function SettingsPage() {
   const [loyaltyLoading, setLoyaltyLoading] = useState(false);
   const [shopCardOpen, setShopCardOpen] = useState(false);
   const [menuThemeOpen, setMenuThemeOpen] = useState(false);
+  const [storefrontOpen, setStorefrontOpen] = useState(false);
+  const [shopAccessActive, setShopAccessActive] = useState(false);
   const [shopCardLoaded, setShopCardLoaded] = useState(false);
   const [shopCardLoading, setShopCardLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -384,6 +392,14 @@ export default function SettingsPage() {
       setProformaEnabled(Boolean(settings.proformaEnabled));
       setInvoiceProductEntryEnabled(Boolean(settings.invoiceProductEntryEnabled));
       setRestaurantCafeEnabled(readShopFeatures().restaurant_cafe_enabled);
+      try {
+        const rawUser = localStorage.getItem("user");
+        const user = rawUser ? (JSON.parse(rawUser) as Record<string, unknown>) : null;
+        const access = getShopAccessFromUser(user);
+        setShopAccessActive(!!access && !isShopAccessExpiredInfo(access));
+      } catch {
+        setShopAccessActive(false);
+      }
       setMenuTableOrdersPopupEnabled(settings.menuTableOrdersPopupEnabled);
     };
     syncPosSettings();
@@ -1638,6 +1654,23 @@ export default function SettingsPage() {
         }
       >
         {menuThemeOpen ? <ReservMenuThemeSettings /> : null}
+      </SettingsSectionCard>
+      ) : null}
+
+      {shopAccessActive ? (
+      <SettingsSectionCard
+        icon={<StorefrontOutlinedIcon sx={{ fontSize: 18 }} />}
+        title="ظاهر فروشگاه آنلاین"
+        hint="لوگو، رنگ، بنر، ترتیب بلوک‌ها و متن اعتماد ویترین"
+        action={
+          storefrontOpen ? undefined : (
+            <Button size="small" variant="outlined" onClick={() => setStorefrontOpen(true)} sx={viewBtnSx}>
+              مشاهده
+            </Button>
+          )
+        }
+      >
+        {storefrontOpen ? <OnlineStorefrontSettingsPanel /> : null}
       </SettingsSectionCard>
       ) : null}
 
