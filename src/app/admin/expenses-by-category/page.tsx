@@ -1,30 +1,33 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Box,
   Typography,
   Paper,
   CircularProgress,
   IconButton,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
   Button,
   Collapse,
   Chip,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
 } from "@mui/material";
-import FilterListIcon from "@mui/icons-material/FilterList";
-import DeleteIcon from "@mui/icons-material/Delete";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
+import PrintIcon from "@mui/icons-material/Print";
+import FileDownloadIcon from "@mui/icons-material/FileDownload";
+import ClearIcon from "@mui/icons-material/Clear";
 import DatePicker from "react-multi-date-picker";
 import persian from "react-date-object/calendars/persian";
 import persian_fa from "react-date-object/locales/persian_fa";
 import "react-multi-date-picker/styles/layouts/mobile.css";
-import BottomSheetModal from "@/app/coponent/BottomSheetModal";
 import { apiRequestError } from "@/app/lib/apiRequestError/client";
 import tokenCode from "@/app/coponent/tokenCode";
 import { toast, ToastContainer } from "react-toastify";
@@ -81,6 +84,27 @@ const FILTER_LABEL: Record<FilterMode, string> = {
   year: "سال جاری",
   range: "بازه انتخابی",
 };
+
+const FILTER_CHIPS: Array<{ value: FilterMode; label: string }> = [
+  { value: "today", label: "روزانه" },
+  { value: "week", label: "هفتگی" },
+  { value: "month", label: "ماهانه" },
+  { value: "year", label: "سالانه" },
+];
+
+function flattenTree(
+  nodes: CategoryNode[],
+  depth = 0,
+): Array<CategoryNode & { depth: number }> {
+  const rows: Array<CategoryNode & { depth: number }> = [];
+  for (const node of nodes) {
+    rows.push({ ...node, depth });
+    if (node.children?.length) {
+      rows.push(...flattenTree(node.children, depth + 1));
+    }
+  }
+  return rows;
+}
 
 function CategoryTreeNode({
   node,
@@ -184,17 +208,154 @@ function CategoryTreeNode({
   );
 }
 
+function printCategoryReport(input: {
+  periodLabel: string;
+  categoryLabel: string;
+  totalAmount: number;
+  totalCount: number;
+  treeRows: Array<CategoryNode & { depth: number }>;
+  items: CategoryExpenseItem[];
+}) {
+  const treeHtml = input.treeRows
+    .map((row) => {
+      const pad = "&nbsp;".repeat(row.depth * 4);
+      return `<tr>
+        <td style="text-align:right">${pad}${row.code} — ${row.name}</td>
+        <td style="text-align:center">${formatNumber(row.count)}</td>
+        <td style="text-align:left">${formatNumber(row.amount)}</td>
+      </tr>`;
+    })
+    .join("");
+
+  const itemsHtml = input.items
+    .map(
+      (item) => `<tr>
+        <td style="text-align:right">${item.date || ""}</td>
+        <td style="text-align:right">${item.title || ""}</td>
+        <td style="text-align:right">${item.accounting_account ? `${item.accounting_account.code} — ${item.accounting_account.name}` : ""}</td>
+        <td style="text-align:right">${item.user_name || ""}</td>
+        <td style="text-align:left">${formatNumber(item.amount)}</td>
+      </tr>`,
+    )
+    .join("");
+
+  const html = `<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <title>گزارش هزینه به تفکیک دسته</title>
+  <style>
+    body { font-family: Tahoma, Arial, sans-serif; color: #111; padding: 16px; }
+    h1 { font-size: 18px; margin: 0 0 8px; }
+    .meta { font-size: 12px; color: #555; margin-bottom: 16px; }
+    .summary { display: flex; gap: 24px; margin-bottom: 18px; font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px; }
+    th, td { border: 1px solid #ccc; padding: 6px 8px; }
+    th { background: #f3f5f8; }
+    h2 { font-size: 14px; margin: 18px 0 8px; }
+    @media print { body { padding: 0; } }
+  </style>
+</head>
+<body>
+  <h1>گزارش هزینه به تفکیک دسته</h1>
+  <div class="meta">بازه: ${input.periodLabel} · دسته: ${input.categoryLabel} · فقط هزینه‌های جاری</div>
+  <div class="summary">
+    <div>جمع مبلغ: <strong>${formatNumber(input.totalAmount)}</strong> تومان</div>
+    <div>تعداد: <strong>${formatNumber(input.totalCount)}</strong> مورد</div>
+  </div>
+  <h2>گزارش دسته‌بندی</h2>
+  <table>
+    <thead><tr><th>دسته</th><th>تعداد</th><th>مبلغ (تومان)</th></tr></thead>
+    <tbody>${treeHtml || `<tr><td colspan="3" style="text-align:center">موردی نیست</td></tr>`}</tbody>
+  </table>
+  <h2>لیست هزینه‌ها</h2>
+  <table>
+    <thead><tr><th>تاریخ</th><th>عنوان</th><th>حساب</th><th>ثبت‌کننده</th><th>مبلغ (تومان)</th></tr></thead>
+    <tbody>${itemsHtml || `<tr><td colspan="5" style="text-align:center">موردی نیست</td></tr>`}</tbody>
+  </table>
+</body>
+</html>`;
+
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  iframe.onload = () => {
+    const frameWindow = iframe.contentWindow;
+    if (!frameWindow) return;
+    frameWindow.focus();
+    frameWindow.print();
+    setTimeout(() => iframe.remove(), 1000);
+  };
+  document.body.appendChild(iframe);
+  iframe.srcdoc = html;
+}
+
+async function downloadCategoryExcel(input: {
+  periodLabel: string;
+  categoryLabel: string;
+  totalAmount: number;
+  totalCount: number;
+  treeRows: Array<CategoryNode & { depth: number }>;
+  items: CategoryExpenseItem[];
+}) {
+  const XLSX = await import("xlsx");
+
+  const summaryRows: Array<Array<string | number>> = [
+    ["گزارش هزینه به تفکیک دسته"],
+    ["بازه", input.periodLabel],
+    ["دسته", input.categoryLabel],
+    ["جمع مبلغ (تومان)", Math.round(input.totalAmount)],
+    ["تعداد", input.totalCount],
+    [],
+    ["کد", "نام دسته", "سطح", "تعداد", "مبلغ (تومان)"],
+  ];
+  for (const row of input.treeRows) {
+    summaryRows.push([
+      row.code,
+      `${"  ".repeat(row.depth)}${row.name}`,
+      row.level,
+      row.count,
+      Math.round(row.amount),
+    ]);
+  }
+
+  const itemRows: Array<Array<string | number>> = [
+    ["تاریخ", "عنوان", "کد حساب", "نام حساب", "ثبت‌کننده", "مبلغ (تومان)"],
+  ];
+  for (const item of input.items) {
+    itemRows.push([
+      item.date || "",
+      item.title || "",
+      item.accounting_account?.code || "",
+      item.accounting_account?.name || "",
+      item.user_name || "",
+      Math.round(item.amount),
+    ]);
+  }
+
+  const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows);
+  summarySheet["!cols"] = [{ wch: 12 }, { wch: 28 }, { wch: 12 }, { wch: 10 }, { wch: 16 }];
+  const itemsSheet = XLSX.utils.aoa_to_sheet(itemRows);
+  itemsSheet["!cols"] = [{ wch: 12 }, { wch: 28 }, { wch: 10 }, { wch: 22 }, { wch: 16 }, { wch: 14 }];
+
+  const book = XLSX.utils.book_new();
+  book.Workbook = { Views: [{ RTL: true }] };
+  XLSX.utils.book_append_sheet(book, summarySheet, "گزارش دسته");
+  XLSX.utils.book_append_sheet(book, itemsSheet, "لیست هزینه‌ها");
+  XLSX.writeFile(book, `هزینه-تفکیک-دسته-${Date.now()}.xlsx`);
+}
+
 export default function ExpensesByCategoryPage() {
   const [loading, setLoading] = useState(true);
-  const [detailLoading, setDetailLoading] = useState(false);
   const [data, setData] = useState<CategoryReport | null>(null);
   const [filterMode, setFilterMode] = useState<FilterMode>("month");
   const [dateRange, setDateRange] = useState<any[]>([]);
-  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [selectedNode, setSelectedNode] = useState<CategoryNode | null>(null);
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [items, setItems] = useState<CategoryExpenseItem[]>([]);
-  const [selectedMeta, setSelectedMeta] = useState<CategoryReport["selected_account"]>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
 
   const buildUrl = useCallback(
     (accountId?: number | null) => {
@@ -214,7 +375,7 @@ export default function ExpensesByCategoryPage() {
           `filter=range&from_date=${encodeURIComponent(JSON.stringify(from_date))}&to_date=${encodeURIComponent(JSON.stringify(to_date))}`,
         );
       } else {
-        params.push(`filter=${filterMode}`);
+        params.push(`filter=${filterMode === "range" ? "month" : filterMode}`);
       }
       if (accountId) {
         params.push(`account_id=${accountId}`);
@@ -228,7 +389,8 @@ export default function ExpensesByCategoryPage() {
     setLoading(true);
     const token = tokenCode();
     try {
-      const res = await apiRequestError("Get", {}, {}, buildUrl(), true, true, token);
+      const url = buildUrl(selectedNode?.id ?? null);
+      const res = await apiRequestError("Get", {}, {}, url, true, true, token);
       if (res.hasError) {
         let message = "خطا در دریافت گزارش";
         try {
@@ -239,112 +401,91 @@ export default function ExpensesByCategoryPage() {
         toast.error(message);
         return;
       }
-      setData(res as CategoryReport);
-      setSelectedNode(null);
-      setItems([]);
-      setSelectedMeta(null);
-      setDetailOpen(false);
+      const report = res as CategoryReport;
+      setData(report);
+      if (selectedNode && report.selected_account) {
+        setSelectedNode((prev) =>
+          prev
+            ? {
+                ...prev,
+                amount: report.selected_account!.amount,
+                count: report.selected_account!.count,
+                name: report.selected_account!.name,
+                code: report.selected_account!.code,
+              }
+            : prev,
+        );
+      }
     } catch {
       toast.error("خطا در دریافت گزارش دسته‌بندی هزینه‌ها");
     } finally {
       setLoading(false);
     }
-  }, [buildUrl]);
+  }, [buildUrl, selectedNode?.id]);
 
   useEffect(() => {
-    fetchReport();
+    void fetchReport();
   }, [fetchReport]);
 
-  const handleSelectNode = async (node: CategoryNode) => {
-    setSelectedNode(node);
-    setDetailOpen(true);
-    setDetailLoading(true);
-    const token = tokenCode();
-    try {
-      const res = await apiRequestError("Get", {}, {}, buildUrl(node.id), true, true, token);
-      if (res.hasError) {
-        toast.error("خطا در دریافت هزینه‌های این دسته");
-        return;
-      }
-      const report = res as CategoryReport;
-      setItems(report.items || []);
-      setSelectedMeta(report.selected_account);
-    } catch {
-      toast.error("خطا در دریافت هزینه‌های این دسته");
-    } finally {
-      setDetailLoading(false);
-    }
+  const handleSelectNode = (node: CategoryNode) => {
+    setSelectedNode((prev) => (prev?.id === node.id ? null : node));
+    setTimeout(() => {
+      listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
   };
 
-  const handleClearFilters = () => {
+  const handleClearCategory = () => setSelectedNode(null);
+
+  const handleResetPeriod = () => {
     setDateRange([]);
     setFilterMode("month");
-    setFilterSheetOpen(false);
+    setSelectedNode(null);
   };
 
-  const hasActiveFilters = filterMode !== "month" || dateRange.length > 0;
-
-  const FilterComponent = () => (
-    <Box sx={{ padding: "16px" }}>
-      <Box sx={{ marginBottom: "16px" }}>
-        <Typography sx={{ color: "#000", fontSize: "14px", mb: 1 }}>فیلتر بر اساس تاریخ (از - تا):</Typography>
-        <DatePicker
-          range
-          value={dateRange}
-          onChange={(dates: any) => {
-            setDateRange(dates || []);
-            if (dates?.length === 2) setFilterMode("range");
-          }}
-          calendar={persian}
-          locale={persian_fa}
-          calendarPosition="bottom-center"
-          style={{
-            height: "50px",
-            borderRadius: "15px",
-            backgroundColor: "var(--admin-surface)",
-            width: "100%",
-          }}
-          className="rmdp-mobile"
-          placeholder="انتخاب بازه تاریخ"
-        />
-      </Box>
-
-      <Box sx={{ marginTop: "16px" }}>
-        <Typography sx={{ color: "#000", marginBottom: "8px", fontSize: "14px" }}>فیلتر زمانی:</Typography>
-        <RadioGroup
-          row
-          value={filterMode === "range" ? "month" : filterMode}
-          onChange={(e) => {
-            setFilterMode(e.target.value as FilterMode);
-            setDateRange([]);
-          }}
-          sx={{ justifyContent: "space-around", flexWrap: "wrap", "& .MuiFormControlLabel-root": { margin: 0 } }}
-        >
-          <FormControlLabel value="today" control={<Radio sx={{ color: "#1f9ad1", "&.Mui-checked": { color: "#1f9ad1" } }} />} label="روزانه" sx={{ color: "#000" }} disabled={dateRange.length === 2} />
-          <FormControlLabel value="week" control={<Radio sx={{ color: "#1f9ad1", "&.Mui-checked": { color: "#1f9ad1" } }} />} label="هفتگی" sx={{ color: "#000" }} disabled={dateRange.length === 2} />
-          <FormControlLabel value="month" control={<Radio sx={{ color: "#1f9ad1", "&.Mui-checked": { color: "#1f9ad1" } }} />} label="ماهانه" sx={{ color: "#000" }} disabled={dateRange.length === 2} />
-          <FormControlLabel value="year" control={<Radio sx={{ color: "#1f9ad1", "&.Mui-checked": { color: "#1f9ad1" } }} />} label="سالانه" sx={{ color: "#000" }} disabled={dateRange.length === 2} />
-        </RadioGroup>
-      </Box>
-
-      {hasActiveFilters && (
-        <Box sx={{ marginTop: "20px", display: "flex", justifyContent: "center" }}>
-          <Button
-            variant="outlined"
-            startIcon={<DeleteIcon />}
-            onClick={handleClearFilters}
-            sx={{
-              color: "var(--admin-error)",
-              borderColor: "var(--admin-error)",
-              "&:hover": { borderColor: "#ff6666", backgroundColor: "var(--admin-error-bg)" },
-            }}
-          >
-            بازگشت به ماه جاری
-          </Button>
-        </Box>
-      )}
-    </Box>
+  const treeRows = useMemo(() => flattenTree(data?.tree || []), [data?.tree]);
+  const items = data?.items || [];
+  const listTotal = useMemo(
+    () => items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0),
+    [items],
   );
+  const periodLabel =
+    filterMode === "range" && dateRange.length === 2
+      ? `${dateRange[0].year}/${dateRange[0].month.number}/${dateRange[0].day} تا ${dateRange[1].year}/${dateRange[1].month.number}/${dateRange[1].day}`
+      : FILTER_LABEL[filterMode];
+  const categoryLabel = selectedNode
+    ? `${selectedNode.code} — ${selectedNode.name}`
+    : "همه دسته‌ها";
+  const reportTotalAmount = selectedNode ? selectedNode.amount : data?.total_amount || 0;
+  const reportTotalCount = selectedNode ? selectedNode.count : data?.total_count || 0;
+
+  const handlePrint = () => {
+    if (!data) return;
+    printCategoryReport({
+      periodLabel,
+      categoryLabel,
+      totalAmount: reportTotalAmount,
+      totalCount: reportTotalCount,
+      treeRows,
+      items,
+    });
+  };
+
+  const handleExcel = async () => {
+    if (!data) return;
+    try {
+      await downloadCategoryExcel({
+        periodLabel,
+        categoryLabel,
+        totalAmount: reportTotalAmount,
+        totalCount: reportTotalCount,
+        treeRows,
+        items,
+      });
+      toast.success("فایل اکسل آماده شد");
+    } catch {
+      toast.error("خطا در ساخت فایل اکسل");
+    }
+  };
 
   return (
     <Box
@@ -357,33 +498,109 @@ export default function ExpensesByCategoryPage() {
         background: "var(--admin-bg-gradient)",
       }}
     >
-      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2, gap: 1 }}>
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2, gap: 1, flexWrap: "wrap" }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <AccountTreeIcon sx={{ color: "var(--admin-accent)", fontSize: 22 }} />
-          <Box>
-            <Typography sx={{ color: "var(--admin-text)", fontSize: 16, fontWeight: 700 }}>
-              هزینه به تفکیک دسته
-            </Typography>
-            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>
-              {FILTER_LABEL[filterMode]} · جاری
-            </Typography>
-          </Box>
+          <Typography sx={{ color: "var(--admin-text)", fontSize: 16, fontWeight: 700 }}>
+            هزینه به تفکیک دسته
+          </Typography>
         </Box>
-        <IconButton
-          onClick={() => setFilterSheetOpen(true)}
-          sx={{
-            bgcolor: hasActiveFilters ? "var(--admin-accent)" : "var(--admin-surface)",
-            color: hasActiveFilters ? "#fff" : "var(--admin-text)",
-            border: "1px solid var(--admin-border)",
-            "&:hover": { bgcolor: hasActiveFilters ? "var(--admin-accent-hover)" : "var(--admin-surface-alt)" },
-          }}
-        >
-          <FilterListIcon />
-        </IconButton>
+        <Box sx={{ display: "flex", gap: 1 }}>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<PrintIcon />}
+            onClick={handlePrint}
+            disabled={!data || loading}
+            sx={{ borderColor: "var(--admin-border)", color: "var(--admin-text)" }}
+          >
+            پرینت
+          </Button>
+          <Button
+            size="small"
+            variant="contained"
+            startIcon={<FileDownloadIcon />}
+            onClick={() => void handleExcel()}
+            disabled={!data || loading}
+            sx={{ bgcolor: "var(--admin-accent)", "&:hover": { bgcolor: "var(--admin-accent-hover)" } }}
+          >
+            اکسل
+          </Button>
+        </Box>
       </Box>
 
+      <Paper
+        elevation={0}
+        sx={{
+          p: 2,
+          mb: 2,
+          borderRadius: "14px",
+          bgcolor: "var(--admin-surface)",
+          border: "1px solid var(--admin-border)",
+        }}
+      >
+        <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: 14, mb: 1.25 }}>
+          فیلتر
+        </Typography>
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 1.5 }}>
+          {FILTER_CHIPS.map((chip) => {
+            const active = filterMode === chip.value && dateRange.length !== 2;
+            return (
+              <Chip
+                key={chip.value}
+                label={chip.label}
+                onClick={() => {
+                  setFilterMode(chip.value);
+                  setDateRange([]);
+                }}
+                sx={{
+                  bgcolor: active ? "var(--admin-accent)" : "var(--admin-surface-alt)",
+                  color: active ? "#fff" : "var(--admin-text)",
+                  fontWeight: 600,
+                }}
+              />
+            );
+          })}
+          {(filterMode !== "month" || dateRange.length > 0 || selectedNode) && (
+            <Chip
+              icon={<ClearIcon sx={{ fontSize: "16px !important" }} />}
+              label="پاک کردن"
+              onClick={handleResetPeriod}
+              sx={{ bgcolor: "var(--admin-error-bg)", color: "var(--admin-error)", fontWeight: 600 }}
+            />
+          )}
+        </Box>
+        <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, mb: 0.75 }}>
+          بازه دلخواه:
+        </Typography>
+        <DatePicker
+          range
+          value={dateRange}
+          onChange={(dates: any) => {
+            setDateRange(dates || []);
+            if (dates?.length === 2) setFilterMode("range");
+          }}
+          calendar={persian}
+          locale={persian_fa}
+          calendarPosition="bottom-center"
+          style={{
+            height: "44px",
+            borderRadius: "12px",
+            backgroundColor: "var(--admin-surface-alt)",
+            width: "100%",
+            border: "1px solid var(--admin-border)",
+          }}
+          className="rmdp-mobile"
+          placeholder="از تاریخ — تا تاریخ"
+        />
+        <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, mt: 1 }}>
+          بازه فعال: {periodLabel}
+          {selectedNode ? ` · دسته انتخاب‌شده: ${categoryLabel}` : ""}
+        </Typography>
+      </Paper>
+
       {loading ? (
-        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "50vh" }}>
+        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "40vh" }}>
           <CircularProgress sx={{ color: "var(--admin-accent)" }} />
         </Box>
       ) : data ? (
@@ -402,20 +619,15 @@ export default function ExpensesByCategoryPage() {
             }}
           >
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.25 }}>
-              <Box
-                sx={{
-                  bgcolor: "rgba(255,255,255,0.2)",
-                  borderRadius: "10px",
-                  p: 1,
-                  display: "flex",
-                }}
-              >
+              <Box sx={{ bgcolor: "rgba(255,255,255,0.2)", borderRadius: "10px", p: 1, display: "flex" }}>
                 <AttachMoneyIcon sx={{ color: "#fff" }} />
               </Box>
               <Box>
-                <Typography sx={{ color: "#fff", fontSize: 13, opacity: 0.9 }}>جمع هزینه‌ها</Typography>
+                <Typography sx={{ color: "#fff", fontSize: 13, opacity: 0.9 }}>
+                  {selectedNode ? `جمع ${selectedNode.name}` : "جمع کل هزینه‌ها"}
+                </Typography>
                 <Typography sx={{ color: "#fff", fontSize: 22, fontWeight: 800 }}>
-                  {formatNumber(data.total_amount)}
+                  {formatNumber(reportTotalAmount)}
                   <Box component="span" sx={{ fontSize: 13, fontWeight: 500, mr: 0.75 }}>
                     تومان
                   </Box>
@@ -423,7 +635,7 @@ export default function ExpensesByCategoryPage() {
               </Box>
             </Box>
             <Chip
-              label={`${formatNumber(data.total_count)} مورد`}
+              label={`${formatNumber(reportTotalCount)} مورد`}
               sx={{ bgcolor: "rgba(255,255,255,0.2)", color: "#fff", fontWeight: 700 }}
             />
           </Paper>
@@ -432,16 +644,17 @@ export default function ExpensesByCategoryPage() {
             elevation={0}
             sx={{
               p: 2,
+              mb: 2,
               borderRadius: "14px",
               bgcolor: "var(--admin-surface)",
               border: "1px solid var(--admin-border)",
             }}
           >
-            <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: 15, mb: 1.5 }}>
-              درخت دسته‌بندی
+            <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: 15, mb: 0.5 }}>
+              گزارش دسته‌بندی
             </Typography>
             <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, mb: 1.5 }}>
-              روی هر دسته کلیک کنید تا هزینه‌های همان بخش دیده شود.
+              روی هر دسته کلیک کنید تا لیست هزینه‌های همان بخش پایین صفحه فیلتر شود.
             </Typography>
 
             {data.tree.length === 0 ? (
@@ -460,80 +673,88 @@ export default function ExpensesByCategoryPage() {
               ))
             )}
           </Paper>
+
+          <Paper
+            ref={listRef}
+            elevation={0}
+            sx={{
+              p: 2,
+              borderRadius: "14px",
+              bgcolor: "var(--admin-surface)",
+              border: "1px solid var(--admin-border)",
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, mb: 1.5, flexWrap: "wrap" }}>
+              <Box>
+                <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: 15 }}>
+                  لیست هزینه‌ها
+                </Typography>
+                <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>
+                  {categoryLabel} · جمع لیست: {formatNumber(listTotal)} تومان
+                </Typography>
+              </Box>
+              {selectedNode && (
+                <Button size="small" onClick={handleClearCategory} sx={{ color: "var(--admin-accent)" }}>
+                  نمایش همه
+                </Button>
+              )}
+            </Box>
+
+            {items.length === 0 ? (
+              <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 13, py: 3, textAlign: "center" }}>
+                هزینه‌ای برای نمایش نیست
+              </Typography>
+            ) : (
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ color: "var(--admin-text)", fontWeight: 700 }}>تاریخ</TableCell>
+                      <TableCell sx={{ color: "var(--admin-text)", fontWeight: 700 }}>عنوان</TableCell>
+                      <TableCell sx={{ color: "var(--admin-text)", fontWeight: 700 }}>حساب</TableCell>
+                      <TableCell sx={{ color: "var(--admin-text)", fontWeight: 700 }}>ثبت‌کننده</TableCell>
+                      <TableCell align="left" sx={{ color: "var(--admin-text)", fontWeight: 700 }}>
+                        مبلغ
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {items.map((item) => (
+                      <TableRow key={item.id} hover>
+                        <TableCell sx={{ color: "var(--admin-text)", whiteSpace: "nowrap" }}>{item.date}</TableCell>
+                        <TableCell sx={{ color: "var(--admin-text)" }}>{item.title}</TableCell>
+                        <TableCell sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>
+                          {item.accounting_account
+                            ? `${item.accounting_account.code} — ${item.accounting_account.name}`
+                            : "—"}
+                        </TableCell>
+                        <TableCell sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>
+                          {item.user_name || "—"}
+                        </TableCell>
+                        <TableCell align="left" sx={{ color: "#e53935", fontWeight: 700, whiteSpace: "nowrap" }}>
+                          {formatNumber(item.amount)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow>
+                      <TableCell colSpan={4} sx={{ color: "var(--admin-text)", fontWeight: 800 }}>
+                        مجموع
+                      </TableCell>
+                      <TableCell align="left" sx={{ color: "var(--admin-accent)", fontWeight: 800, whiteSpace: "nowrap" }}>
+                        {formatNumber(listTotal)}
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </Paper>
         </>
       ) : (
         <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "40vh" }}>
           <Typography sx={{ color: "var(--admin-text)", fontSize: 16 }}>داده‌ای برای نمایش وجود ندارد</Typography>
         </Box>
       )}
-
-      <BottomSheetModal open={filterSheetOpen} onClose={() => setFilterSheetOpen(false)}>
-        <FilterComponent />
-      </BottomSheetModal>
-
-      <BottomSheetModal open={detailOpen} onClose={() => setDetailOpen(false)}>
-        <Box sx={{ p: 2, pb: 4 }}>
-          <Typography sx={{ color: "#000", fontWeight: 800, fontSize: 15, mb: 0.5 }}>
-            {selectedMeta?.name || selectedNode?.name || "هزینه‌های دسته"}
-          </Typography>
-          {(selectedMeta?.code || selectedNode?.code) && (
-            <Typography sx={{ color: "#666", fontSize: 12, mb: 1.5 }}>
-              کد {selectedMeta?.code || selectedNode?.code}
-              {" · "}
-              {formatNumber(selectedMeta?.amount ?? selectedNode?.amount ?? 0)} تومان
-              {" · "}
-              {formatNumber(selectedMeta?.count ?? selectedNode?.count ?? 0)} مورد
-            </Typography>
-          )}
-
-          {detailLoading ? (
-            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-              <CircularProgress size={28} sx={{ color: "#1f9ad1" }} />
-            </Box>
-          ) : items.length === 0 ? (
-            <Typography sx={{ color: "#666", fontSize: 13, textAlign: "center", py: 3 }}>
-              هزینه‌ای در این دسته نیست
-            </Typography>
-          ) : (
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              {items.map((item) => (
-                <Box
-                  key={item.id}
-                  sx={{
-                    p: 1.5,
-                    borderRadius: "12px",
-                    bgcolor: "#f7f9fc",
-                    border: "1px solid #e3e8f0",
-                  }}
-                >
-                  <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1, mb: 0.5 }}>
-                    <Typography sx={{ color: "#111", fontWeight: 700, fontSize: 13, flex: 1 }}>
-                      {item.title}
-                    </Typography>
-                    <Typography sx={{ color: "#e53935", fontWeight: 800, fontSize: 13, whiteSpace: "nowrap" }}>
-                      {formatNumber(item.amount)}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, alignItems: "center" }}>
-                    <Typography sx={{ color: "#666", fontSize: 11 }}>{item.date}</Typography>
-                    {item.type && (
-                      <Chip label={item.type} size="small" sx={{ height: 20, fontSize: 10, bgcolor: "#e8f4fb" }} />
-                    )}
-                    {item.user_name && (
-                      <Typography sx={{ color: "#666", fontSize: 11 }}>{item.user_name}</Typography>
-                    )}
-                    {item.accounting_account && (
-                      <Typography sx={{ color: "#888", fontSize: 11 }}>
-                        {item.accounting_account.code} · {item.accounting_account.name}
-                      </Typography>
-                    )}
-                  </Box>
-                </Box>
-              ))}
-            </Box>
-          )}
-        </Box>
-      </BottomSheetModal>
 
       <ToastContainer autoClose={3000} style={{ marginBottom: "76px", borderRadius: "15px" }} position="bottom-right" />
     </Box>

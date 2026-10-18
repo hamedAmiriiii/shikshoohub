@@ -430,7 +430,8 @@ export default function ExpensesPage() {
   }, [fetchExpenses]);
 
   useEffect(() => {
-    if (!openForm || !readShopFeatures().accounting_enabled) {
+    if (!readShopFeatures().accounting_enabled) {
+      setExpenseAccounts([]);
       return;
     }
     let cancelled = false;
@@ -481,7 +482,8 @@ export default function ExpensesPage() {
 
   const openEdit = (expense: Expense) => {
     setEditingExpense(expense);
-    setAccountingAccountId(expense.accounting_account_id ?? expense.accounting_account?.id ?? null);
+    const linkedId = expense.accounting_account_id ?? expense.accounting_account?.id ?? null;
+    setAccountingAccountId(linkedId != null ? Number(linkedId) : null);
     setTitle(expense.title || "");
     setAmount(formatNumber(expenseAmount(expense)));
     setUserName(expense.user_name || "");
@@ -530,14 +532,19 @@ export default function ExpensesPage() {
       toast.error("لطفاً وارد شوید");
       return;
     }
+    const accountingEnabled = readShopFeatures().accounting_enabled;
+    if (accountingEnabled && !accountingAccountId) {
+      toast.error("حساب درخت هزینه را انتخاب کنید");
+      return;
+    }
     const payload: Record<string, unknown> = {
       title: title.trim(),
       amount: amountNum,
       type: "جاری",
       user_name: userName.trim() || undefined,
     };
-    if (readShopFeatures().accounting_enabled) {
-      payload.accounting_account_id = accountingAccountId;
+    if (accountingEnabled) {
+      payload.accounting_account_id = Number(accountingAccountId);
     }
     Object.assign(payload, beneficiaryPayload(beneficiaryId));
     const payment = buildDocumentPaymentPayload(paymentForm, amountNum);
@@ -549,9 +556,10 @@ export default function ExpensesPage() {
 
     setSaving(true);
     try {
+      const body = { body: JSON.stringify(payload) };
       const res = editingExpense
-        ? await FetchWithJwtClient("PUT", `/api/expenses/${editingExpense.id}`, payload)
-        : await FetchWithJwtClient("POST", "/api/expenses", payload);
+        ? await FetchWithJwtClient("PUT", `/api/expenses/${editingExpense.id}`, token, {}, body)
+        : await FetchWithJwtClient("POST", "/api/expenses", token, {}, body);
       if (!res || res.hasError) {
         toast.error(getApiErrorMessage(res, editingExpense ? "خطا در ویرایش هزینه" : "خطا در ثبت هزینه"));
         return;
@@ -987,48 +995,61 @@ export default function ExpensesPage() {
           <DialogContent>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, mt: 0.5 }}>
               <TextField size="small" label="عنوان" value={title} onChange={(e) => setTitle(e.target.value)} fullWidth sx={fieldSx} />
-              {readShopFeatures().accounting_enabled && (expenseAccounts.length > 0 || accountingAccountId) ? (
+              {readShopFeatures().accounting_enabled ? (
                 <Autocomplete
-                  options={
-                    accountingAccountId &&
-                    !expenseAccounts.some((item) => item.id === accountingAccountId) &&
-                    editingExpense?.accounting_account?.id === accountingAccountId
-                      ? [
-                          {
-                            id: editingExpense.accounting_account.id,
-                            code: editingExpense.accounting_account.code || "",
-                            name: editingExpense.accounting_account.name || "",
-                          },
-                          ...expenseAccounts,
-                        ]
-                      : expenseAccounts
-                  }
-                  value={
-                    [
-                      ...(editingExpense?.accounting_account?.id === accountingAccountId &&
-                      editingExpense.accounting_account
+                  options={(() => {
+                    const extra =
+                      accountingAccountId &&
+                      editingExpense?.accounting_account &&
+                      Number(editingExpense.accounting_account.id) === Number(accountingAccountId) &&
+                      !expenseAccounts.some((item) => Number(item.id) === Number(accountingAccountId))
                         ? [
                             {
-                              id: editingExpense.accounting_account.id,
+                              id: Number(editingExpense.accounting_account.id),
                               code: editingExpense.accounting_account.code || "",
                               name: editingExpense.accounting_account.name || "",
                             },
                           ]
-                        : []),
-                      ...expenseAccounts,
-                    ].find((item) => item.id === accountingAccountId) ?? null
+                        : [];
+                    return [...extra, ...expenseAccounts];
+                  })()}
+                  value={
+                    (() => {
+                      if (accountingAccountId == null) return null;
+                      const fromList = expenseAccounts.find(
+                        (item) => Number(item.id) === Number(accountingAccountId),
+                      );
+                      if (fromList) return fromList;
+                      if (
+                        editingExpense?.accounting_account &&
+                        Number(editingExpense.accounting_account.id) === Number(accountingAccountId)
+                      ) {
+                        return {
+                          id: Number(editingExpense.accounting_account.id),
+                          code: editingExpense.accounting_account.code || "",
+                          name: editingExpense.accounting_account.name || "",
+                        };
+                      }
+                      return null;
+                    })()
                   }
-                  onChange={(_event, option) => setAccountingAccountId(option?.id ?? null)}
+                  onChange={(_event, option) =>
+                    setAccountingAccountId(option?.id != null ? Number(option.id) : null)
+                  }
                   getOptionLabel={(option) =>
                     option.code ? `${option.code} — ${option.name}` : option.name
                   }
-                  isOptionEqualToValue={(option, value) => option.id === value.id}
-                  noOptionsText="حساب هزینه‌ای در درخت نیست"
+                  isOptionEqualToValue={(option, value) => Number(option.id) === Number(value.id)}
+                  noOptionsText={
+                    expenseAccounts.length === 0 ? "در حال بارگذاری حساب‌ها..." : "حساب هزینه‌ای در درخت نیست"
+                  }
                   renderInput={(params) => (
                     <TextField
                       {...params}
                       size="small"
-                      label="حساب درخت (اختیاری)"
+                      required
+                      label="حساب درخت"
+                      helperText="مثلاً کرایه مغازه، حقوق، هزینه جاری"
                       sx={fieldSx}
                     />
                   )}
