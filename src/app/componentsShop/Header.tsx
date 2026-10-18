@@ -16,6 +16,7 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import { useTableOrdersPending } from "@/app/admin/table-orders/TableOrdersPendingProvider";
+import FinanceRemindersBell from "@/app/admin/finance-reminders/FinanceRemindersBell";
 import MenuIcon from "@mui/icons-material/Menu";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import PersonIcon from "@mui/icons-material/Person";
@@ -53,6 +54,7 @@ import AdminHamburgerSidebar, {
 } from "@/app/admin/AdminHamburgerSidebar";
 import { ADMIN_MENU_CART_WIDTH_VAR } from "@/app/admin/adminMenuCartLayout";
 import { useAdminTheme } from "@/app/admin/theme/useAdminTheme";
+import FinanceRemindersBell from "@/app/admin/finance-reminders/FinanceRemindersBell";
 
 function lastPhoneDigits(phone: string, count = 4): string {
   const digits = phone.replace(/\D/g, "");
@@ -757,6 +759,7 @@ export default function Header({
                   open={changePasswordOpen}
                   onClose={() => setChangePasswordOpen(false)}
                 />
+                <FinanceRemindersBell />
                 <IconButton
                   onClick={() => window.dispatchEvent(new Event(WEBINO_CHATBOT_TOGGLE_EVENT))}
                   aria-label="دستیار وبینو"

@@ -7,6 +7,7 @@ import AdminOnboardingProvider from './onboarding/AdminOnboardingProvider';
 import TableOrdersPendingProvider from './table-orders/TableOrdersPendingProvider';
 import ServiceRequestsPendingProvider from './shop-services/ServiceRequestsPendingProvider';
 import TablePagersPendingProvider from './table-pagers/TablePagersPendingProvider';
+import FinanceRemindersProvider from './finance-reminders/FinanceRemindersProvider';
 import AdminTablePagerPopup from './table-pagers/AdminTablePagerPopup';
 import './theme/admin-theme.css';
 import './theme/admin-pos-fullscreen.css';
@@ -259,6 +260,7 @@ export default function ShikshooLayout({
         <TableOrdersPendingProvider>
         <ServiceRequestsPendingProvider>
         <TablePagersPendingProvider>
+        <FinanceRemindersProvider>
         <Box
           className="admin-app"
           sx={{
@@ -306,6 +308,7 @@ export default function ShikshooLayout({
           </>
         )}
         </Box>
+        </FinanceRemindersProvider>
         </TablePagersPendingProvider>
         </ServiceRequestsPendingProvider>
         </TableOrdersPendingProvider>

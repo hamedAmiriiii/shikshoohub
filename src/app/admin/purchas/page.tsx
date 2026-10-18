@@ -184,12 +184,65 @@ export default function ListPurches() {
             },
             {
                 label: "مبلغ",
-                field: (item: any) =>
-                    item?.total_amount != null ? `${formatNumber(item.total_amount)} تومان` : "—",
+                field: (item: any) => {
+                    const fullyReturned =
+                        Boolean(item?.is_fully_returned) ||
+                        (Number(item?.item_returns_count || 0) > 0 && Number(item?.total_amount || 0) <= 0.02);
+                    const amount = fullyReturned
+                        ? Number(item?.returned_sale_total || item?.total_amount || 0)
+                        : item?.total_amount;
+                    if (amount == null) return "—";
+                    return (
+                        <Box
+                            component="span"
+                            sx={{
+                                color: fullyReturned ? "#c62828" : "inherit",
+                                textDecoration: fullyReturned ? "line-through" : "none",
+                                fontWeight: fullyReturned ? 700 : 400,
+                            }}
+                        >
+                            {`${formatNumber(amount)} تومان`}
+                        </Box>
+                    );
+                },
+            },
+            {
+                label: "وضعیت",
+                field: (item: any) => {
+                    const fullyReturned =
+                        Boolean(item?.is_fully_returned) ||
+                        (Number(item?.item_returns_count || 0) > 0 && Number(item?.total_amount || 0) <= 0.02);
+                    const hasReturns = Number(item?.item_returns_count || 0) > 0;
+                    if (fullyReturned) {
+                        return (
+                            <Box sx={{ fontSize: 12, color: "#c62828", fontWeight: 700, lineHeight: 1.4 }}>
+                                برگشت کامل
+                                {item?.last_return_user_name ? (
+                                    <Box component="span" sx={{ display: "block", fontWeight: 500, color: "var(--admin-text-muted)" }}>
+                                        توسط {item.last_return_user_name}
+                                    </Box>
+                                ) : null}
+                            </Box>
+                        );
+                    }
+                    if (hasReturns) {
+                        return (
+                            <Box sx={{ fontSize: 12, color: "#ef6c00", fontWeight: 700 }}>
+                                برگشتی دارد
+                            </Box>
+                        );
+                    }
+                    return "—";
+                },
+                width: "110px",
             },
             {
                 label: "اقلام",
                 field: (item: any) => {
+                    const fullyReturned =
+                        Boolean(item?.is_fully_returned) ||
+                        (Number(item?.item_returns_count || 0) > 0 && Number(item?.total_amount || 0) <= 0.02);
+                    if (fullyReturned) return "برگشت‌خورده";
                     const total = formatPurchaseItemsTotal(item);
                     const breakdown = formatPurchaseItemsBreakdown(item);
                     if (total === "—") return total;

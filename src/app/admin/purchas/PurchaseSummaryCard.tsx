@@ -47,8 +47,12 @@ export default function PurchaseSummaryCard({
   const isInstallment = data?.payment_type === "installment";
   const isCheque = data?.payment_type === "cheque";
   const hasReturns = purchaseHasReturns(data);
+  const fullyReturned = Boolean(data?.is_fully_returned) || (hasReturns && Number(data?.total_amount || 0) <= 0.02);
   const showDailyTicket = Boolean(readAdminPosSettings().showDailyTicketNumber);
   const dailyTicket = showDailyTicket ? dailyTicketFromRecord(data) : null;
+  const displayAmount = fullyReturned
+    ? Number(data?.returned_sale_total || 0)
+    : Number(data?.total_amount || 0);
 
   return (
     <Box
@@ -59,14 +63,15 @@ export default function PurchaseSummaryCard({
         gap: 1,
         width: "100%",
         direction: "rtl",
-        backgroundColor: "var(--admin-surface)",
-        border: "1px solid var(--admin-border)",
+        backgroundColor: fullyReturned ? "rgba(198,40,40,0.08)" : "var(--admin-surface)",
+        border: fullyReturned ? "1px solid rgba(198,40,40,0.35)" : "1px solid var(--admin-border)",
         borderRadius: "12px",
         px: 1.25,
         py: 1,
         mb: 1,
         cursor: "pointer",
-        "&:hover": { backgroundColor: "var(--admin-menu-hover)" },
+        opacity: fullyReturned ? 0.92 : 1,
+        "&:hover": { backgroundColor: fullyReturned ? "rgba(198,40,40,0.12)" : "var(--admin-menu-hover)" },
       }}
     >
       {rowNumber != null ? (
@@ -97,6 +102,11 @@ export default function PurchaseSummaryCard({
           {isCheque ? (
             <Chip label="چکی" size="small" sx={{ height: 18, fontSize: 10, backgroundColor: "var(--admin-online)", color: "var(--admin-on-accent)" }} />
           ) : null}
+          {fullyReturned ? (
+            <Chip label="برگشت کامل" size="small" sx={{ height: 18, fontSize: 10, backgroundColor: "#c62828", color: "#fff" }} />
+          ) : hasReturns ? (
+            <Chip label="برگشتی دارد" size="small" sx={{ height: 18, fontSize: 10, backgroundColor: "#ef6c00", color: "#fff" }} />
+          ) : null}
           <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)" }}>
             {formatDate(data?.created_at || data?.createdAt)}
           </Typography>
@@ -110,13 +120,29 @@ export default function PurchaseSummaryCard({
           <Typography sx={{ fontSize: 12, color: "var(--admin-text)" }} dir="ltr">
             {data?.phone || "بدون شماره"}
           </Typography>
-          <Typography sx={{ fontSize: 12, fontWeight: 700, color: "var(--admin-accent)" }}>
-            {data?.total_amount != null ? `${formatNumber(data.total_amount)} تومان` : "—"}
+          <Typography
+            sx={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: fullyReturned ? "#c62828" : "var(--admin-accent)",
+              textDecoration: fullyReturned ? "line-through" : "none",
+            }}
+          >
+            {displayAmount > 0 || data?.total_amount != null
+              ? `${formatNumber(fullyReturned ? displayAmount || data.total_amount : data.total_amount)} تومان`
+              : "—"}
           </Typography>
           <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)", lineHeight: 1.5 }}>
-            {itemsSummary} · {paymentLabel || "—"}
-            {data?.sold_by_name ? ` · ${data.sold_by_name}` : ""}
-            {hasReturns ? " · برگشتی دارد" : ""}
+            {fullyReturned ? "فاکتور برگشت‌خورده" : itemsSummary}
+            {" · "}
+            {paymentLabel || "—"}
+            {data?.sold_by_name ? ` · فروشنده: ${data.sold_by_name}` : ""}
+            {data?.last_return_user_name
+              ? ` · برگشت توسط: ${data.last_return_user_name}`
+              : hasReturns
+                ? " · برگشتی دارد"
+                : ""}
+            {data?.last_return_at ? ` · ${formatDate(data.last_return_at)}` : ""}
           </Typography>
         </Box>
       </Box>

@@ -731,7 +731,55 @@ export default function purchas(props: any) {
             {isInstallment && data?.installment_amount && (
               <PurchaseInfoRow label="مبلغ پرداخت شده" value={`${formatNumber(data.paid_amount)} تومان`} />
             )}
+            {(data?.is_fully_returned || (Number(data?.item_returns_count || 0) > 0 && Number(data?.total_amount || 0) <= 0.02)) && (
+              <PurchaseInfoRow
+                label="وضعیت"
+                value={`برگشت کامل${data?.last_return_user_name ? ` — توسط ${data.last_return_user_name}` : ""}${data?.last_return_at ? ` — ${data.last_return_at}` : ""}`}
+              />
+            )}
+            {Number(data?.returned_sale_total || 0) > 0 && (
+              <PurchaseInfoRow label="جمع مبلغ برگشتی" value={`${formatNumber(data.returned_sale_total)} تومان`} />
+            )}
           </Box>
+
+          {Array.isArray(data?.item_returns) && data.item_returns.length > 0 ? (
+            <Box className="mt-2" sx={{ mb: 1.5 }}>
+              <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: 13, mb: 1 }}>
+                سابقه برگشت
+              </Typography>
+              {data.item_returns.map((row: any) => (
+                <Box
+                  key={row.id}
+                  sx={{
+                    backgroundColor: "rgba(198,40,40,0.08)",
+                    border: "1px solid rgba(198,40,40,0.25)",
+                    borderRadius: "8px",
+                    padding: "8px",
+                    marginBottom: "8px",
+                  }}
+                >
+                  <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1, flexWrap: "wrap" }}>
+                    <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: 13 }}>
+                      {row.item_name || "قلم برگشتی"}
+                    </Typography>
+                    <Typography sx={{ color: "#c62828", fontWeight: 800, fontSize: 13 }}>
+                      {formatNumber(row.return_sale_total)} تومان
+                    </Typography>
+                  </Box>
+                  <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, mt: 0.5 }}>
+                    تعداد: {formatNumber(row.quantity)}
+                    {row.user_name ? ` · توسط ${row.user_name}` : ""}
+                    {row.created_at ? ` · ${row.created_at}` : ""}
+                  </Typography>
+                  {row.notes ? (
+                    <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, mt: 0.35 }}>
+                      توضیح: {row.notes}
+                    </Typography>
+                  ) : null}
+                </Box>
+              ))}
+            </Box>
+          ) : null}
           
           {/* نمایش لیست محصولات */}
           {data?.purchased_products && Array.isArray(data.purchased_products) && data.purchased_products.length > 0 && (
