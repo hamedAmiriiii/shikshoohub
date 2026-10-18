@@ -178,6 +178,7 @@ export default function ShopHomePage() {
           <HeroSlider key="hero_slider" banners={storefront.banners} primaryColor={primaryColor} />
         );
       case "categories":
+        if (storefront.show_category_row === false) return null;
         return (
           <CategoryRow
             key="categories"
@@ -204,6 +205,7 @@ export default function ShopHomePage() {
             loading={bestSellingLoading}
             shopPath={shopPath}
             primaryColor={primaryColor}
+            cardStyle={storefront.product_card_style}
           />
         );
       case "category_banners":
@@ -242,6 +244,7 @@ export default function ShopHomePage() {
                         shopPath={shopPath}
                         primaryColor={primaryColor}
                         priority={i < 4}
+                        cardStyle={storefront.product_card_style}
                       />
                     </Grid>
                   ))}
@@ -299,6 +302,7 @@ export default function ShopHomePage() {
                         shopPath={shopPath}
                         primaryColor={primaryColor}
                         priority={i < 4}
+                        cardStyle={storefront.product_card_style}
                       />
                     </Grid>
                   ))}

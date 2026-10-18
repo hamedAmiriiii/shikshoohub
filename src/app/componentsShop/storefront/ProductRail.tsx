@@ -4,6 +4,7 @@ import { Box, Typography, Skeleton, IconButton } from "@mui/material";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { useRef } from "react";
+import type { ProductCardStyle } from "@/app/lib/onlineStorefront";
 import ProductCard, { type ShopProduct } from "./ProductCard";
 
 type Props = {
@@ -13,6 +14,7 @@ type Props = {
   shopPath: (path?: string) => string;
   primaryColor?: string;
   onCartChange?: () => void;
+  cardStyle?: ProductCardStyle;
 };
 
 export default function ProductRail({
@@ -22,6 +24,7 @@ export default function ProductRail({
   shopPath,
   primaryColor,
   onCartChange,
+  cardStyle = "digikala",
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -79,6 +82,7 @@ export default function ProductRail({
                   onCartChange={onCartChange}
                   priority={i < 2}
                   compact
+                  cardStyle={cardStyle}
                 />
               </Box>
             ))}

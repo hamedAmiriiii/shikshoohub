@@ -21,12 +21,23 @@ export type StorefrontTrustItem = {
   icon?: "shipping" | "payment" | "verified" | "support" | "return" | "original" | string;
 };
 
+export const PRODUCT_CARD_STYLES = ["digikala", "soft"] as const;
+export type ProductCardStyle = (typeof PRODUCT_CARD_STYLES)[number];
+
+export const PRODUCT_CARD_STYLE_LABELS: Record<ProductCardStyle, string> = {
+  digikala: "دیجی‌کالا (تصویر مربع)",
+  soft: "نرم (کارت برجسته)",
+};
+
 export type OnlineStorefrontConfig = {
   logo_url: string | null;
   primary_color: string;
   banners: StorefrontBanner[];
   block_order: StorefrontBlockId[];
   hidden_category_ids: number[];
+  show_header_categories: boolean;
+  show_category_row: boolean;
+  product_card_style: ProductCardStyle;
   trust_items: StorefrontTrustItem[];
   logo_path?: string | null;
 };
@@ -49,6 +60,18 @@ export const BLOCK_LABELS: Record<StorefrontBlockId, string> = {
   latest: "جدیدترین‌ها",
 };
 
+function asBool(value: unknown, fallback: boolean): boolean {
+  if (value === undefined || value === null) return fallback;
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+  if (typeof value === "string") {
+    const s = value.trim().toLowerCase();
+    if (["1", "true", "yes", "on"].includes(s)) return true;
+    if (["0", "false", "no", "off"].includes(s)) return false;
+  }
+  return fallback;
+}
+
 export function defaultOnlineStorefront(): OnlineStorefrontConfig {
   return {
     logo_url: null,
@@ -56,6 +79,9 @@ export function defaultOnlineStorefront(): OnlineStorefrontConfig {
     banners: [],
     block_order: [...ONLINE_STOREFRONT_BLOCKS],
     hidden_category_ids: [],
+    show_header_categories: true,
+    show_category_row: true,
+    product_card_style: "digikala",
     trust_items: DEFAULT_TRUST_ITEMS.map((t) => ({ ...t })),
   };
 }
@@ -135,6 +161,13 @@ export function parseOnlineStorefront(raw: unknown): OnlineStorefrontConfig {
     }
   }
 
+  const cardRaw = typeof source.product_card_style === "string" ? source.product_card_style : "";
+  const product_card_style: ProductCardStyle = (PRODUCT_CARD_STYLES as readonly string[]).includes(
+    cardRaw,
+  )
+    ? (cardRaw as ProductCardStyle)
+    : "digikala";
+
   return {
     logo_url:
       typeof source.logo_url === "string" && source.logo_url.trim()
@@ -144,6 +177,9 @@ export function parseOnlineStorefront(raw: unknown): OnlineStorefrontConfig {
     banners,
     block_order: normalizeBlocks(source.block_order),
     hidden_category_ids: hidden,
+    show_header_categories: asBool(source.show_header_categories, true),
+    show_category_row: asBool(source.show_category_row, true),
+    product_card_style,
     trust_items: trust.length ? trust : defaults.trust_items,
     logo_path: typeof source.logo_path === "string" ? source.logo_path : null,
   };

@@ -20,14 +20,18 @@ import { apiRequestError } from "@/app/lib/apiRequestError/client";
 import tokenCode from "@/app/coponent/tokenCode";
 import {
   BLOCK_LABELS,
+  PRODUCT_CARD_STYLE_LABELS,
+  PRODUCT_CARD_STYLES,
   defaultOnlineStorefront,
   parseOnlineStorefront,
   resolveMediaUrl,
   type OnlineStorefrontConfig,
+  type ProductCardStyle,
   type StorefrontBanner,
   type StorefrontBlockId,
   type StorefrontTrustItem,
 } from "@/app/lib/onlineStorefront";
+import Switch from "@mui/material/Switch";
 import { parseCategoriesFromApi, type ShopCategory } from "@/app/lib/shopCategories";
 
 const API_BASE = (process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoo-plus.ir").replace(/\/$/, "");
@@ -104,6 +108,9 @@ export default function OnlineStorefrontSettingsPanel() {
           banners: payload.banners,
           block_order: payload.block_order,
           hidden_category_ids: payload.hidden_category_ids,
+          show_header_categories: payload.show_header_categories,
+          show_category_row: payload.show_category_row,
+          product_card_style: payload.product_card_style,
           trust_items: payload.trust_items,
         },
         "/api/settings/online-storefront",
@@ -391,6 +398,61 @@ export default function OnlineStorefrontSettingsPanel() {
             </Box>
           ))}
         </Box>
+      </Box>
+
+      <Box>
+        <Typography sx={{ fontSize: 13, fontWeight: 700, mb: 1, color: "var(--admin-text)" }}>
+          نمایش دسته‌بندی‌ها
+        </Typography>
+        <FormControlLabel
+          control={
+            <Switch
+              size="small"
+              checked={config.show_header_categories !== false}
+              onChange={(e) =>
+                setConfig((p) => ({ ...p, show_header_categories: e.target.checked }))
+              }
+            />
+          }
+          label={<Typography sx={{ fontSize: 12 }}>منوی دسته‌ها در هدر</Typography>}
+        />
+        <FormControlLabel
+          control={
+            <Switch
+              size="small"
+              checked={config.show_category_row !== false}
+              onChange={(e) => setConfig((p) => ({ ...p, show_category_row: e.target.checked }))}
+            />
+          }
+          label={<Typography sx={{ fontSize: 12 }}>ردیف دایره‌ای دسته‌ها در صفحه اول</Typography>}
+        />
+      </Box>
+
+      <Box>
+        <Typography sx={{ fontSize: 13, fontWeight: 700, mb: 1, color: "var(--admin-text)" }}>
+          مدل کارت محصول
+        </Typography>
+        <TextField
+          size="small"
+          select
+          SelectProps={{ native: true }}
+          label="استایل کارت"
+          value={config.product_card_style || "digikala"}
+          onChange={(e) =>
+            setConfig((p) => ({
+              ...p,
+              product_card_style: e.target.value as ProductCardStyle,
+            }))
+          }
+          sx={{ minWidth: 220 }}
+          InputLabelProps={{ shrink: true }}
+        >
+          {PRODUCT_CARD_STYLES.map((style) => (
+            <option key={style} value={style}>
+              {PRODUCT_CARD_STYLE_LABELS[style]}
+            </option>
+          ))}
+        </TextField>
       </Box>
 
       <Box>

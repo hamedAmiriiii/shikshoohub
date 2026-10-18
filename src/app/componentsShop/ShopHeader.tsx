@@ -197,8 +197,10 @@ export default function ShopHeader({ searchQuery = "", onSearchChange }: ShopHea
     logoUrl,
     visibleCategories,
     categoriesLoading,
+    storefront,
     clearCustomerSession,
   } = useShopContext();
+  const showHeaderCategories = storefront.show_header_categories !== false;
 
   const shopCode = ctxShopCode ?? getShopCodeFromPathname(pathname);
   const hideSearch = pathname?.includes("/cart") || pathname?.includes("/orders");
@@ -611,6 +613,7 @@ export default function ShopHeader({ searchQuery = "", onSearchChange }: ShopHea
         ) : null}
 
         {/* Desktop category row */}
+        {showHeaderCategories ? (
         <Box
           sx={{
             display: { xs: "none", md: "block" },
@@ -686,6 +689,7 @@ export default function ShopHeader({ searchQuery = "", onSearchChange }: ShopHea
             )}
           </Box>
         </Box>
+        ) : null}
       </Box>
 
       <Popover

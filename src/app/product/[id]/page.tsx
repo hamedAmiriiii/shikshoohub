@@ -325,16 +325,32 @@ export default function ProductDetailPage() {
   const fetchProduct = useCallback(async () => {
     try {
       setLoading(true);
-      const qs = itemType === "produced_good" ? "?item_type=produced_good" : "";
-      const res = await apiRequestError(
+      const preferProduced = itemType === "produced_good";
+      const primaryQs = preferProduced ? "?item_type=produced_good" : "";
+      let res = await apiRequestError(
         "Get",
         {},
         {},
-        shopApi(`/api/product/${productId}${qs}`),
+        shopApi(`/api/product/${productId}${primaryQs}`),
         false,
         false,
         "",
       );
+
+      // اگر بدون item_type یا با نوع اشتباه ۴۰۴ شد، نوع دیگر را هم امتحان کن
+      if (res?.hasError && res?.statusCode === 404) {
+        const altQs = preferProduced ? "" : "?item_type=produced_good";
+        res = await apiRequestError(
+          "Get",
+          {},
+          {},
+          shopApi(`/api/product/${productId}${altQs}`),
+          false,
+          false,
+          "",
+        );
+      }
+
       if (!res.hasError && res) {
         setProduct(res);
         if (res.sizes?.length) setSelectedSize(res.sizes[0]);
