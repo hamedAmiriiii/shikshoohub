@@ -39,9 +39,9 @@ function getProductImage(product: ShopProduct): string {
   if (product.images?.length) {
     const first = product.images[0];
     const url = first.image_url || first.image_path || "";
-    return resolveMediaUrl(url) || "/pic/noImageShop.jpg";
+    return resolveMediaUrl(url) || "/pic/nooImage.jfif";
   }
-  return resolveMediaUrl(product.image) || "/pic/noImageShop.jpg";
+  return resolveMediaUrl(product.image) || "/pic/nooImage.jfif";
 }
 
 type Props = {

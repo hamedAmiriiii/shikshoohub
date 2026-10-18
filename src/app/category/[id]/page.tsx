@@ -102,76 +102,78 @@ export default function CategoryProductsPage() {
   const [cartUpdateTrigger, setCartUpdateTrigger] = useState(0);
 
   useEffect(() => {
-    if (categoryId) {
-      fetchCategoryInfo();
-    }
-  }, [categoryId]);
+    if (!categoryId) return;
+    let cancelled = false;
 
-  useEffect(() => {
-    if (categoryId) {
-      fetchCategoryProducts();
-    }
-  }, [categoryId, searchQuery]);
-
-  const fetchCategoryInfo = async () => {
-    try {
+    (async () => {
+      setLoading(true);
       setChildCategories([]);
-      const res = await apiRequestError(
-        "Get",
-        {},
-        {},
-        shopApi(`/api/category/${categoryId}`),
-        false,
-        false,
-        "",
+      setParentCategory(null);
+
+      let productsUrl = shopApi(
+        `/api/category/${categoryId}/products?per_page=${perPage}&page=1`,
       );
-
-      if (!res.hasError && res) {
-        setCategoryInfo(res);
-        setCategoryName(res.name || '');
-
-        let children: Category[] = Array.isArray(res.children) ? res.children : [];
-        if (children.length === 0) {
-          const childrenRes = await apiRequestError(
-            "Get",
-            {},
-            {},
-            shopApi(`/api/category/${categoryId}/children`),
-            false,
-            false,
-            "",
-          );
-          if (!childrenRes?.hasError) {
-            if (Array.isArray(childrenRes)) {
-              children = childrenRes;
-            } else if (Array.isArray(childrenRes?.data)) {
-              children = childrenRes.data;
-            }
-          }
-        }
-        setChildCategories(children.filter((cat) => cat.is_active !== false));
-        
-        if (res.parent_id) {
-          const parentRes = await apiRequestError(
-            "Get",
-            {},
-            {},
-            shopApi(`/api/category/${res.parent_id}`),
-            false,
-            false,
-            "",
-          );
-          if (!parentRes.hasError && parentRes) {
-            setParentCategory(parentRes);
-          }
-        } else {
-          setParentCategory(null);
-        }
+      if (searchQuery.trim()) {
+        const searchFilterModel = JSON.stringify({ name: searchQuery.trim() });
+        productsUrl += `&searchFilterModel=${encodeURIComponent(searchFilterModel)}`;
       }
-    } catch (error) {
-      console.error("Error fetching category info:", error);
-    }
-  };
+
+      try {
+        const [infoRes, productsRes] = await Promise.all([
+          apiRequestError("Get", {}, {}, shopApi(`/api/category/${categoryId}`), false, false, ""),
+          apiRequestError("Get", {}, {}, productsUrl, false, false, ""),
+        ]);
+        if (cancelled) return;
+
+        if (!infoRes?.hasError && infoRes) {
+          setCategoryInfo(infoRes);
+          setCategoryName(infoRes.name || "");
+          const children: Category[] = Array.isArray(infoRes.children) ? infoRes.children : [];
+          setChildCategories(children.filter((cat) => cat.is_active !== false));
+          if (infoRes.parent) {
+            setParentCategory(infoRes.parent);
+          } else if (infoRes.parent_id) {
+            // فقط در صورت نیاز؛ موازی با بقیه تمام شده
+            void apiRequestError(
+              "Get",
+              {},
+              {},
+              shopApi(`/api/category/${infoRes.parent_id}`),
+              false,
+              false,
+              "",
+            ).then((parentRes) => {
+              if (!cancelled && !parentRes?.hasError && parentRes) {
+                setParentCategory(parentRes);
+              }
+            });
+          }
+        }
+
+        if (!productsRes?.hasError) {
+          if (productsRes.data && Array.isArray(productsRes.data)) {
+            setProducts(productsRes.data);
+            setTotal(productsRes.total || 0);
+            setCurrentPage(productsRes.current_page || 1);
+            setPerPage(productsRes.per_page || 20);
+          } else if (Array.isArray(productsRes)) {
+            setProducts(productsRes);
+          }
+          if (productsRes.category_name) {
+            setCategoryName((prev) => prev || productsRes.category_name);
+          }
+        }
+      } catch {
+        /* ignore */
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [categoryId, searchQuery, shopApi, perPage]);
 
   const fetchCategoryProducts = async (page: number = 1) => {
     try {
@@ -194,7 +196,6 @@ export default function CategoryProductsPage() {
         } else if (Array.isArray(res)) {
           setProducts(res);
         }
-        // اگر category_name در response محصولات وجود داشت و هنوز نام دسته‌بندی را نداریم، از آن استفاده کن
         if (res.category_name && !categoryName) {
           setCategoryName(res.category_name);
         }

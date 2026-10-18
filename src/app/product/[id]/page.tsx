@@ -74,6 +74,7 @@ interface Product {
   id: number;
   name: string;
   description?: string;
+  note?: string;
   sale_price: string;
   original_sale_price?: string;
   purchase_price?: string;
@@ -323,36 +324,26 @@ export default function ProductDetailPage() {
   const touchEndX = useRef(0);
 
   const fetchProduct = useCallback(async () => {
+    if (!productId) return;
     try {
       setLoading(true);
-      const preferProduced = itemType === "produced_good";
-      const primaryQs = preferProduced ? "?item_type=produced_good" : "";
-      let res = await apiRequestError(
+      const qs = itemType === "produced_good" ? "?item_type=produced_good" : "";
+      const res = await apiRequestError(
         "Get",
         {},
         {},
-        shopApi(`/api/product/${productId}${primaryQs}`),
+        shopApi(`/api/product/${productId}${qs}`),
         false,
         false,
         "",
       );
 
-      // اگر بدون item_type یا با نوع اشتباه ۴۰۴ شد، نوع دیگر را هم امتحان کن
-      if (res?.hasError && res?.statusCode === 404) {
-        const altQs = preferProduced ? "" : "?item_type=produced_good";
-        res = await apiRequestError(
-          "Get",
-          {},
-          {},
-          shopApi(`/api/product/${productId}${altQs}`),
-          false,
-          false,
-          "",
-        );
-      }
-
       if (!res.hasError && res) {
-        setProduct(res);
+        const description =
+          (typeof res.description === "string" && res.description.trim()) ||
+          (typeof res.note === "string" && res.note.trim()) ||
+          "";
+        setProduct({ ...res, description: description || res.description });
         if (res.sizes?.length) setSelectedSize(res.sizes[0]);
         if (res.colors?.length) setSelectedColor(res.colors[0]);
         setCurrentImageIndex(0);
@@ -866,6 +857,24 @@ export default function ProductDetailPage() {
                 </Box>
               )}
 
+              {typeof product.description === "string" && product.description.trim() ? (
+                <Typography
+                  sx={{
+                    fontSize: 13,
+                    color: "#62666d",
+                    lineHeight: 1.8,
+                    mb: 2,
+                    whiteSpace: "pre-wrap",
+                    display: "-webkit-box",
+                    WebkitLineClamp: { xs: 4, md: 6 },
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                  }}
+                >
+                  {product.description.trim()}
+                </Typography>
+              ) : null}
+
               <Divider sx={{ mb: 2 }} />
 
               {product.sizes && product.sizes.length > 0 && (
@@ -1048,15 +1057,16 @@ export default function ProductDetailPage() {
         </Box>
 
         {/* Description — full width below */}
-        {product.description && (
+        {typeof product.description === "string" && product.description.trim() ? (
           <Paper
             elevation={0}
             sx={{
               mt: 2,
-              mx: { xs: 0, md: 0 },
+              mb: { xs: 10, md: 2 },
               borderRadius: { xs: 0, md: 2 },
               border: { md: "1px solid #e0e0e6" },
               overflow: "hidden",
+              bgcolor: "#fff",
             }}
           >
             <Box
@@ -1075,7 +1085,7 @@ export default function ProductDetailPage() {
               }}
             >
               <Typography sx={{ fontWeight: 700, fontSize: 15, color: "#232933" }}>
-                توضیحات
+                توضیحات کالا
               </Typography>
               {showDescription ? <ExpandLessIcon /> : <ExpandMoreIcon />}
             </Box>
@@ -1083,18 +1093,19 @@ export default function ProductDetailPage() {
               <Typography
                 sx={{
                   px: 2,
-                  pb: 2,
+                  pb: 2.5,
                   fontSize: 14,
                   color: "#62666d",
                   lineHeight: 1.9,
                   whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
                 }}
               >
-                {product.description}
+                {product.description.trim()}
               </Typography>
             </Collapse>
           </Paper>
-        )}
+        ) : null}
       </Container>
 
       {/* Mobile sticky buy bar */}

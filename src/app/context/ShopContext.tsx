@@ -35,7 +35,7 @@ import {
   type ShopCategory,
 } from "@/app/lib/shopCategories";
 
-const SHOP_CACHE_TTL_MS = 60_000;
+const SHOP_CACHE_TTL_MS = 5 * 60_000;
 
 type ShopCacheEntry = {
   shop: ShopInfo;
@@ -45,6 +45,31 @@ type ShopCacheEntry = {
 
 const shopInfoCache = new Map<string, ShopCacheEntry>();
 const categoriesCache = new Map<string, { categories: ShopCategory[]; at: number }>();
+
+function resolveShopCode(
+  paramShop: string | null,
+  pathname: string | null,
+): string | null {
+  const raw = paramShop ?? getShopCodeFromPathname(pathname);
+  if (!raw || SHOP_RESERVED_SEGMENTS.has(raw)) return null;
+  return raw;
+}
+
+function readShopCache(code: string | null): ShopCacheEntry | null {
+  if (!code) return null;
+  const hit = shopInfoCache.get(code);
+  if (!hit) return null;
+  if (Date.now() - hit.at > SHOP_CACHE_TTL_MS) return null;
+  return hit;
+}
+
+function readCategoriesCache(code: string | null): ShopCategory[] | null {
+  if (!code) return null;
+  const hit = categoriesCache.get(code);
+  if (!hit) return null;
+  if (Date.now() - hit.at > SHOP_CACHE_TTL_MS) return null;
+  return hit.categories;
+}
 
 interface ShopContextType {
   searchQuery: string;
@@ -70,26 +95,26 @@ interface ShopContextType {
 
 const ShopContext = createContext<ShopContextType | undefined>(undefined);
 
-function extractStorefront(res: Record<string, unknown>): OnlineStorefrontConfig {
-  return parseOnlineStorefront(res);
-}
-
 export function ShopProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const params = useParams();
   const paramShop = typeof params?.shop === "string" ? params.shop : null;
-  const rawShop = paramShop ?? getShopCodeFromPathname(pathname);
-  const shopCode =
-    rawShop && SHOP_RESERVED_SEGMENTS.has(rawShop) ? null : rawShop;
+  const shopCode = resolveShopCode(paramShop, pathname);
+
+  const cachedShop = readShopCache(shopCode);
+  const cachedCats = readCategoriesCache(shopCode);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [shop, setShop] = useState<ShopInfo | null>(null);
-  const [shopLoading, setShopLoading] = useState(false);
+  const [shop, setShop] = useState<ShopInfo | null>(cachedShop?.shop ?? null);
+  const [shopLoading, setShopLoading] = useState(!cachedShop && !!shopCode);
   const [shopError, setShopError] = useState<string | null>(null);
-  const [storefront, setStorefront] = useState<OnlineStorefrontConfig>(defaultOnlineStorefront());
-  const [categories, setCategories] = useState<ShopCategory[]>([]);
-  const [categoriesLoading, setCategoriesLoading] = useState(false);
-  const shopFetchGen = useRef(0);
+  const [storefront, setStorefront] = useState<OnlineStorefrontConfig>(
+    cachedShop?.storefront ?? defaultOnlineStorefront(),
+  );
+  const [categories, setCategories] = useState<ShopCategory[]>(cachedCats ?? []);
+  const [categoriesLoading, setCategoriesLoading] = useState(!cachedCats && !!shopCode);
+  const fetchGen = useRef(0);
+  const lastLoadedCode = useRef<string | null>(cachedShop || cachedCats ? shopCode : null);
 
   const shopPathFn = useCallback(
     (path = "") => (shopCode ? shopPath(shopCode, path) : path || "/"),
@@ -101,73 +126,108 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     [shopCode],
   );
 
+  const loadShopBundle = useCallback(async (code: string, force = false) => {
+    const gen = ++fetchGen.current;
+
+    const shopHit = !force ? readShopCache(code) : null;
+    const catHit = !force ? readCategoriesCache(code) : null;
+
+    if (shopHit) {
+      setShop(shopHit.shop);
+      setStorefront(shopHit.storefront);
+      setShopError(null);
+      setShopLoading(false);
+    } else {
+      setShopLoading(true);
+    }
+
+    if (catHit) {
+      setCategories(catHit);
+      setCategoriesLoading(false);
+    } else {
+      setCategoriesLoading(true);
+    }
+
+    if (shopHit && catHit) {
+      lastLoadedCode.current = code;
+      return;
+    }
+
+    try {
+      const shopPromise = shopHit
+        ? Promise.resolve(null)
+        : apiRequestError("Get", {}, {}, shopApiPath(code, ""), false, true, "");
+      const catPromise = catHit
+        ? Promise.resolve(null)
+        : apiRequestError(
+            "Get",
+            {},
+            {},
+            shopApiPath(code, "/api/category?tree=true"),
+            false,
+            false,
+            "",
+          );
+
+      const [shopRes, catRes] = await Promise.all([shopPromise, catPromise]);
+      if (gen !== fetchGen.current) return;
+
+      if (shopRes) {
+        if (shopRes.hasError) {
+          const message =
+            (typeof shopRes.message === "string" && shopRes.message) ||
+            (shopRes.statusCode === 404 ? "فروشگاه یافت نشد" : "خطا در بارگذاری فروشگاه");
+          setShop(null);
+          setShopError(message);
+          setStorefront(defaultOnlineStorefront());
+        } else {
+          const payload = shopRes as Record<string, unknown>;
+          const sf = parseOnlineStorefront(payload);
+          const nextShop: ShopInfo =
+            payload?.shop && typeof payload.shop === "object"
+              ? ({ ...(payload as object), ...(payload.shop as object) } as ShopInfo)
+              : (payload as ShopInfo);
+          setShop(nextShop);
+          setStorefront(sf);
+          setShopError(null);
+          shopInfoCache.set(code, { shop: nextShop, storefront: sf, at: Date.now() });
+        }
+        setShopLoading(false);
+      }
+
+      if (catRes) {
+        const parsed = parseCategoriesFromApi(catRes);
+        setCategories(parsed);
+        categoriesCache.set(code, { categories: parsed, at: Date.now() });
+        setCategoriesLoading(false);
+      }
+
+      lastLoadedCode.current = code;
+    } catch {
+      if (gen !== fetchGen.current) return;
+      if (!shopHit) {
+        setShopError("خطا در ارتباط با سرور");
+        setShop(null);
+        setStorefront(defaultOnlineStorefront());
+        setShopLoading(false);
+      }
+      if (!catHit) {
+        setCategories([]);
+        setCategoriesLoading(false);
+      }
+    }
+  }, []);
+
   const refreshShop = useCallback(async () => {
     if (!shopCode) {
       setShop(null);
       setShopError(null);
       setStorefront(defaultOnlineStorefront());
-      return;
-    }
-
-    const cached = shopInfoCache.get(shopCode);
-    if (cached && Date.now() - cached.at < SHOP_CACHE_TTL_MS) {
-      setShop(cached.shop);
-      setStorefront(cached.storefront);
-      setShopError(null);
       setShopLoading(false);
       return;
     }
-
-    const gen = ++shopFetchGen.current;
-    setShopLoading(true);
-    setShopError(null);
-    try {
-      const res = await apiRequestError(
-        "Get",
-        {},
-        {},
-        shopApiPath(shopCode, ""),
-        false,
-        true,
-        "",
-      );
-
-      if (gen !== shopFetchGen.current) return;
-
-      if (res.hasError) {
-        const message =
-          (typeof res.message === "string" && res.message) ||
-          (res.statusCode === 404 ? "فروشگاه یافت نشد" : "خطا در بارگذاری فروشگاه");
-        setShop(null);
-        setShopError(message);
-        setStorefront(defaultOnlineStorefront());
-        return;
-      }
-
-      const payload = res as Record<string, unknown>;
-      const sf = extractStorefront(payload);
-      let nextShop: ShopInfo;
-      if (payload?.shop && typeof payload.shop === "object") {
-        nextShop = {
-          ...(typeof payload === "object" ? payload : {}),
-          ...(payload.shop as object),
-        } as ShopInfo;
-      } else {
-        nextShop = payload as ShopInfo;
-      }
-
-      setShop(nextShop);
-      setStorefront(sf);
-      shopInfoCache.set(shopCode, { shop: nextShop, storefront: sf, at: Date.now() });
-    } catch {
-      if (gen !== shopFetchGen.current) return;
-      setShopError("خطا در ارتباط با سرور");
-      setShop(null);
-      setStorefront(defaultOnlineStorefront());
-    } finally {
-      if (gen === shopFetchGen.current) setShopLoading(false);
-    }
-  }, [shopCode]);
+    await loadShopBundle(shopCode, true);
+  }, [shopCode, loadShopBundle]);
 
   const refreshCategories = useCallback(async () => {
     if (!shopCode) {
@@ -175,42 +235,26 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       setCategoriesLoading(false);
       return;
     }
+    categoriesCache.delete(shopCode);
+    await loadShopBundle(shopCode, false);
+  }, [shopCode, loadShopBundle]);
 
-    const cached = categoriesCache.get(shopCode);
-    if (cached && Date.now() - cached.at < SHOP_CACHE_TTL_MS) {
-      setCategories(cached.categories);
+  useEffect(() => {
+    if (!shopCode) {
+      setShop(null);
+      setShopError(null);
+      setStorefront(defaultOnlineStorefront());
+      setCategories([]);
+      setShopLoading(false);
       setCategoriesLoading(false);
+      lastLoadedCode.current = null;
       return;
     }
-
-    setCategoriesLoading(true);
-    try {
-      const res = await apiRequestError(
-        "Get",
-        {},
-        {},
-        shopApiPath(shopCode, "/api/category?tree=true"),
-        false,
-        false,
-        "",
-      );
-      const parsed = parseCategoriesFromApi(res);
-      setCategories(parsed);
-      categoriesCache.set(shopCode, { categories: parsed, at: Date.now() });
-    } catch {
-      setCategories([]);
-    } finally {
-      setCategoriesLoading(false);
+    if (lastLoadedCode.current === shopCode && readShopCache(shopCode) && readCategoriesCache(shopCode)) {
+      return;
     }
-  }, [shopCode]);
-
-  useEffect(() => {
-    void refreshShop();
-  }, [refreshShop]);
-
-  useEffect(() => {
-    void refreshCategories();
-  }, [refreshCategories]);
+    void loadShopBundle(shopCode, false);
+  }, [shopCode, loadShopBundle]);
 
   useEffect(() => {
     setCartShopCode(shopCode);
@@ -316,6 +360,15 @@ export function useShopStorefront() {
   const clearCustomerSessionFn = useCallback(() => {
     if (resolved) clearCustomerSession(resolved);
   }, [resolved]);
+
+  // وقتی shopCode از context با resolved یکی است، همان توابع پایدار context را برگردان
+  // تا وابستگی‌های useEffect (مثل fetch محصول) بی‌دلیل دوباره اجرا نشوند.
+  if (ctx.shopCode && ctx.shopCode === resolved) {
+    return {
+      ...ctx,
+      shopCode: resolved,
+    };
+  }
 
   return {
     ...ctx,
