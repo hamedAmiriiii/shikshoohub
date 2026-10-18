@@ -3,7 +3,6 @@ export const ONLINE_STOREFRONT_BLOCKS = [
   "categories",
   "trust",
   "best_selling",
-  "category_banners",
   "latest",
 ] as const;
 
@@ -56,7 +55,6 @@ export const BLOCK_LABELS: Record<StorefrontBlockId, string> = {
   categories: "دسته‌بندی‌ها",
   trust: "نوار اعتماد",
   best_selling: "پرفروش‌ها",
-  category_banners: "بنر دسته‌های ویژه",
   latest: "جدیدترین‌ها",
 };
 
@@ -101,6 +99,8 @@ function normalizeBlocks(raw: unknown): StorefrontBlockId[] {
   const order: StorefrontBlockId[] = [];
   if (Array.isArray(raw)) {
     for (const item of raw) {
+      // category_banners حذف شده؛ از تنظیمات قدیمی هم نادیده گرفته می‌شود
+      if (item === "category_banners") continue;
       if (
         typeof item === "string" &&
         (ONLINE_STOREFRONT_BLOCKS as readonly string[]).includes(item) &&

@@ -83,6 +83,7 @@ const ROUTE_PERMISSIONS: { prefix: string; keys: ShopPermissionKey[] }[] = [
   { prefix: "/admin/invoices", keys: ["invoices"] },
   { prefix: "/admin/beneficiaries", keys: ["invoices", "expenses"] },
   { prefix: "/admin/expenses-statistics", keys: ["expenses"] },
+  { prefix: "/admin/expenses-by-category", keys: ["expenses"] },
   { prefix: "/admin/expenses", keys: ["expenses"] },
   { prefix: "/admin/cheques", keys: ["cheques"] },
   { prefix: "/admin/manual-trades", keys: ["manual_trades"] },

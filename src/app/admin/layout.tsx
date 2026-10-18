@@ -53,6 +53,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/smart-club/thresholds': 'تنظیم گروه‌ها',
     '/admin/returned-products': 'برگشت خرید',
     '/admin/expenses-statistics': 'گزارش هزینه‌ها',
+    '/admin/expenses-by-category': 'هزینه به تفکیک دسته',
     '/admin/bulk-discount': 'تخفیف دسته جمعی',
     '/admin/settings': 'تنظیمات',
     '/admin/purchas': 'فروش ها',

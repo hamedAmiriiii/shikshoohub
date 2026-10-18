@@ -16,13 +16,10 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  FormControlLabel,
   IconButton,
   Pagination,
   Paper,
   MenuItem,
-  Radio,
-  RadioGroup,
   Table,
   TableBody,
   TableCell,
@@ -319,7 +316,6 @@ export default function ExpensesPage() {
   const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
   const [openFilterSheet, setOpenFilterSheet] = useState(false);
 
-  const [type, setType] = useState<"جاری" | "سرمایه">("جاری");
   const [expenseAccounts, setExpenseAccounts] = useState<ExpenseAccountOption[]>([]);
   const [accountingAccountId, setAccountingAccountId] = useState<number | null>(null);
   const [title, setTitle] = useState("");
@@ -451,7 +447,6 @@ export default function ExpensesPage() {
   }, [openForm]);
 
   const resetForm = () => {
-    setType("جاری");
     setAccountingAccountId(null);
     setTitle("");
     setAmount("");
@@ -486,7 +481,6 @@ export default function ExpensesPage() {
 
   const openEdit = (expense: Expense) => {
     setEditingExpense(expense);
-    setType((expense.type as "جاری" | "سرمایه") || "جاری");
     setAccountingAccountId(expense.accounting_account_id ?? expense.accounting_account?.id ?? null);
     setTitle(expense.title || "");
     setAmount(formatNumber(expenseAmount(expense)));
@@ -539,7 +533,7 @@ export default function ExpensesPage() {
     const payload: Record<string, unknown> = {
       title: title.trim(),
       amount: amountNum,
-      type,
+      type: "جاری",
       user_name: userName.trim() || undefined,
     };
     if (readShopFeatures().accounting_enabled) {
@@ -992,21 +986,6 @@ export default function ExpensesPage() {
           </DialogTitle>
           <DialogContent>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, mt: 0.5 }}>
-              <Box>
-                <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, mb: 0.5 }}>نوع هزینه</Typography>
-                <RadioGroup row value={type} onChange={(e) => setType(e.target.value as "جاری" | "سرمایه")}>
-                  <FormControlLabel
-                    value="جاری"
-                    control={<Radio size="small" sx={{ color: "var(--admin-accent)", "&.Mui-checked": { color: "var(--admin-accent)" } }} />}
-                    label={<Typography sx={{ fontSize: 13, color: "var(--admin-text)" }}>جاری</Typography>}
-                  />
-                  <FormControlLabel
-                    value="سرمایه"
-                    control={<Radio size="small" sx={{ color: "var(--admin-accent)", "&.Mui-checked": { color: "var(--admin-accent)" } }} />}
-                    label={<Typography sx={{ fontSize: 13, color: "var(--admin-text)" }}>سرمایه</Typography>}
-                  />
-                </RadioGroup>
-              </Box>
               <TextField size="small" label="عنوان" value={title} onChange={(e) => setTitle(e.target.value)} fullWidth sx={fieldSx} />
               {readShopFeatures().accounting_enabled && (expenseAccounts.length > 0 || accountingAccountId) ? (
                 <Autocomplete

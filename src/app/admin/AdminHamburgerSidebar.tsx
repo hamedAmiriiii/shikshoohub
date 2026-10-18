@@ -205,6 +205,13 @@ export default function AdminHamburgerSidebar({
         permission: "expenses",
       },
       {
+        id: "expenses-by-category",
+        label: "هزینه به تفکیک دسته",
+        href: "/admin/expenses-by-category",
+        icon: <AccountTreeIcon />,
+        permission: "expenses",
+      },
+      {
         id: "cheques",
         label: "چک",
         href: "/admin/cheques",

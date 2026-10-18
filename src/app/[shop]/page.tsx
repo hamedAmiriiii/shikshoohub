@@ -10,7 +10,6 @@ import HeroSlider from "@/app/componentsShop/storefront/HeroSlider";
 import CategoryRow from "@/app/componentsShop/storefront/CategoryRow";
 import TrustBar from "@/app/componentsShop/storefront/TrustBar";
 import ProductRail from "@/app/componentsShop/storefront/ProductRail";
-import CategoryBanners from "@/app/componentsShop/storefront/CategoryBanners";
 import ProductCard, { type ShopProduct } from "@/app/componentsShop/storefront/ProductCard";
 import HomePageSkeleton from "@/app/componentsShop/storefront/HomeSkeletons";
 
@@ -209,14 +208,7 @@ export default function ShopHomePage() {
           />
         );
       case "category_banners":
-        return (
-          <CategoryBanners
-            key="category_banners"
-            categories={visibleCategories}
-            loading={categoriesLoading}
-            shopPath={shopPath}
-          />
-        );
+        return null;
       case "latest":
         return (
           <Box key="latest">
