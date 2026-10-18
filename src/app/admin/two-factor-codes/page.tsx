@@ -21,17 +21,50 @@ type LogSmsItem = {
   creator?: { id: number; name?: string } | null;
 };
 
+/**
+ * API معمولاً شمسی تهران می‌فرستد (مثل ShopSmsLog).
+ * اگر هنوز میلادی/ISO بود، با Asia/Tehran به شمسی تبدیل می‌شود — بدون دوباره‌تبدیل شمسی.
+ */
 function formatDateTime(value?: string): string {
   if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString("fa-IR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const trimmed = String(value).trim();
+  if (!trimmed) return "—";
+
+  const m = trimmed.match(
+    /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?(?:\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/,
+  );
+  if (m) {
+    const year = Number(m[1]);
+    const mo = m[2].padStart(2, "0");
+    const d = m[3].padStart(2, "0");
+    const hh = m[4] != null ? m[4].padStart(2, "0") : null;
+    const mm = m[5] != null ? m[5].padStart(2, "0") : null;
+
+    // سال شمسی (مثلاً 1405) — فقط نمایش
+    if (year < 1700) {
+      const datePart = `${year}/${mo}/${d}`;
+      return hh != null && mm != null ? `${datePart} ${hh}:${mm}` : datePart;
+    }
+
+    // میلادی / ISO → شمسی تهران
+    const iso =
+      m[7] || /T/.test(trimmed)
+        ? trimmed
+        : `${m[1]}-${mo}-${d}T${hh ?? "00"}:${mm ?? "00"}:${(m[6] ?? "00").padStart(2, "0")}+03:30`;
+    const date = new Date(iso);
+    if (!Number.isNaN(date.getTime())) {
+      return date.toLocaleString("fa-IR", {
+        timeZone: "Asia/Tehran",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    }
+  }
+
+  return trimmed;
 }
 
 function LogSmsMobileCard({ data }: { data: LogSmsItem }) {
