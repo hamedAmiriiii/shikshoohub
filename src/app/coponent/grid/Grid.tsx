@@ -239,7 +239,10 @@ async function getdatas(
   // Build URL with searchFilterModel
   const separator = url.includes("?") ? "&" : "?";
   let fullUrl = `${url}${separator}page=${pageParam}`;
-  
+  if (!/[?&]per_page=/.test(url)) {
+    fullUrl += `&per_page=${rows}`;
+  }
+
   // Add searchFilterModel to URL if it has values
   if (Object.keys(searchFilterModel).length > 0) {
     const searchFilterModelStr = encodeURIComponent(JSON.stringify(searchFilterModel));
@@ -257,9 +260,9 @@ async function getdatas(
     data: res.data,
     totalPurchasePrice: res.total_purchase_price,
     total: res.total,
-    per_page: res.per_page || rows,
+    per_page: Number(res.per_page) || rows,
     current_page: res.current_page || pageParam,
-    last_page: res.last_page,
+    last_page: Number(res.last_page) || undefined,
     next_page_url: res.next_page_url,
   };
 }
@@ -284,7 +287,10 @@ async function getdatasDesktop(
   // Build URL with searchFilterModel
   const separator = url.includes("?") ? "&" : "?";
   let fullUrl = `${url}${separator}page=${page}`;
-  
+  if (!/[?&]per_page=/.test(url)) {
+    fullUrl += `&per_page=${rows}`;
+  }
+
   // Add searchFilterModel to URL if it has values
   if (Object.keys(searchFilterModel).length > 0) {
     const searchFilterModelStr = encodeURIComponent(JSON.stringify(searchFilterModel));
@@ -301,6 +307,10 @@ async function getdatasDesktop(
     data: res.data,
     totalPurchasePrice: res.total_purchase_price,
     total: res.total || 0,
+    per_page: Number(res.per_page) || rows,
+    current_page: res.current_page || page,
+    last_page: Number(res.last_page) || undefined,
+    next_page_url: res.next_page_url,
   };
 }
 
@@ -632,10 +642,19 @@ const List: React.FC<Props> = ({
     : (totalData || 0);
   
   const perPage = usePagination
-    ? (desktopData?.per_page || rows)
-    : (datas?.pages?.[0]?.per_page || rows);
+    ? (Number(desktopData?.per_page) || rows)
+    : (Number(datas?.pages?.[0]?.per_page) || rows);
 
-  const totalPages = usePagination && total > 0 ? Math.ceil(total / perPage) : 0;
+  // ترجیح last_page از API تا با per_page واقعی سرور هم‌خوان باشد
+  const apiLastPage = usePagination
+    ? Number(desktopData?.last_page)
+    : Number(datas?.pages?.[0]?.last_page);
+  const totalPages =
+    usePagination && total > 0
+      ? apiLastPage > 0
+        ? apiLastPage
+        : Math.max(1, Math.ceil(total / Math.max(1, perPage)))
+      : 0;
 
   const rowNumberFor = (page: number, index: number) => (page - 1) * perPage + index + 1;
 

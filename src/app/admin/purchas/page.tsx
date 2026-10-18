@@ -347,6 +347,7 @@ export default function ListPurches() {
               filterComponent={null}
               showTotal={true}
               enablePagination={true}
+              rows={15}
               compactDesktop
               actionsColumnWidth="148px"
               desktopColumns={desktopColumns}
