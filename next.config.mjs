@@ -1,9 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    serverActions: {
-      bodySizeLimit: '10mb', // 👈 افزایش حجم مجاز تا 10 مگابایت
-    },
+  // Next 15+: serverActions دیگر زیر experimental نیست
+  serverActions: {
+    bodySizeLimit: "10mb",
   },
   transpilePackages: [
     "framer-motion",
@@ -12,21 +11,27 @@ const nextConfig = {
     "@mui/icons-material",
     "@nextui-org/react",
   ],
-    typescript: {
-        ignoreBuildErrors: true,
+  typescript: {
+    ignoreBuildErrors: true,
   },
   images: {
-    domains: ['https://api.webinoo-plus.ir' , 'webinoplus.ir', 'api.webinoplus.ir'], // اضافه کردن هاست به لیست مجاز
+    // AVIF را خاموش نگه‌دار تا ریسک بهینه‌سازی تصویر (GHSA-2xp9-vwfh-vxw4) کمتر شود
+    formats: ["image/webp"],
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: 'api.webinoplus.ir',
-        pathname: '/storage/**',
+        protocol: "https",
+        hostname: "api.webinoplus.ir",
+        pathname: "/storage/**",
       },
       {
-        protocol: 'https',
-        hostname: 'api.webinoo-plus.ir',
-        pathname: '/storage/**',
+        protocol: "https",
+        hostname: "api.webinoo-plus.ir",
+        pathname: "/storage/**",
+      },
+      {
+        protocol: "https",
+        hostname: "webinoplus.ir",
+        pathname: "/**",
       },
     ],
   },

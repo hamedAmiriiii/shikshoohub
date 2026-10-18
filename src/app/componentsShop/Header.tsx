@@ -54,7 +54,6 @@ import AdminHamburgerSidebar, {
 } from "@/app/admin/AdminHamburgerSidebar";
 import { ADMIN_MENU_CART_WIDTH_VAR } from "@/app/admin/adminMenuCartLayout";
 import { useAdminTheme } from "@/app/admin/theme/useAdminTheme";
-import FinanceRemindersBell from "@/app/admin/finance-reminders/FinanceRemindersBell";
 
 function lastPhoneDigits(phone: string, count = 4): string {
   const digits = phone.replace(/\D/g, "");
