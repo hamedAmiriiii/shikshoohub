@@ -51,6 +51,7 @@ interface CategoryNode {
 
 interface CategoryExpenseItem {
   id: number;
+  source?: "expense" | "invoice";
   title: string;
   amount: number;
   type: string | null;
@@ -212,6 +213,9 @@ function printExpenseList(input: {
       (item) => `<tr>
         <td style="text-align:right">${item.date || ""}</td>
         <td style="text-align:right">${item.title || ""}</td>
+        <td style="text-align:right">${categoryLabelOf(item)}</td>
+        <td style="text-align:right">${item.user_name || "—"}</td>
+        <td style="text-align:left">${formatNumber(item.amount)}</td>
       </tr>`,
     )
     .join("");
@@ -228,15 +232,30 @@ function printExpenseList(input: {
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
     th, td { border: 1px solid #ccc; padding: 6px 8px; }
     th { background: #f3f5f8; }
+    tfoot td { font-weight: 800; }
     @media print { body { padding: 0; } }
   </style>
 </head>
 <body>
   <h1>لیست هزینه‌ها</h1>
-  <div class="meta">بازه: ${input.periodLabel} · ${input.categoryLabel} · جمع: ${formatNumber(input.totalAmount)} تومان</div>
+  <div class="meta">بازه: ${input.periodLabel} · ${input.categoryLabel}</div>
   <table>
-    <thead><tr><th>تاریخ</th><th>عنوان هزینه</th></tr></thead>
-    <tbody>${rows || `<tr><td colspan="2" style="text-align:center">موردی نیست</td></tr>`}</tbody>
+    <thead>
+      <tr>
+        <th>تاریخ</th>
+        <th>عنوان</th>
+        <th>دسته‌بندی</th>
+        <th>ثبت‌کننده</th>
+        <th>مبلغ</th>
+      </tr>
+    </thead>
+    <tbody>${rows || `<tr><td colspan="5" style="text-align:center">موردی نیست</td></tr>`}</tbody>
+    <tfoot>
+      <tr>
+        <td colspan="4" style="text-align:right">مجموع</td>
+        <td style="text-align:left">${formatNumber(input.totalAmount)}</td>
+      </tr>
+    </tfoot>
   </table>
 </body>
 </html>`;
@@ -667,7 +686,7 @@ export default function ExpensesByCategoryPage() {
                   </TableHead>
                   <TableBody>
                     {items.map((item) => (
-                      <TableRow key={item.id} hover>
+                      <TableRow key={`${item.source || "expense"}-${item.id}`} hover>
                         <TableCell sx={{ color: "var(--admin-text)", whiteSpace: "nowrap" }}>{item.date}</TableCell>
                         <TableCell sx={{ color: "var(--admin-text)" }}>{item.title}</TableCell>
                         <TableCell sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>
