@@ -1871,7 +1871,19 @@ function TableReservPageBody() {
             {t("cancelOrder")}
           </Button>
         ) : null}
-        <Dialog open={cancelConfirmOpen} onClose={() => !cancellingOrder && setCancelConfirmOpen(false)}>
+        <Dialog
+          open={cancelConfirmOpen}
+          onClose={() => !cancellingOrder && setCancelConfirmOpen(false)}
+          PaperProps={{
+            sx: {
+              bgcolor: SURFACE,
+              color: TEXT,
+              backgroundImage: "none",
+              borderRadius: "16px",
+              border: `1px solid ${BORDER}`,
+            },
+          }}
+        >
           <DialogContent>
             <Typography sx={{ color: TEXT, fontWeight: 800, mb: 1 }}>{t("cancelOrderConfirm")}</Typography>
           </DialogContent>
@@ -1975,7 +1987,19 @@ function TableReservPageBody() {
             {t("cancelOrder")}
           </Button>
         ) : null}
-        <Dialog open={cancelConfirmOpen} onClose={() => !cancellingOrder && setCancelConfirmOpen(false)}>
+        <Dialog
+          open={cancelConfirmOpen}
+          onClose={() => !cancellingOrder && setCancelConfirmOpen(false)}
+          PaperProps={{
+            sx: {
+              bgcolor: SURFACE,
+              color: TEXT,
+              backgroundImage: "none",
+              borderRadius: "16px",
+              border: `1px solid ${BORDER}`,
+            },
+          }}
+        >
           <DialogContent>
             <Typography sx={{ color: TEXT, fontWeight: 800, mb: 1 }}>{t("cancelOrderConfirm")}</Typography>
             <Typography sx={{ color: MUTED, fontSize: 14, lineHeight: 1.8 }}>

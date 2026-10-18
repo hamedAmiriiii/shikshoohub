@@ -72,7 +72,6 @@ interface CategoryReport {
     amount: number;
     count: number;
   } | null;
-  meta?: { accounting_ready?: boolean; filter?: string };
 }
 
 const formatNumber = (num: number) => new Intl.NumberFormat("fa-IR").format(num);
@@ -99,11 +98,14 @@ function flattenTree(
   const rows: Array<CategoryNode & { depth: number }> = [];
   for (const node of nodes) {
     rows.push({ ...node, depth });
-    if (node.children?.length) {
-      rows.push(...flattenTree(node.children, depth + 1));
-    }
+    if (node.children?.length) rows.push(...flattenTree(node.children, depth + 1));
   }
   return rows;
+}
+
+function categoryLabelOf(item: CategoryExpenseItem) {
+  if (!item.accounting_account) return "—";
+  return item.accounting_account.name;
 }
 
 function CategoryTreeNode({
@@ -118,7 +120,7 @@ function CategoryTreeNode({
   onSelect: (node: CategoryNode) => void;
 }) {
   const hasChildren = node.children.length > 0;
-  const [open, setOpen] = useState(depth < 2 || node.amount > 0);
+  const [open, setOpen] = useState(depth < 1 || node.amount > 0);
   const selected = selectedId === node.id;
   const color = node.kind === "expense" ? "#e53935" : "#1e88e5";
 
@@ -129,18 +131,16 @@ function CategoryTreeNode({
         sx={{
           display: "flex",
           alignItems: "center",
-          gap: 0.75,
-          py: 0.85,
-          px: 1,
-          mr: depth * 1.25,
-          mb: 0.5,
-          borderRadius: "10px",
+          gap: 0.4,
+          py: 0.35,
+          px: 0.6,
+          mr: depth * 0.9,
+          mb: 0.3,
+          borderRadius: "7px",
           cursor: "pointer",
-          bgcolor: selected ? `${color}22` : depth === 0 ? `${color}14` : "var(--admin-surface)",
-          border: `1px solid ${selected ? color : "var(--admin-border)"}`,
-          borderInlineStart: `3px solid ${color}`,
-          transition: "background-color .15s, border-color .15s",
-          "&:hover": { bgcolor: `${color}18` },
+          bgcolor: selected ? `${color}22` : "transparent",
+          border: selected ? `1px solid ${color}` : "1px solid transparent",
+          "&:hover": { bgcolor: `${color}14` },
         }}
       >
         {hasChildren ? (
@@ -150,47 +150,40 @@ function CategoryTreeNode({
               e.stopPropagation();
               setOpen((v) => !v);
             }}
-            sx={{ color: "var(--admin-text-muted)", p: 0.25 }}
+            sx={{ color: "var(--admin-text-muted)", p: 0.1 }}
           >
-            {open ? <ExpandMoreIcon fontSize="small" /> : <ChevronLeftIcon fontSize="small" />}
+            {open ? <ExpandMoreIcon sx={{ fontSize: 16 }} /> : <ChevronLeftIcon sx={{ fontSize: 16 }} />}
           </IconButton>
         ) : (
-          <Box sx={{ width: 28 }} />
+          <Box sx={{ width: 22 }} />
         )}
-
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography
-            sx={{
-              color: "var(--admin-text)",
-              fontSize: depth === 0 ? 14 : 13,
-              fontWeight: depth === 0 ? 800 : selected ? 700 : 500,
-              lineHeight: 1.35,
-            }}
-          >
-            <Box component="span" sx={{ color: "var(--admin-text-muted)", fontWeight: 600, ml: 0.5 }}>
-              {node.code}
-            </Box>
-            {node.name}
-          </Typography>
-          {node.count > 0 && (
-            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, mt: 0.15 }}>
-              {formatNumber(node.count)} مورد
-            </Typography>
-          )}
-        </Box>
-
+        <Typography
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            color: "var(--admin-text)",
+            fontSize: 11.5,
+            fontWeight: selected || depth === 0 ? 700 : 500,
+            lineHeight: 1.3,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+          title={`${node.code} ${node.name}`}
+        >
+          {node.name}
+        </Typography>
         <Typography
           sx={{
             color: node.amount > 0 ? color : "var(--admin-text-muted)",
             fontWeight: 700,
-            fontSize: 13,
+            fontSize: 11,
             whiteSpace: "nowrap",
           }}
         >
           {formatNumber(node.amount)}
         </Typography>
       </Box>
-
       {hasChildren && (
         <Collapse in={open} timeout="auto" unmountOnExit>
           {node.children.map((child) => (
@@ -208,33 +201,17 @@ function CategoryTreeNode({
   );
 }
 
-function printCategoryReport(input: {
+function printExpenseList(input: {
   periodLabel: string;
   categoryLabel: string;
   totalAmount: number;
-  totalCount: number;
-  treeRows: Array<CategoryNode & { depth: number }>;
   items: CategoryExpenseItem[];
 }) {
-  const treeHtml = input.treeRows
-    .map((row) => {
-      const pad = "&nbsp;".repeat(row.depth * 4);
-      return `<tr>
-        <td style="text-align:right">${pad}${row.code} — ${row.name}</td>
-        <td style="text-align:center">${formatNumber(row.count)}</td>
-        <td style="text-align:left">${formatNumber(row.amount)}</td>
-      </tr>`;
-    })
-    .join("");
-
-  const itemsHtml = input.items
+  const rows = input.items
     .map(
       (item) => `<tr>
         <td style="text-align:right">${item.date || ""}</td>
         <td style="text-align:right">${item.title || ""}</td>
-        <td style="text-align:right">${item.accounting_account ? `${item.accounting_account.code} — ${item.accounting_account.name}` : ""}</td>
-        <td style="text-align:right">${item.user_name || ""}</td>
-        <td style="text-align:left">${formatNumber(item.amount)}</td>
       </tr>`,
     )
     .join("");
@@ -243,35 +220,23 @@ function printCategoryReport(input: {
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="utf-8" />
-  <title>گزارش هزینه به تفکیک دسته</title>
+  <title>لیست هزینه‌ها</title>
   <style>
     body { font-family: Tahoma, Arial, sans-serif; color: #111; padding: 16px; }
-    h1 { font-size: 18px; margin: 0 0 8px; }
-    .meta { font-size: 12px; color: #555; margin-bottom: 16px; }
-    .summary { display: flex; gap: 24px; margin-bottom: 18px; font-size: 13px; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px; }
+    h1 { font-size: 16px; margin: 0 0 6px; }
+    .meta { font-size: 12px; color: #555; margin-bottom: 14px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
     th, td { border: 1px solid #ccc; padding: 6px 8px; }
     th { background: #f3f5f8; }
-    h2 { font-size: 14px; margin: 18px 0 8px; }
     @media print { body { padding: 0; } }
   </style>
 </head>
 <body>
-  <h1>گزارش هزینه به تفکیک دسته</h1>
-  <div class="meta">بازه: ${input.periodLabel} · دسته: ${input.categoryLabel} · فقط هزینه‌های جاری</div>
-  <div class="summary">
-    <div>جمع مبلغ: <strong>${formatNumber(input.totalAmount)}</strong> تومان</div>
-    <div>تعداد: <strong>${formatNumber(input.totalCount)}</strong> مورد</div>
-  </div>
-  <h2>گزارش دسته‌بندی</h2>
+  <h1>لیست هزینه‌ها</h1>
+  <div class="meta">بازه: ${input.periodLabel} · ${input.categoryLabel} · جمع: ${formatNumber(input.totalAmount)} تومان</div>
   <table>
-    <thead><tr><th>دسته</th><th>تعداد</th><th>مبلغ (تومان)</th></tr></thead>
-    <tbody>${treeHtml || `<tr><td colspan="3" style="text-align:center">موردی نیست</td></tr>`}</tbody>
-  </table>
-  <h2>لیست هزینه‌ها</h2>
-  <table>
-    <thead><tr><th>تاریخ</th><th>عنوان</th><th>حساب</th><th>ثبت‌کننده</th><th>مبلغ (تومان)</th></tr></thead>
-    <tbody>${itemsHtml || `<tr><td colspan="5" style="text-align:center">موردی نیست</td></tr>`}</tbody>
+    <thead><tr><th>تاریخ</th><th>عنوان هزینه</th></tr></thead>
+    <tbody>${rows || `<tr><td colspan="2" style="text-align:center">موردی نیست</td></tr>`}</tbody>
   </table>
 </body>
 </html>`;
@@ -311,37 +276,27 @@ async function downloadCategoryExcel(input: {
     ["جمع مبلغ (تومان)", Math.round(input.totalAmount)],
     ["تعداد", input.totalCount],
     [],
-    ["کد", "نام دسته", "سطح", "تعداد", "مبلغ (تومان)"],
+    ["کد", "نام دسته", "تعداد", "مبلغ (تومان)"],
   ];
   for (const row of input.treeRows) {
-    summaryRows.push([
-      row.code,
-      `${"  ".repeat(row.depth)}${row.name}`,
-      row.level,
-      row.count,
-      Math.round(row.amount),
-    ]);
+    summaryRows.push([row.code, `${"  ".repeat(row.depth)}${row.name}`, row.count, Math.round(row.amount)]);
   }
 
   const itemRows: Array<Array<string | number>> = [
-    ["تاریخ", "عنوان", "کد حساب", "نام حساب", "ثبت‌کننده", "مبلغ (تومان)"],
+    ["تاریخ", "عنوان", "دسته‌بندی", "ثبت‌کننده", "مبلغ (تومان)"],
   ];
   for (const item of input.items) {
     itemRows.push([
       item.date || "",
       item.title || "",
-      item.accounting_account?.code || "",
-      item.accounting_account?.name || "",
+      categoryLabelOf(item),
       item.user_name || "",
       Math.round(item.amount),
     ]);
   }
 
   const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows);
-  summarySheet["!cols"] = [{ wch: 12 }, { wch: 28 }, { wch: 12 }, { wch: 10 }, { wch: 16 }];
   const itemsSheet = XLSX.utils.aoa_to_sheet(itemRows);
-  itemsSheet["!cols"] = [{ wch: 12 }, { wch: 28 }, { wch: 10 }, { wch: 22 }, { wch: 16 }, { wch: 14 }];
-
   const book = XLSX.utils.book_new();
   book.Workbook = { Views: [{ RTL: true }] };
   XLSX.utils.book_append_sheet(book, summarySheet, "گزارش دسته");
@@ -377,9 +332,7 @@ export default function ExpensesByCategoryPage() {
       } else {
         params.push(`filter=${filterMode === "range" ? "month" : filterMode}`);
       }
-      if (accountId) {
-        params.push(`account_id=${accountId}`);
-      }
+      if (accountId) params.push(`account_id=${accountId}`);
       return `/api/expenses-by-category?${params.join("&")}`;
     },
     [filterMode, dateRange],
@@ -389,8 +342,7 @@ export default function ExpensesByCategoryPage() {
     setLoading(true);
     const token = tokenCode();
     try {
-      const url = buildUrl(selectedNode?.id ?? null);
-      const res = await apiRequestError("Get", {}, {}, url, true, true, token);
+      const res = await apiRequestError("Get", {}, {}, buildUrl(selectedNode?.id ?? null), true, true, token);
       if (res.hasError) {
         let message = "خطا در دریافت گزارش";
         try {
@@ -429,12 +381,8 @@ export default function ExpensesByCategoryPage() {
 
   const handleSelectNode = (node: CategoryNode) => {
     setSelectedNode((prev) => (prev?.id === node.id ? null : node));
-    setTimeout(() => {
-      listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 50);
+    setTimeout(() => listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   };
-
-  const handleClearCategory = () => setSelectedNode(null);
 
   const handleResetPeriod = () => {
     setDateRange([]);
@@ -452,40 +400,9 @@ export default function ExpensesByCategoryPage() {
     filterMode === "range" && dateRange.length === 2
       ? `${dateRange[0].year}/${dateRange[0].month.number}/${dateRange[0].day} تا ${dateRange[1].year}/${dateRange[1].month.number}/${dateRange[1].day}`
       : FILTER_LABEL[filterMode];
-  const categoryLabel = selectedNode
-    ? `${selectedNode.code} — ${selectedNode.name}`
-    : "همه دسته‌ها";
+  const categoryLabel = selectedNode ? selectedNode.name : "همه دسته‌ها";
   const reportTotalAmount = selectedNode ? selectedNode.amount : data?.total_amount || 0;
   const reportTotalCount = selectedNode ? selectedNode.count : data?.total_count || 0;
-
-  const handlePrint = () => {
-    if (!data) return;
-    printCategoryReport({
-      periodLabel,
-      categoryLabel,
-      totalAmount: reportTotalAmount,
-      totalCount: reportTotalCount,
-      treeRows,
-      items,
-    });
-  };
-
-  const handleExcel = async () => {
-    if (!data) return;
-    try {
-      await downloadCategoryExcel({
-        periodLabel,
-        categoryLabel,
-        totalAmount: reportTotalAmount,
-        totalCount: reportTotalCount,
-        treeRows,
-        items,
-      });
-      toast.success("فایل اکسل آماده شد");
-    } catch {
-      toast.error("خطا در ساخت فایل اکسل");
-    }
-  };
 
   return (
     <Box
@@ -510,8 +427,15 @@ export default function ExpensesByCategoryPage() {
             size="small"
             variant="outlined"
             startIcon={<PrintIcon />}
-            onClick={handlePrint}
             disabled={!data || loading}
+            onClick={() =>
+              printExpenseList({
+                periodLabel,
+                categoryLabel,
+                totalAmount: listTotal,
+                items,
+              })
+            }
             sx={{ borderColor: "var(--admin-border)", color: "var(--admin-text)" }}
           >
             پرینت
@@ -520,8 +444,19 @@ export default function ExpensesByCategoryPage() {
             size="small"
             variant="contained"
             startIcon={<FileDownloadIcon />}
-            onClick={() => void handleExcel()}
             disabled={!data || loading}
+            onClick={() => {
+              void downloadCategoryExcel({
+                periodLabel,
+                categoryLabel,
+                totalAmount: reportTotalAmount,
+                totalCount: reportTotalCount,
+                treeRows,
+                items,
+              })
+                .then(() => toast.success("فایل اکسل آماده شد"))
+                .catch(() => toast.error("خطا در ساخت فایل اکسل"));
+            }}
             sx={{ bgcolor: "var(--admin-accent)", "&:hover": { bgcolor: "var(--admin-accent-hover)" } }}
           >
             اکسل
@@ -532,134 +467,102 @@ export default function ExpensesByCategoryPage() {
       <Paper
         elevation={0}
         sx={{
-          p: 2,
+          p: 1.5,
           mb: 2,
           borderRadius: "14px",
           bgcolor: "var(--admin-surface)",
           border: "1px solid var(--admin-border)",
         }}
       >
-        <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: 14, mb: 1.25 }}>
-          فیلتر
-        </Typography>
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 1.5 }}>
-          {FILTER_CHIPS.map((chip) => {
-            const active = filterMode === chip.value && dateRange.length !== 2;
-            return (
-              <Chip
-                key={chip.value}
-                label={chip.label}
-                onClick={() => {
-                  setFilterMode(chip.value);
-                  setDateRange([]);
-                }}
-                sx={{
-                  bgcolor: active ? "var(--admin-accent)" : "var(--admin-surface-alt)",
-                  color: active ? "#fff" : "var(--admin-text)",
-                  fontWeight: 600,
-                }}
-              />
-            );
-          })}
-          {(filterMode !== "month" || dateRange.length > 0 || selectedNode) && (
-            <Chip
-              icon={<ClearIcon sx={{ fontSize: "16px !important" }} />}
-              label="پاک کردن"
-              onClick={handleResetPeriod}
-              sx={{ bgcolor: "var(--admin-error-bg)", color: "var(--admin-error)", fontWeight: 600 }}
-            />
-          )}
-        </Box>
-        <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, mb: 0.75 }}>
-          بازه دلخواه:
-        </Typography>
-        <DatePicker
-          range
-          value={dateRange}
-          onChange={(dates: any) => {
-            setDateRange(dates || []);
-            if (dates?.length === 2) setFilterMode("range");
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", md: "1fr 280px" },
+            gap: 1.5,
+            alignItems: "start",
           }}
-          calendar={persian}
-          locale={persian_fa}
-          calendarPosition="bottom-center"
-          style={{
-            height: "44px",
-            borderRadius: "12px",
-            backgroundColor: "var(--admin-surface-alt)",
-            width: "100%",
-            border: "1px solid var(--admin-border)",
-          }}
-          className="rmdp-mobile"
-          placeholder="از تاریخ — تا تاریخ"
-        />
-        <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, mt: 1 }}>
-          بازه فعال: {periodLabel}
-          {selectedNode ? ` · دسته انتخاب‌شده: ${categoryLabel}` : ""}
-        </Typography>
-      </Paper>
-
-      {loading ? (
-        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "40vh" }}>
-          <CircularProgress sx={{ color: "var(--admin-accent)" }} />
-        </Box>
-      ) : data ? (
-        <>
-          <Paper
-            elevation={0}
-            sx={{
-              p: 2,
-              mb: 2,
-              borderRadius: "14px",
-              background: "linear-gradient(135deg, var(--admin-accent) 0%, var(--admin-accent-hover) 100%)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 2,
-            }}
-          >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1.25 }}>
-              <Box sx={{ bgcolor: "rgba(255,255,255,0.2)", borderRadius: "10px", p: 1, display: "flex" }}>
-                <AttachMoneyIcon sx={{ color: "#fff" }} />
-              </Box>
-              <Box>
-                <Typography sx={{ color: "#fff", fontSize: 13, opacity: 0.9 }}>
-                  {selectedNode ? `جمع ${selectedNode.name}` : "جمع کل هزینه‌ها"}
-                </Typography>
-                <Typography sx={{ color: "#fff", fontSize: 22, fontWeight: 800 }}>
-                  {formatNumber(reportTotalAmount)}
-                  <Box component="span" sx={{ fontSize: 13, fontWeight: 500, mr: 0.75 }}>
-                    تومان
-                  </Box>
-                </Typography>
-              </Box>
+        >
+          <Box>
+            <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: 13, mb: 1 }}>
+              فیلتر زمانی
+            </Typography>
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mb: 1.25 }}>
+              {FILTER_CHIPS.map((chip) => {
+                const active = filterMode === chip.value && dateRange.length !== 2;
+                return (
+                  <Chip
+                    key={chip.value}
+                    size="small"
+                    label={chip.label}
+                    onClick={() => {
+                      setFilterMode(chip.value);
+                      setDateRange([]);
+                    }}
+                    sx={{
+                      bgcolor: active ? "var(--admin-accent)" : "var(--admin-surface-alt)",
+                      color: active ? "#fff" : "var(--admin-text)",
+                      fontWeight: 600,
+                      height: 28,
+                    }}
+                  />
+                );
+              })}
+              {(filterMode !== "month" || dateRange.length > 0 || selectedNode) && (
+                <Chip
+                  size="small"
+                  icon={<ClearIcon sx={{ fontSize: "14px !important" }} />}
+                  label="پاک کردن"
+                  onClick={handleResetPeriod}
+                  sx={{ bgcolor: "var(--admin-error-bg)", color: "var(--admin-error)", fontWeight: 600, height: 28 }}
+                />
+              )}
             </Box>
-            <Chip
-              label={`${formatNumber(reportTotalCount)} مورد`}
-              sx={{ bgcolor: "rgba(255,255,255,0.2)", color: "#fff", fontWeight: 700 }}
+            <DatePicker
+              range
+              value={dateRange}
+              onChange={(dates: any) => {
+                setDateRange(dates || []);
+                if (dates?.length === 2) setFilterMode("range");
+              }}
+              calendar={persian}
+              locale={persian_fa}
+              calendarPosition="bottom-center"
+              style={{
+                height: "40px",
+                borderRadius: "10px",
+                backgroundColor: "var(--admin-surface-alt)",
+                width: "100%",
+                border: "1px solid var(--admin-border)",
+              }}
+              className="rmdp-mobile"
+              placeholder="از تاریخ — تا تاریخ"
             />
-          </Paper>
+            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, mt: 0.75 }}>
+              بازه: {periodLabel}
+              {selectedNode ? ` · دسته: ${selectedNode.name}` : ""}
+            </Typography>
+          </Box>
 
-          <Paper
-            elevation={0}
+          <Box
             sx={{
-              p: 2,
-              mb: 2,
-              borderRadius: "14px",
-              bgcolor: "var(--admin-surface)",
               border: "1px solid var(--admin-border)",
+              borderRadius: "10px",
+              bgcolor: "var(--admin-surface-alt)",
+              p: 1,
+              maxHeight: { xs: 220, md: 260 },
+              overflow: "auto",
             }}
           >
-            <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: 15, mb: 0.5 }}>
-              گزارش دسته‌بندی
+            <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: 12, mb: 0.75 }}>
+              دسته‌بندی
             </Typography>
-            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, mb: 1.5 }}>
-              روی هر دسته کلیک کنید تا لیست هزینه‌های همان بخش پایین صفحه فیلتر شود.
-            </Typography>
-
-            {data.tree.length === 0 ? (
-              <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 13, py: 4, textAlign: "center" }}>
-                در این بازه هزینه‌ای ثبت نشده است
+            {loading && !data ? (
+              <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+                <CircularProgress size={20} sx={{ color: "var(--admin-accent)" }} />
+              </Box>
+            ) : !data?.tree?.length ? (
+              <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, textAlign: "center", py: 1 }}>
+                دسته‌ای نیست
               </Typography>
             ) : (
               data.tree.map((node) => (
@@ -672,6 +575,49 @@ export default function ExpensesByCategoryPage() {
                 />
               ))
             )}
+          </Box>
+        </Box>
+      </Paper>
+
+      {loading && !data ? (
+        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "30vh" }}>
+          <CircularProgress sx={{ color: "var(--admin-accent)" }} />
+        </Box>
+      ) : data ? (
+        <>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 1.75,
+              mb: 2,
+              borderRadius: "14px",
+              background: "linear-gradient(135deg, var(--admin-accent) 0%, var(--admin-accent-hover) 100%)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 2,
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.25 }}>
+              <Box sx={{ bgcolor: "rgba(255,255,255,0.2)", borderRadius: "10px", p: 0.9, display: "flex" }}>
+                <AttachMoneyIcon sx={{ color: "#fff", fontSize: 20 }} />
+              </Box>
+              <Box>
+                <Typography sx={{ color: "#fff", fontSize: 12, opacity: 0.9 }}>
+                  {selectedNode ? `جمع ${selectedNode.name}` : "جمع کل هزینه‌ها"}
+                </Typography>
+                <Typography sx={{ color: "#fff", fontSize: 20, fontWeight: 800 }}>
+                  {formatNumber(reportTotalAmount)}
+                  <Box component="span" sx={{ fontSize: 12, fontWeight: 500, mr: 0.75 }}>
+                    تومان
+                  </Box>
+                </Typography>
+              </Box>
+            </Box>
+            <Chip
+              label={`${formatNumber(reportTotalCount)} مورد`}
+              sx={{ bgcolor: "rgba(255,255,255,0.2)", color: "#fff", fontWeight: 700 }}
+            />
           </Paper>
 
           <Paper
@@ -682,6 +628,7 @@ export default function ExpensesByCategoryPage() {
               borderRadius: "14px",
               bgcolor: "var(--admin-surface)",
               border: "1px solid var(--admin-border)",
+              opacity: loading ? 0.7 : 1,
             }}
           >
             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, mb: 1.5, flexWrap: "wrap" }}>
@@ -690,11 +637,11 @@ export default function ExpensesByCategoryPage() {
                   لیست هزینه‌ها
                 </Typography>
                 <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>
-                  {categoryLabel} · جمع لیست: {formatNumber(listTotal)} تومان
+                  {categoryLabel} · جمع: {formatNumber(listTotal)} تومان
                 </Typography>
               </Box>
               {selectedNode && (
-                <Button size="small" onClick={handleClearCategory} sx={{ color: "var(--admin-accent)" }}>
+                <Button size="small" onClick={() => setSelectedNode(null)} sx={{ color: "var(--admin-accent)" }}>
                   نمایش همه
                 </Button>
               )}
@@ -711,7 +658,7 @@ export default function ExpensesByCategoryPage() {
                     <TableRow>
                       <TableCell sx={{ color: "var(--admin-text)", fontWeight: 700 }}>تاریخ</TableCell>
                       <TableCell sx={{ color: "var(--admin-text)", fontWeight: 700 }}>عنوان</TableCell>
-                      <TableCell sx={{ color: "var(--admin-text)", fontWeight: 700 }}>حساب</TableCell>
+                      <TableCell sx={{ color: "var(--admin-text)", fontWeight: 700 }}>دسته‌بندی</TableCell>
                       <TableCell sx={{ color: "var(--admin-text)", fontWeight: 700 }}>ثبت‌کننده</TableCell>
                       <TableCell align="left" sx={{ color: "var(--admin-text)", fontWeight: 700 }}>
                         مبلغ
@@ -724,9 +671,7 @@ export default function ExpensesByCategoryPage() {
                         <TableCell sx={{ color: "var(--admin-text)", whiteSpace: "nowrap" }}>{item.date}</TableCell>
                         <TableCell sx={{ color: "var(--admin-text)" }}>{item.title}</TableCell>
                         <TableCell sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>
-                          {item.accounting_account
-                            ? `${item.accounting_account.code} — ${item.accounting_account.name}`
-                            : "—"}
+                          {categoryLabelOf(item)}
                         </TableCell>
                         <TableCell sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>
                           {item.user_name || "—"}
@@ -751,7 +696,7 @@ export default function ExpensesByCategoryPage() {
           </Paper>
         </>
       ) : (
-        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "40vh" }}>
+        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "30vh" }}>
           <Typography sx={{ color: "var(--admin-text)", fontSize: 16 }}>داده‌ای برای نمایش وجود ندارد</Typography>
         </Box>
       )}
