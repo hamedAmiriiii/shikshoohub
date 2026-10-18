@@ -125,8 +125,7 @@ export default function CategoryProductsPage() {
         false,
         "",
       );
-      console.log("res : ",res);
-      
+
       if (!res.hasError && res) {
         setCategoryInfo(res);
         setCategoryName(res.name || '');
@@ -185,7 +184,6 @@ export default function CategoryProductsPage() {
       }
 
       const res = await apiRequestError("Get", {}, {}, url, false, false, "");
-console.log("res2222 : ",res);
 
       if (!res.hasError) {
         if (res.data && Array.isArray(res.data)) {
