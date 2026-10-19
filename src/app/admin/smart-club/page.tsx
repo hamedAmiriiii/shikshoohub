@@ -56,6 +56,35 @@ import {
 } from "@/app/lib/smartCustomer";
 import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
 
+/** نمایش آخرین محاسبه؛ شمسی را دست‌نخورده می‌گذارد، میلادی را تهران→شمسی می‌کند. */
+function formatComputedAt(value?: string | null): string {
+  if (!value) return "";
+  const trimmed = String(value).trim();
+  const m = trimmed.match(
+    /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/,
+  );
+  if (!m) return trimmed;
+  const year = Number(m[1]);
+  const mo = m[2].padStart(2, "0");
+  const d = m[3].padStart(2, "0");
+  const hh = m[4] != null ? m[4].padStart(2, "0") : null;
+  const mm = m[5] != null ? m[5].padStart(2, "0") : null;
+  if (year < 1700) {
+    return hh && mm ? `${year}/${mo}/${d} ${hh}:${mm}` : `${year}/${mo}/${d}`;
+  }
+  const iso = `${m[1]}-${mo}-${d}T${hh ?? "00"}:${mm ?? "00"}:${(m[6] ?? "00").padStart(2, "0")}+03:30`;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return trimmed;
+  return date.toLocaleString("fa-IR", {
+    timeZone: "Asia/Tehran",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 const CARD_THEME: Record<string, { color: string; bg: string; icon: ReactNode }> = {
   vip: { color: "#f5c542", bg: "rgba(245,197,66,0.12)", icon: <EmojiEventsOutlinedIcon /> },
   ready_repurchase: { color: "#2dd4bf", bg: "rgba(45,212,191,0.12)", icon: <ShoppingCartOutlinedIcon /> },
@@ -564,7 +593,10 @@ export default function SmartClubDashboardPage() {
 
           {data.last_computed_at ? (
             <Typography sx={{ fontSize: 10, color: "var(--admin-text-secondary)", mt: 0.75 }}>
-              آخرین محاسبه: {data.last_computed_at}
+              آخرین محاسبه:{" "}
+              <Box component="span" dir="ltr" sx={{ display: "inline-block" }}>
+                {formatComputedAt(data.last_computed_at)}
+              </Box>
             </Typography>
           ) : null}
         </>

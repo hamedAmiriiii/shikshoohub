@@ -261,6 +261,8 @@ export default function ListPurches() {
     let searchBoxList: any = [
       { fieldName: "phone", fieldOperation: "MATCH", fieldValue: "", nextConditionOperator: "OR" },
       { fieldName: "customer_name", fieldOperation: "MATCH", fieldValue: "", nextConditionOperator: "OR" },
+      { fieldName: "id", fieldOperation: "MATCH", fieldValue: "", nextConditionOperator: "OR" },
+      { fieldName: "daily_ticket_number", fieldOperation: "MATCH", fieldValue: "", nextConditionOperator: "OR" },
     ];
 
 
