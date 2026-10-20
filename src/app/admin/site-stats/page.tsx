@@ -2,14 +2,16 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Box, CircularProgress, Grid, IconButton, Tooltip, Typography } from "@mui/material";
+import { Box, Button, CircularProgress, Grid, IconButton, Tooltip, Typography } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import LanguageIcon from "@mui/icons-material/Language";
 import CalculateIcon from "@mui/icons-material/Calculate";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import ApiIcon from "@mui/icons-material/Api";
 import LoyaltyIcon from "@mui/icons-material/Loyalty";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
+import { GA_DASHBOARD_URL, GA_MEASUREMENT_ID } from "@/app/lib/googleAnalytics";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { isSuperAdminUser } from "@/app/lib/superAdmin";
@@ -91,8 +93,8 @@ export default function SiteStatsPage() {
   return (
     <Box sx={{ p: { xs: 1.5, md: 2.5 }, direction: "rtl" }}>
       <ToastContainer position="top-center" rtl theme="dark" />
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
-        <Box sx={{ flex: 1 }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2, flexWrap: "wrap" }}>
+        <Box sx={{ flex: 1, minWidth: 200 }}>
           <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: { xs: 18, md: 22 } }}>
             آمار بازدید سایت
           </Typography>
@@ -100,6 +102,30 @@ export default function SiteStatsPage() {
             هر بار باز شدن صفحه یک بازدید است. «امروز» و «۳۰ روز» همان جمع ردیف‌های روزانه هستند.
           </Typography>
         </Box>
+        <Button
+          component="a"
+          href={GA_DASHBOARD_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          variant="outlined"
+          size="small"
+          endIcon={<OpenInNewIcon sx={{ fontSize: 16 }} />}
+          sx={{
+            color: "var(--admin-accent)",
+            borderColor: "var(--admin-border)",
+            borderRadius: "10px",
+            textTransform: "none",
+            fontWeight: 600,
+            "&:hover": { borderColor: "var(--admin-accent)", bgcolor: "rgba(120, 181, 104, 0.08)" },
+          }}
+        >
+          داشبورد Google Analytics
+          {GA_MEASUREMENT_ID ? (
+            <Box component="span" dir="ltr" sx={{ mr: 0.75, opacity: 0.7, fontSize: 11, fontWeight: 500 }}>
+              ({GA_MEASUREMENT_ID})
+            </Box>
+          ) : null}
+        </Button>
         <Tooltip title="بروزرسانی">
           <span>
             <IconButton onClick={() => void load()} disabled={loading} sx={{ color: "var(--admin-accent)" }} aria-label="بروزرسانی آمار">

@@ -57,6 +57,7 @@ const SUPER_ADMIN_PATHS = [
   "/admin/shop-sms-quota",
   "/admin/shop-service-access",
   "/admin/sms-package-orders",
+  "/admin/sms-gateway",
   "/admin/two-factor-codes",
   "/admin/agency-requests",
   "/admin/marketers",

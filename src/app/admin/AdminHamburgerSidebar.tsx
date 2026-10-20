@@ -553,6 +553,12 @@ export default function AdminHamburgerSidebar({
         icon: <ReceiptLongIcon />,
       },
       {
+        id: "sms-gateway",
+        label: "درگاه پیامک",
+        href: "/admin/sms-gateway",
+        icon: <SmsIcon />,
+      },
+      {
         id: "two-factor-codes",
         label: "کدهای دوعاملی",
         href: "/admin/two-factor-codes",
