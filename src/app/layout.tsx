@@ -11,6 +11,7 @@ import PWAHead from "./components/PWAHead";
 import AppShell from "./AppShell";
 import RepairHostRedirect from "./components/RepairHostRedirect";
 import MarketingRefTracker from "./components/MarketingRefTracker";
+import GoogleAnalytics from "./components/GoogleAnalytics";
 import { LEGACY_BROWSER_BOOTSTRAP } from "./legacyBrowserBootstrap";
 import {
   APP_ICONS,
@@ -124,7 +125,7 @@ export default function RootLayout({
         </LanguageProvider>
           </QueryClientProvider>
         {/* </AuthProvider> */}
-        
+        <GoogleAnalytics />
       </body>
     </html>
   );
