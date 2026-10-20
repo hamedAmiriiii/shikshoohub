@@ -60,7 +60,7 @@ export default function SmsGatewayPage() {
   const [creditLabel, setCreditLabel] = useState<string | null>(null);
 
   const [provider, setProvider] = useState<Provider>("shina");
-  const [username, setUsername] = useState("989399166196");
+  const [username, setUsername] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [apiKeyHint, setApiKeyHint] = useState("");
   const [from, setFrom] = useState("30008810852036");
@@ -80,7 +80,7 @@ export default function SmsGatewayPage() {
       }
       const data = res as GatewaySettings;
       setProvider(data.provider === "melipayamak" ? "melipayamak" : "shina");
-      setUsername(data.melipayamak.username || "989399166196");
+      setUsername(data.melipayamak.username || "");
       setApiKey("");
       setApiKeyHint(
         data.melipayamak.api_key_set
@@ -257,7 +257,7 @@ export default function SmsGatewayPage() {
               label="نام کاربری"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              helperText="فرمت صحیح: 989399166196"
+              helperText="همان نام کاربری ورود به پنل ملی‌پیامک؛ معمولاً با 09 شروع می‌شود و نباید به 98 تبدیل شود."
               fullWidth
               sx={fieldSx}
               inputProps={{ dir: "ltr" }}
@@ -277,7 +277,7 @@ export default function SmsGatewayPage() {
               label="شماره خط اختصاصی (from)"
               value={from}
               onChange={(e) => setFrom(e.target.value)}
-              helperText="برای پیامک متن آزاد فروشگاه / کمپین — مثلاً 30008810852036"
+              helperText="شماره خط اختصاصی پنل. خط عمومی با وب‌سرویس ارسال نمی‌شود."
               fullWidth
               sx={fieldSx}
               inputProps={{ dir: "ltr" }}
@@ -309,8 +309,9 @@ export default function SmsGatewayPage() {
           <Typography
             sx={{ color: "var(--admin-text-muted)", fontSize: 12, mt: 2, lineHeight: 1.7 }}
           >
-            با خط اختصاصی، پیامک‌های فروشگاه و متن آزاد از همین شماره می‌روند. پترن خدماتی
-            اشتراکی فقط وقتی لازم است که bodyId را پر کنید (مثلاً OTP بدون بلک‌لیست تبلیغاتی).
+            پیامک متن آزاد با خط اختصاصی و ApiKey ارسال می‌شود و انتهای متن باید لغو11 باشد.
+            اگر استعلام موجودی خطای IP داد، IP سرور را در پنل ملی‌پیامک مجاز کنید. پترن
+            اشتراکی فقط وقتی لازم است که bodyId را برای OTP پر کنید.
           </Typography>
 
           <Button
