@@ -35,6 +35,7 @@ type GatewaySettings = {
     from: string;
     otp_body_id: number | null;
     otp_vars_mode: "code" | "shop_code";
+    credit_body_id: number | null;
   };
   shina: { gateway: string };
 };
@@ -65,6 +66,7 @@ export default function SmsGatewayPage() {
   const [apiKeyHint, setApiKeyHint] = useState("");
   const [from, setFrom] = useState("30008810852036");
   const [otpBodyId, setOtpBodyId] = useState("");
+  const [creditBodyId, setCreditBodyId] = useState("564775");
   const [otpVarsMode, setOtpVarsMode] = useState<"code" | "shop_code">("shop_code");
 
   const load = useCallback(async () => {
@@ -92,6 +94,9 @@ export default function SmsGatewayPage() {
         data.melipayamak.otp_body_id != null ? String(data.melipayamak.otp_body_id) : "564703",
       );
       setOtpVarsMode(data.melipayamak.otp_vars_mode === "code" ? "code" : "shop_code");
+      setCreditBodyId(
+        data.melipayamak.credit_body_id != null ? String(data.melipayamak.credit_body_id) : "564775",
+      );
     } catch {
       toast.error("خطا در دریافت تنظیمات درگاه پیامک");
     } finally {
@@ -118,6 +123,7 @@ export default function SmsGatewayPage() {
         melipayamak_username: username.trim(),
         melipayamak_from: from.trim(),
         melipayamak_otp_body_id: otpBodyId.trim(),
+        melipayamak_credit_body_id: creditBodyId.trim(),
         melipayamak_otp_vars_mode: otpVarsMode,
       };
       if (apiKey.trim() !== "") {
@@ -304,14 +310,22 @@ export default function SmsGatewayPage() {
               <MenuItem value="shop_code">{"{0}"} عنوان یا نام فروشگاه، {"{1}"} کد</MenuItem>
               <MenuItem value="code">فقط کد (برای الگوی تک‌متغیره)</MenuItem>
             </TextField>
+            <TextField
+              label="شناسه پترن اعتبار باشگاه (bodyId)"
+              value={creditBodyId}
+              onChange={(e) => setCreditBodyId(e.target.value.replace(/\D/g, ""))}
+              helperText="الگوی ۵۶۴۷۷۵: {0} نام فروشگاه، {1} نام مشتری، {2} مبلغ. تا تأیید پنل، ارسال این الگو رد می‌شود."
+              fullWidth
+              sx={fieldSx}
+              inputProps={{ dir: "ltr" }}
+            />
           </Box>
 
           <Typography
             sx={{ color: "var(--admin-text-muted)", fontSize: 12, mt: 2, lineHeight: 1.7 }}
           >
-            کدهای تأیید با الگوی ۵۶۴۷۰۳ ارسال می‌شوند: «{'{0}'} کد تایید هویت شما : {'{1}'} webinoo-plus».
-            این ارسال از وب‌سرویس خدماتی است. پیامک‌های فروشگاه همچنان با خط اختصاصی می‌روند
-            و انتهای متن‌شان لغو11 است.
+            کد تأیید با الگوی ۵۶۴۷۰۳ و افزایش اعتبار باشگاه با الگوی ۵۶۴۷۷۵ از وب‌سرویس خدماتی می‌رود.
+            الگوی باشگاه هنوز منتظر تأیید پنل است. بقیهٔ پیامک‌های فروشگاه با خط اختصاصی و لغو11 ارسال می‌شوند.
           </Typography>
 
           <Button
