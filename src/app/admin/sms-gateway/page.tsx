@@ -89,7 +89,7 @@ export default function SmsGatewayPage() {
       );
       setFrom(data.melipayamak.from || "30008810852036");
       setOtpBodyId(
-        data.melipayamak.otp_body_id != null ? String(data.melipayamak.otp_body_id) : "",
+        data.melipayamak.otp_body_id != null ? String(data.melipayamak.otp_body_id) : "564703",
       );
       setOtpVarsMode(data.melipayamak.otp_vars_mode === "code" ? "code" : "shop_code");
     } catch {
@@ -286,7 +286,7 @@ export default function SmsGatewayPage() {
               label="شناسه پترن OTP (bodyId)"
               value={otpBodyId}
               onChange={(e) => setOtpBodyId(e.target.value.replace(/\D/g, ""))}
-              helperText="از پنل ملی‌پیامک → ارسال بر اساس پترن. اگر خالی باشد، OTP هم با خط اختصاصی ارسال می‌شود."
+              helperText="الگوی تأییدشده ۵۶۴۷۰۳. کد تأیید از خط خدماتی اشتراکی می‌رود و به لیست سیاه هم می‌رسد."
               fullWidth
               sx={fieldSx}
               inputProps={{ dir: "ltr" }}
@@ -301,17 +301,17 @@ export default function SmsGatewayPage() {
               fullWidth
               sx={fieldSx}
             >
-              <MenuItem value="shop_code">نام فروشگاه ; کد</MenuItem>
-              <MenuItem value="code">فقط کد</MenuItem>
+              <MenuItem value="shop_code">{"{0}"} عنوان یا نام فروشگاه، {"{1}"} کد</MenuItem>
+              <MenuItem value="code">فقط کد (برای الگوی تک‌متغیره)</MenuItem>
             </TextField>
           </Box>
 
           <Typography
             sx={{ color: "var(--admin-text-muted)", fontSize: 12, mt: 2, lineHeight: 1.7 }}
           >
-            پیامک متن آزاد با خط اختصاصی و ApiKey ارسال می‌شود و انتهای متن باید لغو11 باشد.
-            اگر استعلام موجودی خطای IP داد، IP سرور را در پنل ملی‌پیامک مجاز کنید. پترن
-            اشتراکی فقط وقتی لازم است که bodyId را برای OTP پر کنید.
+            کدهای تأیید با الگوی ۵۶۴۷۰۳ ارسال می‌شوند: «{'{0}'} کد تایید هویت شما : {'{1}'} webinoo-plus».
+            این ارسال از وب‌سرویس خدماتی است. پیامک‌های فروشگاه همچنان با خط اختصاصی می‌روند
+            و انتهای متن‌شان لغو11 است.
           </Typography>
 
           <Button
