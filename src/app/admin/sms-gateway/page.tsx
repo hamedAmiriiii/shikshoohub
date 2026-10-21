@@ -36,6 +36,7 @@ type GatewaySettings = {
     otp_body_id: number | null;
     otp_vars_mode: "code" | "shop_code";
     credit_body_id: number | null;
+    low_quota_body_id: number | null;
   };
   shina: { gateway: string };
 };
@@ -67,6 +68,7 @@ export default function SmsGatewayPage() {
   const [from, setFrom] = useState("30008810852036");
   const [otpBodyId, setOtpBodyId] = useState("");
   const [creditBodyId, setCreditBodyId] = useState("564775");
+  const [lowQuotaBodyId, setLowQuotaBodyId] = useState("");
   const [otpVarsMode, setOtpVarsMode] = useState<"code" | "shop_code">("shop_code");
 
   const load = useCallback(async () => {
@@ -97,6 +99,11 @@ export default function SmsGatewayPage() {
       setCreditBodyId(
         data.melipayamak.credit_body_id != null ? String(data.melipayamak.credit_body_id) : "564775",
       );
+      setLowQuotaBodyId(
+        data.melipayamak.low_quota_body_id != null
+          ? String(data.melipayamak.low_quota_body_id)
+          : "",
+      );
     } catch {
       toast.error("خطا در دریافت تنظیمات درگاه پیامک");
     } finally {
@@ -124,6 +131,7 @@ export default function SmsGatewayPage() {
         melipayamak_from: from.trim(),
         melipayamak_otp_body_id: otpBodyId.trim(),
         melipayamak_credit_body_id: creditBodyId.trim(),
+        melipayamak_low_quota_body_id: lowQuotaBodyId.trim(),
         melipayamak_otp_vars_mode: otpVarsMode,
       };
       if (apiKey.trim() !== "") {
@@ -319,13 +327,23 @@ export default function SmsGatewayPage() {
               sx={fieldSx}
               inputProps={{ dir: "ltr" }}
             />
+            <TextField
+              label="شناسه پترن هشدار کمبود اعتبار فروشگاه (bodyId)"
+              value={lowQuotaBodyId}
+              onChange={(e) => setLowQuotaBodyId(e.target.value.replace(/\D/g, ""))}
+              helperText="{0} نام فروشگاه، {1} موجودی باقیمانده. وقتی اعتبار زیر ۳۰ برسد یک‌بار به صاحب فروشگاه ارسال می‌شود."
+              fullWidth
+              sx={fieldSx}
+              inputProps={{ dir: "ltr" }}
+            />
           </Box>
 
           <Typography
             sx={{ color: "var(--admin-text-muted)", fontSize: 12, mt: 2, lineHeight: 1.7 }}
           >
-            کد تأیید با الگوی ۵۶۴۷۰۳ و افزایش اعتبار باشگاه با الگوی ۵۶۴۷۷۵ از وب‌سرویس خدماتی می‌رود.
-            الگوی باشگاه هنوز منتظر تأیید پنل است. بقیهٔ پیامک‌های فروشگاه با خط اختصاصی و لغو11 ارسال می‌شوند.
+            کد تأیید با الگوی ۵۶۴۷۰۳، افزایش اعتبار باشگاه با الگوی ۵۶۴۷۷۵، و هشدار کمبود اعتبار فروشگاه
+            (زیر ۳۰ پیامک، یک‌بار تا شارژ بعدی) از وب‌سرویس خدماتی می‌روند. بقیهٔ پیامک‌های فروشگاه با خط
+            اختصاصی و لغو11 ارسال می‌شوند.
           </Typography>
 
           <Button
