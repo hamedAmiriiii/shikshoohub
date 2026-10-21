@@ -314,7 +314,7 @@ export default function SmsGatewayPage() {
               label="شناسه پترن اعتبار باشگاه (bodyId)"
               value={creditBodyId}
               onChange={(e) => setCreditBodyId(e.target.value.replace(/\D/g, ""))}
-              helperText="الگوی ۵۶۴۷۷۵: {0} نام فروشگاه، {1} نام مشتری، {2} مبلغ. تا تأیید پنل، ارسال این الگو رد می‌شود."
+              helperText="الگوی ۵۶۴۷۷۵: نام فروشگاه خط اول، بعد اینتر نام مشتری، مبلغ با جداکننده هزارگان مثل 12,000."
               fullWidth
               sx={fieldSx}
               inputProps={{ dir: "ltr" }}
