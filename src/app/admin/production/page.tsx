@@ -1241,7 +1241,7 @@ export default function ProductionCostingPage() {
                         ? "کمبود مواد"
                         : (good.ingredient_costs || []).length > 0
                           ? `${(good.ingredient_costs || []).length} قلم`
-                          : "—"
+                          : "—"}
                     </StyledTableCell>
                     <StyledTableCell align="center">
                       <Box sx={{ display: "flex", gap: 0.25, justifyContent: "center" }}>
