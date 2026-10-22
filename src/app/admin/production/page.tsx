@@ -52,6 +52,8 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import ZoomInIcon from "@mui/icons-material/ZoomIn";
 import ZoomOutIcon from "@mui/icons-material/ZoomOut";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
+import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
+import AssessmentIcon from "@mui/icons-material/Assessment";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import tokenCode from "@/app/coponent/tokenCode";
@@ -90,6 +92,7 @@ import {
   recipeLinesFromGood,
   recipeLineKey,
   isNestedRecipeLine,
+  isFinalProducedGood,
   applySalePriceRounding,
   salePriceFromProfitPercent,
   storedMarkupPercent,
@@ -98,6 +101,11 @@ import {
   type RawMaterial,
   type RecipeLine,
   type SalePriceMode,
+  type InventoryWaste,
+  type InventoryWasteKind,
+  type InventoryWasteSummary,
+  asInventoryWaste,
+  extractWasteList,
 } from "@/app/lib/productionCosting";
 import { formatAmountInput } from "@/app/lib/amountInput";
 import { useShopPermissionGate } from "@/app/lib/shopPermissions";
@@ -214,7 +222,11 @@ const actionBtnSx = {
   p: 0.4,
 } as const;
 
-type TabKey = "stock" | "materials" | "goods";
+type TabKey = "stock" | "materials" | "goods" | "waste";
+
+type WasteTarget =
+  | { kind: "raw_material"; item: RawMaterial }
+  | { kind: "produced_good"; item: ProducedGood };
 
 const emptyLine = (): RecipeLine => ({
   kind: "raw_material",
@@ -266,6 +278,7 @@ export default function ProductionCostingPage() {
   const [editingGood, setEditingGood] = useState<ProducedGood | null>(null);
   const [goodName, setGoodName] = useState("");
   const [goodUnit, setGoodUnit] = useState<"kg" | "piece">("kg");
+  const [goodIsFinal, setGoodIsFinal] = useState(true);
   const [recipeLines, setRecipeLines] = useState<RecipeLine[]>([emptyLine()]);
   const [layerOrder, setLayerOrder] = useState<LayerOrderEntry[]>([]);
   const [layerCompose, setLayerCompose] = useState<LayerComposeMode>("side");
@@ -287,10 +300,21 @@ export default function ProductionCostingPage() {
   const [salePriceMode, setSalePriceMode] = useState<SalePriceMode>("percent");
   const [roundSalePrice, setRoundSalePrice] = useState(false);
 
+  const [wasteTarget, setWasteTarget] = useState<WasteTarget | null>(null);
+  const [wasteQty, setWasteQty] = useState("1");
+  const [wasteNote, setWasteNote] = useState("");
+  const [wastes, setWastes] = useState<InventoryWaste[]>([]);
+  const [wasteSummary, setWasteSummary] = useState<InventoryWasteSummary | null>(null);
+  const [wasteLoading, setWasteLoading] = useState(false);
+  const [wasteKindFilter, setWasteKindFilter] = useState<"all" | InventoryWasteKind>("all");
+  const [wasteFromDate, setWasteFromDate] = useState("");
+  const [wasteToDate, setWasteToDate] = useState("");
+
   const [deleteTarget, setDeleteTarget] = useState<
     | { kind: "material"; item: RawMaterial }
     | { kind: "good"; item: ProducedGood }
     | { kind: "lot"; material: RawMaterial; lotId: number }
+    | { kind: "waste"; item: InventoryWaste }
     | null
   >(null);
 
@@ -321,9 +345,38 @@ export default function ProductionCostingPage() {
     }
   }, []);
 
+  const loadWastes = useCallback(async () => {
+    const token = tokenCode();
+    if (!token) return;
+    setWasteLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.set("paginate", "1");
+      params.set("per_page", "50");
+      if (wasteKindFilter !== "all") params.set("kind", wasteKindFilter);
+      if (wasteFromDate) params.set("from_date", wasteFromDate);
+      if (wasteToDate) params.set("to_date", wasteToDate);
+      if (searchQuery.trim()) params.set("search", searchQuery.trim());
+      const res = await FetchWithJwtClient("GET", `/api/inventory-wastes?${params.toString()}`, token);
+      if (res?.hasError) {
+        toast.error(getApiErrorMessage(res, "خطا در دریافت گزارش ضایعات"));
+        return;
+      }
+      const parsed = extractWasteList(res);
+      setWastes(parsed.rows);
+      setWasteSummary(parsed.summary);
+    } finally {
+      setWasteLoading(false);
+    }
+  }, [wasteKindFilter, wasteFromDate, wasteToDate, searchQuery]);
+
   useEffect(() => {
     void loadAll();
   }, [loadAll]);
+
+  useEffect(() => {
+    if (tab === "waste") void loadWastes();
+  }, [tab, loadWastes]);
 
   useEffect(() => {
     const token = tokenCode();
@@ -341,6 +394,7 @@ export default function ProductionCostingPage() {
   useEffect(() => {
     if (tab === "materials" && !canMaterials && canGoods) setTab("stock");
     if ((tab === "stock" || tab === "goods") && !canGoods && canMaterials) setTab("materials");
+    if (tab === "waste" && !canMaterials && !canGoods) setTab(canGoods ? "stock" : "materials");
   }, [tab, canMaterials, canGoods]);
 
   const searchText = searchQuery.trim().toLowerCase();
@@ -353,7 +407,13 @@ export default function ProductionCostingPage() {
     return materials.filter((item) => String(item.name || "").toLowerCase().includes(searchText));
   }, [materials, searchText]);
   const searchPlaceholder =
-    tab === "materials" ? "جستجوی ماده اولیه" : tab === "goods" ? "جستجوی کالای تولیدی" : "جستجوی کالا";
+    tab === "materials"
+      ? "جستجوی ماده اولیه"
+      : tab === "goods"
+        ? "جستجوی کالای تولیدی"
+        : tab === "waste"
+          ? "جستجوی ضایعات (نام یا توضیح)"
+          : "جستجوی کالا";
 
   useEffect(() => {
     if (!produceGood) {
@@ -617,6 +677,8 @@ export default function ProductionCostingPage() {
         res = await FetchWithJwtClient("DELETE", `/api/raw-materials/${deleteTarget.item.id}`, token);
       } else if (deleteTarget.kind === "good") {
         res = await FetchWithJwtClient("DELETE", `/api/produced-goods/${deleteTarget.item.id}`, token);
+      } else if (deleteTarget.kind === "waste") {
+        res = await FetchWithJwtClient("DELETE", `/api/inventory-wastes/${deleteTarget.item.id}`, token);
       } else {
         res = await FetchWithJwtClient(
           "DELETE",
@@ -628,9 +690,60 @@ export default function ProductionCostingPage() {
         toast.error(getApiErrorMessage(res, "حذف ناموفق بود"));
         return;
       }
-      toast.success("حذف شد");
+      toast.success(deleteTarget.kind === "waste" ? "ضایعات برگشت خورد" : "حذف شد");
       setDeleteTarget(null);
       await loadAll();
+      if (tab === "waste") await loadWastes();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openWaste = (target: WasteTarget) => {
+    setWasteTarget(target);
+    setWasteQty("1");
+    setWasteNote("");
+  };
+
+  const saveWaste = async () => {
+    if (!wasteTarget) return;
+    const qty = parseAmount(wasteQty);
+    if (qty <= 0) {
+      toast.error("مقدار ضایعات را وارد کنید");
+      return;
+    }
+    const token = tokenCode();
+    if (!token) return;
+    setSaving(true);
+    try {
+      const payload =
+        wasteTarget.kind === "raw_material"
+          ? {
+              kind: "raw_material",
+              raw_material_id: wasteTarget.item.id,
+              quantity_kg: qty,
+              note: wasteNote.trim() || null,
+            }
+          : {
+              kind: "produced_good",
+              produced_good_id: wasteTarget.item.id,
+              quantity_kg: qty,
+              note: wasteNote.trim() || null,
+            };
+      const res = await FetchWithJwtClient("POST", "/api/inventory-wastes", token, {}, { body: JSON.stringify(payload) });
+      if (res?.hasError) {
+        toast.error(getApiErrorMessage(res, "ثبت ضایعات ناموفق بود"));
+        return;
+      }
+      const created = asInventoryWaste(res);
+      toast.success(
+        created
+          ? `ضایعات ثبت شد · هزینه ${formatToman(created.total_cost)} تومان`
+          : "ضایعات ثبت شد",
+      );
+      setWasteTarget(null);
+      await loadAll();
+      if (tab === "waste") await loadWastes();
     } finally {
       setSaving(false);
     }
@@ -645,6 +758,7 @@ export default function ProductionCostingPage() {
     setEditingGood(null);
     setGoodName("");
     setGoodUnit("kg");
+    setGoodIsFinal(true);
     setRecipeLines([emptyLine()]);
     setLayerOrder([]);
     setLayerCompose("side");
@@ -657,6 +771,7 @@ export default function ProductionCostingPage() {
     setEditingGood(good);
     setGoodName(good.name);
     setGoodUnit(isPieceMaterial(good) ? "piece" : "kg");
+    setGoodIsFinal(isFinalProducedGood(good));
     setRecipeLines(recipeLinesFromGood(good));
     setLayerOrder(layerOrderFromGood(good));
     setLayerCompose(layerComposeFromGood(good));
@@ -725,6 +840,7 @@ export default function ProductionCostingPage() {
       );
       const payload: Record<string, unknown> = {
         name,
+        is_final: goodIsFinal,
         ingredients,
         category_ids: goodCategoryIds,
         layer_order: layerOrder
@@ -926,7 +1042,7 @@ export default function ProductionCostingPage() {
       <ToastContainer position="top-center" rtl />
 
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 1.5, flexWrap: "wrap", mb: 1.25 }}>
-        {tab !== "stock" && (
+        {tab !== "stock" && tab !== "waste" && (
           <Button
             size="small"
             variant="contained"
@@ -963,6 +1079,9 @@ export default function ProductionCostingPage() {
         {canGoods ? <Tab value="stock" icon={<WarehouseIcon />} iconPosition="start" label="موجودی" /> : null}
         {canMaterials ? <Tab value="materials" icon={<Inventory2Icon />} iconPosition="start" label="انبار مواد اولیه" /> : null}
         {canGoods ? <Tab value="goods" icon={<KitchenIcon />} iconPosition="start" label="کالای تولیدی" /> : null}
+        {canMaterials || canGoods ? (
+          <Tab value="waste" icon={<AssessmentIcon />} iconPosition="start" label="ضایعات" />
+        ) : null}
       </Tabs>
 
       <TextField
@@ -1019,7 +1138,12 @@ export default function ProductionCostingPage() {
                     <StyledTableRow key={good.id}>
                       <StyledTableCell align="center">{index + 1}</StyledTableCell>
                       <StyledTableCell align="center">
-                        <Typography sx={{ fontWeight: 600 }}>{good.name}</Typography>
+                        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0.35 }}>
+                          <Typography sx={{ fontWeight: 600 }}>{good.name}</Typography>
+                          {!isFinalProducedGood(good) ? (
+                            <Chip size="small" label="نیمه‌ساخته" sx={{ height: 20, fontSize: 10 }} />
+                          ) : null}
+                        </Box>
                       </StyledTableCell>
                       <StyledTableCell align="center">{formatKg(good.stock_kg || 0)} {materialUnitLabel(good)}</StyledTableCell>
                       <StyledTableCell align="center">{formatToman(cost)}</StyledTableCell>
@@ -1052,6 +1176,16 @@ export default function ProductionCostingPage() {
                               sx={{ ...actionBtnSx, color: "var(--admin-accent)" }}
                             >
                               <PrecisionManufacturingIcon sx={{ fontSize: 18 }} />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="ثبت ضایعات">
+                            <IconButton
+                              size="small"
+                              onClick={() => openWaste({ kind: "produced_good", item: good })}
+                              disabled={!((good.stock_kg || 0) > 0)}
+                              sx={{ ...actionBtnSx, color: "#ef6c00" }}
+                            >
+                              <DeleteSweepIcon sx={{ fontSize: 18 }} />
                             </IconButton>
                           </Tooltip>
                           <Tooltip title="ویرایش فرمول">
@@ -1127,6 +1261,16 @@ export default function ProductionCostingPage() {
                                 sx={{ ...actionBtnSx, color: "var(--admin-accent)" }}
                               >
                                 <AddIcon sx={{ fontSize: 18 }} />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="ثبت ضایعات">
+                              <IconButton
+                                size="small"
+                                onClick={() => openWaste({ kind: "raw_material", item: material })}
+                                disabled={!((material.stock_kg || 0) > 0)}
+                                sx={{ ...actionBtnSx, color: "#ef6c00" }}
+                              >
+                                <DeleteSweepIcon sx={{ fontSize: 18 }} />
                               </IconButton>
                             </Tooltip>
                             <Tooltip title="ویرایش">
@@ -1210,6 +1354,152 @@ export default function ProductionCostingPage() {
             </Table>
           </TableContainer>
         )
+      ) : tab === "waste" ? (
+        <Box sx={{ display: "grid", gap: 1.25 }}>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "160px 1fr 1fr auto" },
+              gap: 1,
+              alignItems: "center",
+            }}
+          >
+            <TextField
+              select
+              size="small"
+              label="نوع"
+              value={wasteKindFilter}
+              onChange={(e) => setWasteKindFilter(e.target.value as "all" | InventoryWasteKind)}
+              sx={fieldSx}
+            >
+              <MenuItem value="all">همه</MenuItem>
+              <MenuItem value="raw_material">مواد اولیه</MenuItem>
+              <MenuItem value="produced_good">کالای تولیدی</MenuItem>
+            </TextField>
+            <TextField
+              size="small"
+              type="date"
+              label="از تاریخ"
+              value={wasteFromDate}
+              onChange={(e) => setWasteFromDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              sx={fieldSx}
+            />
+            <TextField
+              size="small"
+              type="date"
+              label="تا تاریخ"
+              value={wasteToDate}
+              onChange={(e) => setWasteToDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              sx={fieldSx}
+            />
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => void loadWastes()}
+              sx={{ ...adminButtonStartIconSx, borderColor: "var(--admin-border)", color: "var(--admin-text)" }}
+            >
+              اعمال فیلتر
+            </Button>
+          </Box>
+
+          {wasteSummary && (
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(4, 1fr)" }, gap: 1 }}>
+              {[
+                { label: "تعداد سند", value: formatKg(wasteSummary.count) },
+                { label: "جمع هزینه", value: `${formatToman(wasteSummary.total_cost)} ت` },
+                { label: "مواد اولیه", value: `${formatToman(wasteSummary.raw_material_cost)} ت` },
+                { label: "کالای تولیدی", value: `${formatToman(wasteSummary.produced_good_cost)} ت` },
+              ].map((stat) => (
+                <Box
+                  key={stat.label}
+                  sx={{
+                    p: 1.25,
+                    borderRadius: "12px",
+                    border: "1px solid var(--admin-border)",
+                    bgcolor: "var(--admin-surface)",
+                  }}
+                >
+                  <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)" }}>{stat.label}</Typography>
+                  <Typography sx={{ fontSize: 15, fontWeight: 800, color: "var(--admin-text)" }}>{stat.value}</Typography>
+                </Box>
+              ))}
+            </Box>
+          )}
+
+          {wasteLoading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+              <CircularProgress size={28} />
+            </Box>
+          ) : wastes.length === 0 ? (
+            <EmptyHint
+              title="ضایعاتی ثبت نشده"
+              text="از لیست مواد اولیه یا کالای تولیدی، آیکون ضایعات را بزنید. موجودی با FIFO از لات یا بچ تولید کم می‌شود."
+            />
+          ) : (
+            <TableContainer component={Paper} sx={tableWrapSx}>
+              <Table size="small" aria-label="گزارش ضایعات">
+                <TableHead>
+                  <TableRow>
+                    <StyledTableCell align="center">تاریخ</StyledTableCell>
+                    <StyledTableCell align="center">نوع</StyledTableCell>
+                    <StyledTableCell align="center">قلم</StyledTableCell>
+                    <StyledTableCell align="center">مقدار</StyledTableCell>
+                    <StyledTableCell align="center">هزینه</StyledTableCell>
+                    <StyledTableCell align="center">منبع</StyledTableCell>
+                    <StyledTableCell align="center">عملیات</StyledTableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {wastes.map((row) => (
+                    <StyledTableRow key={row.id}>
+                      <StyledTableCell align="center" sx={{ fontSize: 12, whiteSpace: "nowrap" }}>
+                        {(row.wasted_at || row.created_at || "—").replace("T", " ").slice(0, 16)}
+                      </StyledTableCell>
+                      <StyledTableCell align="center">
+                        <Chip
+                          size="small"
+                          label={row.kind === "produced_good" ? "تولیدی" : "ماده"}
+                          sx={{ fontSize: 11 }}
+                        />
+                      </StyledTableCell>
+                      <StyledTableCell align="center">
+                        <Typography sx={{ fontWeight: 600, fontSize: 13 }}>{row.item_name || "—"}</Typography>
+                        {row.note ? (
+                          <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)" }}>{row.note}</Typography>
+                        ) : null}
+                      </StyledTableCell>
+                      <StyledTableCell align="center">
+                        {formatKg(row.quantity_kg)} {materialUnitLabel(row)}
+                      </StyledTableCell>
+                      <StyledTableCell align="center" sx={{ fontWeight: 700, color: "#ef6c00" }}>
+                        {formatToman(row.total_cost)}
+                      </StyledTableCell>
+                      <StyledTableCell align="center" sx={{ fontSize: 11, color: "var(--admin-text-muted)" }}>
+                        {(row.consumptions || [])
+                          .map((c) => c.source_label || "")
+                          .filter(Boolean)
+                          .join(" · ") || "—"}
+                      </StyledTableCell>
+                      <StyledTableCell align="center">
+                        <Tooltip title="برگشت ضایعات">
+                          <IconButton
+                            size="small"
+                            onClick={() => setDeleteTarget({ kind: "waste", item: row })}
+                            sx={{ ...actionBtnSx, color: "var(--admin-error)" }}
+                          >
+                            <DeleteOutlineIcon sx={{ fontSize: 18 }} />
+                          </IconButton>
+                        </Tooltip>
+                      </StyledTableCell>
+                    </StyledTableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </Box>
       ) : goods.length === 0 ? (
         <EmptyHint title="هنوز کالای تولیدی نیست" text="فرمول هر واحد کالا را با مواد اولیه یا کالای تولیدی دیگر (نیمه‌ساخته) بنویسید. هزینه از لات‌ها و موجودی تولید حساب می‌شود." />
       ) : filteredGoods.length === 0 ? (
@@ -1231,7 +1521,12 @@ export default function ProductionCostingPage() {
                   <StyledTableRow key={good.id}>
                     <StyledTableCell align="center">{index + 1}</StyledTableCell>
                     <StyledTableCell align="center">
-                      <Typography sx={{ fontWeight: 600 }}>{good.name}</Typography>
+                      <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0.35 }}>
+                        <Typography sx={{ fontWeight: 600 }}>{good.name}</Typography>
+                        {!isFinalProducedGood(good) ? (
+                          <Chip size="small" label="نیمه‌ساخته" sx={{ height: 20, fontSize: 10 }} />
+                        ) : null}
+                      </Box>
                     </StyledTableCell>
                     <StyledTableCell align="center" sx={{ color: "var(--admin-accent)", fontWeight: 700 }}>
                       {formatToman(good.cost_per_kg || 0)}
@@ -1256,6 +1551,16 @@ export default function ProductionCostingPage() {
                             sx={{ ...actionBtnSx, color: "var(--admin-accent)" }}
                           >
                             <PrecisionManufacturingIcon sx={{ fontSize: 18 }} />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="ثبت ضایعات">
+                          <IconButton
+                            size="small"
+                            onClick={() => openWaste({ kind: "produced_good", item: good })}
+                            disabled={!((good.stock_kg || 0) > 0)}
+                            sx={{ ...actionBtnSx, color: "#ef6c00" }}
+                          >
+                            <DeleteSweepIcon sx={{ fontSize: 18 }} />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="ویرایش">
@@ -1506,6 +1811,26 @@ export default function ProductionCostingPage() {
               <MenuItem value="overlay">بالا (پیتزا)</MenuItem>
             </TextField>
           </Box>
+          <FormControlLabel
+            sx={{ m: 0, alignItems: "flex-start" }}
+            control={
+              <Switch
+                size="small"
+                checked={goodIsFinal}
+                onChange={(e) => setGoodIsFinal(e.target.checked)}
+              />
+            }
+            label={
+              <Box>
+                <Typography sx={{ fontSize: 12, fontWeight: 700, color: "var(--admin-text)" }}>
+                  کالای نهایی (قابل فروش)
+                </Typography>
+                <Typography sx={{ fontSize: 10.5, color: "var(--admin-text-muted)" }}>
+                  روشن = در منوی آنلاین و صندوق دیده می‌شود. خاموش = نیمه‌ساخته؛ فقط در فرمول تولیدهای دیگر (مثل برگر داخل ساندویچ).
+                </Typography>
+              </Box>
+            }
+          />
           <Autocomplete
             multiple
             size="small"
@@ -1531,7 +1856,7 @@ export default function ProductionCostingPage() {
             </Typography>
           </Box>
           <Typography sx={{ fontSize: 10.5, color: "var(--admin-text-muted)", mt: -0.5 }}>
-            می‌توانید ماده اولیه یا کالای تولیدی دیگر (مثل برگر داخل ساندویچ) را بگذارید.
+            ماده اولیه یا کالای تولیدی دیگر (ترجیحاً نیمه‌ساخته مثل برگر داخل ساندویچ) را بگذارید.
           </Typography>
           {recipeLines.map((line, index) => {
             const nested = isNestedRecipeLine(line);
@@ -1630,6 +1955,7 @@ export default function ProductionCostingPage() {
                   .map((good) => (
                     <MenuItem key={`pg-${good.id}`} value={`pg:${good.id}`}>
                       {good.name}
+                      {!isFinalProducedGood(good) ? " (نیمه‌ساخته)" : ""}
                       {good.stock_kg != null ? ` · موجودی ${formatKg(good.stock_kg)}` : ""}
                     </MenuItem>
                   ))}
@@ -2442,21 +2768,67 @@ export default function ProductionCostingPage() {
         </DialogActions>
       </Dialog>
 
+      <Dialog open={!!wasteTarget} onClose={() => setWasteTarget(null)} fullWidth maxWidth="xs">
+        <DialogTitle sx={{ fontSize: 15, fontWeight: 700 }}>
+          ثبت ضایعات {wasteTarget?.item.name || ""}
+        </DialogTitle>
+        <DialogContent sx={{ display: "grid", gap: 1.5, pt: "16px !important" }}>
+          <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)" }}>
+            موجودی با FIFO از{" "}
+            {wasteTarget?.kind === "raw_material" ? "لات‌های خرید ماده" : "بچ‌های تولید کالا"} کم می‌شود و هزینهٔ واقعی ضایعات ثبت می‌گردد.
+          </Typography>
+          <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)" }}>
+            موجودی فعلی: {formatKg(Number(wasteTarget?.item.stock_kg) || 0)}{" "}
+            {materialUnitLabel(wasteTarget?.item)}
+          </Typography>
+          <TextField
+            size="small"
+            label={isPieceMaterial(wasteTarget?.item) ? "تعداد" : "مقدار (کیلو)"}
+            value={wasteQty}
+            onChange={(e) => setWasteQty(e.target.value)}
+            inputMode="decimal"
+            sx={fieldSx}
+          />
+          <TextField
+            size="small"
+            label="توضیح (اختیاری)"
+            value={wasteNote}
+            onChange={(e) => setWasteNote(e.target.value)}
+            multiline
+            minRows={2}
+            sx={fieldSx}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setWasteTarget(null)}>انصراف</Button>
+          <Button
+            disabled={saving}
+            onClick={() => void saveWaste()}
+            variant="contained"
+            sx={{ backgroundColor: "#ef6c00", "&:hover": { backgroundColor: "#e65100" } }}
+          >
+            ثبت ضایعات
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)} fullWidth maxWidth="xs">
-        <DialogTitle>حذف شود؟</DialogTitle>
+        <DialogTitle>{deleteTarget?.kind === "waste" ? "برگشت ضایعات؟" : "حذف شود؟"}</DialogTitle>
         <DialogContent>
           <Typography>
             {deleteTarget?.kind === "material"
               ? `ماده اولیه «${deleteTarget.item.name}» حذف شود؟`
               : deleteTarget?.kind === "good"
                 ? `کالای «${deleteTarget.item.name}» حذف شود؟`
-                : "این خرید انبار حذف شود؟"}
+                : deleteTarget?.kind === "waste"
+                  ? `ضایعات «${deleteTarget.item.item_name || ""}» برگشت بخورد و موجودی بازگردانده شود؟`
+                  : "این خرید انبار حذف شود؟"}
           </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteTarget(null)}>انصراف</Button>
           <Button disabled={saving} onClick={() => void confirmDelete()} color="error" variant="contained">
-            حذف
+            {deleteTarget?.kind === "waste" ? "برگشت" : "حذف"}
           </Button>
         </DialogActions>
       </Dialog>

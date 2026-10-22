@@ -132,6 +132,8 @@ export type SalePriceMode = "percent" | "manual";
 
 export type ProducedGood = {
   unit_type?: RawMaterialUnit | string | null;
+  /** true = نهایی (منو/فروش) · false = نیمه‌ساخته (فرمول تولید) */
+  is_final?: boolean | number | string | null;
   id: number;
   name: string;
   sale_price?: number;
@@ -235,6 +237,14 @@ export function recipeLineKey(line: Pick<RecipeLine, "kind" | "raw_material_id" 
 
 export function isPieceMaterial(material?: { unit_type?: string | null } | null): boolean {
   return material?.unit_type === "piece";
+}
+
+/** پیش‌فرض نهایی است؛ فقط false صریح = نیمه‌ساخته */
+export function isFinalProducedGood(good?: Pick<ProducedGood, "is_final"> | null): boolean {
+  if (!good) return true;
+  const value = good.is_final as unknown;
+  if (value === false || value === 0 || value === "0") return false;
+  return true;
 }
 
 /** «کیلو» یا «عدد» */
@@ -378,4 +388,70 @@ export function roundSalePriceToThousand(price: number): number {
 export function applySalePriceRounding(price: number, round: boolean): number {
   const n = Math.round(Number(price) || 0);
   return round ? roundSalePrice(n) : n;
+}
+
+export type InventoryWasteKind = "raw_material" | "produced_good";
+
+export type InventoryWasteConsumption = {
+  id: number;
+  raw_material_lot_id?: number | null;
+  production_id?: number | null;
+  source_label?: string | null;
+  quantity_kg: number;
+  price_per_kg: number;
+  cost: number;
+};
+
+export type InventoryWaste = {
+  id: number;
+  kind: InventoryWasteKind | string;
+  raw_material_id?: number | null;
+  produced_good_id?: number | null;
+  item_name?: string | null;
+  unit_type?: RawMaterialUnit | string | null;
+  quantity_kg: number;
+  total_cost: number;
+  cost_per_kg?: number;
+  note?: string | null;
+  wasted_at?: string | null;
+  created_at?: string | null;
+  consumptions?: InventoryWasteConsumption[];
+};
+
+export type InventoryWasteSummary = {
+  count: number;
+  total_cost: number;
+  total_quantity: number;
+  raw_material_cost: number;
+  produced_good_cost: number;
+};
+
+export function asInventoryWaste(res: unknown): InventoryWaste | null {
+  if (!res || typeof res !== "object" || Array.isArray(res)) return null;
+  const obj = res as InventoryWaste & { data?: InventoryWaste };
+  if (obj.data && typeof obj.data === "object" && !Array.isArray(obj.data)) {
+    return obj.data;
+  }
+  if (obj.id != null) return obj;
+  return null;
+}
+
+export function extractWasteList(res: unknown): {
+  rows: InventoryWaste[];
+  summary: InventoryWasteSummary | null;
+} {
+  if (!res || typeof res !== "object") return { rows: [], summary: null };
+  const obj = res as {
+    data?: unknown;
+    summary?: InventoryWasteSummary;
+  };
+  const rows = Array.isArray(obj.data)
+    ? (obj.data as InventoryWaste[])
+    : Array.isArray(res)
+      ? (res as InventoryWaste[])
+      : [];
+  return {
+    rows,
+    summary: obj.summary && typeof obj.summary === "object" ? obj.summary : null,
+  };
 }
