@@ -189,7 +189,7 @@ export default function DocumentPaymentFields({
           onChange={(shopAccountId) => patch({ shopAccountId })}
           required={needsAccount}
           compact={compact}
-          helperText={compact ? "" : needsAccount ? "نقد همان لحظه از این حساب کم می‌شود" : "برای سهم نقد لازم است"}
+          helperText={compact ? "" : needsAccount ? "" : "برای سهم نقد لازم است"}
         />
       ) : null}
 

@@ -426,7 +426,9 @@ export default function InvoiceDetailsDialog({
       }}
     >
       <DialogTitle sx={{ color: "var(--admin-text)", fontWeight: "700", fontSize: 14, py: 1.25 }}>
-        جزئیات فاکتور{invoice?.title ? ` — ${invoice.title}` : ""}
+        جزئیات فاکتور
+        {invoice?.id != null ? ` شماره ${formatAmountNumber(invoice.id)}` : ""}
+        {invoice?.title ? ` — ${invoice.title}` : ""}
       </DialogTitle>
       <DialogContent>
         {loading ? (

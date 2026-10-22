@@ -65,7 +65,7 @@ export default function BeneficiarySelect({
   initialOption,
   onChange,
   label = "مشتری (طرف‌حساب خرید)",
-  helperText = "اختیاری — کسی که از او خرید کرده‌اید",
+  helperText = "",
   disabled,
   allowRegister = true,
   compact,

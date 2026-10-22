@@ -733,7 +733,7 @@ export default function InvoicesPage() {
             <Table size="small" aria-label="invoices table">
               <TableHead>
                 <TableRow>
-                  <StyledTableCell align="center">ردیف</StyledTableCell>
+                  <StyledTableCell align="center">شماره</StyledTableCell>
                   <StyledTableCell align="center">عنوان</StyledTableCell>
                   <StyledTableCell align="center">مبلغ</StyledTableCell>
                   <StyledTableCell align="center">پرداخت</StyledTableCell>
@@ -745,10 +745,12 @@ export default function InvoicesPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {invoices.map((invoice, index) => (
+                {invoices.map((invoice) => (
                   <StyledTableRow key={invoice.id}>
                     <StyledTableCell align="center">
-                      {(currentPage - 1) * perPage + index + 1}
+                      <Typography sx={{ color: 'var(--admin-text)', fontWeight: '700', fontVariantNumeric: 'tabular-nums' }}>
+                        {formatNumber(invoice.id)}
+                      </Typography>
                     </StyledTableCell>
                     <StyledTableCell align="center">
                       <Typography sx={{ color: 'var(--admin-text)', fontWeight: '600' }}>

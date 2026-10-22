@@ -741,6 +741,7 @@ export default function ExpensesPage() {
             <Table size="small">
               <TableHead>
                 <TableRow>
+                  <StyledTableCell align="right">شماره</StyledTableCell>
                   <StyledTableCell align="right">عنوان</StyledTableCell>
                   <StyledTableCell align="right">نوع</StyledTableCell>
                   <StyledTableCell align="right">مبلغ</StyledTableCell>
@@ -757,6 +758,11 @@ export default function ExpensesPage() {
                   const creditSource = expenseCreditSource(expense);
                   return (
                     <StyledTableRow key={expense.id}>
+                      <StyledTableCell align="right">
+                        <Typography sx={{ fontWeight: 700, color: "var(--admin-text)", fontVariantNumeric: "tabular-nums" }}>
+                          {formatNumber(expense.id)}
+                        </Typography>
+                      </StyledTableCell>
                       <StyledTableCell align="right">
                         <Typography sx={{ fontWeight: 600, color: "var(--admin-text)", whiteSpace: "normal" }}>
                           {expense.title}
