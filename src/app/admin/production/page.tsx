@@ -88,6 +88,8 @@ import {
   parseAmount,
   profitPercentFromSale,
   recipeLinesFromGood,
+  recipeLineKey,
+  isNestedRecipeLine,
   applySalePriceRounding,
   salePriceFromProfitPercent,
   storedMarkupPercent,
@@ -215,7 +217,9 @@ const actionBtnSx = {
 type TabKey = "stock" | "materials" | "goods";
 
 const emptyLine = (): RecipeLine => ({
+  kind: "raw_material",
   raw_material_id: "",
+  ingredient_produced_good_id: "",
   grams_per_kg: 0,
   is_removable: false,
   is_addable: false,
@@ -668,32 +672,63 @@ export default function ProductionCostingPage() {
       return;
     }
     const ingredients = recipeLines
-      .filter((line) => line.raw_material_id !== "" && line.grams_per_kg > 0)
-      .map((line) => ({
-        raw_material_id: Number(line.raw_material_id),
-        grams_per_kg: line.grams_per_kg,
-        is_removable: line.is_removable === true,
-        is_addable: line.is_addable === true,
-      }));
+      .filter((line) => {
+        if (!(line.grams_per_kg > 0)) return false;
+        if (isNestedRecipeLine(line)) return Number(line.ingredient_produced_good_id) > 0;
+        return line.raw_material_id !== "" && Number(line.raw_material_id) > 0;
+      })
+      .map((line) => {
+        if (isNestedRecipeLine(line)) {
+          return {
+            ingredient_produced_good_id: Number(line.ingredient_produced_good_id),
+            grams_per_kg: line.grams_per_kg,
+            is_removable: false,
+            is_addable: false,
+          };
+        }
+        return {
+          raw_material_id: Number(line.raw_material_id),
+          grams_per_kg: line.grams_per_kg,
+          is_removable: line.is_removable === true,
+          is_addable: line.is_addable === true,
+        };
+      });
     if (!ingredients.length) {
-      toast.error("حداقل یک ماده با مقدار گرم وارد کنید");
+      toast.error("حداقل یک ماده یا کالای تولیدی با مقدار وارد کنید");
       return;
     }
-    if (new Set(ingredients.map((line) => line.raw_material_id)).size !== ingredients.length) {
-      toast.error("یک ماده را دو بار در فرمول نگذارید");
+    const keys = recipeLines
+      .filter((line) => line.grams_per_kg > 0)
+      .map((line) => recipeLineKey(line))
+      .filter((k) => !k.endsWith(":0") && !k.endsWith(":"));
+    if (new Set(keys).size !== keys.length) {
+      toast.error("یک ماده یا کالای تولیدی را دو بار در فرمول نگذارید");
       return;
+    }
+    if (editingGood) {
+      const selfInRecipe = ingredients.some(
+        (line) => "ingredient_produced_good_id" in line && Number(line.ingredient_produced_good_id) === editingGood.id,
+      );
+      if (selfInRecipe) {
+        toast.error("کالا نمی‌تواند خودش را در فرمول داشته باشد");
+        return;
+      }
     }
     const token = tokenCode();
     if (!token) return;
     setSaving(true);
     try {
-      const recipeIds = new Set(ingredients.map((line) => line.raw_material_id));
+      const recipeMaterialIds = new Set(
+        ingredients
+          .map((line) => ("raw_material_id" in line ? Number(line.raw_material_id) : 0))
+          .filter((id) => id > 0),
+      );
       const payload: Record<string, unknown> = {
         name,
         ingredients,
         category_ids: goodCategoryIds,
         layer_order: layerOrder
-          .filter((row) => recipeIds.has(row.raw_material_id))
+          .filter((row) => recipeMaterialIds.has(row.raw_material_id))
           .map((row) => {
             const scale_x = clampLayerScale(row.scale_x);
             const scale_y = clampLayerScale(row.scale_y);
@@ -1176,7 +1211,7 @@ export default function ProductionCostingPage() {
           </TableContainer>
         )
       ) : goods.length === 0 ? (
-        <EmptyHint title="هنوز کالای تولیدی نیست" text="فرمول هر واحد کالا (هر کیلو یا هر عدد) را با گرم یا تعداد مواد بنویسید. هزینه از لات‌های موجود انبار حساب می‌شود." />
+        <EmptyHint title="هنوز کالای تولیدی نیست" text="فرمول هر واحد کالا را با مواد اولیه یا کالای تولیدی دیگر (نیمه‌ساخته) بنویسید. هزینه از لات‌ها و موجودی تولید حساب می‌شود." />
       ) : filteredGoods.length === 0 ? (
         <EmptyHint title="نتیجه‌ای پیدا نشد" text="نام دیگری جستجو کنید." />
       ) : (
@@ -1205,8 +1240,8 @@ export default function ProductionCostingPage() {
                       {good.stock_sufficient === false
                         ? "کمبود مواد"
                         : (good.ingredient_costs || []).length > 0
-                          ? `${(good.ingredient_costs || []).length} ماده`
-                          : "—"}
+                          ? `${(good.ingredient_costs || []).length} قلم`
+                          : "—"
                     </StyledTableCell>
                     <StyledTableCell align="center">
                       <Box sx={{ display: "flex", gap: 0.25, justifyContent: "center" }}>
@@ -1495,7 +1530,32 @@ export default function ProductionCostingPage() {
               {goodUnit === "piece" ? "برای ۱ عدد · گرم / عدد" : "برای ۱ کیلو · گرم / عدد"}
             </Typography>
           </Box>
-          {recipeLines.map((line, index) => (
+          <Typography sx={{ fontSize: 10.5, color: "var(--admin-text-muted)", mt: -0.5 }}>
+            می‌توانید ماده اولیه یا کالای تولیدی دیگر (مثل برگر داخل ساندویچ) را بگذارید.
+          </Typography>
+          {recipeLines.map((line, index) => {
+            const nested = isNestedRecipeLine(line);
+            const nestedGood = nested
+              ? goods.find((g) => g.id === Number(line.ingredient_produced_good_id))
+              : undefined;
+            const rawMaterial = !nested
+              ? materials.find((m) => m.id === line.raw_material_id)
+              : undefined;
+            const qtyLabel = nested
+              ? isPieceMaterial(nestedGood)
+                ? "عدد"
+                : "گرم"
+              : isPieceMaterial(rawMaterial)
+                ? "عدد"
+                : "گرم";
+            const selectedValue = nested
+              ? line.ingredient_produced_good_id === ""
+                ? ""
+                : `pg:${line.ingredient_produced_good_id}`
+              : line.raw_material_id === ""
+                ? ""
+                : `rm:${line.raw_material_id}`;
+            return (
             <Box
               key={index}
               sx={{
@@ -1512,24 +1572,71 @@ export default function ProductionCostingPage() {
               <TextField
                 select
                 size="small"
-                label="ماده"
-                value={line.raw_material_id}
+                label="ماده / کالای تولیدی"
+                value={selectedValue}
                 onChange={(e) => {
+                  const value = e.target.value;
                   const next = [...recipeLines];
-                  next[index] = { ...next[index], raw_material_id: e.target.value === "" ? "" : Number(e.target.value) };
+                  if (value.startsWith("pg:")) {
+                    const id = Number(value.slice(3));
+                    next[index] = {
+                      ...next[index],
+                      kind: "produced_good",
+                      raw_material_id: "",
+                      ingredient_produced_good_id: id > 0 ? id : "",
+                      is_removable: false,
+                      is_addable: false,
+                    };
+                  } else if (value.startsWith("rm:")) {
+                    const id = Number(value.slice(3));
+                    next[index] = {
+                      ...next[index],
+                      kind: "raw_material",
+                      raw_material_id: id > 0 ? id : "",
+                      ingredient_produced_good_id: "",
+                    };
+                  } else {
+                    next[index] = {
+                      ...next[index],
+                      kind: "raw_material",
+                      raw_material_id: "",
+                      ingredient_produced_good_id: "",
+                    };
+                  }
                   setRecipeLines(next);
                 }}
                 sx={fieldSx}
               >
+                <MenuItem value="">
+                  <em>انتخاب کنید</em>
+                </MenuItem>
+                {materials.length > 0 && (
+                  <MenuItem disabled value="__raw_header">
+                    — مواد اولیه —
+                  </MenuItem>
+                )}
                 {materials.map((material) => (
-                  <MenuItem key={material.id} value={material.id}>
+                  <MenuItem key={`rm-${material.id}`} value={`rm:${material.id}`}>
                     {material.name}
                   </MenuItem>
                 ))}
+                {goods.filter((g) => !editingGood || g.id !== editingGood.id).length > 0 && (
+                  <MenuItem disabled value="__pg_header">
+                    — کالاهای تولیدی —
+                  </MenuItem>
+                )}
+                {goods
+                  .filter((g) => !editingGood || g.id !== editingGood.id)
+                  .map((good) => (
+                    <MenuItem key={`pg-${good.id}`} value={`pg:${good.id}`}>
+                      {good.name}
+                      {good.stock_kg != null ? ` · موجودی ${formatKg(good.stock_kg)}` : ""}
+                    </MenuItem>
+                  ))}
               </TextField>
               <TextField
                 size="small"
-                label={isPieceMaterial(materials.find((m) => m.id === line.raw_material_id)) ? "عدد" : "گرم"}
+                label={qtyLabel}
                 value={line.grams_per_kg || ""}
                 onChange={(e) => {
                   const next = [...recipeLines];
@@ -1547,6 +1654,7 @@ export default function ProductionCostingPage() {
               >
                 <DeleteOutlineIcon sx={{ fontSize: 18 }} />
               </IconButton>
+              {!nested && (
               <Box sx={{ gridColumn: "1 / -1", display: "flex", gap: 1.5, flexWrap: "wrap" }}>
                 <FormControlLabel
                   sx={{ m: 0 }}
@@ -1581,20 +1689,32 @@ export default function ProductionCostingPage() {
                   label={<Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)" }}>اضافه‌پذیر</Typography>}
                 />
               </Box>
+              )}
+              {nested && (
+                <Typography sx={{ gridColumn: "1 / -1", fontSize: 10.5, color: "var(--admin-text-muted)" }}>
+                  از موجودی تولیدشدهٔ این کالا کم می‌شود (نیمه‌ساخته).
+                </Typography>
+              )}
             </Box>
-          ))}
+            );
+          })}
           <Button
             size="small"
             startIcon={<AddIcon />}
             onClick={() => setRecipeLines([...recipeLines, emptyLine()])}
             sx={{ ...adminButtonStartIconSx, justifySelf: "start" }}
           >
-            ماده
+            ماده / کالا
           </Button>
 
           {(() => {
             const recipeMaterialIds = Array.from(
-              new Set(recipeLines.map((line) => Number(line.raw_material_id)).filter((id) => id > 0)),
+              new Set(
+                recipeLines
+                  .filter((line) => !isNestedRecipeLine(line))
+                  .map((line) => Number(line.raw_material_id))
+                  .filter((id) => id > 0),
+              ),
             );
             const materialById = new Map(materials.map((m) => [m.id, m] as const));
             const rows = layerOrder.filter((row) => recipeMaterialIds.includes(row.raw_material_id));
@@ -2086,17 +2206,26 @@ export default function ProductionCostingPage() {
                     <Typography sx={{ fontSize: 13, fontWeight: 700, color: "var(--admin-text)" }}>
                       مواد مصرفی
                     </Typography>
-                    {ingredients.map((line) => {
-                      const unit = materialUnitLabel(
-                        line.unit_type ? line : materials.find((m) => m.id === line.raw_material_id)
-                      );
+                    {ingredients.map((line, idx) => {
+                      const isNested =
+                        line.ingredient_kind === "produced_good" ||
+                        Number(line.ingredient_produced_good_id) > 0;
+                      const unitSource = line.unit_type
+                        ? line
+                        : isNested
+                          ? goods.find((g) => g.id === Number(line.ingredient_produced_good_id))
+                          : materials.find((m) => m.id === Number(line.raw_material_id));
+                      const unit = materialUnitLabel(unitSource);
                       const short = (line.shortage_kg || 0) > 0;
                       const lots = line.lots || [];
                       const lineCost =
                         line.cost != null ? line.cost : lots.reduce((sum, lot) => sum + (Number(lot.cost) || 0), 0);
+                      const lineKey = isNested
+                        ? `pg:${line.ingredient_produced_good_id}-${idx}`
+                        : `rm:${line.raw_material_id}-${idx}`;
                       return (
                         <Box
-                          key={line.raw_material_id}
+                          key={lineKey}
                           sx={{
                             p: 1.25,
                             borderRadius: "12px",
@@ -2106,7 +2235,15 @@ export default function ProductionCostingPage() {
                         >
                           <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, flexWrap: "wrap" }}>
                             <Typography sx={{ fontSize: 14, fontWeight: 700, color: "var(--admin-text)" }}>
-                              {line.name || `ماده ${line.raw_material_id}`}
+                              {line.name ||
+                                (isNested
+                                  ? `کالای تولیدی ${line.ingredient_produced_good_id}`
+                                  : `ماده ${line.raw_material_id}`)}
+                              {isNested ? (
+                                <Typography component="span" sx={{ fontSize: 11, fontWeight: 500, color: "var(--admin-text-muted)", ml: 0.75 }}>
+                                  (تولیدی)
+                                </Typography>
+                              ) : null}
                             </Typography>
                             <Typography sx={{ fontSize: 13, fontWeight: 700, color: "var(--admin-text)" }}>
                               {formatToman(lineCost)} <span style={{ fontWeight: 400, color: "var(--admin-text-muted)", fontSize: 11 }}>تومان</span>
@@ -2125,10 +2262,15 @@ export default function ProductionCostingPage() {
                           {lots.length > 0 && (
                             <Box sx={{ mt: 1, pt: 0.75, borderTop: "1px dashed var(--admin-border)", display: "grid", gap: 0.5 }}>
                               {lots.map((lot, i) => {
-                                const virtual = !lot.lot_id;
+                                const virtual = !lot.lot_id && !lot.source_production_id;
+                                const label = virtual
+                                  ? "بدون موجودی (قیمت تخمینی)"
+                                  : lot.source_production_id
+                                    ? `تولید #${lot.source_production_id}`
+                                    : `لات ${lot.lot_id}`;
                                 return (
                                   <Box
-                                    key={`${lot.lot_id ?? "short"}-${i}`}
+                                    key={`${lot.lot_id ?? lot.source_production_id ?? "short"}-${i}`}
                                     sx={{
                                       display: "flex",
                                       justifyContent: "space-between",
@@ -2139,7 +2281,7 @@ export default function ProductionCostingPage() {
                                     }}
                                   >
                                     <span>
-                                      {virtual ? "بدون موجودی (قیمت تخمینی)" : `لات ${lot.lot_id}`}
+                                      {label}
                                       {" · "}
                                       {formatKg(lot.quantity_kg)} {unit} × {formatToman(lot.price_per_kg)}
                                     </span>
@@ -2183,12 +2325,25 @@ export default function ProductionCostingPage() {
               <Typography sx={{ fontWeight: 800, color: "var(--admin-accent)" }}>
                 {formatKg(lastProduction.quantity_kg)} {materialUnitLabel(lastProduction)} {lastProduction.produced_good_name} · هر {materialUnitLabel(lastProduction)} {formatToman(lastProduction.cost_per_kg)} تومان
               </Typography>
-              {(lastProduction.consumptions || []).map((row) => (
-                <Typography key={row.id} sx={{ fontSize: 13, color: "var(--admin-text-muted)" }}>
-                  {row.raw_material_name}: {formatKg(row.quantity_kg)}{" "}
-                  {materialUnitLabel(materials.find((m) => m.id === row.raw_material_id))} از لات {row.raw_material_lot_id} با قیمت {formatToman(row.price_per_kg)} → {formatToman(row.cost)} تومان
-                </Typography>
-              ))}
+              {(lastProduction.consumptions || []).map((row) => {
+                const isNested =
+                  row.ingredient_kind === "produced_good" ||
+                  Number(row.ingredient_produced_good_id) > 0;
+                const unitSource = isNested
+                  ? goods.find((g) => g.id === Number(row.ingredient_produced_good_id))
+                  : materials.find((m) => m.id === Number(row.raw_material_id));
+                const sourceLabel = isNested
+                  ? `از تولید #${row.source_production_id}`
+                  : `از لات ${row.raw_material_lot_id}`;
+                return (
+                  <Typography key={row.id} sx={{ fontSize: 13, color: "var(--admin-text-muted)" }}>
+                    {row.raw_material_name}
+                    {isNested ? " (تولیدی)" : ""}: {formatKg(row.quantity_kg)}{" "}
+                    {materialUnitLabel(unitSource)} {sourceLabel} با قیمت {formatToman(row.price_per_kg)} →{" "}
+                    {formatToman(row.cost)} تومان
+                  </Typography>
+                );
+              })}
             </>
           )}
         </DialogContent>

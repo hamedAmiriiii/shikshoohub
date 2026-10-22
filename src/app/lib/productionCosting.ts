@@ -94,16 +94,22 @@ export function parseLayerOrderEntry(raw: unknown): LayerOrderEntry | null {
 }
 
 export type IngredientCostLot = {
-  lot_id: number;
+  lot_id?: number | null;
+  source_production_id?: number | null;
   quantity_kg: number;
   price_per_kg: number;
   cost: number;
+  estimated?: boolean;
 };
+
+export type IngredientKind = "raw_material" | "produced_good";
 
 export type IngredientCost = {
   unit_type?: RawMaterialUnit | string | null;
   id?: number;
-  raw_material_id: number;
+  ingredient_kind?: IngredientKind | string | null;
+  raw_material_id?: number | null;
+  ingredient_produced_good_id?: number | null;
   name?: string | null;
   grams_per_kg: number;
   is_removable?: boolean;
@@ -115,7 +121,8 @@ export type IngredientCost = {
 };
 
 export type MaterialShortage = {
-  raw_material_id: number;
+  raw_material_id?: number | null;
+  ingredient_produced_good_id?: number | null;
   name?: string | null;
   needed_kg: number;
   shortage_kg: number;
@@ -179,9 +186,12 @@ export function categoryIdsFromGood(good: ProducedGood): number[] {
 
 export type ProductionConsumption = {
   id: number;
-  raw_material_id: number;
+  ingredient_kind?: IngredientKind | string | null;
+  raw_material_id?: number | null;
   raw_material_name?: string | null;
-  raw_material_lot_id?: number;
+  ingredient_produced_good_id?: number | null;
+  raw_material_lot_id?: number | null;
+  source_production_id?: number | null;
   quantity_kg: number;
   price_per_kg: number;
   cost: number;
@@ -201,13 +211,27 @@ export type ProductionRecord = {
 };
 
 export type RecipeLine = {
+  /** ماده اولیه یا کالای تولیدی نیمه‌ساخته */
+  kind: IngredientKind;
   raw_material_id: number | "";
+  ingredient_produced_good_id: number | "";
   grams_per_kg: number;
-  /** مشتری در منوی سه‌بعدی بتواند این ماده را بردارد */
+  /** مشتری در منوی سه‌بعدی بتواند این ماده را بردارد (فقط ماده اولیه) */
   is_removable?: boolean;
   /** مشتری در منوی سه‌بعدی بتواند یک واحد اضافه (مثلاً دوبل) سفارش دهد */
   is_addable?: boolean;
 };
+
+export function isNestedRecipeLine(line: Pick<RecipeLine, "kind" | "ingredient_produced_good_id">): boolean {
+  return line.kind === "produced_good" || Number(line.ingredient_produced_good_id) > 0;
+}
+
+export function recipeLineKey(line: Pick<RecipeLine, "kind" | "raw_material_id" | "ingredient_produced_good_id">): string {
+  if (isNestedRecipeLine(line)) {
+    return `pg:${Number(line.ingredient_produced_good_id) || 0}`;
+  }
+  return `rm:${Number(line.raw_material_id) || 0}`;
+}
 
 export function isPieceMaterial(material?: { unit_type?: string | null } | null): boolean {
   return material?.unit_type === "piece";
@@ -284,13 +308,22 @@ export function asProductionRecord(res: unknown): ProductionRecord | null {
 
 export function recipeLinesFromGood(good: ProducedGood): RecipeLine[] {
   const lines = good.ingredient_costs || [];
-  if (!lines.length) return [{ raw_material_id: "", grams_per_kg: 0 }];
-  return lines.map((line) => ({
-    raw_material_id: line.raw_material_id,
-    grams_per_kg: Number(line.grams_per_kg) || 0,
-    is_removable: line.is_removable === true,
-    is_addable: line.is_addable === true,
-  }));
+  if (!lines.length) {
+    return [{ kind: "raw_material", raw_material_id: "", ingredient_produced_good_id: "", grams_per_kg: 0 }];
+  }
+  return lines.map((line) => {
+    const nestedId = Number(line.ingredient_produced_good_id) || 0;
+    const isNested =
+      line.ingredient_kind === "produced_good" || nestedId > 0;
+    return {
+      kind: isNested ? "produced_good" : "raw_material",
+      raw_material_id: isNested ? "" : (Number(line.raw_material_id) || ""),
+      ingredient_produced_good_id: isNested ? nestedId : "",
+      grams_per_kg: Number(line.grams_per_kg) || 0,
+      is_removable: !isNested && line.is_removable === true,
+      is_addable: !isNested && line.is_addable === true,
+    };
+  });
 }
 
 /** ترتیب اولیهٔ لایه‌ها: ترتیب ذخیره‌شده، وگرنه ترتیب فرمول */
@@ -301,7 +334,7 @@ export function layerOrderFromGood(good: ProducedGood): LayerOrderEntry[] {
   if (stored.length) return stored;
   return (good.ingredient_costs || [])
     .map((line) => Number(line.raw_material_id))
-    .filter((n) => n > 0)
+    .filter((n) => Number.isFinite(n) && n > 0)
     .map((id) => defaultLayerOrderEntry(id));
 }
 
