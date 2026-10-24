@@ -127,6 +127,8 @@ const SMS_TYPE_LABELS: Record<string, string> = {
   installment_credit: "اعتبار اقساطی",
   installment_reminder: "یادآوری قسط",
   stock_notify: "اطلاع موجودی",
+  category_stock_notify: "خبر دسته",
+  category_stock_notify_link: "لینک خبر دسته",
   oil_welcome: "خوش‌آمد تعویض روغن",
   oil_reminder: "یادآوری تعویض روغن",
 };
@@ -141,6 +143,8 @@ const SMS_TYPE_COLORS: Record<string, string> = {
   installment_credit: "#00897b",
   installment_reminder: "#f57c00",
   stock_notify: "#0288d1",
+  category_stock_notify: "#00897b",
+  category_stock_notify_link: "#26a69a",
   oil_welcome: "#6d4c41",
   oil_reminder: "#8d6e63",
 };
@@ -881,6 +885,8 @@ export default function ShopSmsLogsPage() {
                   <MenuItem value="installment_credit">اعتبار اقساطی</MenuItem>
                   <MenuItem value="installment_reminder">یادآوری قسط</MenuItem>
                   <MenuItem value="stock_notify">اطلاع موجودی</MenuItem>
+                  <MenuItem value="category_stock_notify">خبر دسته</MenuItem>
+                  <MenuItem value="category_stock_notify_link">لینک خبر دسته</MenuItem>
                 </Select>
               </FormControl>
             </Box> */}

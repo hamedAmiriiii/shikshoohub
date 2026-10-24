@@ -30,6 +30,7 @@ import type DateObject from "react-date-object";
 import { gregorianApiDateFromDateObject, parseAccessEndToDateObject } from "@/app/lib/shopAccess";
 import { readRoundSalePriceToThousand, roundToTen } from "@/app/lib/salePriceRounding";
 import { isMeasuredProduct, sanitizeQuantityDraft } from "@/app/lib/productUnits";
+import CategoryStockNotifyManage from "@/app/admin/product/CategoryStockNotifyManage";
 
 const PRODUCT_SORT_OPTIONS = [
     { value: "", label: "جدیدترین" },
@@ -980,7 +981,8 @@ export default function ListData() {
             onManufacturerItem={handleManufacturerProduct}
             onDeleteItem={handleDeleteProduct}
             customActions={
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexWrap: "wrap" }}>
+                <CategoryStockNotifyManage />
                 <Button
                   size="small"
                   startIcon={<FileUploadIcon sx={{ fontSize: 16 }} />}

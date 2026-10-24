@@ -11,9 +11,14 @@ import {
   CardActionArea,
   CardContent,
   Grid,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
+import NotificationsActiveOutlinedIcon from "@mui/icons-material/NotificationsActiveOutlined";
 import {
   getCachedProductDiscount,
   isCatalogItemOutOfStock,
@@ -21,16 +26,20 @@ import {
 } from "@/app/lib/productsCache";
 import { catalogItemKey } from "@/app/lib/catalogItems";
 import { useProductQuickActions } from "@/app/admin/ProductQuickActions";
+import CategoryStockNotifyDialog from "@/app/admin/CategoryStockNotifyDialog";
 import {
   MENU_ALL_CATEGORY_ID,
+  MENU_UNCATEGORIZED_ID,
   buildMenuCategories,
   filterProductsByMenuCategory,
   getProductImageUrl,
+  type MenuCategory,
 } from "@/app/lib/menuModeProducts";
 import {
   ADMIN_POS_SETTINGS_CHANGED_EVENT,
   readAdminPosSettings,
 } from "@/app/lib/adminPosSettings";
+import { readShopFeatures, SHOP_FEATURES_CHANGED_EVENT } from "@/app/lib/shopFeatures";
 import AdminMenuModeCartPanel, {
   type AdminMenuModeCartPanelProps,
 } from "@/app/admin/AdminMenuModeCartPanel";
@@ -68,9 +77,15 @@ export default function AdminMenuModeView({
   const [search, setSearch] = useState("");
   const [showProductImages, setShowProductImages] = useState(true);
   const [showProductStock, setShowProductStock] = useState(false);
+  const [customerClubEnabled, setCustomerClubEnabled] = useState(false);
+  const [categoryMenuPos, setCategoryMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const [categoryMenuTarget, setCategoryMenuTarget] = useState<MenuCategory | null>(null);
+  const [categoryNotifyOpen, setCategoryNotifyOpen] = useState(false);
   const { openContextMenu, quickActionsUi } = useProductQuickActions(onProductUpdated);
   const suppressClickRef = useRef(false);
   const longPressRef = useRef<number | null>(null);
+  const categoryLongPressRef = useRef<number | null>(null);
+  const suppressCategoryClickRef = useRef(false);
 
   useEffect(() => {
     const apply = () => {
@@ -83,11 +98,45 @@ export default function AdminMenuModeView({
     return () => window.removeEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, apply);
   }, []);
 
+  useEffect(() => {
+    const sync = () => setCustomerClubEnabled(readShopFeatures().customer_club_enabled);
+    sync();
+    window.addEventListener(SHOP_FEATURES_CHANGED_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(SHOP_FEATURES_CHANGED_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+
   const clearLongPress = () => {
     if (longPressRef.current != null) {
       window.clearTimeout(longPressRef.current);
       longPressRef.current = null;
     }
+  };
+
+  const clearCategoryLongPress = () => {
+    if (categoryLongPressRef.current != null) {
+      window.clearTimeout(categoryLongPressRef.current);
+      categoryLongPressRef.current = null;
+    }
+  };
+
+  const canNotifyCategory = (category: MenuCategory) =>
+    customerClubEnabled &&
+    category.id !== MENU_ALL_CATEGORY_ID &&
+    category.id !== MENU_UNCATEGORIZED_ID &&
+    Number.isFinite(Number(category.id)) &&
+    Number(category.id) > 0;
+
+  const openCategoryContextMenu = (
+    point: { top: number; left: number },
+    category: MenuCategory,
+  ) => {
+    if (!canNotifyCategory(category)) return;
+    setCategoryMenuTarget(category);
+    setCategoryMenuPos(point);
   };
 
   const cartQtyById = useMemo(() => {
@@ -177,7 +226,35 @@ export default function AdminMenuModeView({
               label={`${category.name} (${category.count})`}
               size="small"
               clickable
-              onClick={() => setSelectedCategoryId(category.id)}
+              onClick={() => {
+                if (suppressCategoryClickRef.current) {
+                  suppressCategoryClickRef.current = false;
+                  return;
+                }
+                setSelectedCategoryId(category.id);
+              }}
+              onContextMenu={(e) => {
+                if (!canNotifyCategory(category)) return;
+                e.preventDefault();
+                e.stopPropagation();
+                openCategoryContextMenu({ top: e.clientY, left: e.clientX }, category);
+              }}
+              onTouchStart={(e) => {
+                if (!canNotifyCategory(category)) return;
+                clearCategoryLongPress();
+                const touch = e.touches[0];
+                if (!touch) return;
+                categoryLongPressRef.current = window.setTimeout(() => {
+                  suppressCategoryClickRef.current = true;
+                  openCategoryContextMenu(
+                    { top: touch.clientY, left: touch.clientX },
+                    category,
+                  );
+                }, 480);
+              }}
+              onTouchEnd={clearCategoryLongPress}
+              onTouchMove={clearCategoryLongPress}
+              onTouchCancel={clearCategoryLongPress}
               sx={{
                 flexShrink: 0,
                 height: 24,
@@ -460,6 +537,55 @@ export default function AdminMenuModeView({
     </Box>
   );
 
+  const categoryNotifyUi = (
+    <>
+      <Menu
+        disableScrollLock
+        open={Boolean(categoryMenuPos)}
+        onClose={() => {
+          setCategoryMenuPos(null);
+          setCategoryMenuTarget(null);
+        }}
+        anchorReference="anchorPosition"
+        anchorPosition={categoryMenuPos || { top: 0, left: 0 }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+        slotProps={{
+          paper: {
+            sx: {
+              bgcolor: "var(--admin-surface)",
+              color: "var(--admin-text)",
+              border: "1px solid var(--admin-border)",
+              minWidth: 200,
+              direction: "rtl",
+            },
+          },
+        }}
+      >
+        <MenuItem
+          onClick={() => {
+            setCategoryMenuPos(null);
+            setCategoryNotifyOpen(true);
+          }}
+          sx={{ fontSize: 13 }}
+        >
+          <ListItemIcon sx={{ minWidth: 32 }}>
+            <NotificationsActiveOutlinedIcon fontSize="small" sx={{ color: "var(--admin-accent)" }} />
+          </ListItemIcon>
+          <ListItemText primary="موجود شد خبر بده" />
+        </MenuItem>
+      </Menu>
+      <CategoryStockNotifyDialog
+        open={categoryNotifyOpen && Boolean(categoryMenuTarget)}
+        categoryId={categoryMenuTarget?.id ?? null}
+        categoryName={categoryMenuTarget?.name}
+        onClose={() => {
+          setCategoryNotifyOpen(false);
+          setCategoryMenuTarget(null);
+        }}
+      />
+    </>
+  );
+
   if (classicPosMode) {
     return (
       <Box sx={{ position: "relative" }}>
@@ -503,6 +629,7 @@ export default function AdminMenuModeView({
           </Box>
         </Box>
         {quickActionsUi}
+        {categoryNotifyUi}
       </Box>
     );
   }
@@ -513,6 +640,7 @@ export default function AdminMenuModeView({
       <AdminMenuModeCartPanel {...cartPanel} />
       {productBrowser}
       {quickActionsUi}
+      {categoryNotifyUi}
     </Box>
   );
 }
