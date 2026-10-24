@@ -41,7 +41,9 @@ export function canReplacePurchase(purchase: any): { ok: boolean; reason: string
   if (purchase.cart_id) {
     return { ok: false, reason: "سفارش اینترنتی از این مسیر ویرایش نمی‌شود" };
   }
-  const lines = Array.isArray(purchase.purchased_products) ? purchase.purchased_products : [];
+  const lines = (Array.isArray(purchase.purchased_products) ? purchase.purchased_products : []).filter(
+    (line: any) => Number(line?.quantity) > 0 && !line?.from_return_history && !line?.is_fully_returned,
+  );
   if (lines.length === 0) {
     return { ok: false, reason: "اقلام باقی‌مانده‌ای برای ویرایش نیست" };
   }
@@ -185,7 +187,9 @@ export function buildPurchaseEditPayload(purchase: any, catalog: any[] = []): Pu
     return { ok: false, reason: gate.reason };
   }
 
-  const lines = Array.isArray(purchase.purchased_products) ? purchase.purchased_products : [];
+  const lines = (Array.isArray(purchase.purchased_products) ? purchase.purchased_products : []).filter(
+    (line: any) => Number(line?.quantity) > 0 && !line?.from_return_history && !line?.is_fully_returned,
+  );
   const cartItems = lines.map((line: any) => purchasedLineToCartItem(line, catalog));
   const totalAmt = cartItems.reduce(
     (sum: number, item: any) => sum + Number(item.sale_price) * Number(item.quantity),

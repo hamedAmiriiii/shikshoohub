@@ -101,12 +101,38 @@ export function formatFaNumber(n: number): string {
   return new Intl.NumberFormat("fa-IR").format(Math.round(n || 0));
 }
 
+/**
+ * تاریخ فاکتور رسمی.
+ * API فروش معمولاً created_at را از قبل شمسی می‌فرستد (مثلاً 1404-07-02 12:30:00)؛
+ * نباید دوباره با Date + fa-IR تبدیل شود وگرنه تاریخ اشتباه می‌شود.
+ */
 export function formatFaDate(iso?: string | null): string {
   if (!iso) return "";
+  const raw = String(iso).trim();
+  if (!raw) return "";
+
   try {
-    return new Intl.DateTimeFormat("fa-IR", { dateStyle: "short" }).format(new Date(iso));
+    const match = /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/.exec(raw);
+    if (match && !raw.includes("T")) {
+      const year = Number(match[1]);
+      // بازهٔ رایج سال شمسی در دادهٔ فروشگاه
+      if (year >= 1200 && year <= 1600) {
+        return `${match[1]}/${match[2].padStart(2, "0")}/${match[3].padStart(2, "0")}`;
+      }
+    }
+
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) {
+      return raw.split(/\s+/)[0]?.replace(/-/g, "/") || raw;
+    }
+
+    return new Intl.DateTimeFormat("fa-IR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(date);
   } catch {
-    return String(iso);
+    return raw.split(/\s+/)[0]?.replace(/-/g, "/") || raw;
   }
 }
 

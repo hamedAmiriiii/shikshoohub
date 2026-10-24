@@ -309,6 +309,7 @@ export default function SettingsPage() {
   const [shopCardOpen, setShopCardOpen] = useState(false);
   const [menuThemeOpen, setMenuThemeOpen] = useState(false);
   const [storefrontOpen, setStorefrontOpen] = useState(false);
+  const [googleSheetOpen, setGoogleSheetOpen] = useState(false);
   const [shopAccessActive, setShopAccessActive] = useState(false);
   const [shopCardLoaded, setShopCardLoaded] = useState(false);
   const [shopCardLoading, setShopCardLoading] = useState(false);
@@ -406,6 +407,13 @@ export default function SettingsPage() {
     if (window.location.hash === "#shop-backup") {
       window.setTimeout(() => {
         document.getElementById("shop-backup")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 200);
+    }
+    // برگشت از اتصال گوگل: فقط در این حالت بخش را خودکار باز کن
+    if (new URLSearchParams(window.location.search).has("google_sheet")) {
+      setGoogleSheetOpen(true);
+      window.setTimeout(() => {
+        document.getElementById("shop-google-sheet")?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 200);
     }
     const printSettings = readSaleReceiptPrintSettings();
@@ -888,10 +896,6 @@ export default function SettingsPage() {
       setShopCardLoading(false);
     }
   }, [shopCardLoaded]);
-
-  useEffect(() => {
-    if (restaurantCafeEnabled) void openShopCard();
-  }, [restaurantCafeEnabled, openShopCard]);
 
   const handleSaveShopCard = async () => {
     const token = tokenCode();
@@ -1526,9 +1530,16 @@ export default function SettingsPage() {
         icon={<CreditCardIcon sx={{ fontSize: 18 }} />}
         title="پرداخت سفارش میز"
         hint="آنلاین با زرین‌پال وبینو، کارت‌به‌کارت یا کارتخوان"
-        loading={shopCardLoading}
+        loading={shopCardOpen && shopCardLoading}
+        action={
+          shopCardOpen ? undefined : (
+            <Button size="small" variant="outlined" onClick={() => void openShopCard()} sx={viewBtnSx}>
+              مشاهده
+            </Button>
+          )
+        }
       >
-        {!shopCardLoading ? (
+        {shopCardOpen && !shopCardLoading ? (
         <Box sx={{ mt: 1, display: "flex", flexDirection: "column", gap: 1 }}>
           <Box>
             <SettingsToggleRow
@@ -1691,9 +1702,17 @@ export default function SettingsPage() {
         icon={<TableChartIcon sx={{ fontSize: 18 }} />}
         title="گوگل شیت"
         hint="ارسال دادهٔ فروشگاه به گوگل شیت خودتان"
-        action={<ShopGoogleSheetTablesButton />}
+        action={
+          googleSheetOpen ? (
+            <ShopGoogleSheetTablesButton />
+          ) : (
+            <Button size="small" variant="outlined" onClick={() => setGoogleSheetOpen(true)} sx={viewBtnSx}>
+              مشاهده
+            </Button>
+          )
+        }
       >
-        <ShopGoogleSheetSettings />
+        {googleSheetOpen ? <ShopGoogleSheetSettings /> : null}
       </SettingsSectionCard>
       ) : null}
 

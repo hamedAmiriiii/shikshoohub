@@ -242,17 +242,40 @@ export default function ListPurches() {
                     const fullyReturned =
                         Boolean(item?.is_fully_returned) ||
                         (Number(item?.item_returns_count || 0) > 0 && Number(item?.total_amount || 0) <= 0.02);
-                    if (fullyReturned) return "برگشت‌خورده";
                     const total = formatPurchaseItemsTotal(item);
                     const breakdown = formatPurchaseItemsBreakdown(item);
-                    if (total === "—") return total;
+                    if (total === "—" && breakdown === "—") return fullyReturned ? "برگشت‌خورده" : "—";
                     return (
-                        <Box component="span" title={breakdown} sx={{ cursor: "help", borderBottom: "1px dotted var(--admin-text-muted)" }}>
-                            {total}
+                        <Box
+                            sx={{
+                                color: fullyReturned ? "#c62828" : "inherit",
+                                fontSize: 12,
+                                lineHeight: 1.45,
+                                textAlign: "right",
+                                maxWidth: 280,
+                            }}
+                            title={breakdown}
+                        >
+                            <Box component="span" sx={{ fontWeight: 700, displayInlineEnd: 0.5 }}>
+                                {total}
+                            </Box>
+                            <Box
+                                component="span"
+                                sx={{
+                                    color: fullyReturned ? "#c62828" : "var(--admin-text-muted)",
+                                    fontWeight: 500,
+                                    display: "-webkit-box",
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: "vertical",
+                                    overflow: "hidden",
+                                }}
+                            >
+                                {breakdown}
+                            </Box>
                         </Box>
                     );
                 },
-                width: "72px",
+                width: "220px",
             },
         ],
         [showDailyTicket],

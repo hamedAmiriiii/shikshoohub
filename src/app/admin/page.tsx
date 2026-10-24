@@ -39,7 +39,8 @@ import { apiRequestError } from '@/app/lib/apiRequestError/client';
 import { toast, ToastContainer } from 'react-toastify';
 import { notifySmsQuotaIfExhausted } from "@/app/lib/notifySmsQuota";
 import { useSearchParams, useRouter } from "next/navigation";
-import { isBackupReminderDue, markBackupReminderSeen } from "@/app/lib/shopBackup";
+import { downloadShopBackup, isBackupReminderDue } from "@/app/lib/shopBackup";
+import CloudDownloadIcon from "@mui/icons-material/CloudDownload";
 import 'react-toastify/dist/ReactToastify.css';
 import PhoneNumberInput from '@/app/coponent/PhoneNumberInput/PhoneNumberInput';
 import tokenCode from '@/app/coponent/tokenCode';
@@ -290,7 +291,8 @@ export default function ShoppingPage() {
   const [saleDateEditEnabled, setSaleDateEditEnabled] = useState(false);
   const [saleDate, setSaleDate] = useState<DateObject>(() => todayJalaliDateObject());
   const [saleSuccessOpen, setSaleSuccessOpen] = useState(false);
-  const [showBackupReminder, setShowBackupReminder] = useState(false);
+  const [backupRequiredOpen, setBackupRequiredOpen] = useState(false);
+  const [backupDownloading, setBackupDownloading] = useState(false);
   const [lastSaleReceipt, setLastSaleReceipt] = useState<SaleReceiptData | null>(null);
   const [skipPrintPreview, setSkipPrintPreview] = useState(false);
   const [isRegisteringUser, setIsRegisteringUser] = useState(false);
@@ -1644,8 +1646,7 @@ export default function ShoppingPage() {
       setLastSaleReceipt(receipt);
       setSkipPrintPreview(false);
       const remindBackup = purchaseId != null && isBackupReminderDue();
-      if (remindBackup) markBackupReminderSeen();
-      setShowBackupReminder(remindBackup);
+      setBackupRequiredOpen(remindBackup);
       setSaleSuccessOpen(true);
       const linkedProformaId = pendingProformaIdRef.current;
       pendingProformaIdRef.current = null;
@@ -1707,7 +1708,7 @@ export default function ShoppingPage() {
       saveSaleReceiptPrintData(receipt);
       setLastSaleReceipt(receipt);
       setSkipPrintPreview(false);
-      setShowBackupReminder(false);
+      setBackupRequiredOpen(false);
       setSaleSuccessOpen(true);
       const pendingItems = await listPendingOutboxItems();
       setPendingPurchases(pendingItems.map(outboxItemToLegacyPending));
@@ -4892,7 +4893,11 @@ export default function ShoppingPage() {
 
       <Modal
         open={saleSuccessOpen}
-        onClose={() => setSaleSuccessOpen(false)}
+        onClose={() => {
+          if (backupRequiredOpen) return;
+          setSaleSuccessOpen(false);
+        }}
+        disableEscapeKeyDown={backupRequiredOpen}
         aria-labelledby="sale-success-modal"
       >
         <Box
@@ -4925,42 +4930,12 @@ export default function ShoppingPage() {
               شماره فاکتور: {lastSaleReceipt.purchaseId}
             </Typography>
           )}
-          {showBackupReminder ? (
-            <Box
-              sx={{
-                mt: 1,
-                mb: 0.5,
-                p: 1.25,
-                borderRadius: "12px",
-                bgcolor: "var(--admin-surface-alt)",
-                border: "1px solid var(--admin-menu-hover)",
-                textAlign: "right",
-              }}
-            >
-              <Typography sx={{ color: "var(--admin-text)", fontSize: 13, fontWeight: 700, mb: 0.5 }}>
-                پشتیبان‌گیری
-              </Typography>
-              <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: 12, lineHeight: 1.7 }}>
-                سه روز از آخرین یادآوری گذشته است. از اطلاعات موجود فروشگاه یک پشتیبان بگیرید.
-              </Typography>
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={() => {
-                  setSaleSuccessOpen(false);
-                  router.push("/admin/settings#shop-backup");
-                }}
-                sx={{ mt: 1, borderColor: "var(--admin-accent)", color: "var(--admin-accent)" }}
-              >
-                رفتن به پشتیبان‌گیری
-              </Button>
-            </Box>
-          ) : null}
           <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, mt: 2 }}>
             <Button
               variant="contained"
               startIcon={<PrintIcon />}
               onClick={handlePrintLastSaleReceipt}
+              disabled={backupRequiredOpen}
               sx={{
                 bgcolor: "var(--admin-accent)",
                 "&:hover": { bgcolor: "var(--admin-accent-hover)" },
@@ -4973,6 +4948,7 @@ export default function ShoppingPage() {
             <Button
               variant="outlined"
               onClick={() => setSaleSuccessOpen(false)}
+              disabled={backupRequiredOpen}
               sx={{
                 borderColor: "var(--admin-menu-hover)",
                 color: "var(--admin-text)",
@@ -4983,6 +4959,67 @@ export default function ShoppingPage() {
               ادامه فروش
             </Button>
           </Box>
+        </Box>
+      </Modal>
+
+      <Modal
+        open={backupRequiredOpen}
+        onClose={() => {}}
+        disableEscapeKeyDown
+        aria-labelledby="backup-required-modal"
+        sx={{ zIndex: (theme) => theme.zIndex.modal + 2 }}
+      >
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: { xs: "92%", sm: 420 },
+            bgcolor: "var(--admin-surface)",
+            borderRadius: "16px",
+            boxShadow: 24,
+            p: 3,
+            textAlign: "center",
+            direction: "rtl",
+            border: "1px solid var(--admin-accent)",
+            outline: "none",
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <CloudDownloadIcon sx={{ fontSize: 52, color: "var(--admin-accent)", mb: 1.5 }} />
+          <Typography id="backup-required-modal" sx={{ fontWeight: 800, fontSize: 18, color: "var(--admin-text)", mb: 1 }}>
+            گرفتن پشتیبان الزامی است
+          </Typography>
+          <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: 13, lineHeight: 1.8, mb: 2.5 }}>
+            سه روز از آخرین پشتیبان گذشته است. برای ادامه کار، همین حالا از اطلاعات فروشگاه یک پشتیبان بگیرید.
+          </Typography>
+          <Button
+            fullWidth
+            variant="contained"
+            startIcon={backupDownloading ? <CircularProgress size={18} color="inherit" /> : <CloudDownloadIcon />}
+            disabled={backupDownloading}
+            onClick={async () => {
+              setBackupDownloading(true);
+              const res = await downloadShopBackup();
+              setBackupDownloading(false);
+              if (!res.ok) {
+                toast.error(res.message);
+                return;
+              }
+              toast.success("فایل پشتیبان دانلود شد");
+              setBackupRequiredOpen(false);
+            }}
+            sx={{
+              bgcolor: "var(--admin-accent)",
+              "&:hover": { bgcolor: "var(--admin-accent-hover)" },
+              borderRadius: "12px",
+              py: 1.35,
+              fontWeight: 700,
+            }}
+          >
+            {backupDownloading ? "در حال دانلود..." : "گرفتن پشتیبان"}
+          </Button>
         </Box>
       </Modal>
 

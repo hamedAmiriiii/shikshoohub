@@ -56,6 +56,13 @@ import {
   type PosTerminalRefundAvailability,
 } from "@/app/lib/purchaseReturns";
 import { canReplacePurchase, navigateToPurchaseEdit } from "@/app/lib/purchaseEdit";
+import {
+  isLineFullyReturned,
+  isLineReturnable,
+  lineBarcode,
+  lineDisplayName,
+  lineReturnedQuantity,
+} from "@/app/lib/purchaseListDisplay";
 import ShopAccountSelect from "@/app/admin/ShopAccountSelect";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -310,7 +317,15 @@ export default function purchas(props: any) {
     return payload;
   };
 
+  const isItemReturnedLocally = (item: any) =>
+    deletedItems.includes(item?.id) || isLineFullyReturned(item) || Boolean(item?.from_return_history);
+
+  const hasReturnableItems = () =>
+    Array.isArray(data?.purchased_products) &&
+    data.purchased_products.some((item: any) => !deletedItems.includes(item.id) && isLineReturnable(item));
+
   const getItemQuantity = (item: any) => {
+    if (deletedItems.includes(item?.id)) return 0;
     const qty = adjustedQuantities[item.id] ?? item.quantity;
     const productRef = item.product ?? item;
     const min = getMinQuantity(productRef);
@@ -781,10 +796,10 @@ export default function purchas(props: any) {
             </Box>
           ) : null}
           
-          {/* نمایش لیست محصولات */}
+          {/* نمایش لیست محصولات (شامل ردپای برگشتی‌ها) */}
           {data?.purchased_products && Array.isArray(data.purchased_products) && data.purchased_products.length > 0 && (
             <Box className="mt-2">
-              {canReplacePurchase(data).ok && (isInstallment || !data.purchased_products.some((item: any) => !deletedItems.includes(item.id))) ? (
+              {canReplacePurchase(data).ok && (isInstallment || !hasReturnableItems()) ? (
                 <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}>
                   <Button
                     size="small"
@@ -797,7 +812,7 @@ export default function purchas(props: any) {
                   </Button>
                 </Box>
               ) : null}
-              {!isInstallment && data.purchased_products.some((item: any) => !deletedItems.includes(item.id)) ? (
+              {!isInstallment && hasReturnableItems() ? (
                 <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1, gap: 1 }}>
                   {canReplacePurchase(data).ok ? (
                     <Button
@@ -830,22 +845,38 @@ export default function purchas(props: any) {
                 </Box>
               ) : null}
               
-              {data.purchased_products
-                .filter((item: any) => !deletedItems.includes(item.id))
-                .map((item: any, index: number) => (
+              {data.purchased_products.map((item: any, index: number) => {
+                const returnedLocally = isItemReturnedLocally(item);
+                const remainingQty = getItemQuantity(item);
+                const serverReturnedQty = lineReturnedQuantity(item);
+                const returnedQty = deletedItems.includes(item.id)
+                  ? serverReturnedQty + (Number(adjustedQuantities[item.id] ?? item.quantity) || 0)
+                  : serverReturnedQty;
+                const historyQty =
+                  Number(item.original_quantity) ||
+                  returnedQty ||
+                  Number(item.quantity) ||
+                  0;
+                const qtyLabel = returnedLocally
+                  ? `${formatProductQuantity(historyQty, item.product ?? item)} ${getUnitLabel(item.product ?? item)} (برگشت‌خورده)`
+                  : returnedQty > 0
+                    ? `${formatProductQuantity(remainingQty, item.product ?? item)} ${getUnitLabel(item.product ?? item)} · برگشت ${formatProductQuantity(returnedQty, item.product ?? item)}`
+                    : `${formatProductQuantity(remainingQty, item.product ?? item)} ${getUnitLabel(item.product ?? item)}`;
+                return (
                 <Box key={item.id || index} sx={{ 
-                  backgroundColor: "var(--admin-surface-alt)", 
+                  backgroundColor: returnedLocally ? "rgba(198,40,40,0.08)" : "var(--admin-surface-alt)", 
                   borderRadius: "8px", 
                   padding: "8px", 
                   marginBottom: "8px" ,
-                  border:"1px solid rgb(212, 87, 37)"
+                  border: returnedLocally ? "1px solid rgba(198,40,40,0.35)" : "1px solid rgb(212, 87, 37)",
+                  opacity: returnedLocally ? 0.92 : 1,
                 }}>
                   <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     
                       <LabelCustom 
                         title={"کالا"} 
                         name="" 
-                        text={`${item?.item_name} — ${formatProductQuantity(getItemQuantity(item), item.product ?? item)} ${getUnitLabel(item.product ?? item)}`}
+                        text={`${lineDisplayName(item)}${lineBarcode(item) ? ` (${lineBarcode(item)})` : ""} — ${qtyLabel}`}
                       />
                       <LabelCustom 
                         title={"قیمت "} 
@@ -857,8 +888,8 @@ export default function purchas(props: any) {
                         } 
                       />
                    
-                    {/* دکمه برگشت فقط برای خریدهای غیراقساطی */}
-                    {!isInstallment && (
+                    {/* دکمه برگشت فقط برای اقلام باقی‌ماندهٔ غیراقساطی */}
+                    {!isInstallment && !returnedLocally && isLineReturnable(item) && (
                       <IconButton
                         onClick={() => handleOpenDeleteDialog(item)}
                         sx={{
@@ -876,9 +907,13 @@ export default function purchas(props: any) {
                         <ReplayIcon fontSize="small" />
                       </IconButton>
                     )}
+                    {returnedLocally ? (
+                      <Chip label="برگشت" size="small" sx={{ height: 22, fontSize: 11, backgroundColor: "#c62828", color: "#fff" }} />
+                    ) : null}
                   </Box>
                 </Box>
-              ))}
+              );
+              })}
             </Box>
           )}
           

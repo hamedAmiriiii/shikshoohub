@@ -145,15 +145,17 @@ function SaleReceiptPrintContent() {
     () => `
       @page {
         size: ${formalPrint ? `A5 ${formalOrientation}` : `${paperWidthMm}mm auto`};
-        margin: ${formalPrint ? "6mm" : "0"};
+        margin: ${formalPrint ? "5mm" : "0"};
       }
       @media print {
         html, body {
           width: ${formalPrint ? "auto" : `${paperWidthMm}mm`};
+          height: auto !important;
           margin: 0 !important;
           padding: 0 !important;
           background: #fff !important;
           color: #111 !important;
+          overflow: visible !important;
         }
         .no-print {
           display: none !important;
@@ -162,10 +164,36 @@ function SaleReceiptPrintContent() {
           background: #fff !important;
           border: none !important;
           padding: 0 !important;
+          margin: 0 !important;
           color: #111 !important;
+          display: block !important;
+          overflow: visible !important;
+          width: 100% !important;
+          max-width: none !important;
         }
         .print-ticket {
           box-shadow: none !important;
+        }
+        .print-ticket-formal {
+          width: 100% !important;
+          max-width: 100% !important;
+          min-height: 0 !important;
+          height: auto !important;
+          margin: 0 !important;
+          padding: 2mm !important;
+          border: 1px solid #111 !important;
+          box-sizing: border-box !important;
+          overflow: hidden !important;
+          page-break-inside: avoid;
+        }
+        .print-ticket-formal table {
+          width: 100% !important;
+          table-layout: fixed !important;
+        }
+        .print-ticket-formal th,
+        .print-ticket-formal td {
+          word-break: break-word;
+          overflow-wrap: anywhere;
         }
         body[data-print-station="hall"] .print-ticket:not(.print-ticket-hall) {
           display: none !important;
@@ -275,38 +303,69 @@ function SaleReceiptPrintContent() {
               </Typography>
               {formalPrint ? (
                 <Box
-                  className="print-ticket print-ticket-hall"
+                  className="print-ticket print-ticket-hall print-ticket-formal"
                   sx={{
-                    width: formalOrientation === "portrait" ? "148mm" : "210mm",
-                    minHeight: formalOrientation === "portrait" ? "210mm" : "148mm",
+                    // پیش‌نمایش: اندازهٔ قابل‌چاپ A5 (بعد از حاشیهٔ صفحه)، نه خود برگهٔ کامل
+                    width: formalOrientation === "portrait" ? "138mm" : "200mm",
+                    maxWidth: "100%",
+                    minHeight: formalOrientation === "portrait" ? "200mm" : "138mm",
                     mx: "auto",
                     bgcolor: "#fff",
                     color: "#111",
                     border: "1px solid #111",
-                    p: 1.25,
+                    p: formalOrientation === "landscape" ? 1 : 1.25,
+                    boxSizing: "border-box",
                     direction: "rtl",
                     fontFamily: "Tahoma, Arial, sans-serif",
+                    overflow: "hidden",
                   }}
                 >
-                  <Typography align="center" sx={{ fontWeight: 900, fontSize: 20, color: "#111" }}>
+                  <Typography
+                    align="center"
+                    sx={{
+                      fontWeight: 900,
+                      fontSize: formalOrientation === "landscape" ? 16 : 20,
+                      lineHeight: 1.25,
+                      color: "#111",
+                    }}
+                  >
                     {proformaPrintMode ? "پیش‌فاکتور" : "فاکتور فروش"}
                   </Typography>
                   {settings.hallTitle ? (
-                    <Typography align="center" sx={{ fontSize: 12, color: "#111" }}>
+                    <Typography align="center" sx={{ fontSize: 11, color: "#111" }}>
                       {settings.hallTitle}
                     </Typography>
                   ) : null}
-                  <Typography align="center" sx={{ fontSize: 12, mb: 1, color: "#111" }}>
+                  <Typography align="center" sx={{ fontSize: 11, mb: 0.75, color: "#111" }}>
                     {settings.shopTitle || receipt.shopName || ""}
                   </Typography>
                   {receipt.footerNote ? (
-                    <Typography sx={{ fontSize: 12, mb: 0.5, color: "#111" }}>{receipt.footerNote}</Typography>
+                    <Typography sx={{ fontSize: 11, mb: 0.5, color: "#111" }}>{receipt.footerNote}</Typography>
                   ) : null}
-                  <Box component="table" sx={{ width: "100%", borderCollapse: "collapse", fontSize: 11, color: "#111" }}>
+                  <Box
+                    component="table"
+                    sx={{
+                      width: "100%",
+                      borderCollapse: "collapse",
+                      tableLayout: "fixed",
+                      fontSize: formalOrientation === "landscape" ? 10 : 11,
+                      color: "#111",
+                    }}
+                  >
+                    <Box component="colgroup">
+                      <Box component="col" sx={{ width: "46%" }} />
+                      <Box component="col" sx={{ width: "14%" }} />
+                      <Box component="col" sx={{ width: "20%" }} />
+                      <Box component="col" sx={{ width: "20%" }} />
+                    </Box>
                     <Box component="thead">
                       <Box component="tr">
                         {["شرح", "تعداد", "فی", "مبلغ"].map((label) => (
-                          <Box component="th" key={label} sx={{ border: "1px solid #111", p: 0.4, bgcolor: "#d9d9d9" }}>
+                          <Box
+                            component="th"
+                            key={label}
+                            sx={{ border: "1px solid #111", p: 0.35, bgcolor: "#d9d9d9", fontWeight: 800 }}
+                          >
                             {label}
                           </Box>
                         ))}
@@ -315,15 +374,32 @@ function SaleReceiptPrintContent() {
                     <Box component="tbody">
                       {receipt.items.map((item, index) => (
                         <Box component="tr" key={`${item.name}-${index}`}>
-                          <Box component="td" sx={{ border: "1px solid #111", p: 0.4, textAlign: "right" }}>{item.name}</Box>
-                          <Box component="td" sx={{ border: "1px solid #111", p: 0.4, textAlign: "center" }}>{formatReceiptNumber(item.quantity)}</Box>
-                          <Box component="td" sx={{ border: "1px solid #111", p: 0.4, textAlign: "center" }}>{formatReceiptNumber(item.unitPrice)}</Box>
-                          <Box component="td" sx={{ border: "1px solid #111", p: 0.4, textAlign: "center" }}>{formatReceiptNumber(item.lineTotal)}</Box>
+                          <Box
+                            component="td"
+                            sx={{
+                              border: "1px solid #111",
+                              p: 0.35,
+                              textAlign: "right",
+                              wordBreak: "break-word",
+                              overflowWrap: "anywhere",
+                            }}
+                          >
+                            {item.name}
+                          </Box>
+                          <Box component="td" sx={{ border: "1px solid #111", p: 0.35, textAlign: "center" }}>
+                            {formatReceiptNumber(item.quantity)}
+                          </Box>
+                          <Box component="td" sx={{ border: "1px solid #111", p: 0.35, textAlign: "center" }}>
+                            {formatReceiptNumber(item.unitPrice)}
+                          </Box>
+                          <Box component="td" sx={{ border: "1px solid #111", p: 0.35, textAlign: "center" }}>
+                            {formatReceiptNumber(item.lineTotal)}
+                          </Box>
                         </Box>
                       ))}
                     </Box>
                   </Box>
-                  <Typography sx={{ fontSize: 12, mt: 1, fontWeight: 800, color: "#111" }}>
+                  <Typography sx={{ fontSize: 11, mt: 0.75, fontWeight: 800, color: "#111" }}>
                     قابل پرداخت: {formatReceiptNumber(receipt.payableNow || receipt.finalTotal)} تومان
                   </Typography>
                 </Box>

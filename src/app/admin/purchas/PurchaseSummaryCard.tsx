@@ -133,7 +133,7 @@ export default function PurchaseSummaryCard({
               : "—"}
           </Typography>
           <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)", lineHeight: 1.5 }}>
-            {fullyReturned ? "فاکتور برگشت‌خورده" : itemsSummary}
+            {itemsSummary !== "—" ? itemsSummary : fullyReturned ? "فاکتور برگشت‌خورده" : "—"}
             {" · "}
             {paymentLabel || "—"}
             {data?.sold_by_name ? ` · فروشنده: ${data.sold_by_name}` : ""}
