@@ -27,7 +27,8 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import {
   fetchShopAccounts,
-  isMainShopAccount,
+  isPettyCashAccount,
+  isTillAccount,
   remainingBalanceDeleteMessage,
   setShopAccountBalances,
   type ShopAccount,
@@ -85,7 +86,17 @@ export default function ShopAccountsPage() {
     setLoading(true);
     try {
       const list = await fetchShopAccounts();
-      setAccounts(list.filter(isMainShopAccount));
+      // تنخواه صفحهٔ خودش را دارد؛ صندوق نقد و حساب‌های بانکی/فروشگاه اینجا دیده می‌شوند
+      setAccounts(
+        list
+          .filter((account) => !isPettyCashAccount(account))
+          .sort((a, b) => {
+            const tillA = isTillAccount(a) ? 0 : 1;
+            const tillB = isTillAccount(b) ? 0 : 1;
+            if (tillA !== tillB) return tillA - tillB;
+            return (a.sort_order ?? a.id) - (b.sort_order ?? b.id);
+          }),
+      );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "خطا در دریافت حساب‌ها");
       setAccounts([]);
@@ -216,6 +227,10 @@ export default function ShopAccountsPage() {
   };
 
   const handleDelete = async (account: ShopAccount) => {
+    if (isTillAccount(account)) {
+      toast.error("صندوق نقد قابل حذف نیست");
+      return;
+    }
     if (account.is_default) {
       toast.error("حساب‌های پیش‌فرض قابل حذف نیستند");
       return;
@@ -276,7 +291,7 @@ export default function ShopAccountsPage() {
                 حساب‌های فروشگاه
               </Typography>
               <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>
-                حساب‌های اصلی برای واریز روزانه، شارژ تنخواه و پرداخت هزینه/فاکتور
+                صندوق نقد، حساب بانکی و حساب فروشگاه — برای واریز روزانه، شارژ تنخواه و پرداخت هزینه/فاکتور
               </Typography>
             </Box>
           </Box>
@@ -384,7 +399,19 @@ export default function ShopAccountsPage() {
                   <Box sx={{ minWidth: 0 }}>
                     <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: 15 }}>
                       {account.name}
-                      {account.is_default ? (
+                      {isTillAccount(account) ? (
+                        <Box
+                          component="span"
+                          sx={{
+                            ml: 1,
+                            color: "var(--admin-accent)",
+                            fontWeight: 600,
+                            fontSize: 11,
+                          }}
+                        >
+                          (صندوق نقد)
+                        </Box>
+                      ) : account.is_default ? (
                         <Box
                           component="span"
                           sx={{
@@ -404,10 +431,9 @@ export default function ShopAccountsPage() {
                       موجودی: {formatNumber(account.balance)} تومان
                     </Typography>
                     <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, mt: 0.5 }}>
-                      واریز: {formatNumber(account.deposits_total ?? 0)} · شارژ تنخواه:{" "}
-                      {formatNumber(account.charged_total ?? 0)} · هزینه:{" "}
-                      {formatNumber(account.expenses_total ?? 0)} · فاکتور:{" "}
-                      {formatNumber(account.invoices_total ?? 0)}
+                      {isTillAccount(account)
+                        ? "مانده از دفتر صندوق (نقد فروش) · قابل انتخاب در پرداخت هزینه و فاکتور"
+                        : `واریز: ${formatNumber(account.deposits_total ?? 0)} · شارژ تنخواه: ${formatNumber(account.charged_total ?? 0)} · هزینه: ${formatNumber(account.expenses_total ?? 0)} · فاکتور: ${formatNumber(account.invoices_total ?? 0)}`}
                     </Typography>
                   </Box>
                   <Box sx={{ display: "flex", gap: 0.5, alignItems: "center" }}>
@@ -422,10 +448,13 @@ export default function ShopAccountsPage() {
                     <IconButton
                       size="small"
                       aria-label="حذف حساب"
-                      disabled={Boolean(account.is_default)}
+                      disabled={Boolean(account.is_default) || isTillAccount(account)}
                       onClick={() => handleDelete(account)}
                       sx={{
-                        color: account.is_default ? "var(--admin-text-secondary)" : "#f87171",
+                        color:
+                          account.is_default || isTillAccount(account)
+                            ? "var(--admin-text-secondary)"
+                            : "#f87171",
                       }}
                     >
                       <DeleteOutlineIcon fontSize="small" />

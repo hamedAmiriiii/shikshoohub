@@ -44,10 +44,6 @@ import {
   purchasesFilterLabel,
 } from "@/app/lib/purchaseReceiptPrint";
 import { readListReceiptPrintSettings } from "@/app/lib/saleReceiptPrint";
-import {
-  formatPurchaseItemsBreakdown,
-  formatPurchaseItemsTotal,
-} from "@/app/lib/purchaseListDisplay";
 
 const formatNumber = (num: number | string) => {
     const numValue = typeof num === "string" ? parseFloat(num.replace(/,/g, "")) : num;
@@ -163,7 +159,10 @@ export default function ListPurches() {
             },
             {
                 label: "فروشنده",
-                field: (item: any) => item?.sold_by_name || "—",
+                field: (item: any) => {
+                    const name = String(item?.sold_by_name || item?.soldByName || "").trim();
+                    return name && name !== "—" && name !== "-" ? name : "—";
+                },
                 width: "120px",
             },
             {
@@ -235,47 +234,6 @@ export default function ListPurches() {
                     return "—";
                 },
                 width: "110px",
-            },
-            {
-                label: "اقلام",
-                field: (item: any) => {
-                    const fullyReturned =
-                        Boolean(item?.is_fully_returned) ||
-                        (Number(item?.item_returns_count || 0) > 0 && Number(item?.total_amount || 0) <= 0.02);
-                    const total = formatPurchaseItemsTotal(item);
-                    const breakdown = formatPurchaseItemsBreakdown(item);
-                    if (total === "—" && breakdown === "—") return fullyReturned ? "برگشت‌خورده" : "—";
-                    return (
-                        <Box
-                            sx={{
-                                color: fullyReturned ? "#c62828" : "inherit",
-                                fontSize: 12,
-                                lineHeight: 1.45,
-                                textAlign: "right",
-                                maxWidth: 280,
-                            }}
-                            title={breakdown}
-                        >
-                            <Box component="span" sx={{ fontWeight: 700, displayInlineEnd: 0.5 }}>
-                                {total}
-                            </Box>
-                            <Box
-                                component="span"
-                                sx={{
-                                    color: fullyReturned ? "#c62828" : "var(--admin-text-muted)",
-                                    fontWeight: 500,
-                                    display: "-webkit-box",
-                                    WebkitLineClamp: 2,
-                                    WebkitBoxOrient: "vertical",
-                                    overflow: "hidden",
-                                }}
-                            >
-                                {breakdown}
-                            </Box>
-                        </Box>
-                    );
-                },
-                width: "220px",
             },
         ],
         [showDailyTicket],

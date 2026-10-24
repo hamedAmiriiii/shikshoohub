@@ -23,8 +23,12 @@ export function isPettyCashAccount(account: Pick<ShopAccount, "type">): boolean 
   return account.type === "petty_cash";
 }
 
+export function isTillAccount(account: Pick<ShopAccount, "type" | "is_till">): boolean {
+  return account.is_till === true || account.type === "till";
+}
+
 export function isMainShopAccount(account: Pick<ShopAccount, "type" | "is_till">): boolean {
-  if (account.is_till || account.type === "till") return false;
+  if (isTillAccount(account)) return false;
   if (isPettyCashAccount(account)) return false;
   return true;
 }
