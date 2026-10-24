@@ -37,6 +37,9 @@ type GatewaySettings = {
     otp_vars_mode: "code" | "shop_code";
     credit_body_id: number | null;
     low_quota_body_id: number | null;
+    purchase_body_id: number | null;
+    category_restock_body_id: number | null;
+    category_link_body_id: number | null;
   };
   shina: { gateway: string };
 };
@@ -69,6 +72,9 @@ export default function SmsGatewayPage() {
   const [otpBodyId, setOtpBodyId] = useState("");
   const [creditBodyId, setCreditBodyId] = useState("564775");
   const [lowQuotaBodyId, setLowQuotaBodyId] = useState("");
+  const [purchaseBodyId, setPurchaseBodyId] = useState("566903");
+  const [categoryRestockBodyId, setCategoryRestockBodyId] = useState("566901");
+  const [categoryLinkBodyId, setCategoryLinkBodyId] = useState("566902");
   const [otpVarsMode, setOtpVarsMode] = useState<"code" | "shop_code">("shop_code");
 
   const load = useCallback(async () => {
@@ -104,6 +110,21 @@ export default function SmsGatewayPage() {
           ? String(data.melipayamak.low_quota_body_id)
           : "",
       );
+      setPurchaseBodyId(
+        data.melipayamak.purchase_body_id != null
+          ? String(data.melipayamak.purchase_body_id)
+          : "566903",
+      );
+      setCategoryRestockBodyId(
+        data.melipayamak.category_restock_body_id != null
+          ? String(data.melipayamak.category_restock_body_id)
+          : "566901",
+      );
+      setCategoryLinkBodyId(
+        data.melipayamak.category_link_body_id != null
+          ? String(data.melipayamak.category_link_body_id)
+          : "566902",
+      );
     } catch {
       toast.error("خطا در دریافت تنظیمات درگاه پیامک");
     } finally {
@@ -132,6 +153,9 @@ export default function SmsGatewayPage() {
         melipayamak_otp_body_id: otpBodyId.trim(),
         melipayamak_credit_body_id: creditBodyId.trim(),
         melipayamak_low_quota_body_id: lowQuotaBodyId.trim(),
+        melipayamak_purchase_body_id: purchaseBodyId.trim(),
+        melipayamak_category_restock_body_id: categoryRestockBodyId.trim(),
+        melipayamak_category_link_body_id: categoryLinkBodyId.trim(),
         melipayamak_otp_vars_mode: otpVarsMode,
       };
       if (apiKey.trim() !== "") {
@@ -336,14 +360,41 @@ export default function SmsGatewayPage() {
               sx={fieldSx}
               inputProps={{ dir: "ltr" }}
             />
+            <TextField
+              label="شناسه پترن تشکر از خرید (bodyId)"
+              value={purchaseBodyId}
+              onChange={(e) => setPurchaseBodyId(e.target.value.replace(/\D/g, ""))}
+              helperText="الگوی ۵۶۶۹۰۳: {0} با تشکر از خرید شما"
+              fullWidth
+              sx={fieldSx}
+              inputProps={{ dir: "ltr" }}
+            />
+            <TextField
+              label="شناسه پترن موجود شدن در دسته (bodyId)"
+              value={categoryRestockBodyId}
+              onChange={(e) => setCategoryRestockBodyId(e.target.value.replace(/\D/g, ""))}
+              helperText={'الگوی ۵۶۶۹۰۱: {0} کالای «{1}» در دسته «{2}» دوباره موجود شد.'}
+              fullWidth
+              sx={fieldSx}
+              inputProps={{ dir: "ltr" }}
+            />
+            <TextField
+              label="شناسه پترن لینک مشاهده کالا (bodyId)"
+              value={categoryLinkBodyId}
+              onChange={(e) => setCategoryLinkBodyId(e.target.value.replace(/\D/g, ""))}
+              helperText="الگوی ۵۶۶۹۰۲: {0} مشاهده کالا: {1}"
+              fullWidth
+              sx={fieldSx}
+              inputProps={{ dir: "ltr" }}
+            />
           </Box>
 
           <Typography
             sx={{ color: "var(--admin-text-muted)", fontSize: 12, mt: 2, lineHeight: 1.7 }}
           >
-            کد تأیید با الگوی ۵۶۴۷۰۳، افزایش اعتبار باشگاه با الگوی ۵۶۴۷۷۵، و هشدار کمبود اعتبار فروشگاه
-            (زیر ۳۰ پیامک، یک‌بار تا شارژ بعدی) از وب‌سرویس خدماتی می‌روند. بقیهٔ پیامک‌های فروشگاه با خط
-            اختصاصی و لغو11 ارسال می‌شوند.
+            پترن‌های خدماتی (OTP، اعتبار، تشکر خرید ۵۶۶۹۰۳، موجود شدن دسته ۵۶۶۹۰۱، لینک کالا ۵۶۶۹۰۲ و …)
+            از وب‌سرویس می‌روند. برای «کالای جدید در دسته» هنوز پترن جدا ثبت نشده؛ تا تأیید، متن آزاد /
+            خط اختصاصی استفاده می‌شود.
           </Typography>
 
           <Button
