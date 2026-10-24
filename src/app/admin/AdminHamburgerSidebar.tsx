@@ -48,6 +48,7 @@ import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import VpnKeyIcon from "@mui/icons-material/VpnKey";
 import WifiIcon from "@mui/icons-material/Wifi";
 import PasswordIcon from "@mui/icons-material/Password";
+import BugReportIcon from "@mui/icons-material/BugReport";
 import BadgeIcon from "@mui/icons-material/Badge";
 import PaymentsIcon from "@mui/icons-material/Payments";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
@@ -623,6 +624,12 @@ export default function AdminHamburgerSidebar({
         label: "آمار سایت",
         href: "/admin/site-stats",
         icon: <AssessmentIcon />,
+      },
+      {
+        id: "laravel-log",
+        label: "لاگ خطای سرور",
+        href: "/admin/laravel-log",
+        icon: <BugReportIcon />,
       },
     ],
     [],

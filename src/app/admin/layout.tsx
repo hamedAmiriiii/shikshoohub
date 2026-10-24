@@ -90,6 +90,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/desktop-licenses': 'لایسنس دسکتاپ',
     '/admin/desktop-licenses/logs': 'لاگ اتصال دسکتاپ',
     '/admin/site-stats': 'آمار سایت',
+    '/admin/laravel-log': 'لاگ خطای سرور',
     '/admin/installments': 'اقساط',
     '/admin/installment-credits': 'اعتبار اقساطی',
     '/admin/profit-loss': 'سود و ضرر',
