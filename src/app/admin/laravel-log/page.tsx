@@ -16,6 +16,7 @@ import DownloadIcon from "@mui/icons-material/Download";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import BugReportIcon from "@mui/icons-material/BugReport";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import tokenCode from "@/app/coponent/tokenCode";
@@ -25,9 +26,12 @@ import { isSuperAdminUser } from "@/app/lib/superAdmin";
 import { adminButtonStartIconSx, adminPageSx, adminSurfaceCardSx } from "@/app/admin/theme/adminTheme";
 
 const API_BASE = (process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoo-plus.ir").replace(/\/$/, "");
+const PRIMARY = "api-errors.log";
 
 type LogFileRow = {
   name: string;
+  title?: string;
+  kind?: string;
   size: number;
   size_label: string;
   modified_at?: string | null;
@@ -72,8 +76,39 @@ export default function LaravelLogPage() {
   const [allowed, setAllowed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [files, setFiles] = useState<LogFileRow[]>([]);
+  const [hint, setHint] = useState("");
   const [busyFile, setBusyFile] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<LogFileRow | null>(null);
+  const [previewName, setPreviewName] = useState(PRIMARY);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewContent, setPreviewContent] = useState("");
+  const [previewMessage, setPreviewMessage] = useState("");
+  const [previewTruncated, setPreviewTruncated] = useState(false);
+
+  const loadTail = useCallback(async (fileName: string) => {
+    setPreviewName(fileName);
+    setPreviewLoading(true);
+    try {
+      const token = tokenCode();
+      const res = await FetchWithJwtClient("GET", "/api/admin/laravel-log/tail", token, {
+        file: fileName,
+        bytes: 65536,
+      });
+      if (res?.hasError) {
+        toast.error(getApiErrorMessage(res, "خواندن لاگ ناموفق بود"));
+        setPreviewContent("");
+        setPreviewMessage("");
+        return;
+      }
+      setPreviewContent(typeof res?.content === "string" ? res.content : "");
+      setPreviewMessage(typeof res?.message === "string" ? res.message : "");
+      setPreviewTruncated(Boolean(res?.truncated));
+    } catch (e) {
+      toast.error(getApiErrorMessage(e, "خواندن لاگ ناموفق بود"));
+    } finally {
+      setPreviewLoading(false);
+    }
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -87,13 +122,19 @@ export default function LaravelLogPage() {
       }
       const list = Array.isArray(res?.files) ? (res.files as LogFileRow[]) : [];
       setFiles(list);
+      setHint(typeof res?.hint === "string" ? res.hint : "");
+      const primary =
+        (typeof res?.primary === "string" && res.primary) ||
+        list.find((f) => f.kind === "errors")?.name ||
+        PRIMARY;
+      await loadTail(primary);
     } catch (e) {
       toast.error(getApiErrorMessage(e, "خواندن لیست لاگ ناموفق بود"));
       setFiles([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadTail]);
 
   useEffect(() => {
     if (!isSuperAdminUser()) {
@@ -186,11 +227,8 @@ export default function LaravelLogPage() {
             لاگ خطای سرور
           </Typography>
           <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: 13, mt: 0.5 }}>
-            فایل‌های{" "}
-            <Box component="span" dir="ltr" sx={{ fontFamily: "monospace" }}>
-              storage/logs
-            </Box>{" "}
-            لاراول (مثل laravel.log و api-errors.log) — دانلود یا حذف.
+            {hint ||
+              "خطاهای ۵۰۰ در api-errors.log هستند. laravel.log بیشتر هشدار عمومی مثل slow.request است."}
           </Typography>
         </Box>
         <Button
@@ -216,81 +254,159 @@ export default function LaravelLogPage() {
         <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
           <CircularProgress size={32} sx={{ color: "var(--admin-accent)" }} />
         </Box>
-      ) : files.length === 0 ? (
-        <Box sx={{ ...adminSurfaceCardSx, p: 3, textAlign: "center" }}>
-          <BugReportIcon sx={{ fontSize: 36, color: "var(--admin-text-muted)", mb: 1 }} />
-          <Typography sx={{ color: "var(--admin-text-muted)" }}>فایل لاگی پیدا نشد.</Typography>
-        </Box>
       ) : (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
-          {files.map((file) => {
-            const busy = busyFile === file.name;
-            return (
-              <Box
-                key={file.name}
-                sx={{
-                  ...adminSurfaceCardSx,
-                  p: 1.75,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1.5,
-                  flexWrap: "wrap",
-                }}
-              >
-                <Box sx={{ flex: 1, minWidth: 180 }}>
-                  <Typography
-                    dir="ltr"
+        <>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25, mb: 2 }}>
+            {files.map((file) => {
+              const busy = busyFile === file.name;
+              const selected = previewName === file.name;
+              const isErrors = file.kind === "errors" || file.name === PRIMARY;
+              return (
+                <Box
+                  key={file.name}
+                  sx={{
+                    ...adminSurfaceCardSx,
+                    p: 1.75,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1.5,
+                    flexWrap: "wrap",
+                    borderColor: selected
+                      ? "var(--admin-accent)"
+                      : isErrors
+                        ? "rgba(198, 40, 40, 0.45)"
+                        : "var(--admin-border)",
+                    borderWidth: selected || isErrors ? 2 : 1,
+                  }}
+                >
+                  <Box sx={{ flex: 1, minWidth: 180 }}>
+                    <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: 13 }}>
+                      {file.title || file.name}
+                      {isErrors ? " ★" : ""}
+                    </Typography>
+                    <Typography
+                      dir="ltr"
+                      sx={{
+                        color: "var(--admin-text-muted)",
+                        fontSize: 12,
+                        fontFamily: "monospace",
+                        textAlign: "left",
+                        mt: 0.25,
+                      }}
+                    >
+                      {file.name}
+                    </Typography>
+                    <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, mt: 0.35 }}>
+                      {file.exists === false
+                        ? "هنوز ساخته نشده"
+                        : `${file.size_label || "0 B"} · ${formatWhen(file.modified_at)}`}
+                    </Typography>
+                  </Box>
+                  <Button
+                    variant={selected ? "contained" : "outlined"}
+                    size="small"
+                    startIcon={<VisibilityIcon />}
+                    disabled={busy}
+                    onClick={() => void loadTail(file.name)}
                     sx={{
-                      color: "var(--admin-text)",
-                      fontWeight: 700,
-                      fontSize: 14,
-                      fontFamily: "monospace",
-                      textAlign: "left",
+                      ...adminButtonStartIconSx,
+                      textTransform: "none",
+                      borderRadius: "10px",
+                      fontWeight: 600,
+                      ...(selected
+                        ? {
+                            bgcolor: "var(--admin-accent)",
+                            "&:hover": { bgcolor: "var(--admin-accent)" },
+                          }
+                        : {}),
                     }}
                   >
-                    {file.name}
-                  </Typography>
-                  <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, mt: 0.35 }}>
-                    {file.size_label || "0 B"} · {formatWhen(file.modified_at)}
-                  </Typography>
+                    مشاهده
+                  </Button>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    startIcon={busy ? <CircularProgress size={14} color="inherit" /> : <DownloadIcon />}
+                    disabled={busy || !file.exists || file.size <= 0}
+                    onClick={() => void downloadFile(file)}
+                    sx={{
+                      ...adminButtonStartIconSx,
+                      textTransform: "none",
+                      borderRadius: "10px",
+                      bgcolor: "var(--admin-accent)",
+                      fontWeight: 600,
+                      "&:hover": { bgcolor: "var(--admin-accent)" },
+                    }}
+                  >
+                    دانلود
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    color="error"
+                    startIcon={<DeleteOutlineIcon />}
+                    disabled={busy || file.exists === false}
+                    onClick={() => setDeleteTarget(file)}
+                    sx={{
+                      ...adminButtonStartIconSx,
+                      textTransform: "none",
+                      borderRadius: "10px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    حذف
+                  </Button>
                 </Box>
-                <Button
-                  variant="contained"
-                  size="small"
-                  startIcon={busy ? <CircularProgress size={14} color="inherit" /> : <DownloadIcon />}
-                  disabled={busy || file.size <= 0}
-                  onClick={() => void downloadFile(file)}
-                  sx={{
-                    ...adminButtonStartIconSx,
-                    textTransform: "none",
-                    borderRadius: "10px",
-                    bgcolor: "var(--admin-accent)",
-                    fontWeight: 600,
-                    "&:hover": { bgcolor: "var(--admin-accent)" },
-                  }}
-                >
-                  دانلود
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  color="error"
-                  startIcon={<DeleteOutlineIcon />}
-                  disabled={busy}
-                  onClick={() => setDeleteTarget(file)}
-                  sx={{
-                    ...adminButtonStartIconSx,
-                    textTransform: "none",
-                    borderRadius: "10px",
-                    fontWeight: 600,
-                  }}
-                >
-                  حذف
-                </Button>
+              );
+            })}
+          </Box>
+
+          <Box sx={{ ...adminSurfaceCardSx, p: 1.75 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1, flexWrap: "wrap" }}>
+              <BugReportIcon sx={{ color: "var(--admin-accent)", fontSize: 20 }} />
+              <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, flex: 1 }}>
+                پیش‌نمایش:{" "}
+                <Box component="span" dir="ltr" sx={{ fontFamily: "monospace" }}>
+                  {previewName}
+                </Box>
+              </Typography>
+              {previewTruncated ? (
+                <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>
+                  فقط انتهای فایل
+                </Typography>
+              ) : null}
+            </Box>
+            {previewLoading ? (
+              <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+                <CircularProgress size={28} sx={{ color: "var(--admin-accent)" }} />
               </Box>
-            );
-          })}
-        </Box>
+            ) : (
+              <Box
+                component="pre"
+                dir="ltr"
+                sx={{
+                  m: 0,
+                  p: 1.5,
+                  maxHeight: 420,
+                  overflow: "auto",
+                  borderRadius: "10px",
+                  bgcolor: "rgba(0,0,0,0.35)",
+                  color: "#d7e0d2",
+                  fontSize: 12,
+                  lineHeight: 1.5,
+                  fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
+                  textAlign: "left",
+                }}
+              >
+                {previewContent.trim()
+                  ? previewContent
+                  : previewMessage || "محتوایی نیست — اگر خطای ۵۰۰ رخ دهد اینجا می‌آید."}
+              </Box>
+            )}
+          </Box>
+        </>
       )}
 
       <Dialog open={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)} dir="rtl">
