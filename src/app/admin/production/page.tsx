@@ -1825,9 +1825,7 @@ export default function ProductionCostingPage() {
                 <Typography sx={{ fontSize: 12, fontWeight: 700, color: "var(--admin-text)" }}>
                   کالای نهایی (قابل فروش)
                 </Typography>
-                <Typography sx={{ fontSize: 10.5, color: "var(--admin-text-muted)" }}>
-                  روشن = در منوی آنلاین و صندوق دیده می‌شود. خاموش = نیمه‌ساخته؛ فقط در فرمول تولیدهای دیگر (مثل برگر داخل ساندویچ).
-                </Typography>
+                
               </Box>
             }
           />
@@ -1855,9 +1853,7 @@ export default function ProductionCostingPage() {
               {goodUnit === "piece" ? "برای ۱ عدد · گرم / عدد" : "برای ۱ کیلو · گرم / عدد"}
             </Typography>
           </Box>
-          <Typography sx={{ fontSize: 10.5, color: "var(--admin-text-muted)", mt: -0.5 }}>
-            ماده اولیه یا کالای تولیدی دیگر (ترجیحاً نیمه‌ساخته مثل برگر داخل ساندویچ) را بگذارید.
-          </Typography>
+         
           {recipeLines.map((line, index) => {
             const nested = isNestedRecipeLine(line);
             const nestedGood = nested
