@@ -35,27 +35,31 @@ import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import TodayIcon from "@mui/icons-material/Today";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import { apiRequestError } from "@/app/lib/apiRequestError/client";
 import tokenCode from "@/app/coponent/tokenCode";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { adminButtonStartIconSx, adminPageSx } from "@/app/admin/theme/adminTheme";
 
 const StyledTableCell = styled(TableCell)(() => ({
   [`&.${tableCellClasses.head}`]: {
     backgroundColor: "var(--admin-surface-alt)",
-    color: "var(--admin-text)",
-    fontWeight: "600",
-    fontSize: "11px",
-    padding: "6px 4px",
+    color: "var(--admin-text-muted)",
+    fontWeight: 700,
+    fontSize: "12px",
+    padding: "10px 8px",
     whiteSpace: "nowrap",
-    lineHeight: 1.25,
+    lineHeight: 1.3,
+    borderBottom: "1px solid var(--admin-border)",
   },
   [`&.${tableCellClasses.body}`]: {
     color: "var(--admin-text)",
-    fontSize: "11px",
-    padding: "4px 3px",
+    fontSize: "12px",
+    padding: "10px 8px",
     verticalAlign: "middle",
-    lineHeight: 1.25,
+    lineHeight: 1.35,
+    borderBottom: "1px solid var(--admin-border)",
   },
 }));
 
@@ -63,6 +67,9 @@ const StyledTableRow = styled(TableRow)(() => ({
   backgroundColor: "var(--admin-surface)",
   "&:nth-of-type(even)": {
     backgroundColor: "var(--admin-surface-alt)",
+  },
+  "&:last-child td": {
+    borderBottom: "none",
   },
   "&:hover": {
     backgroundColor: "var(--admin-menu-hover)",
@@ -158,6 +165,30 @@ const formatNumber = (num: number) =>
 
 const PERSIAN_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
 const ARABIC_DIGITS = "٠١٢٣٤٥٦٧٨٩";
+const WEEKDAY_FA = ["یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه", "شنبه"];
+
+function toFaDigits(value: string | number): string {
+  return String(value).replace(/\d/g, (d) => PERSIAN_DIGITS[Number(d)] ?? d);
+}
+
+function parseJalaliParts(
+  row: DailyReconciliationRow,
+  monthFilter: MonthFilter | null
+): { year: number; month: number; day: number } | null {
+  const raw = String(row.date_jalali || "").trim().replace(/\//g, "-");
+  const m = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) {
+    return { year: Number(m[1]), month: Number(m[2]), day: Number(m[3]) };
+  }
+  if (row.day_of_month != null && monthFilter) {
+    return {
+      year: monthFilter.year,
+      month: monthFilter.month,
+      day: row.day_of_month,
+    };
+  }
+  return null;
+}
 
 function parseAmount(value: string): number {
   const normalized = value
@@ -502,18 +533,38 @@ const amountFieldSxFull = {
   minWidth: "100%",
   maxWidth: "100%",
   width: "100%",
+  "& .MuiOutlinedInput-root": {
+    ...amountFieldSx["& .MuiOutlinedInput-root"],
+    borderRadius: 1.5,
+    fontSize: "13px",
+  },
+  "& .MuiInputBase-input": {
+    ...amountFieldSx["& .MuiInputBase-input"],
+    py: 0.85,
+    px: 1,
+    fontSize: "13px",
+  },
+  "& .MuiInputLabel-root": { color: "var(--admin-text-muted)" },
 };
 
 function rowDateLabel(
   row: DailyReconciliationRow,
-  monthFilter: MonthFilter | null
+  monthFilter: MonthFilter | null,
+  opts?: { withWeekday?: boolean }
 ): string {
-  return (
-    row.date_jalali ||
-    (row.day_of_month != null && monthFilter
-      ? `${monthFilter.month_name} ${row.day_of_month}`
-      : row.date)
-  );
+  const parts = parseJalaliParts(row, monthFilter);
+  if (parts && parts.month >= 1 && parts.month <= 12) {
+    const monthName = PERSIAN_MONTH_NAMES[parts.month - 1] || monthFilter?.month_name || "";
+    const dateText = `${toFaDigits(parts.day)} ${monthName} ${toFaDigits(parts.year)}`;
+    if (opts?.withWeekday && row.date) {
+      const g = new Date(`${row.date}T12:00:00`);
+      if (!Number.isNaN(g.getTime())) {
+        return `${WEEKDAY_FA[g.getDay()]} ${dateText}`;
+      }
+    }
+    return dateText;
+  }
+  return row.date_jalali ? toFaDigits(row.date_jalali.replace(/-/g, "/")) : row.date;
 }
 
 function rowDisplayDiscrepancy(
@@ -613,20 +664,49 @@ function buildCumulativePreviewByDate(
 
 function RowStatusChip({ row }: { row: DailyReconciliationRow }) {
   if (row.is_closed) {
-    return <Chip label="ثبت شده" size="small" color="success" variant="outlined" />;
+    return (
+      <Chip
+        label="ثبت‌شده"
+        size="small"
+        sx={{
+          height: 24,
+          fontSize: 11,
+          fontWeight: 700,
+          bgcolor: "rgba(120, 181, 104, 0.16)",
+          color: "var(--admin-accent)",
+          border: "none",
+        }}
+      />
+    );
   }
   if (row.editable) {
     return (
       <Chip
-        label="قابل ویرایش"
+        label="باز"
         size="small"
-        sx={{ borderColor: "var(--admin-accent)", color: "var(--admin-accent)" }}
-        variant="outlined"
+        sx={{
+          height: 24,
+          fontSize: 11,
+          fontWeight: 700,
+          bgcolor: "rgba(255, 193, 7, 0.14)",
+          color: "var(--admin-warning, #fbbf24)",
+          border: "none",
+        }}
       />
     );
   }
   return (
-    <Chip label="فقط نمایش" size="small" variant="outlined" sx={{ color: "var(--admin-text-muted)" }} />
+    <Chip
+      label="بسته"
+      size="small"
+      sx={{
+        height: 24,
+        fontSize: 11,
+        bgcolor: "var(--admin-surface-alt)",
+        color: "var(--admin-text-muted)",
+        border: "none",
+      }}
+    />
   );
 }
 
@@ -944,7 +1024,7 @@ export default function DailyReconciliationPage() {
         toast.error(getApiErrorMessage(res, "خطا در ثبت تطبیق روزانه"));
         return;
       }
-      toast.success(`واریز ${row.date_jalali || row.date} ثبت شد`);
+      toast.success(`واریز ${rowDateLabel(row, monthFilter)} ثبت شد`);
       setDepositModalRow(null);
       if (monthFilter) {
         await fetchGrid(monthFilter.year, monthFilter.month);
@@ -969,80 +1049,34 @@ export default function DailyReconciliationPage() {
     : null;
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        background: "var(--admin-bg-gradient)",
-        paddingTop: { xs: "12px", md: "24px" },
-        paddingBottom: { xs: "150px", md: "60px" },
-        direction: "rtl",
-      }}
-    >
-      <Container maxWidth={false} sx={{ px: { xs: 1.5, md: 3 } }}>
-        <Card
+    <Box sx={{ ...adminPageSx, pt: { xs: 1.25, md: 2 }, pb: { xs: "100px", md: 4 } }}>
+      <Container maxWidth="lg" sx={{ px: { xs: 1.25, md: 2 } }}>
+        <Box
           sx={{
-            mb: 2,
-            backgroundColor: "var(--admin-surface)",
-            border: "1px solid var(--admin-border)",
-            borderRadius: 2,
+            mb: 1.5,
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: 1.5,
+            flexWrap: "wrap",
           }}
         >
-          <CardContent
-            sx={{
-              py: 1.25,
-              px: { xs: 1.5, md: 2 },
-              "&:last-child": { pb: 1.25 },
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 1.5,
-              flexWrap: "wrap",
-            }}
-          >
-            <Typography
-              sx={{
-                color: "var(--admin-text-muted)",
-                fontSize: 13,
-                lineHeight: 1.7,
-                flex: "1 1 220px",
-                minWidth: 0,
-              }}
-            >
-              {monthFilter && (
-                <>
-                  <Box component="span" sx={{ color: "var(--admin-text)", fontWeight: 700 }}>
-                    {monthFilter.month_name} {monthFilter.year}
-                  </Box>
-                  {rangeInfo && (
-                    <>
-                      {" "}
-                      — از {rangeInfo.from} تا{" "}
-                      {monthFilter.is_current_month ? "امروز" : rangeInfo.to} (
-                      {visibleRows.length} روز)
-                    </>
-                  )}
-                  {monthFilter.is_current_month && (
-                    <Chip
-                      label="ماه جاری"
-                      size="small"
-                      sx={{ ml: 1, height: 22, fontSize: 11 }}
-                      color="primary"
-                      variant="outlined"
-                    />
-                  )}
-                  <br />
-                </>
-              )}
-              {latestCumulative != null && (
-                <>
-                  {" "}
-                  — آخرین اختلاف تجمعی این دوره:{" "}
-                  <Box component="span" sx={{ color: "var(--admin-accent)", fontWeight: 700 }}>
-                    {formatNumber(latestCumulative)} تومان
-                  </Box>
-                </>
-              )}
-            </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.1, minWidth: 0 }}>
+            <AccountBalanceIcon sx={{ color: "var(--admin-accent)", fontSize: 28 }} />
+            <Box>
+              <Typography sx={{ color: "var(--admin-text)", fontWeight: 800, fontSize: { xs: 17, md: 20 } }}>
+                تطبیق روزانه
+              </Typography>
+              <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, mt: 0.2 }}>
+                {monthFilter
+                  ? `${monthFilter.month_name} ${toFaDigits(monthFilter.year)} · ${toFaDigits(visibleRows.length)} روز`
+                  : "واریز حساب‌ها را با وصول روز یکی کنید"}
+                {latestCumulative != null
+                  ? ` · تجمعی ${formatNumber(latestCumulative)} تومان`
+                  : ""}
+              </Typography>
+            </Box>
+          </Box>
 
             <Box
               sx={{
@@ -1105,6 +1139,7 @@ export default function DailyReconciliationPage() {
                       if (!monthFilter) return;
                       handleYearMonthSelect(Number(e.target.value), monthFilter.month);
                     }}
+                    renderValue={(v) => (v === "" || v == null ? "" : toFaDigits(Number(v)))}
                     sx={{
                       color: "var(--admin-text)",
                       fontSize: 13,
@@ -1113,7 +1148,7 @@ export default function DailyReconciliationPage() {
                   >
                     {yearOptions.map((y) => (
                       <MenuItem key={y} value={y}>
-                        {y}
+                        {toFaDigits(y)}
                       </MenuItem>
                     ))}
                   </Select>
@@ -1136,6 +1171,7 @@ export default function DailyReconciliationPage() {
                   onClick={goCurrentMonth}
                   disabled={loading}
                   sx={{
+                    ...adminButtonStartIconSx,
                     color: "var(--admin-accent)",
                     borderColor: "var(--admin-accent)",
                   }}
@@ -1152,6 +1188,7 @@ export default function DailyReconciliationPage() {
                 }
                 disabled={loading}
                 sx={{
+                  ...adminButtonStartIconSx,
                   color: "var(--admin-text)",
                   borderColor: "var(--admin-border)",
                   "&:hover": { borderColor: "var(--admin-accent)" },
@@ -1160,8 +1197,7 @@ export default function DailyReconciliationPage() {
                 بروزرسانی
               </Button>
             </Box>
-          </CardContent>
-        </Card>
+        </Box>
 
         {loading ? (
           <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
@@ -1169,37 +1205,41 @@ export default function DailyReconciliationPage() {
           </Box>
         ) : visibleRows.length === 0 ? (
           <Paper
+            elevation={0}
             sx={{
-              p: 4,
+              p: 5,
               textAlign: "center",
               backgroundColor: "var(--admin-surface)",
               border: "1px solid var(--admin-border)",
-              borderRadius: 2,
+              borderRadius: 2.5,
             }}
           >
-            <Typography sx={{ color: "var(--admin-text-muted)" }}>رکوردی یافت نشد</Typography>
+            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 13 }}>
+              برای این ماه رکوردی نیست
+            </Typography>
           </Paper>
         ) : (
           <>
           <TableContainer
             component={Paper}
+            elevation={0}
             sx={{
               display: { xs: "none", md: "block" },
               backgroundColor: "var(--admin-surface)",
-              borderRadius: 2,
+              borderRadius: 2.5,
               border: "1px solid var(--admin-border)",
-              overflowX: "auto",
+              overflow: "hidden",
             }}
           >
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <StyledTableCell align="center">تاریخ</StyledTableCell>
+                  <StyledTableCell align="right" sx={{ px: 2 }}>تاریخ</StyledTableCell>
                   <StyledTableCell align="center">جمع واریز</StyledTableCell>
                   <StyledTableCell align="center">اختلاف روز</StyledTableCell>
                   <StyledTableCell align="center">تجمعی</StyledTableCell>
                   <StyledTableCell align="center">وضعیت</StyledTableCell>
-                  <StyledTableCell align="center">عملیات</StyledTableCell>
+                  <StyledTableCell align="center" sx={{ px: 2 }}>عملیات</StyledTableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -1209,17 +1249,17 @@ export default function DailyReconciliationPage() {
                   const depositsTotal = depositsTotalForTone(row, draft, shopAccounts);
                   return (
                     <StyledTableRow key={row.date}>
-                      <StyledTableCell align="center">
-                        <Typography sx={{ fontWeight: 700, fontSize: 12 }}>
-                          {rowDateLabel(row, monthFilter)}
+                      <StyledTableCell align="right" sx={{ px: 2 }}>
+                        <Typography sx={{ fontWeight: 700, fontSize: 13, color: "var(--admin-text)" }}>
+                          {rowDateLabel(row, monthFilter, { withWeekday: true })}
                         </Typography>
                       </StyledTableCell>
                       <StyledTableCell align="center">
                         <Typography
                           sx={{
-                            fontSize: 12,
+                            fontSize: 13,
                             color: depositsTotal > 0 ? "var(--admin-accent)" : "var(--admin-text-muted)",
-                            fontWeight: 600,
+                            fontWeight: 700,
                           }}
                         >
                           {depositsTotal > 0 ? formatNumber(depositsTotal) : "—"}
@@ -1240,7 +1280,7 @@ export default function DailyReconciliationPage() {
                       <StyledTableCell align="center">
                         <RowStatusChip row={row} />
                       </StyledTableCell>
-                      <StyledTableCell align="center">
+                      <StyledTableCell align="center" sx={{ px: 2 }}>
                         {row.editable ? (
                           <Button
                             size="small"
@@ -1248,10 +1288,13 @@ export default function DailyReconciliationPage() {
                             startIcon={<EditOutlinedIcon sx={{ fontSize: 16 }} />}
                             onClick={() => openDepositModal(row)}
                             sx={{
+                              ...adminButtonStartIconSx,
                               bgcolor: "var(--admin-accent)",
                               color: "var(--admin-on-accent)",
-                              fontSize: 11,
-                              py: 0.35,
+                              fontSize: 12,
+                              fontWeight: 700,
+                              borderRadius: 1.5,
+                              px: 1.25,
                               "&:hover": { bgcolor: "var(--admin-accent-hover)" },
                             }}
                           >
@@ -1262,12 +1305,18 @@ export default function DailyReconciliationPage() {
                             size="small"
                             variant="outlined"
                             onClick={() => openDepositModal(row)}
-                            sx={{ fontSize: 11, color: "var(--admin-text)", borderColor: "var(--admin-border)" }}
+                            sx={{
+                              fontSize: 12,
+                              fontWeight: 600,
+                              borderRadius: 1.5,
+                              color: "var(--admin-text)",
+                              borderColor: "var(--admin-border)",
+                            }}
                           >
                             جزئیات
                           </Button>
                         ) : (
-                          <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11 }}>—</Typography>
+                          <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>—</Typography>
                         )}
                       </StyledTableCell>
                     </StyledTableRow>
@@ -1285,20 +1334,32 @@ export default function DailyReconciliationPage() {
               return (
                 <Card
                   key={row.date}
+                  elevation={0}
                   sx={{
                     bgcolor: "var(--admin-surface)",
                     border: "1px solid var(--admin-border)",
-                    borderRadius: 2,
+                    borderRadius: 2.5,
                   }}
                 >
-                  <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1, mb: 1 }}>
-                      <Typography sx={{ fontWeight: 700, color: "var(--admin-text)", fontSize: 14 }}>
-                        {rowDateLabel(row, monthFilter)}
+                  <CardContent sx={{ p: 1.75, "&:last-child": { pb: 1.75 } }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1, mb: 1.25 }}>
+                      <Typography sx={{ fontWeight: 800, color: "var(--admin-text)", fontSize: 14 }}>
+                        {rowDateLabel(row, monthFilter, { withWeekday: true })}
                       </Typography>
                       <RowStatusChip row={row} />
                     </Box>
-                    <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1, mb: 1.25 }}>
+                    <Box
+                      sx={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr 1fr",
+                        gap: 1,
+                        mb: 1.35,
+                        p: 1.1,
+                        borderRadius: 1.75,
+                        bgcolor: "var(--admin-surface-alt)",
+                        border: "1px solid var(--admin-border)",
+                      }}
+                    >
                       <MobileStat label="جمع واریز" value={depositsTotal} accent />
                       <Box>
                         <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, mb: 0.25 }}>اختلاف روز</Typography>
@@ -1323,6 +1384,9 @@ export default function DailyReconciliationPage() {
                         startIcon={<EditOutlinedIcon />}
                         onClick={() => openDepositModal(row)}
                         sx={{
+                          ...adminButtonStartIconSx,
+                          fontWeight: 700,
+                          borderRadius: 1.75,
                           bgcolor: row.editable ? "var(--admin-accent)" : "transparent",
                           color: row.editable ? "var(--admin-on-accent)" : "var(--admin-text)",
                           borderColor: "var(--admin-border)",
@@ -1349,29 +1413,52 @@ export default function DailyReconciliationPage() {
               sx: {
                 bgcolor: "var(--admin-surface)",
                 color: "var(--admin-text)",
-                borderRadius: 2,
+                borderRadius: 2.75,
                 border: "1px solid var(--admin-border)",
                 direction: "rtl",
+                overflow: "hidden",
               },
             }}
           >
-            <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>
-              {depositModalRow?.editable ? "ثبت واریز" : "جزئیات واریز"} —{" "}
-              {depositModalRow ? rowDateLabel(depositModalRow, monthFilter) : ""}
+            <DialogTitle
+              sx={{
+                fontWeight: 800,
+                pb: 1.25,
+                pt: 2,
+                px: 2.25,
+                borderBottom: "1px solid var(--admin-border)",
+                bgcolor: "var(--admin-surface-alt)",
+              }}
+            >
+              <Typography component="span" sx={{ display: "block", fontSize: 17, fontWeight: 800, color: "var(--admin-text)" }}>
+                {depositModalRow?.editable ? "ثبت واریز" : "جزئیات واریز"}
+              </Typography>
+              <Typography component="span" sx={{ display: "block", mt: 0.35, fontSize: 13, fontWeight: 600, color: "var(--admin-accent)" }}>
+                {depositModalRow ? rowDateLabel(depositModalRow, monthFilter, { withWeekday: true }) : ""}
+              </Typography>
             </DialogTitle>
-            <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 1.5, pt: 1 }}>
+            <DialogContent
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 1.5,
+                px: 2.25,
+                pb: 1.5,
+                "&.MuiDialogContent-root": { pt: 2 },
+              }}
+            >
               {modalSalesLoading ? (
-                <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
-                  <CircularProgress size={22} sx={{ color: "var(--admin-accent)" }} />
+                <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
+                  <CircularProgress size={24} sx={{ color: "var(--admin-accent)" }} />
                 </Box>
               ) : depositModalRow?.sales ? (
                 <Box
                   sx={{
                     display: "grid",
                     gridTemplateColumns: "1fr 1fr",
-                    gap: 1,
-                    p: 1.25,
-                    borderRadius: 1.5,
+                    gap: 1.1,
+                    p: 1.35,
+                    borderRadius: 2,
                     bgcolor: "var(--admin-surface-alt)",
                     border: "1px solid var(--admin-border)",
                   }}
@@ -1387,7 +1474,7 @@ export default function DailyReconciliationPage() {
 
               {depositModalRow && modalDraft ? (
                 <>
-                  <Typography sx={{ fontSize: 13, fontWeight: 700, color: "var(--admin-accent)", mt: 0.5 }}>
+                  <Typography sx={{ fontSize: 13, fontWeight: 800, color: "var(--admin-text)", mt: 0.25 }}>
                     مبالغ واریز
                   </Typography>
                   {shopAccounts.map((account) => (
@@ -1428,24 +1515,40 @@ export default function DailyReconciliationPage() {
                       "& .MuiOutlinedInput-root": {
                         bgcolor: "var(--admin-surface-alt)",
                         color: "var(--admin-text)",
+                        borderRadius: 1.5,
                         "& fieldset": { borderColor: "var(--admin-border)" },
                       },
                       "& .MuiInputLabel-root": { color: "var(--admin-text-muted)" },
                     }}
                   />
-                  <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1 }}>
-                    <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)" }}>
-                      جمع واریز: {formatNumber(depositTotal(modalDraft))} تومان
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 1,
+                      p: 1.15,
+                      borderRadius: 1.75,
+                      bgcolor: "var(--admin-surface-alt)",
+                      border: "1px solid var(--admin-border)",
+                    }}
+                  >
+                    <Typography sx={{ fontSize: 12.5, color: "var(--admin-text-muted)" }}>
+                      جمع واریز:{" "}
+                      <Box component="span" sx={{ color: "var(--admin-accent)", fontWeight: 800 }}>
+                        {formatNumber(depositTotal(modalDraft))}
+                      </Box>{" "}
+                      تومان
                     </Typography>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-                      <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)" }}>اختلاف:</Typography>
+                      <Typography sx={{ fontSize: 12.5, color: "var(--admin-text-muted)" }}>اختلاف</Typography>
                       <DiscrepancyCell value={modalPreviewDisc} />
                     </Box>
                   </Box>
                 </>
               ) : null}
             </DialogContent>
-            <DialogActions sx={{ px: 2, pb: 2 }}>
+            <DialogActions sx={{ px: 2.25, pb: 2, pt: 1, gap: 1, borderTop: "1px solid var(--admin-border)" }}>
               <Button onClick={closeDepositModal} disabled={Boolean(savingDate)} sx={{ color: "var(--admin-text-muted)" }}>
                 بستن
               </Button>
@@ -1461,7 +1564,14 @@ export default function DailyReconciliationPage() {
                     )
                   }
                   onClick={() => handleSave(depositModalRow)}
-                  sx={{ bgcolor: "var(--admin-accent)", "&:hover": { bgcolor: "var(--admin-accent-hover)" } }}
+                  sx={{
+                    ...adminButtonStartIconSx,
+                    fontWeight: 800,
+                    borderRadius: 1.75,
+                    bgcolor: "var(--admin-accent)",
+                    color: "var(--admin-on-accent)",
+                    "&:hover": { bgcolor: "var(--admin-accent-hover)" },
+                  }}
                 >
                   ثبت واریز
                 </Button>
