@@ -26,16 +26,19 @@ import tokenCode from "@/app/coponent/tokenCode";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import {
+  fetchShopAccountBalanceAdjustments,
   fetchShopAccounts,
   isPettyCashAccount,
   isTillAccount,
   remainingBalanceDeleteMessage,
   setShopAccountBalances,
   type ShopAccount,
+  type ShopAccountBalanceAdjustmentLog,
 } from "@/app/lib/shopAccounts";
 import { jalaliYmd, todayJalaliYmd } from "@/app/lib/accounting";
 import { todayJalaliDateObject } from "@/app/lib/cheques";
 import { AccountingJalaliDateField } from "@/app/admin/accounting/ui";
+import ShopAccountBalanceAdjustLog from "@/app/admin/ShopAccountBalanceAdjustLog";
 import DateObject from "react-date-object";
 
 const formatNumber = (num: number) =>
@@ -81,6 +84,25 @@ export default function ShopAccountsPage() {
   const [saving, setSaving] = useState(false);
   const [balanceDate, setBalanceDate] = useState<DateObject | null>(() => todayJalaliDateObject());
   const [balanceTargets, setBalanceTargets] = useState<Record<number, string>>({});
+  const [adjustLogs, setAdjustLogs] = useState<ShopAccountBalanceAdjustmentLog[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+
+  const loadLogs = useCallback(async () => {
+    setLogsLoading(true);
+    try {
+      // حساب‌های فروشگاه + صندوق (بدون تنخواه؛ تنخواه لاگ جدا در صفحه خودش دارد)
+      const [shopRows, tillRows] = await Promise.all([
+        fetchShopAccountBalanceAdjustments({ type: "shop", limit: 80 }),
+        fetchShopAccountBalanceAdjustments({ type: "till", limit: 40 }),
+      ]);
+      const merged = [...shopRows, ...tillRows].sort((a, b) => b.id - a.id).slice(0, 100);
+      setAdjustLogs(merged);
+    } catch {
+      setAdjustLogs([]);
+    } finally {
+      setLogsLoading(false);
+    }
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -97,13 +119,14 @@ export default function ShopAccountsPage() {
             return (a.sort_order ?? a.id) - (b.sort_order ?? b.id);
           }),
       );
+      await loadLogs();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "خطا در دریافت حساب‌ها");
       setAccounts([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadLogs]);
 
   useEffect(() => {
     load();
@@ -518,11 +541,18 @@ export default function ShopAccountsPage() {
           </DialogActions>
         </Dialog>
 
+        <ShopAccountBalanceAdjustLog
+          rows={adjustLogs}
+          loading={logsLoading}
+          title="لاگ اصلاح موجودی حساب‌ها"
+          emptyText="هنوز اصلاح دستی برای حساب‌های فروشگاه ثبت نشده"
+        />
+
         <Dialog open={balanceOpen} onClose={() => setBalanceOpen(false)} fullWidth maxWidth="sm">
           <DialogTitle sx={{ color: "var(--admin-text)" }}>تنظیم مانده واقعی</DialogTitle>
           <DialogContent>
             <Typography sx={{ fontSize: 13, color: "var(--admin-text-muted)", mb: 2 }}>
-              موجودی صفحهٔ حساب‌ها و دفتر همان حساب با رقمی که وارد می‌کنید یکی می‌شود. اختلاف به سرمایه می‌رود. بعد از این کار بستن سال را بزنید.
+              موجودی صفحهٔ حساب‌ها و دفتر همان حساب با رقمی که وارد می‌کنید یکی می‌شود. اختلاف به سرمایه می‌رود. همهٔ تغییرات در لاگ پایین صفحه ثبت می‌شود.
             </Typography>
             <Box sx={{ mb: 2 }}>
               <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)", mb: 0.5 }}>

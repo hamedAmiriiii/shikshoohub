@@ -112,6 +112,14 @@ function isPathActive(pathname: string | null, href: string): boolean {
         !pathname.startsWith("/admin/product/create"))
     );
   }
+  // فروش‌ها نباید صفحهٔ سابقه مشتری را فعال کند
+  if (href === "/admin/purchas") {
+    return (
+      pathname === "/admin/purchas" ||
+      (pathname.startsWith("/admin/purchas/") &&
+        !pathname.startsWith("/admin/purchas/customer"))
+    );
+  }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -233,6 +241,13 @@ export default function AdminHamburgerSidebar({
         href: "/admin/purchase-debts",
         icon: <AccountBalanceWalletIcon />,
         permission: "debts",
+      },
+      {
+        id: "customer-ledger",
+        label: "سابقه مشتری",
+        href: "/admin/purchas/customer",
+        icon: <HistoryIcon />,
+        permission: ["debts", "pos"],
       },
       {
         id: "returned",

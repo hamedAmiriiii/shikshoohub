@@ -143,6 +143,80 @@ export async function setShopAccountBalances(payload: {
   };
 }
 
+export type ShopAccountBalanceAdjustmentLog = {
+  id: number;
+  shop_account_id: number;
+  account_name: string;
+  account_type?: string;
+  account_type_label?: string;
+  amount: number;
+  balance_before: number | null;
+  balance_after: number | null;
+  date: string | null;
+  date_jalali: string | null;
+  description: string | null;
+  user_name: string | null;
+  created_at_jalali: string | null;
+};
+
+export async function fetchShopAccountBalanceAdjustments(options?: {
+  type?: "all" | "shop" | "petty_cash" | "till";
+  shopAccountId?: number;
+  limit?: number;
+  token?: string;
+}): Promise<ShopAccountBalanceAdjustmentLog[]> {
+  const token =
+    options?.token ?? (typeof window !== "undefined" ? localStorage.getItem("token") || "" : "");
+  const params = new URLSearchParams();
+  if (options?.type && options.type !== "all") params.set("type", options.type);
+  if (options?.shopAccountId) params.set("shop_account_id", String(options.shopAccountId));
+  if (options?.limit) params.set("limit", String(options.limit));
+  const query = params.toString() ? `?${params.toString()}` : "";
+  const res = await apiRequestError(
+    "Get",
+    {},
+    {},
+    `/api/shop-accounts/balance-adjustments${query}`,
+    true,
+    true,
+    token
+  );
+  if (res?.hasError) {
+    throw new Error(
+      typeof res.message === "string" ? res.message : "خطا در دریافت لاگ اصلاح مانده"
+    );
+  }
+  const rec = res && typeof res === "object" ? (res as Record<string, unknown>) : {};
+  const raw = Array.isArray(rec.data) ? rec.data : Array.isArray(res) ? res : [];
+  return raw
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const row = item as Record<string, unknown>;
+      const id = Number(row.id);
+      if (!Number.isFinite(id) || id <= 0) return null;
+      return {
+        id,
+        shop_account_id: Number(row.shop_account_id) || 0,
+        account_name: typeof row.account_name === "string" ? row.account_name : `حساب ${id}`,
+        account_type: typeof row.account_type === "string" ? row.account_type : undefined,
+        account_type_label:
+          typeof row.account_type_label === "string" ? row.account_type_label : undefined,
+        amount: Math.round(Number(row.amount) || 0),
+        balance_before:
+          row.balance_before == null ? null : Math.round(Number(row.balance_before) || 0),
+        balance_after:
+          row.balance_after == null ? null : Math.round(Number(row.balance_after) || 0),
+        date: typeof row.date === "string" ? row.date : null,
+        date_jalali: typeof row.date_jalali === "string" ? row.date_jalali : null,
+        description: typeof row.description === "string" ? row.description : null,
+        user_name: typeof row.user_name === "string" ? row.user_name : null,
+        created_at_jalali:
+          typeof row.created_at_jalali === "string" ? row.created_at_jalali : null,
+      } satisfies ShopAccountBalanceAdjustmentLog;
+    })
+    .filter((item): item is ShopAccountBalanceAdjustmentLog => item != null);
+}
+
 export function formatAccountOptionLabel(account: ShopAccount): string {
   const balance = new Intl.NumberFormat("fa-IR").format(account.balance || 0);
   const kind =

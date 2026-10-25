@@ -590,27 +590,32 @@ export default function ChequesPage() {
       )}
 
       <BottomSheetModal open={filterSheetOpen} onClose={() => setFilterSheetOpen(false)}>
-        <Box sx={{ p: 2, direction: "rtl" }}>
-          <Typography sx={{ color: "#000", mb: 1, fontSize: 14, fontWeight: 600 }}>نوع چک</Typography>
+        <Box sx={{ p: 2, direction: "rtl", color: "var(--admin-text)" }}>
+          <Typography sx={{ color: "var(--admin-text)", mb: 1, fontSize: 14, fontWeight: 600 }}>نوع چک</Typography>
           <RadioGroup
             row
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value as ChequeType | "all")}
             sx={{ mb: 2, justifyContent: "space-around" }}
           >
-            <FormControlLabel value="all" control={<Radio sx={{ color: "#1f9ad1", "&.Mui-checked": { color: "#1f9ad1" } }} />} label="همه" sx={{ color: "#000" }} />
+            <FormControlLabel
+              value="all"
+              control={<Radio sx={{ color: "var(--admin-text-muted)", "&.Mui-checked": { color: "var(--admin-accent)" } }} />}
+              label="همه"
+              sx={{ color: "var(--admin-text)", "& .MuiFormControlLabel-label": { color: "var(--admin-text)" } }}
+            />
             {CHEQUE_TYPE_OPTIONS.map((o) => (
               <FormControlLabel
                 key={o.value}
                 value={o.value}
-                control={<Radio sx={{ color: "#1f9ad1", "&.Mui-checked": { color: "#1f9ad1" } }} />}
+                control={<Radio sx={{ color: "var(--admin-text-muted)", "&.Mui-checked": { color: "var(--admin-accent)" } }} />}
                 label={o.label}
-                sx={{ color: "#000" }}
+                sx={{ color: "var(--admin-text)", "& .MuiFormControlLabel-label": { color: "var(--admin-text)" } }}
               />
             ))}
           </RadioGroup>
 
-          <Typography sx={{ color: "#000", mb: 1, fontSize: 14, fontWeight: 600 }}>وضعیت</Typography>
+          <Typography sx={{ color: "var(--admin-text)", mb: 1, fontSize: 14, fontWeight: 600 }}>وضعیت</Typography>
           <RadioGroup
             row
             value={statusFilter}
@@ -624,14 +629,14 @@ export default function ChequesPage() {
               <FormControlLabel
                 key={o.value}
                 value={o.value}
-                control={<Radio sx={{ color: "#1f9ad1", "&.Mui-checked": { color: "#1f9ad1" } }} />}
+                control={<Radio sx={{ color: "var(--admin-text-muted)", "&.Mui-checked": { color: "var(--admin-accent)" } }} />}
                 label={o.label}
-                sx={{ color: "#000" }}
+                sx={{ color: "var(--admin-text)", "& .MuiFormControlLabel-label": { color: "var(--admin-text)" } }}
               />
             ))}
           </RadioGroup>
 
-          <Typography sx={{ color: "#000", mb: 1, fontSize: 14, fontWeight: 600 }}>بازه زمانی</Typography>
+          <Typography sx={{ color: "var(--admin-text)", mb: 1, fontSize: 14, fontWeight: 600 }}>بازه زمانی</Typography>
           <RadioGroup
             row
             value={timeFilter}
@@ -645,14 +650,14 @@ export default function ChequesPage() {
               <FormControlLabel
                 key={o.value}
                 value={o.value}
-                control={<Radio sx={{ color: "#1f9ad1", "&.Mui-checked": { color: "#1f9ad1" } }} />}
+                control={<Radio sx={{ color: "var(--admin-text-muted)", "&.Mui-checked": { color: "var(--admin-accent)" } }} />}
                 label={o.label}
-                sx={{ color: "#000" }}
+                sx={{ color: "var(--admin-text)", "& .MuiFormControlLabel-label": { color: "var(--admin-text)" } }}
               />
             ))}
           </RadioGroup>
 
-          <Typography sx={{ color: "#000", mb: 1, fontSize: 14, fontWeight: 600 }}>
+          <Typography sx={{ color: "var(--admin-text)", mb: 1, fontSize: 14, fontWeight: 600 }}>
             چک‌های در انتظار (سررسید نزدیک)
           </Typography>
           <RadioGroup
@@ -661,8 +666,18 @@ export default function ChequesPage() {
             onChange={(e) => setUpcoming(e.target.value === "upcoming")}
             sx={{ mb: 1, justifyContent: "space-around" }}
           >
-            <FormControlLabel value="list" control={<Radio sx={{ color: "#1f9ad1", "&.Mui-checked": { color: "#1f9ad1" } }} />} label="لیست عادی" sx={{ color: "#000" }} />
-            <FormControlLabel value="upcoming" control={<Radio sx={{ color: "#1f9ad1", "&.Mui-checked": { color: "#1f9ad1" } }} />} label="سررسید نزدیک" sx={{ color: "#000" }} />
+            <FormControlLabel
+              value="list"
+              control={<Radio sx={{ color: "var(--admin-text-muted)", "&.Mui-checked": { color: "var(--admin-accent)" } }} />}
+              label="لیست عادی"
+              sx={{ color: "var(--admin-text)", "& .MuiFormControlLabel-label": { color: "var(--admin-text)" } }}
+            />
+            <FormControlLabel
+              value="upcoming"
+              control={<Radio sx={{ color: "var(--admin-text-muted)", "&.Mui-checked": { color: "var(--admin-accent)" } }} />}
+              label="سررسید نزدیک"
+              sx={{ color: "var(--admin-text)", "& .MuiFormControlLabel-label": { color: "var(--admin-text)" } }}
+            />
           </RadioGroup>
 
           {upcoming ? (

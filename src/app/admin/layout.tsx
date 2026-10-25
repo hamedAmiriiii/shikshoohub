@@ -111,6 +111,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/partners': 'شرکا',
     '/admin/petty-cash': 'تنخواه',
     '/admin/purchase-debts': 'بدهکاران (نسیه)',
+    '/admin/purchas/customer': 'سابقه مشتری',
     '/admin/payroll': 'حقوق',
     '/admin/payroll/employees': 'کارمندها',
     '/admin/auditors': 'حسابرس‌ها',
@@ -131,7 +132,7 @@ const getAdminBackUrl = (pathname: string | null): string => {
     return "/admin/beneficiaries";
   }
   if (pathname && /^\/admin\/purchas\/customer\/[^/]+$/.test(pathname)) {
-    return "/admin/purchas";
+    return "/admin/purchas/customer";
   }
   if (pathname?.startsWith("/admin/smart-club/")) {
     return "/admin/smart-club";

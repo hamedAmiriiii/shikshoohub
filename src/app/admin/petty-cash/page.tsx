@@ -24,16 +24,25 @@ import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import AddIcon from "@mui/icons-material/Add";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import SyncAltIcon from "@mui/icons-material/SyncAlt";
+import TuneIcon from "@mui/icons-material/Tune";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import { apiRequestError } from "@/app/lib/apiRequestError/client";
 import tokenCode from "@/app/coponent/tokenCode";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import ShopAccountBalanceAdjustLog from "@/app/admin/ShopAccountBalanceAdjustLog";
+import { AccountingJalaliDateField } from "@/app/admin/accounting/ui";
+import { jalaliYmd, todayJalaliYmd } from "@/app/lib/accounting";
+import { todayJalaliDateObject } from "@/app/lib/cheques";
+import DateObject from "react-date-object";
 import {
+  fetchShopAccountBalanceAdjustments,
   fetchShopAccounts,
   isMainShopAccount,
   remainingBalanceDeleteMessage,
+  setShopAccountBalances,
   type ShopAccount,
+  type ShopAccountBalanceAdjustmentLog,
 } from "@/app/lib/shopAccounts";
 
 const formatNumber = (num: number) =>
@@ -109,11 +118,30 @@ export default function PettyCashPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [chargeOpen, setChargeOpen] = useState(false);
   const [chargeTarget, setChargeTarget] = useState<ShopAccount | null>(null);
+  const [balanceOpen, setBalanceOpen] = useState(false);
+  const [balanceTarget, setBalanceTarget] = useState<ShopAccount | null>(null);
+  const [balanceValue, setBalanceValue] = useState("");
+  const [balanceNote, setBalanceNote] = useState("اصلاح دستی موجودی تنخواه");
+  const [balanceDate, setBalanceDate] = useState<DateObject | null>(() => todayJalaliDateObject());
+  const [adjustLogs, setAdjustLogs] = useState<ShopAccountBalanceAdjustmentLog[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
   const [newName, setNewName] = useState("");
   const [fromAccountId, setFromAccountId] = useState<number | "">("");
   const [chargeAmount, setChargeAmount] = useState("");
   const [chargeTitle, setChargeTitle] = useState("شارژ تنخواه");
   const [saving, setSaving] = useState(false);
+
+  const loadLogs = useCallback(async () => {
+    setLogsLoading(true);
+    try {
+      const rows = await fetchShopAccountBalanceAdjustments({ type: "petty_cash", limit: 80 });
+      setAdjustLogs(rows);
+    } catch {
+      setAdjustLogs([]);
+    } finally {
+      setLogsLoading(false);
+    }
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -124,6 +152,7 @@ export default function PettyCashPage() {
       ]);
       setPettyAccounts(petty);
       setMainAccounts(all.filter(isMainShopAccount));
+      await loadLogs();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "خطا در دریافت تنخواه‌ها");
       setPettyAccounts([]);
@@ -131,7 +160,7 @@ export default function PettyCashPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadLogs]);
 
   useEffect(() => {
     load();
@@ -148,6 +177,38 @@ export default function PettyCashPage() {
     setChargeAmount("");
     setChargeTitle("شارژ تنخواه");
     setChargeOpen(true);
+  };
+
+  const openBalance = (account: ShopAccount) => {
+    setBalanceTarget(account);
+    setBalanceValue(formatAmountInput(String(Math.round(account.balance || 0))));
+    setBalanceNote("اصلاح دستی موجودی تنخواه");
+    setBalanceDate(todayJalaliDateObject());
+    setBalanceOpen(true);
+  };
+
+  const handleSetBalance = async () => {
+    if (!balanceTarget) return;
+    const target = parseAmount(balanceValue);
+    if (balanceValue.trim() === "") {
+      toast.error("موجودی جدید را وارد کنید");
+      return;
+    }
+    setSaving(true);
+    try {
+      const result = await setShopAccountBalances({
+        date: jalaliYmd(balanceDate) || todayJalaliYmd(),
+        description: balanceNote.trim() || "اصلاح دستی موجودی تنخواه",
+        items: [{ shop_account_id: balanceTarget.id, target_balance: target }],
+      });
+      toast.success(result.message);
+      setBalanceOpen(false);
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "خطا در اصلاح موجودی");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCreate = async () => {
@@ -395,7 +456,20 @@ export default function PettyCashPage() {
                       {formatNumber(account.invoices_total ?? 0)}
                     </Typography>
                   </Box>
-                  <Box sx={{ display: "flex", gap: 0.75, alignItems: "center" }}>
+                  <Box sx={{ display: "flex", gap: 0.75, alignItems: "center", flexWrap: "wrap" }}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={<TuneIcon sx={{ fontSize: 16 }} />}
+                      onClick={() => openBalance(account)}
+                      sx={{
+                        color: "var(--admin-text)",
+                        borderColor: "var(--admin-border)",
+                        fontSize: 12,
+                      }}
+                    >
+                      اصلاح موجودی
+                    </Button>
                     <Button
                       size="small"
                       variant="outlined"
@@ -424,6 +498,13 @@ export default function PettyCashPage() {
             ))}
           </Box>
         )}
+
+        <ShopAccountBalanceAdjustLog
+          rows={adjustLogs}
+          loading={logsLoading}
+          title="لاگ اصلاح موجودی تنخواه"
+          emptyText="هنوز اصلاح دستی برای تنخواه ثبت نشده"
+        />
 
         <Dialog
           open={createOpen}
@@ -464,6 +545,68 @@ export default function PettyCashPage() {
               sx={{ bgcolor: "var(--admin-accent)", "&:hover": { bgcolor: "var(--admin-accent-hover)" } }}
             >
               {saving ? "..." : "ایجاد"}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog
+          open={balanceOpen}
+          onClose={() => !saving && setBalanceOpen(false)}
+          fullWidth
+          maxWidth="xs"
+          PaperProps={{
+            sx: {
+              bgcolor: "var(--admin-surface)",
+              color: "var(--admin-text)",
+              borderRadius: 2,
+              border: "1px solid var(--admin-border)",
+              direction: "rtl",
+            },
+          }}
+        >
+          <DialogTitle sx={{ fontWeight: 700 }}>
+            اصلاح موجودی {balanceTarget?.name || "تنخواه"}
+          </DialogTitle>
+          <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 1.5, pt: 1 }}>
+            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, mt: 1 }}>
+              موجودی فعلی: {formatNumber(balanceTarget?.balance || 0)} تومان — عدد جدید را وارد کنید
+              (کم یا زیاد).
+            </Typography>
+            <TextField
+              fullWidth
+              size="small"
+              label="موجودی جدید"
+              value={balanceValue}
+              onChange={(e) => setBalanceValue(formatAmountInput(e.target.value))}
+              sx={fieldSx}
+              inputProps={{ style: { direction: "ltr", textAlign: "left" } }}
+            />
+            <Box>
+              <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)", mb: 0.5 }}>
+                تاریخ سند
+              </Typography>
+              <AccountingJalaliDateField value={balanceDate} onChange={setBalanceDate} placeholder="تاریخ" />
+            </Box>
+            <TextField
+              fullWidth
+              size="small"
+              label="توضیح"
+              value={balanceNote}
+              onChange={(e) => setBalanceNote(e.target.value)}
+              sx={fieldSx}
+            />
+          </DialogContent>
+          <DialogActions sx={{ px: 2, pb: 2 }}>
+            <Button onClick={() => setBalanceOpen(false)} disabled={saving} sx={{ color: "var(--admin-text-muted)" }}>
+              انصراف
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleSetBalance}
+              disabled={saving}
+              sx={{ bgcolor: "var(--admin-accent)", "&:hover": { bgcolor: "var(--admin-accent-hover)" } }}
+            >
+              {saving ? "..." : "اعمال"}
             </Button>
           </DialogActions>
         </Dialog>

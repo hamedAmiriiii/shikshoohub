@@ -46,14 +46,15 @@ const BottomSheetModal: React.FC<BottomSheetProps> = ({open, onClose, icon, titl
             display: "flex",
             flexDirection: "column",
             justifyContent: "center",
-            backgroundColor: "white",
+            backgroundColor: "var(--admin-surface, #2b3143)",
+            color: "var(--admin-text, #ffffff)",
             borderTopLeftRadius: "1.5rem",
             borderTopRightRadius: "1.5rem",
             boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
           }}>
           <Grid container>
             <Grid item xs={12} sx={{display: 'flex', justifyContent: 'center'}}>
-              <Divider sx={{width: "3.5rem", height: "0.15rem"}} color="#2CDFC9"/>
+              <Divider sx={{width: "3.5rem", height: "0.15rem", bgcolor: "var(--admin-accent, #2CDFC9)", border: "none"}} />
             </Grid>
             <Grid item xs={12}
                   sx={{
@@ -65,10 +66,9 @@ const BottomSheetModal: React.FC<BottomSheetProps> = ({open, onClose, icon, titl
                   }}>
               <IconButton
                 edge="end"
-                color="inherit"
                 onClick={onClose as any}
                 aria-label="close"
-                sx={{marginRight: "1rem"}}>
+                sx={{marginRight: "1rem", color: "var(--admin-text, #ffffff)"}}>
                 <CloseIcon/>
               </IconButton>
               <Grid item xs={12}
@@ -85,8 +85,9 @@ const BottomSheetModal: React.FC<BottomSheetProps> = ({open, onClose, icon, titl
                   id="bottom-sheet-title"
                   variant="h2"
                   sx={{
-                    fontSize: "font-size: 0.75rem",
+                    fontSize: "0.75rem",
                     fontWeight: "400",
+                    color: "var(--admin-text, #ffffff)",
                   }}>
                   {title}
                 </Typography>}
