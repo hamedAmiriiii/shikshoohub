@@ -284,6 +284,13 @@ export default function AdminHamburgerSidebar({
         icon: <AccountBalanceWalletIcon />,
         permission: "shop_accounts",
       },
+      {
+        id: "financial-activity",
+        label: "اتفاقات مالی",
+        href: "/admin/financial-activity",
+        icon: <EventAvailableIcon />,
+        permission: "reports",
+      },
       { id: "profit", label: "سود و ضرر", href: "/admin/profit-loss", icon: <TrendingUpIcon />, permission: "reports" },
       {
         id: "smart-review",
