@@ -238,6 +238,7 @@ const emptyLine = (): RecipeLine => ({
 });
 
 const LAYER_IMAGE_MAX_BYTES = 3 * 1024 * 1024;
+const COVER_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 
 const checkerSx = {
   backgroundColor: "#ffffff",
@@ -250,6 +251,34 @@ const checkerSx = {
 function layerImageSrc(url?: string | null): string | null {
   if (!url) return null;
   return url.startsWith("/storage/") ? `https://api.webinoo-plus.ir${url}` : url;
+}
+
+/** عکس نمایشی کالا: کلی، وگرنه اولین لایهٔ ماده */
+function goodDisplayImageSrc(
+  good: ProducedGood,
+  materials: RawMaterial[],
+): string | null {
+  const cover = layerImageSrc(good.cover_image_url);
+  if (cover) return cover;
+  const materialById = new Map(materials.map((m) => [m.id, m] as const));
+  const order = Array.isArray(good.layer_order) ? good.layer_order : [];
+  for (let i = order.length - 1; i >= 0; i -= 1) {
+    const entry = order[i];
+    const id =
+      typeof entry === "number" || typeof entry === "string"
+        ? Number(entry)
+        : Number((entry as { raw_material_id?: number })?.raw_material_id);
+    if (!Number.isFinite(id) || id <= 0) continue;
+    const src = layerImageSrc(materialById.get(id)?.layer_image_url);
+    if (src) return src;
+  }
+  for (const line of good.ingredient_costs || []) {
+    const id = Number(line.raw_material_id);
+    if (!Number.isFinite(id) || id <= 0) continue;
+    const src = layerImageSrc(materialById.get(id)?.layer_image_url);
+    if (src) return src;
+  }
+  return null;
 }
 
 export default function ProductionCostingPage() {
@@ -286,6 +315,9 @@ export default function ProductionCostingPage() {
   // عکس لایهٔ ماده اولیه (منوی سه‌بعدی)
   const [layerDataUrl, setLayerDataUrl] = useState<string | null>(null);
   const [layerRemoved, setLayerRemoved] = useState(false);
+  // عکس کلی کالای تولیدی (بدون مواد)
+  const [coverDataUrl, setCoverDataUrl] = useState<string | null>(null);
+  const [coverRemoved, setCoverRemoved] = useState(false);
   const [goodCategoryIds, setGoodCategoryIds] = useState<number[]>([]);
   const [shopCategories, setShopCategories] = useState<ShopCategoryOption[]>([]);
 
@@ -492,6 +524,24 @@ export default function ProductionCostingPage() {
     reader.readAsDataURL(file);
   };
 
+  const pickCoverFile = (file: File | undefined | null) => {
+    if (!file) return;
+    if (!["image/jpeg", "image/jpg", "image/png", "image/webp"].includes(file.type)) {
+      toast.error("عکس کلی باید jpg، png یا webp باشد");
+      return;
+    }
+    if (file.size > COVER_IMAGE_MAX_BYTES) {
+      toast.error("حجم عکس کلی نباید بیشتر از ۵ مگابایت باشد");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCoverDataUrl(typeof reader.result === "string" ? reader.result : null);
+      setCoverRemoved(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
   /** بعد از ذخیرهٔ ماده: آپلود یا حذف عکس لایه. false یعنی خطا (پیام داده شده). */
   const syncLayerImage = async (materialId: number, token: string): Promise<boolean> => {
     if (layerDataUrl) {
@@ -510,6 +560,30 @@ export default function ProductionCostingPage() {
       const res = await FetchWithJwtClient("DELETE", `/api/raw-materials/${materialId}/layer-image`, token, {});
       if (res?.hasError) {
         toast.error(getApiErrorMessage(res, "حذف عکس لایه ناموفق بود"));
+        return false;
+      }
+    }
+    return true;
+  };
+
+  /** بعد از ذخیرهٔ کالا: آپلود یا حذف عکس کلی. */
+  const syncCoverImage = async (goodId: number, token: string): Promise<boolean> => {
+    if (coverDataUrl) {
+      const res = await FetchWithJwtClient(
+        "POST",
+        `/api/produced-goods/${goodId}/cover-image`,
+        token,
+        {},
+        { body: JSON.stringify({ image_base64: coverDataUrl }) },
+      );
+      if (res?.hasError) {
+        toast.error(getApiErrorMessage(res, "کالا ذخیره شد ولی عکس کلی آپلود نشد"));
+        return false;
+      }
+    } else if (coverRemoved && editingGood?.cover_image_url) {
+      const res = await FetchWithJwtClient("DELETE", `/api/produced-goods/${goodId}/cover-image`, token, {});
+      if (res?.hasError) {
+        toast.error(getApiErrorMessage(res, "حذف عکس کلی ناموفق بود"));
         return false;
       }
     }
@@ -763,6 +837,8 @@ export default function ProductionCostingPage() {
     setLayerOrder([]);
     setLayerCompose("side");
     setSelectedLayerIndex(null);
+    setCoverDataUrl(null);
+    setCoverRemoved(false);
     setGoodCategoryIds([]);
     setGoodDialogOpen(true);
   };
@@ -776,6 +852,8 @@ export default function ProductionCostingPage() {
     setLayerOrder(layerOrderFromGood(good));
     setLayerCompose(layerComposeFromGood(good));
     setSelectedLayerIndex(null);
+    setCoverDataUrl(null);
+    setCoverRemoved(false);
     setGoodCategoryIds(categoryIdsFromGood(good));
     setGoodDialogOpen(true);
   };
@@ -873,6 +951,15 @@ export default function ProductionCostingPage() {
       if (res?.hasError) {
         toast.error(getApiErrorMessage(res, "ذخیره کالا ناموفق بود"));
         return;
+      }
+      const saved = asProducedGood(res);
+      const goodId = saved?.id || editingGood?.id;
+      if (goodId) {
+        const coverOk = await syncCoverImage(goodId, token);
+        if (!coverOk) {
+          await loadAll();
+          return;
+        }
       }
       toast.success(editingGood ? "فرمول کالا به‌روز شد" : "کالای تولیدی ثبت شد");
       setGoodDialogOpen(false);
@@ -1138,11 +1225,31 @@ export default function ProductionCostingPage() {
                     <StyledTableRow key={good.id}>
                       <StyledTableCell align="center">{index + 1}</StyledTableCell>
                       <StyledTableCell align="center">
-                        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0.35 }}>
-                          <Typography sx={{ fontWeight: 600 }}>{good.name}</Typography>
-                          {!isFinalProducedGood(good) ? (
-                            <Chip size="small" label="نیمه‌ساخته" sx={{ height: 20, fontSize: 10 }} />
-                          ) : null}
+                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
+                          {(() => {
+                            const src = goodDisplayImageSrc(good, materials);
+                            return src ? (
+                              <Box
+                                component="img"
+                                src={src}
+                                alt=""
+                                sx={{
+                                  width: 40,
+                                  height: 40,
+                                  borderRadius: "10px",
+                                  objectFit: "cover",
+                                  border: "1px solid var(--admin-border)",
+                                  flexShrink: 0,
+                                }}
+                              />
+                            ) : null;
+                          })()}
+                          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 0.35 }}>
+                            <Typography sx={{ fontWeight: 600 }}>{good.name}</Typography>
+                            {!isFinalProducedGood(good) ? (
+                              <Chip size="small" label="نیمه‌ساخته" sx={{ height: 20, fontSize: 10 }} />
+                            ) : null}
+                          </Box>
                         </Box>
                       </StyledTableCell>
                       <StyledTableCell align="center">{formatKg(good.stock_kg || 0)} {materialUnitLabel(good)}</StyledTableCell>
@@ -1521,11 +1628,31 @@ export default function ProductionCostingPage() {
                   <StyledTableRow key={good.id}>
                     <StyledTableCell align="center">{index + 1}</StyledTableCell>
                     <StyledTableCell align="center">
-                      <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0.35 }}>
-                        <Typography sx={{ fontWeight: 600 }}>{good.name}</Typography>
-                        {!isFinalProducedGood(good) ? (
-                          <Chip size="small" label="نیمه‌ساخته" sx={{ height: 20, fontSize: 10 }} />
-                        ) : null}
+                      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
+                        {(() => {
+                          const src = goodDisplayImageSrc(good, materials);
+                          return src ? (
+                            <Box
+                              component="img"
+                              src={src}
+                              alt=""
+                              sx={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: "10px",
+                                objectFit: "cover",
+                                border: "1px solid var(--admin-border)",
+                                flexShrink: 0,
+                              }}
+                            />
+                          ) : null;
+                        })()}
+                        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 0.35 }}>
+                          <Typography sx={{ fontWeight: 600 }}>{good.name}</Typography>
+                          {!isFinalProducedGood(good) ? (
+                            <Chip size="small" label="نیمه‌ساخته" sx={{ height: 20, fontSize: 10 }} />
+                          ) : null}
+                        </Box>
                       </Box>
                     </StyledTableCell>
                     <StyledTableCell align="center" sx={{ color: "var(--admin-accent)", fontWeight: 700 }}>
@@ -1846,6 +1973,86 @@ export default function ProductionCostingPage() {
               <TextField {...params} size="small" label="دسته‌بندی" sx={fieldSx} />
             )}
           />
+
+          {(() => {
+            const existing = coverRemoved ? null : layerImageSrc(editingGood?.cover_image_url);
+            const shown = coverDataUrl || existing;
+            return (
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.5,
+                  p: 1,
+                  borderRadius: "12px",
+                  border: "1px dashed var(--admin-border)",
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 84,
+                    height: 64,
+                    flexShrink: 0,
+                    borderRadius: "10px",
+                    display: "grid",
+                    placeItems: "center",
+                    overflow: "hidden",
+                    bgcolor: "var(--admin-surface-alt)",
+                    border: "1px solid var(--admin-border)",
+                  }}
+                >
+                  {shown ? (
+                    <Box component="img" src={shown} alt="" sx={{ maxWidth: "100%", maxHeight: "100%", objectFit: "cover" }} />
+                  ) : (
+                    <Typography sx={{ fontSize: 10, color: "#888", textAlign: "center", px: 0.5 }}>
+                      بدون عکس کلی
+                    </Typography>
+                  )}
+                </Box>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography sx={{ fontSize: 12, fontWeight: 700, color: "var(--admin-text)" }}>
+                    عکس کلی کالا
+                  </Typography>
+                  <Typography sx={{ fontSize: 10.5, color: "var(--admin-text-muted)", lineHeight: 1.7 }}>
+                    عکس تمام‌شده بدون مواد تشکیل‌دهنده. اگر نباشد، لایه‌های مواد در منو نمایش داده می‌شود. jpg / png / webp · حداکثر ۵ مگابایت.
+                  </Typography>
+                  <Box sx={{ display: "flex", gap: 0.8, mt: 0.6, flexWrap: "wrap" }}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      component="label"
+                      startIcon={<CloudUploadIcon />}
+                      sx={{ fontSize: 11 }}
+                    >
+                      {shown ? "تغییر عکس" : "انتخاب عکس"}
+                      <input
+                        hidden
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png,image/webp"
+                        onChange={(e) => {
+                          pickCoverFile(e.target.files?.[0]);
+                          e.target.value = "";
+                        }}
+                      />
+                    </Button>
+                    {shown ? (
+                      <Button
+                        size="small"
+                        color="error"
+                        onClick={() => {
+                          setCoverDataUrl(null);
+                          setCoverRemoved(true);
+                        }}
+                        sx={{ fontSize: 11 }}
+                      >
+                        حذف عکس
+                      </Button>
+                    ) : null}
+                  </Box>
+                </Box>
+              </Box>
+            );
+          })()}
 
           <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mt: 0.5 }}>
             <Typography sx={{ fontSize: 12, fontWeight: 700, color: "var(--admin-text)" }}>فرمول</Typography>

@@ -157,6 +157,9 @@ export type ProducedGood = {
   layer_order?: Array<number | LayerOrderEntry | Record<string, unknown>> | null;
   /** side = ساندویچ نمای کنار | overlay = پیتزا نمای بالا */
   layer_compose?: LayerComposeMode | string | null;
+  /** عکس کلی کالا (بدون لایه‌های مواد)؛ اگر نباشد از لایه‌ها استفاده می‌شود */
+  cover_image_url?: string | null;
+  cover_image_path?: string | null;
   category_ids?: Array<number | string>;
   categories?: Array<{ id?: number | string; name?: string } | number | string>;
 };
