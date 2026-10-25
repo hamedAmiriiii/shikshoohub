@@ -33,6 +33,8 @@ import { paymentTypeLabel } from "@/app/lib/paymentTypes";
 import { isIranMobile, normalizeIranMobile } from "@/app/lib/purchaseReturns";
 import { buildDocumentLink, type LedgerDocumentType } from "@/app/lib/documentReturn";
 import { adminButtonStartIconSx, adminPageSx } from "@/app/admin/theme/adminTheme";
+import BeneficiarySelect from "@/app/admin/BeneficiarySelect";
+import type { Beneficiary } from "@/app/lib/beneficiaries";
 
 type LedgerSide = "debtor" | "creditor" | "settled";
 
@@ -354,10 +356,44 @@ export default function CustomerPurchaseHistoryPage() {
     { label: "اعتبار باشگاه", value: formatMoney(stats?.current_credit), color: "var(--admin-accent)" },
   ];
 
+  const currentBeneficiary: Beneficiary | null =
+    beneficiaryId > 0 ? { id: beneficiaryId, name: name || null, phone: phone || null } : null;
+
+  const switchCustomer = (option: Beneficiary | null) => {
+    if (!option) return;
+    const nextPhone = normalizeIranMobile(String(option.phone || ""));
+    if (!isIranMobile(nextPhone)) {
+      toast.error("این طرف‌حساب شماره موبایل معتبر ندارد");
+      return;
+    }
+    if (nextPhone === phone) return;
+    router.push(`/admin/purchas/customer/${nextPhone}`);
+  };
+
   return (
     <Box sx={{ ...adminPageSx, pt: { xs: 1.25, md: 2 }, pb: { xs: "100px", md: 4 } }}>
       <Container maxWidth="xl" sx={{ px: { xs: 1.25, md: 2 } }}>
         <ToastContainer autoClose={3000} position="bottom-right" rtl />
+
+        <Box
+          sx={{
+            mb: 1.5,
+            p: 1.5,
+            borderRadius: 2,
+            bgcolor: "var(--admin-surface)",
+            border: "1px solid var(--admin-border)",
+          }}
+        >
+          <BeneficiarySelect
+            value={beneficiaryId > 0 ? beneficiaryId : ""}
+            initialOption={currentBeneficiary?.id ? currentBeneficiary : null}
+            onChange={(_id, option) => switchCustomer(option)}
+            label="جستجو با نام یا طرف‌حساب"
+            helperText="فقط نام یا شماره را تایپ کنید"
+            allowRegister={false}
+          />
+        </Box>
+
         {loading ? (
           <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
             <CircularProgress size={28} sx={{ color: "var(--admin-accent)" }} />
