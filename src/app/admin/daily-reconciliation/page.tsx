@@ -9,6 +9,10 @@ import {
   Chip,
   CircularProgress,
   Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControl,
   IconButton,
   MenuItem,
@@ -20,7 +24,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Divider,
   TextField,
   Typography,
 } from "@mui/material";
@@ -28,10 +31,10 @@ import { styled } from "@mui/material/styles";
 import { tableCellClasses } from "@mui/material/TableCell";
 import SaveIcon from "@mui/icons-material/Save";
 import RefreshIcon from "@mui/icons-material/Refresh";
-import SyncIcon from "@mui/icons-material/Sync";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import TodayIcon from "@mui/icons-material/Today";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import { apiRequestError } from "@/app/lib/apiRequestError/client";
 import tokenCode from "@/app/coponent/tokenCode";
 import { toast, ToastContainer } from "react-toastify";
@@ -66,60 +69,10 @@ const StyledTableRow = styled(TableRow)(() => ({
   },
 }));
 
-/** عرض ستون‌های چسبان سمت راست (واریز و ثبت) */
-const STICKY_W = {
-  date: 56,
-  account: 84,
-  cash: 76,
-  daily: 64,
-  cumul: 64,
-  notes: 92,
-  save: 48,
-} as const;
-
-function stickyRightSx(
-  right: number,
-  width: number,
-  opts?: { isHead?: boolean; isEdge?: boolean; accent?: boolean }
-) {
-  const headBg = opts?.accent
-    ? "rgba(120,181,104,0.14)"
-    : "var(--admin-surface-alt)";
-  return {
-    position: "sticky" as const,
-    right,
-    width,
-    minWidth: width,
-    maxWidth: width,
-    zIndex: opts?.isHead ? 5 : 3,
-    backgroundColor: opts?.isHead ? headBg : "inherit",
-    ...(opts?.isEdge
-      ? {
-          boxShadow: "-6px 0 10px rgba(0,0,0,0.18)",
-          borderLeft: "1px solid var(--admin-border)",
-        }
-      : null),
-  };
-}
-
 interface SalesSnapshot {
   total_sales: number;
   card_amount: number;
   cash_amount: number;
-  installments_collected: number;
-  debts_collected: number;
-  discount_given: number;
-  total_collected: number;
-  credit_used_total: number;
-  uncollected_debts: number;
-}
-
-interface DailySalesApiResponse {
-  date: string;
-  date_jalali?: string;
-  total_sales: number;
-  cash_amount: number;
-  card_amount: number;
   installments_collected: number;
   debts_collected: number;
   discount_given: number;
@@ -315,38 +268,6 @@ function filterRowsUpToToday(
   return list.filter((row) => row.date <= today);
 }
 
-function parseDailySalesResponse(res: unknown): DailySalesApiResponse | null {
-  if (!res || typeof res !== "object") return null;
-  const r = res as Record<string, unknown>;
-  if (r.hasError) return null;
-
-  const pick = (obj: Record<string, unknown>): DailySalesApiResponse | null => {
-    if (typeof obj.date !== "string") return null;
-    return {
-      date: obj.date,
-      date_jalali: typeof obj.date_jalali === "string" ? obj.date_jalali : undefined,
-      total_sales: Math.floor(Number(obj.total_sales) || 0),
-      cash_amount: Math.floor(Number(obj.cash_amount) || 0),
-      card_amount: Math.floor(Number(obj.card_amount) || 0),
-      installments_collected: Math.floor(Number(obj.installments_collected) || 0),
-      debts_collected: Math.floor(Number(obj.debts_collected) || 0),
-      discount_given: Math.floor(Number(obj.discount_given) || 0),
-      total_collected: Math.floor(Number(obj.total_collected) || 0),
-      credit_used_total: Math.floor(Number(obj.credit_used_total) || 0),
-      uncollected_debts: Math.floor(Number(obj.uncollected_debts) || 0),
-    };
-  };
-
-  const direct = pick(r);
-  if (direct) return direct;
-
-  if (r.data && typeof r.data === "object") {
-    return pick(r.data as Record<string, unknown>);
-  }
-
-  return null;
-}
-
 function salesField(
   source: Record<string, unknown>,
   nested: Record<string, unknown>,
@@ -372,10 +293,6 @@ function salesSnapshotFromRecord(source: Record<string, unknown>): SalesSnapshot
     credit_used_total: salesField(source, nested, "credit_used_total"),
     uncollected_debts: salesField(source, nested, "uncollected_debts"),
   };
-}
-
-function salesSnapshotFromDailySales(data: DailySalesApiResponse): SalesSnapshot {
-  return salesSnapshotFromRecord(data as unknown as Record<string, unknown>);
 }
 
 function parseAccountDeposits(raw: unknown): AccountDeposit[] {
@@ -763,7 +680,8 @@ export default function DailyReconciliationPage() {
   const [drafts, setDrafts] = useState<Record<string, DepositDraft>>({});
   const [loading, setLoading] = useState(true);
   const [savingDate, setSavingDate] = useState<string | null>(null);
-  const [refreshingSalesDate, setRefreshingSalesDate] = useState<string | null>(null);
+  const [depositModalRow, setDepositModalRow] = useState<DailyReconciliationRow | null>(null);
+  const [modalSalesLoading, setModalSalesLoading] = useState(false);
   const [monthFilter, setMonthFilter] = useState<MonthFilter | null>(null);
   const [rangeInfo, setRangeInfo] = useState<{
     from: string;
@@ -934,45 +852,55 @@ export default function DailyReconciliationPage() {
     });
   };
 
-  const handleRefreshSales = async (row: DailyReconciliationRow) => {
-    setRefreshingSalesDate(row.date);
+  const openDepositModal = async (row: DailyReconciliationRow) => {
+    setDepositModalRow(row);
+    if (!drafts[row.date]) {
+      setDrafts((prev) => ({ ...prev, [row.date]: draftsFromRow(row, shopAccounts) }));
+    }
+    // جزئیات فروش را فقط هنگام باز شدن مودال می‌گیریم (گرید سبک می‌ماند)
+    setModalSalesLoading(true);
     const token = tokenCode();
     try {
       const res = await apiRequestError(
         "Get",
         {},
         {},
-        `/api/dashboard/daily-sales?date=${encodeURIComponent(row.date)}`,
+        `/api/daily-reconciliations/${encodeURIComponent(row.date)}`,
         true,
         true,
         token
       );
       if (res?.hasError) {
-        toast.error(getApiErrorMessage(res, "خطا در دریافت فروش روزانه"));
         return;
       }
-      const salesData = parseDailySalesResponse(res);
-      if (!salesData) {
-        toast.error("ساختار پاسخ فروش روزانه نامعتبر است");
-        return;
+      const salesRaw = (res as { sales?: Record<string, unknown> })?.sales;
+      if (salesRaw && typeof salesRaw === "object") {
+        const sales: SalesSnapshot = {
+          total_sales: Math.floor(Number(salesRaw.total_sales) || 0),
+          card_amount: Math.floor(Number(salesRaw.card_amount) || 0),
+          cash_amount: Math.floor(Number(salesRaw.cash_amount) || 0),
+          installments_collected: Math.floor(Number(salesRaw.installments_collected) || 0),
+          debts_collected: Math.floor(Number(salesRaw.debts_collected) || 0),
+          discount_given: Math.floor(Number(salesRaw.discount_given) || 0),
+          total_collected: Math.floor(Number(salesRaw.total_collected) || 0),
+          credit_used_total: Math.floor(Number(salesRaw.credit_used_total) || 0),
+          uncollected_debts: Math.floor(Number(salesRaw.uncollected_debts) || 0),
+        };
+        setRows((prev) =>
+          prev.map((r) => (r.date === row.date ? { ...r, sales } : r))
+        );
+        setDepositModalRow((prev) => (prev && prev.date === row.date ? { ...prev, sales } : prev));
       }
-      setRows((prev) =>
-        prev.map((r) =>
-          r.date === row.date
-            ? {
-                ...r,
-                date_jalali: salesData.date_jalali ?? r.date_jalali,
-                sales: salesSnapshotFromDailySales(salesData),
-              }
-            : r
-        )
-      );
-      toast.success(`فروش ${salesData.date_jalali || row.date} به‌روز شد`);
     } catch {
-      toast.error("خطا در دریافت فروش روزانه");
+      // گرید با دادهٔ موجود مودال را نشان می‌دهد
     } finally {
-      setRefreshingSalesDate(null);
+      setModalSalesLoading(false);
     }
+  };
+
+  const closeDepositModal = () => {
+    if (savingDate) return;
+    setDepositModalRow(null);
   };
 
   const handleSave = async (row: DailyReconciliationRow) => {
@@ -997,13 +925,10 @@ export default function DailyReconciliationPage() {
       credit_used_total: sales?.credit_used_total ?? 0,
       deposit_cash: parseAmount(draft.deposit_cash),
       account_deposits: accountDeposits,
-      // سازگاری با فرانت/بک‌اند قدیمی
       deposit_account_1: accountDeposits[0]?.amount ?? 0,
       deposit_account_2: accountDeposits[1]?.amount ?? 0,
       ...(draft.notes.trim() ? { notes: draft.notes.trim() } : {}),
     };
-
-    console.log("[daily-reconciliation] POST /api/daily-reconciliations body", body);
 
     try {
       const res = await apiRequestError(
@@ -1015,12 +940,12 @@ export default function DailyReconciliationPage() {
         true,
         token
       );
-      console.log("[daily-reconciliation] POST response", res);
       if (res?.hasError) {
         toast.error(getApiErrorMessage(res, "خطا در ثبت تطبیق روزانه"));
         return;
       }
-      toast.success(`تطبیق ${row.date_jalali || row.date} ثبت شد و اسناد واریز به‌روز شد`);
+      toast.success(`واریز ${row.date_jalali || row.date} ثبت شد`);
+      setDepositModalRow(null);
       if (monthFilter) {
         await fetchGrid(monthFilter.year, monthFilter.month);
       } else {
@@ -1033,80 +958,15 @@ export default function DailyReconciliationPage() {
     }
   };
 
-  const renderCashCell = (row: DailyReconciliationRow, fullWidth = false) => {
-    const draft = drafts[row.date];
-    if (!row.editable) {
-      const val = row.deposits?.deposit_cash ?? 0;
-      return (
-        <Typography sx={{ color: "var(--admin-text)", fontSize: "11px" }}>
-          {val > 0 ? formatNumber(val) : "—"}
-        </Typography>
-      );
-    }
-    if (!draft) return null;
-    return (
-      <TextField
-        size="small"
-        value={draft.deposit_cash}
-        onChange={(e) => updateDraft(row.date, { deposit_cash: formatAmountInput(e.target.value) })}
-        placeholder="۰"
-        sx={fullWidth ? amountFieldSxFull : amountFieldSx}
-      />
-    );
-  };
-
-  const renderAccountCell = (
-    row: DailyReconciliationRow,
-    account: ShopAccount,
-    accountIndex: number,
-    fullWidth = false
-  ) => {
-    const draft = drafts[row.date];
-    if (!row.editable) {
-      const val = depositAmountForAccount(row, account, accountIndex);
-      return (
-        <Typography sx={{ color: "var(--admin-text)", fontSize: "11px" }}>
-          {val > 0 ? formatNumber(val) : "—"}
-        </Typography>
-      );
-    }
-    if (!draft) return null;
-    return (
-      <TextField
-        size="small"
-        value={draft.accounts[String(account.id)] || ""}
-        onChange={(e) => updateAccountDraft(row.date, account.id, e.target.value)}
-        placeholder="۰"
-        sx={fullWidth ? amountFieldSxFull : amountFieldSx}
-      />
-    );
-  };
-
   const reversedVisibleRows = useMemo(
     () => [...visibleRows].reverse(),
     [visibleRows]
   );
 
-  const stickyLayout = useMemo(() => {
-    let right = 0;
-    const date = { right, width: STICKY_W.date };
-    right += STICKY_W.date;
-    const accounts = shopAccounts.map(() => {
-      const col = { right, width: STICKY_W.account };
-      right += STICKY_W.account;
-      return col;
-    });
-    const cash = { right, width: STICKY_W.cash };
-    right += STICKY_W.cash;
-    const daily = { right, width: STICKY_W.daily };
-    right += STICKY_W.daily;
-    const cumul = { right, width: STICKY_W.cumul };
-    right += STICKY_W.cumul;
-    const notes = { right, width: STICKY_W.notes };
-    right += STICKY_W.notes;
-    const save = { right, width: STICKY_W.save };
-    return { date, accounts, cash, daily, cumul, notes, save };
-  }, [shopAccounts]);
+  const modalDraft = depositModalRow ? drafts[depositModalRow.date] : null;
+  const modalPreviewDisc = depositModalRow && modalDraft
+    ? previewDailyDiscrepancy(modalDraft, depositModalRow.sales)
+    : null;
 
   return (
     <Box
@@ -1331,82 +1191,15 @@ export default function DailyReconciliationPage() {
               overflowX: "auto",
             }}
           >
-            <Table size="small" stickyHeader sx={{ borderCollapse: "separate", borderSpacing: 0 }}>
+            <Table size="small">
               <TableHead>
                 <TableRow>
-                  <StyledTableCell
-                    align="center"
-                    sx={stickyRightSx(stickyLayout.date.right, stickyLayout.date.width, {
-                      isHead: true,
-                    })}
-                  >
-                    تاریخ
-                  </StyledTableCell>
-                  {shopAccounts.map((account, index) => (
-                    <StyledTableCell
-                      key={account.id}
-                      align="center"
-                      sx={stickyRightSx(
-                        stickyLayout.accounts[index]?.right ?? 0,
-                        stickyLayout.accounts[index]?.width ?? STICKY_W.account,
-                        { isHead: true, accent: true }
-                      )}
-                    >
-                      {account.name}
-                    </StyledTableCell>
-                  ))}
-                  <StyledTableCell
-                    align="center"
-                    sx={stickyRightSx(stickyLayout.cash.right, stickyLayout.cash.width, {
-                      isHead: true,
-                      accent: true,
-                    })}
-                  >
-                    نقدی
-                  </StyledTableCell>
-                  <StyledTableCell
-                    align="center"
-                    sx={stickyRightSx(stickyLayout.daily.right, stickyLayout.daily.width, {
-                      isHead: true,
-                    })}
-                  >
-                    اختلاف روز
-                  </StyledTableCell>
-                  <StyledTableCell
-                    align="center"
-                    sx={stickyRightSx(stickyLayout.cumul.right, stickyLayout.cumul.width, {
-                      isHead: true,
-                    })}
-                  >
-                    تجمعی
-                  </StyledTableCell>
-                  <StyledTableCell
-                    align="center"
-                    sx={stickyRightSx(stickyLayout.notes.right, stickyLayout.notes.width, {
-                      isHead: true,
-                    })}
-                  >
-                    یادداشت
-                  </StyledTableCell>
-                  <StyledTableCell
-                    align="center"
-                    sx={stickyRightSx(stickyLayout.save.right, stickyLayout.save.width, {
-                      isHead: true,
-                      isEdge: true,
-                    })}
-                  >
-                    ثبت
-                  </StyledTableCell>
-                  <StyledTableCell align="center">فروش</StyledTableCell>
-                  <StyledTableCell align="center">نقد</StyledTableCell>
-                  <StyledTableCell align="center">کارت</StyledTableCell>
-                  <StyledTableCell align="center">اقساط</StyledTableCell>
-                  <StyledTableCell align="center">وصول نسیه</StyledTableCell>
-                  <StyledTableCell align="center">تخفیف</StyledTableCell>
-                  <StyledTableCell align="center">جمع وصول</StyledTableCell>
-                  <StyledTableCell align="center">اعتبار</StyledTableCell>
-                  <StyledTableCell align="center">بدهی باز</StyledTableCell>
-                  <StyledTableCell align="center">بروز</StyledTableCell>
+                  <StyledTableCell align="center">تاریخ</StyledTableCell>
+                  <StyledTableCell align="center">جمع واریز</StyledTableCell>
+                  <StyledTableCell align="center">اختلاف روز</StyledTableCell>
+                  <StyledTableCell align="center">تجمعی</StyledTableCell>
+                  <StyledTableCell align="center">وضعیت</StyledTableCell>
+                  <StyledTableCell align="center">عملیات</StyledTableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -1414,210 +1207,68 @@ export default function DailyReconciliationPage() {
                   const draft = drafts[row.date];
                   const displayDisc = rowDisplayDiscrepancy(row, draft);
                   const depositsTotal = depositsTotalForTone(row, draft, shopAccounts);
-                  const totalCollected = row.sales?.total_collected ?? 0;
-                  const discrepancyTone =
-                    displayDisc != null
-                      ? displayDisc < depositsTotal - totalCollected
-                        ? "negative"
-                        : displayDisc > depositsTotal - totalCollected
-                          ? "positive"
-                          : null
-                      : null;
-
                   return (
-                    <StyledTableRow
-                      key={row.date}
-                      sx={
-                        discrepancyTone
-                          ? {
-                              backgroundColor:
-                                discrepancyTone === "negative"
-                                  ? "rgba(239, 68, 68, 0.10) !important"
-                                  : "rgba(74, 222, 128, 0.10) !important",
-                              "&:nth-of-type(even)": {
-                                backgroundColor:
-                                  discrepancyTone === "negative"
-                                    ? "rgba(239, 68, 68, 0.16) !important"
-                                    : "rgba(74, 222, 128, 0.16) !important",
-                              },
-                              "&:hover": {
-                                backgroundColor:
-                                  discrepancyTone === "negative"
-                                    ? "rgba(239, 68, 68, 0.20) !important"
-                                    : "rgba(74, 222, 128, 0.20) !important",
-                              },
-                            }
-                          : undefined
-                      }
-                    >
-                      <StyledTableCell
-                        align="center"
-                        sx={stickyRightSx(stickyLayout.date.right, stickyLayout.date.width)}
-                      >
-                        <Typography sx={{ fontWeight: 600, fontSize: 10 }}>
+                    <StyledTableRow key={row.date}>
+                      <StyledTableCell align="center">
+                        <Typography sx={{ fontWeight: 700, fontSize: 12 }}>
                           {rowDateLabel(row, monthFilter)}
                         </Typography>
                       </StyledTableCell>
-                      {shopAccounts.map((account, index) => (
-                        <StyledTableCell
-                          key={account.id}
-                          align="center"
-                          sx={stickyRightSx(
-                            stickyLayout.accounts[index]?.right ?? 0,
-                            stickyLayout.accounts[index]?.width ?? STICKY_W.account,
-                            { accent: true }
-                          )}
+                      <StyledTableCell align="center">
+                        <Typography
+                          sx={{
+                            fontSize: 12,
+                            color: depositsTotal > 0 ? "var(--admin-accent)" : "var(--admin-text-muted)",
+                            fontWeight: 600,
+                          }}
                         >
-                          {renderAccountCell(row, account, index)}
-                        </StyledTableCell>
-                      ))}
-                      <StyledTableCell
-                        align="center"
-                        sx={stickyRightSx(stickyLayout.cash.right, stickyLayout.cash.width, {
-                          accent: true,
-                        })}
-                      >
-                        {renderCashCell(row)}
-                      </StyledTableCell>
-                      <StyledTableCell
-                        align="center"
-                        sx={{
-                          ...stickyRightSx(stickyLayout.daily.right, stickyLayout.daily.width),
-                          ...(discrepancyTone
-                            ? {
-                                backgroundColor:
-                                  discrepancyTone === "negative"
-                                    ? "rgba(239, 68, 68, 0.16)"
-                                    : "rgba(74, 222, 128, 0.16)",
-                              }
-                            : null),
-                        }}
-                      >
-                        <DiscrepancyCell value={displayDisc ?? null} />
-                      </StyledTableCell>
-                      <StyledTableCell
-                        align="center"
-                        sx={stickyRightSx(stickyLayout.cumul.right, stickyLayout.cumul.width)}
-                      >
-                        <DiscrepancyCell value={row.cumulative_discrepancy} />
-                      </StyledTableCell>
-                      <StyledTableCell
-                        align="center"
-                        sx={stickyRightSx(stickyLayout.notes.right, stickyLayout.notes.width)}
-                      >
-                        {row.editable && draft ? (
-                          <TextField
-                            size="small"
-                            placeholder="—"
-                            value={draft.notes}
-                            onChange={(e) => updateDraft(row.date, { notes: e.target.value })}
-                            sx={{
-                              minWidth: 78,
-                              maxWidth: 88,
-                              "& .MuiOutlinedInput-root": {
-                                backgroundColor: "var(--admin-surface-alt)",
-                                fontSize: "10px",
-                                "& fieldset": { borderColor: "var(--admin-border)" },
-                              },
-                              "& .MuiInputBase-input": {
-                                color: "var(--admin-text)",
-                                py: 0.35,
-                                px: 0.5,
-                                fontSize: "10px",
-                              },
-                            }}
-                          />
-                        ) : (
-                          <Typography
-                            sx={{
-                              color: "var(--admin-text-muted)",
-                              fontSize: "10px",
-                              maxWidth: 86,
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {row.notes?.trim() || "—"}
-                          </Typography>
-                        )}
-                      </StyledTableCell>
-                      <StyledTableCell
-                        align="center"
-                        sx={stickyRightSx(stickyLayout.save.right, stickyLayout.save.width, {
-                          isEdge: true,
-                        })}
-                      >
-                        {row.editable ? (
-                          <IconButton
-                            size="small"
-                            disabled={savingDate === row.date}
-                            onClick={() => handleSave(row)}
-                            aria-label="ثبت"
-                            sx={{
-                              color: "var(--admin-on-accent)",
-                              bgcolor: "var(--admin-accent)",
-                              width: 28,
-                              height: 28,
-                              "&:hover": { bgcolor: "var(--admin-accent-hover)" },
-                              "&.Mui-disabled": { bgcolor: "var(--admin-border)", color: "var(--admin-text-muted)" },
-                            }}
-                          >
-                            {savingDate === row.date ? (
-                              <CircularProgress size={14} color="inherit" />
-                            ) : (
-                              <SaveIcon sx={{ fontSize: 16 }} />
-                            )}
-                          </IconButton>
-                        ) : (
-                          <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 10 }}>
-                            —
-                          </Typography>
-                        )}
-                      </StyledTableCell>
-                      <StyledTableCell align="center">
-                        {formatNumber(row.sales?.total_sales ?? 0)}
-                      </StyledTableCell>
-                      <StyledTableCell align="center">
-                        {formatNumber(row.sales?.cash_amount ?? 0)}
-                      </StyledTableCell>
-                      <StyledTableCell align="center">
-                        {formatNumber(row.sales?.card_amount ?? 0)}
-                      </StyledTableCell>
-                      <StyledTableCell align="center">
-                        {formatNumber(row.sales?.installments_collected ?? 0)}
-                      </StyledTableCell>
-                      <StyledTableCell align="center">
-                        {formatNumber(row.sales?.debts_collected ?? 0)}
-                      </StyledTableCell>
-                      <StyledTableCell align="center">
-                        {formatNumber(row.sales?.discount_given ?? 0)}
-                      </StyledTableCell>
-                      <StyledTableCell align="center">
-                        <Typography sx={{ fontWeight: 700, color: "var(--admin-accent)", fontSize: 11 }}>
-                          {formatNumber(row.sales?.total_collected ?? 0)}
+                          {depositsTotal > 0 ? formatNumber(depositsTotal) : "—"}
                         </Typography>
                       </StyledTableCell>
                       <StyledTableCell align="center">
-                        {formatNumber(row.sales?.credit_used_total ?? 0)}
+                        <DiscrepancyCell value={displayDisc ?? null} />
                       </StyledTableCell>
                       <StyledTableCell align="center">
-                        {formatNumber(row.sales?.uncollected_debts ?? 0)}
+                        <DiscrepancyCell
+                          value={
+                            cumulativePreviewByDate[row.date] != null
+                              ? cumulativePreviewByDate[row.date]
+                              : row.cumulative_discrepancy
+                          }
+                        />
                       </StyledTableCell>
                       <StyledTableCell align="center">
-                        <IconButton
-                          size="small"
-                          disabled={refreshingSalesDate === row.date}
-                          onClick={() => handleRefreshSales(row)}
-                          aria-label="بروزرسانی فروش"
-                          sx={{ color: "var(--admin-text-muted)", width: 26, height: 26 }}
-                        >
-                          {refreshingSalesDate === row.date ? (
-                            <CircularProgress size={12} />
-                          ) : (
-                            <SyncIcon sx={{ fontSize: 15 }} />
-                          )}
-                        </IconButton>
+                        <RowStatusChip row={row} />
+                      </StyledTableCell>
+                      <StyledTableCell align="center">
+                        {row.editable ? (
+                          <Button
+                            size="small"
+                            variant="contained"
+                            startIcon={<EditOutlinedIcon sx={{ fontSize: 16 }} />}
+                            onClick={() => openDepositModal(row)}
+                            sx={{
+                              bgcolor: "var(--admin-accent)",
+                              color: "var(--admin-on-accent)",
+                              fontSize: 11,
+                              py: 0.35,
+                              "&:hover": { bgcolor: "var(--admin-accent-hover)" },
+                            }}
+                          >
+                            ثبت واریز
+                          </Button>
+                        ) : row.is_closed ? (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => openDepositModal(row)}
+                            sx={{ fontSize: 11, color: "var(--admin-text)", borderColor: "var(--admin-border)" }}
+                          >
+                            جزئیات
+                          </Button>
+                        ) : (
+                          <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11 }}>—</Typography>
+                        )}
                       </StyledTableCell>
                     </StyledTableRow>
                   );
@@ -1626,222 +1277,61 @@ export default function DailyReconciliationPage() {
             </Table>
           </TableContainer>
 
-          <Box sx={{ display: { xs: "flex", md: "none" }, flexDirection: "column", gap: 2 }}>
+          <Box sx={{ display: { xs: "flex", md: "none" }, flexDirection: "column", gap: 1.25 }}>
             {reversedVisibleRows.map((row) => {
               const draft = drafts[row.date];
               const displayDisc = rowDisplayDiscrepancy(row, draft);
-              const sales = row.sales;
               const depositsTotal = depositsTotalForTone(row, draft, shopAccounts);
-              const totalCollected = sales?.total_collected ?? 0;
-              const discrepancyTone =
-                displayDisc != null
-                  ? displayDisc <depositsTotal - totalCollected
-                    ? "negative"
-                    : displayDisc > depositsTotal - totalCollected
-                      ? "positive"
-                      : null
-                  : null;
-
-
-
               return (
                 <Card
                   key={row.date}
                   sx={{
-                    backgroundColor: discrepancyTone
-                      ? discrepancyTone === "negative"
-                        ? "rgba(239, 68, 68, 0.10)"
-                        : "rgba(74, 222, 128, 0.10)"
-                      : "var(--admin-surface)",
-                    borderRadius: "16px",
-                    border: discrepancyTone
-                      ? discrepancyTone === "negative"
-                        ? "1px solid rgba(239, 68, 68, 0.45)"
-                        : "1px solid rgba(74, 222, 128, 0.45)"
-                      : "1px solid var(--admin-border)",
-                    transition: "all 0.2s ease",
-                    "&:hover": {
-                      borderColor: discrepancyTone
-                        ? discrepancyTone === "negative"
-                          ? "rgba(239, 68, 68, 0.65)"
-                          : "rgba(74, 222, 128, 0.65)"
-                        : "rgba(120, 181, 104, 0.4)",
-                      boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                    },
+                    bgcolor: "var(--admin-surface)",
+                    border: "1px solid var(--admin-border)",
+                    borderRadius: 2,
                   }}
                 >
-                  <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "flex-start",
-                        gap: 1,
-                        mb: 1.5,
-                      }}
-                    >
-                      <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: 16 }}>
+                  <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1, mb: 1 }}>
+                      <Typography sx={{ fontWeight: 700, color: "var(--admin-text)", fontSize: 14 }}>
                         {rowDateLabel(row, monthFilter)}
                       </Typography>
                       <RowStatusChip row={row} />
                     </Box>
-
-                    <Divider sx={{ borderColor: "var(--admin-divider)", mb: 1.5 }} />
-
-                    <Typography
-                      sx={{
-                        color: "var(--admin-text-muted)",
-                        fontSize: 12,
-                        fontWeight: 600,
-                        mb: 1,
-                      }}
-                    >
-                      فروش و وصول
-                    </Typography>
-                    <Box
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr 1fr",
-                        gap: 1.25,
-                        mb: 1.5,
-                      }}
-                    >
-                      <MobileStat label="فروش" value={sales?.total_sales ?? 0} />
-                      <MobileStat label="نقد" value={sales?.cash_amount ?? 0} />
-                      <MobileStat label="کارت" value={sales?.card_amount ?? 0} />
-                      <MobileStat label="اقساط" value={sales?.installments_collected ?? 0} />
-                      <MobileStat label="وصول نسیه" value={sales?.debts_collected ?? 0} />
-                      <MobileStat label="تخفیف" value={sales?.discount_given ?? 0} />
-                      <MobileStat label="جمع وصول" value={sales?.total_collected ?? 0} accent />
-                      <MobileStat
-                        label="اعتبار مصرف‌شده"
-                        value={sales?.credit_used_total ?? 0}
-                      />
-                      <MobileStat label="بدهی باز" value={sales?.uncollected_debts ?? 0} />
-                    </Box>
-
-                    <Button
-                      fullWidth
-                      size="small"
-                      variant="outlined"
-                      disabled={refreshingSalesDate === row.date}
-                      startIcon={
-                        refreshingSalesDate === row.date ? (
-                          <CircularProgress size={14} />
-                        ) : (
-                          <SyncIcon fontSize="small" />
-                        )
-                      }
-                      onClick={() => handleRefreshSales(row)}
-                      sx={{
-                        mb: 1.5,
-                        color: "var(--admin-text)",
-                        borderColor: "var(--admin-border)",
-                        "&:hover": { borderColor: "var(--admin-accent)" },
-                      }}
-                    >
-                      بروزرسانی فروش
-                    </Button>
-
-                    <Divider sx={{ borderColor: "var(--admin-divider)", mb: 1.5 }} />
-
-                    <Typography
-                      sx={{
-                        color: "var(--admin-accent)",
-                        fontSize: 12,
-                        fontWeight: 600,
-                        mb: 1,
-                      }}
-                    >
-                      واریز
-                    </Typography>
-                    <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25, mb: 1.5 }}>
-                      {shopAccounts.map((account, index) => (
-                        <Box key={account.id}>
-                          <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, mb: 0.5 }}>
-                            {account.name}
-                          </Typography>
-                          {renderAccountCell(row, account, index, true)}
-                        </Box>
-                      ))}
+                    <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1, mb: 1.25 }}>
+                      <MobileStat label="جمع واریز" value={depositsTotal} accent />
                       <Box>
-                        <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, mb: 0.5 }}>
-                          نقدی
-                        </Typography>
-                        {renderCashCell(row, true)}
-                      </Box>
-                    </Box>
-
-                    <Box
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr 1fr",
-                        gap: 1.25,
-                        mb: 1.5,
-                      }}
-                    >
-                      <Box>
-                        <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, mb: 0.5 }}>
-                          اختلاف روز
-                          {row.editable && !row.is_closed && draft ? " (پیش‌نمایش)" : ""}
-                        </Typography>
+                        <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, mb: 0.25 }}>اختلاف روز</Typography>
                         <DiscrepancyCell value={displayDisc ?? null} />
                       </Box>
                       <Box>
-                        <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, mb: 0.5 }}>
-                          تجمعی
-                        </Typography>
-                        <DiscrepancyCell value={row.cumulative_discrepancy} />
+                        <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, mb: 0.25 }}>تجمعی</Typography>
+                        <DiscrepancyCell
+                          value={
+                            cumulativePreviewByDate[row.date] != null
+                              ? cumulativePreviewByDate[row.date]
+                              : row.cumulative_discrepancy
+                          }
+                        />
                       </Box>
                     </Box>
-
-                    <Box sx={{ mb: 1.5 }}>
-                      <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, mb: 0.5 }}>
-                        یادداشت
-                      </Typography>
-                      {row.editable && draft ? (
-                        <TextField
-                          fullWidth
-                          size="small"
-                          placeholder="اختیاری"
-                          value={draft.notes}
-                          onChange={(e) => updateDraft(row.date, { notes: e.target.value })}
-                          sx={{
-                            "& .MuiOutlinedInput-root": {
-                              backgroundColor: "var(--admin-surface-alt)",
-                              fontSize: "12px",
-                              "& fieldset": { borderColor: "var(--admin-border)" },
-                            },
-                            "& .MuiInputBase-input": { color: "var(--admin-text)" },
-                          }}
-                        />
-                      ) : (
-                        <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>
-                          {row.notes?.trim() || "—"}
-                        </Typography>
-                      )}
-                    </Box>
-
-                    {row.editable ? (
+                    {row.editable || row.is_closed ? (
                       <Button
                         fullWidth
-                        size="medium"
-                        variant="contained"
-                        disabled={savingDate === row.date}
-                        startIcon={
-                          savingDate === row.date ? (
-                            <CircularProgress size={16} color="inherit" />
-                          ) : (
-                            <SaveIcon />
-                          )
-                        }
-                        onClick={() => handleSave(row)}
+                        size="small"
+                        variant={row.editable ? "contained" : "outlined"}
+                        startIcon={<EditOutlinedIcon />}
+                        onClick={() => openDepositModal(row)}
                         sx={{
-                          backgroundColor: "var(--admin-accent)",
-                          "&:hover": { backgroundColor: "var(--admin-accent-hover)" },
+                          bgcolor: row.editable ? "var(--admin-accent)" : "transparent",
+                          color: row.editable ? "var(--admin-on-accent)" : "var(--admin-text)",
+                          borderColor: "var(--admin-border)",
+                          "&:hover": {
+                            bgcolor: row.editable ? "var(--admin-accent-hover)" : "var(--admin-menu-hover)",
+                          },
                         }}
                       >
-                        ثبت تطبیق
+                        {row.editable ? "ثبت واریز" : "جزئیات واریز"}
                       </Button>
                     ) : null}
                   </CardContent>
@@ -1849,6 +1339,135 @@ export default function DailyReconciliationPage() {
               );
             })}
           </Box>
+
+          <Dialog
+            open={Boolean(depositModalRow)}
+            onClose={closeDepositModal}
+            fullWidth
+            maxWidth="sm"
+            PaperProps={{
+              sx: {
+                bgcolor: "var(--admin-surface)",
+                color: "var(--admin-text)",
+                borderRadius: 2,
+                border: "1px solid var(--admin-border)",
+                direction: "rtl",
+              },
+            }}
+          >
+            <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>
+              {depositModalRow?.editable ? "ثبت واریز" : "جزئیات واریز"} —{" "}
+              {depositModalRow ? rowDateLabel(depositModalRow, monthFilter) : ""}
+            </DialogTitle>
+            <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 1.5, pt: 1 }}>
+              {modalSalesLoading ? (
+                <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+                  <CircularProgress size={22} sx={{ color: "var(--admin-accent)" }} />
+                </Box>
+              ) : depositModalRow?.sales ? (
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 1,
+                    p: 1.25,
+                    borderRadius: 1.5,
+                    bgcolor: "var(--admin-surface-alt)",
+                    border: "1px solid var(--admin-border)",
+                  }}
+                >
+                  <MobileStat label="فروش" value={depositModalRow.sales.total_sales} />
+                  <MobileStat label="جمع وصول" value={depositModalRow.sales.total_collected} accent />
+                  <MobileStat label="نقد" value={depositModalRow.sales.cash_amount} />
+                  <MobileStat label="کارت" value={depositModalRow.sales.card_amount} />
+                  <MobileStat label="اقساط" value={depositModalRow.sales.installments_collected} />
+                  <MobileStat label="وصول نسیه" value={depositModalRow.sales.debts_collected} />
+                </Box>
+              ) : null}
+
+              {depositModalRow && modalDraft ? (
+                <>
+                  <Typography sx={{ fontSize: 13, fontWeight: 700, color: "var(--admin-accent)", mt: 0.5 }}>
+                    مبالغ واریز
+                  </Typography>
+                  {shopAccounts.map((account) => (
+                    <TextField
+                      key={account.id}
+                      fullWidth
+                      size="small"
+                      label={account.name}
+                      value={modalDraft.accounts[String(account.id)] || ""}
+                      disabled={!depositModalRow.editable}
+                      onChange={(e) => updateAccountDraft(depositModalRow.date, account.id, e.target.value)}
+                      placeholder="۰"
+                      sx={amountFieldSxFull}
+                      inputProps={{ style: { direction: "ltr", textAlign: "left" } }}
+                    />
+                  ))}
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="نقدی"
+                    value={modalDraft.deposit_cash}
+                    disabled={!depositModalRow.editable}
+                    onChange={(e) =>
+                      updateDraft(depositModalRow.date, { deposit_cash: formatAmountInput(e.target.value) })
+                    }
+                    placeholder="۰"
+                    sx={amountFieldSxFull}
+                    inputProps={{ style: { direction: "ltr", textAlign: "left" } }}
+                  />
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="یادداشت"
+                    value={modalDraft.notes}
+                    disabled={!depositModalRow.editable}
+                    onChange={(e) => updateDraft(depositModalRow.date, { notes: e.target.value })}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        bgcolor: "var(--admin-surface-alt)",
+                        color: "var(--admin-text)",
+                        "& fieldset": { borderColor: "var(--admin-border)" },
+                      },
+                      "& .MuiInputLabel-root": { color: "var(--admin-text-muted)" },
+                    }}
+                  />
+                  <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1 }}>
+                    <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)" }}>
+                      جمع واریز: {formatNumber(depositTotal(modalDraft))} تومان
+                    </Typography>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+                      <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)" }}>اختلاف:</Typography>
+                      <DiscrepancyCell value={modalPreviewDisc} />
+                    </Box>
+                  </Box>
+                </>
+              ) : null}
+            </DialogContent>
+            <DialogActions sx={{ px: 2, pb: 2 }}>
+              <Button onClick={closeDepositModal} disabled={Boolean(savingDate)} sx={{ color: "var(--admin-text-muted)" }}>
+                بستن
+              </Button>
+              {depositModalRow?.editable ? (
+                <Button
+                  variant="contained"
+                  disabled={Boolean(savingDate) || !modalDraft}
+                  startIcon={
+                    savingDate === depositModalRow.date ? (
+                      <CircularProgress size={16} color="inherit" />
+                    ) : (
+                      <SaveIcon />
+                    )
+                  }
+                  onClick={() => handleSave(depositModalRow)}
+                  sx={{ bgcolor: "var(--admin-accent)", "&:hover": { bgcolor: "var(--admin-accent-hover)" } }}
+                >
+                  ثبت واریز
+                </Button>
+              ) : null}
+            </DialogActions>
+          </Dialog>
           </>
         )}
 
