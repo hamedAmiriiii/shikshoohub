@@ -722,17 +722,19 @@ export default function Header({
                   <Tooltip
                     title={
                       auditorShopCount > 1
-                        ? `حالت حسابرسی — ${shopDisplayName} (کلیک برای تغییر فروشگاه)`
-                        : `حالت حسابرسی — ${shopDisplayName}`
+                        ? `حسابرس · ${shopDisplayName} · تغییر فروشگاه`
+                        : `حسابرس · ${shopDisplayName}`
                     }
                     arrow
+                    enterTouchDelay={500}
                   >
                     <IconButton
                       onClick={auditorShopCount > 1 ? handleSwitchShop : undefined}
-                      aria-label={`حالت حسابرسی — فروشگاه ${shopDisplayName}`}
+                      aria-label="حالت حسابرسی"
                       sx={{
-                        color: "var(--admin-info-icon, var(--admin-accent))",
-                        backgroundColor: "var(--admin-info-bg, var(--admin-icon-bg))",
+                        color: "var(--admin-info-icon, #38bdf8)",
+                        backgroundColor: "var(--admin-info-bg, rgba(56, 189, 248, 0.15))",
+                        border: "1px solid var(--admin-info-border, rgba(56, 189, 248, 0.45))",
                         padding: { xs: "5px", md: "8px" },
                         flexShrink: 0,
                         cursor: auditorShopCount > 1 ? "pointer" : "default",
