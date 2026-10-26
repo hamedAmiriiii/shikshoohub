@@ -91,6 +91,7 @@ type DayEvent = {
   method_label: string;
   title: string;
   subtitle?: string | null;
+  party?: string | null;
   amount: number;
   cash_amount?: number;
   card_amount?: number;
@@ -568,6 +569,7 @@ export default function FinancialActivityPage() {
                   <TableHead>
                     <TableRow>
                       <StyledTableCell align="right">شرح</StyledTableCell>
+                      <StyledTableCell align="right">طرف حساب</StyledTableCell>
                       <StyledTableCell align="center">نوع</StyledTableCell>
                       <StyledTableCell align="center">روش</StyledTableCell>
                       <StyledTableCell align="right">جزئیات</StyledTableCell>
@@ -598,6 +600,19 @@ export default function FinancialActivityPage() {
                                 {event.title}
                               </Typography>
                             )}
+                          </StyledTableCell>
+                          <StyledTableCell
+                            align="right"
+                            sx={{
+                              fontWeight: event.party ? 600 : 400,
+                              color: event.party ? "var(--admin-text)" : "var(--admin-text-muted)",
+                              whiteSpace: "nowrap",
+                              maxWidth: 160,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {event.party || "—"}
                           </StyledTableCell>
                           <StyledTableCell align="center">
                             <Typography

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import {
   Box,
   Button,
@@ -8,7 +8,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   IconButton,
   Paper,
   Table,
@@ -24,6 +23,7 @@ import { styled } from "@mui/material/styles";
 import { tableCellClasses } from "@mui/material/TableCell";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import { toast } from "react-toastify";
 import tokenCode from "@/app/coponent/tokenCode";
 import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
@@ -102,6 +102,7 @@ const fieldSx = {
     backgroundColor: "var(--admin-surface)",
     minHeight: 30,
     fontSize: 12,
+    borderRadius: "8px",
     "& fieldset": { borderColor: "var(--admin-border)" },
     "&:hover fieldset": { borderColor: "var(--admin-accent)" },
     "&.Mui-focused fieldset": { borderColor: "var(--admin-accent)" },
@@ -113,17 +114,20 @@ const StyledTableCell = styled(TableCell)({
   [`&.${tableCellClasses.head}`]: {
     backgroundColor: "var(--admin-surface-alt)",
     color: "var(--admin-text)",
-    fontWeight: 600,
+    fontWeight: 800,
     fontSize: 12,
-    padding: "6px 8px",
+    padding: "9px 8px",
     whiteSpace: "nowrap",
     textAlign: "center",
+    borderBottom: "1px solid var(--admin-border)",
   },
   [`&.${tableCellClasses.body}`]: {
     color: "var(--admin-text)",
     fontSize: 12,
-    padding: "4px 8px",
+    padding: "6px 8px",
     textAlign: "center",
+    borderBottom: "1px solid var(--admin-border)",
+    verticalAlign: "middle",
   },
 });
 
@@ -132,7 +136,7 @@ const StyledTableRow = styled(TableRow)({
   "&:nth-of-type(even)": {
     backgroundColor: "var(--admin-surface-alt)",
   },
-  "&:last-child td, &:last-child th": { border: 0 },
+  "&:last-child td, &:last-child th": { borderBottom: 0 },
 });
 
 function newDraftKey() {
@@ -190,6 +194,36 @@ function draftsFromInvoice(invoice: InvoiceRecord): DraftItem[] {
   });
 }
 
+function MetaBox({ label, value }: { label: string; value: string }) {
+  return (
+    <Box
+      sx={{
+        flex: 1,
+        minWidth: 0,
+        p: 1.15,
+        borderRadius: 1.75,
+        border: "1px solid var(--admin-border)",
+        bgcolor: "var(--admin-surface-alt)",
+      }}
+    >
+      <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)", mb: 0.35 }}>{label}</Typography>
+      <Typography
+        sx={{
+          fontSize: 13,
+          fontWeight: 700,
+          color: "var(--admin-text)",
+          lineHeight: 1.5,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {value || "—"}
+      </Typography>
+    </Box>
+  );
+}
+
 type Props = {
   open: boolean;
   invoice: InvoiceRecord | null;
@@ -213,6 +247,8 @@ export default function InvoiceDetailsDialog({
   const [settleOpen, setSettleOpen] = useState(false);
   const [productEntryEnabled, setProductEntryEnabled] = useState(false);
   const [afterMismatch, setAfterMismatch] = useState<"save" | "register">("save");
+  const titleInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const focusKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     const sync = () => setProductEntryEnabled(Boolean(readAdminPosSettings().invoiceProductEntryEnabled));
@@ -240,7 +276,7 @@ export default function InvoiceDetailsDialog({
 
       if (cancelled) return;
       const loadedItems = draftsFromInvoice(full);
-      setDrafts(loadedItems);
+      setDrafts(loadedItems.length > 0 ? loadedItems : [emptyDraft()]);
       setOriginalHadItems(loadedItems.length > 0);
       setInvoiceAmount(toNumber(full.amount));
       setRecord(full);
@@ -253,6 +289,17 @@ export default function InvoiceDetailsDialog({
       cancelled = true;
     };
   }, [open, invoice]);
+
+  useEffect(() => {
+    const key = focusKeyRef.current;
+    if (!key) return;
+    const input = titleInputRefs.current[key];
+    if (input) {
+      input.focus();
+      input.select?.();
+      focusKeyRef.current = null;
+    }
+  }, [drafts]);
 
   const itemsTotal = useMemo(
     () =>
@@ -274,6 +321,20 @@ export default function InvoiceDetailsDialog({
 
   const updateDraft = (key: string, patch: Partial<DraftItem>) => {
     setDrafts((prev) => prev.map((row) => (row.key === key ? { ...row, ...patch } : row)));
+  };
+
+  const addRow = (focus = true) => {
+    const draft = emptyDraft();
+    if (focus) focusKeyRef.current = draft.key;
+    setDrafts((prev) => [...prev, draft]);
+  };
+
+  const handleFieldEnter = (e: KeyboardEvent) => {
+    if (e.key !== "Enter") return;
+    if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return;
+    e.preventDefault();
+    e.stopPropagation();
+    addRow(true);
   };
 
   const collectItems = () => {
@@ -410,6 +471,12 @@ export default function InvoiceDetailsDialog({
     }
   };
 
+  const display = record || invoice;
+  const beneficiary = beneficiaryFromRecord(display);
+  const shopAccountName =
+    display?.shop_account?.name ||
+    (display?.shop_account_id != null ? `حساب #${display.shop_account_id}` : "");
+
   return (
     <>
     <Dialog
@@ -420,30 +487,96 @@ export default function InvoiceDetailsDialog({
       PaperProps={{
         sx: {
           backgroundColor: "var(--admin-surface)",
-          borderRadius: "16px",
-          border: "1px solid rgba(55, 84, 165, 0.3)",
+          borderRadius: "18px",
+          border: "1px solid var(--admin-border)",
+          overflow: "hidden",
         },
       }}
     >
-      <DialogTitle sx={{ color: "var(--admin-text)", fontWeight: "700", fontSize: 14, py: 1.25 }}>
-        جزئیات فاکتور
-        {invoice?.id != null ? ` شماره ${formatAmountNumber(invoice.id)}` : ""}
-        {invoice?.title ? ` — ${invoice.title}` : ""}
-      </DialogTitle>
-      <DialogContent>
+      <Box
+        sx={{
+          px: 2.25,
+          pt: 2,
+          pb: 1.5,
+          borderBottom: "1px solid var(--admin-border)",
+          bgcolor: "var(--admin-surface-alt)",
+          backgroundImage:
+            "linear-gradient(180deg, rgba(120,181,104,0.08), transparent 70%)",
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 1.5 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.1, minWidth: 0 }}>
+            <Box
+              sx={{
+                width: 42,
+                height: 42,
+                borderRadius: "12px",
+                display: "grid",
+                placeItems: "center",
+                bgcolor: "rgba(120, 181, 104, 0.16)",
+                color: "var(--admin-accent)",
+                flexShrink: 0,
+              }}
+            >
+              <ReceiptLongIcon />
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography sx={{ fontWeight: 900, fontSize: 17, color: "var(--admin-text)", lineHeight: 1.3 }}>
+                فاکتور خرید
+              </Typography>
+              <Typography sx={{ fontSize: 12.5, color: "var(--admin-text-muted)", mt: 0.2 }}>
+                {display?.title ? display.title : "بدون عنوان"}
+                {display?.id != null ? ` · شماره ${formatAmountNumber(display.id)}` : ""}
+              </Typography>
+            </Box>
+          </Box>
+          <Box sx={{ textAlign: "left", flexShrink: 0 }}>
+            <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)" }}>تاریخ</Typography>
+            <Typography sx={{ fontSize: 13, fontWeight: 800, color: "var(--admin-text)" }}>
+              {display?.date || "—"}
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
+
+      <DialogContent sx={{ px: 2.25, py: 2 }}>
         {loading ? (
           <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
             <CircularProgress sx={{ color: "var(--admin-accent)" }} />
           </Box>
         ) : (
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25, mt: 0.5 }}>
-            {beneficiaryFromRecord(invoice) ? (
-              <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>
-                ذینفع: {formatBeneficiaryLabel(beneficiaryFromRecord(invoice))}
-              </Typography>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+                gap: 1,
+              }}
+            >
+              <MetaBox label="طرف حساب / ذینفع" value={formatBeneficiaryLabel(beneficiary) || "—"} />
+              <MetaBox label="حساب پرداخت" value={shopAccountName || "—"} />
+              <MetaBox label="شماره فاکتور" value={display?.id != null ? formatAmountNumber(display.id) : "—"} />
+              <MetaBox label="عنوان سند" value={display?.title || "—"} />
+            </Box>
+
+            {display?.description ? (
+              <Box
+                sx={{
+                  p: 1.15,
+                  borderRadius: 1.75,
+                  border: "1px dashed var(--admin-border)",
+                  bgcolor: "var(--admin-surface-alt)",
+                }}
+              >
+                <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)", mb: 0.3 }}>توضیحات</Typography>
+                <Typography sx={{ fontSize: 12.5, color: "var(--admin-text)", lineHeight: 1.7 }}>
+                  {display.description}
+                </Typography>
+              </Box>
             ) : null}
-            <DocumentPaymentBreakdownView doc={record || invoice} />
-            {documentNeedsSettle(record || invoice) ? (
+
+            <DocumentPaymentBreakdownView doc={display} />
+            {documentNeedsSettle(display) ? (
               <Button
                 size="small"
                 variant="outlined"
@@ -458,54 +591,66 @@ export default function InvoiceDetailsDialog({
                 تسویه نسیه
               </Button>
             ) : null}
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1 }}>
-              <Typography sx={{ color: "var(--admin-text)", fontWeight: 600, fontSize: 13 }}>
-                ردیف‌های فاکتور
-              </Typography>
-              <Button
-                size="small"
-                variant="contained"
-                startIcon={<AddIcon sx={{ fontSize: 16 }} />}
-                onClick={() => setDrafts((prev) => [...prev, emptyDraft()])}
-                sx={{
-                  ...adminButtonStartIconSx,
-                  backgroundColor: "var(--admin-accent)",
-                  fontSize: 12,
-                  minHeight: 28,
-                  py: 0.25,
-                  "&:hover": { backgroundColor: "var(--admin-accent-hover)" },
-                }}
-              >
-                افزودن ردیف
-              </Button>
-            </Box>
 
-            {drafts.length === 0 ? (
-              <Typography sx={{ color: "var(--admin-text-muted)", py: 2, textAlign: "center", fontSize: 12 }}>
-                ردیفی ثبت نشده است
-              </Typography>
-            ) : (
-              <TableContainer
-                component={Paper}
+            <Box
+              sx={{
+                borderRadius: 2.25,
+                border: "1px solid var(--admin-border)",
+                overflow: "hidden",
+                bgcolor: "var(--admin-surface)",
+              }}
+            >
+              <Box
                 sx={{
-                  backgroundColor: "var(--admin-surface)",
-                  borderRadius: "10px",
-                  border: "1px solid var(--admin-border)",
-                  boxShadow: "none",
-                  overflowX: "auto",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 1,
+                  px: 1.35,
+                  py: 1,
+                  bgcolor: "var(--admin-surface-alt)",
+                  borderBottom: "1px solid var(--admin-border)",
                 }}
               >
+                <Box>
+                  <Typography sx={{ color: "var(--admin-text)", fontWeight: 800, fontSize: 13 }}>
+                    اقلام کالا / خدمات
+                  </Typography>
+                  <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, mt: 0.15 }}>
+                    Enter در هر فیلد = افزودن ردیف جدید
+                  </Typography>
+                </Box>
+                <Button
+                  size="small"
+                  variant="contained"
+                  startIcon={<AddIcon sx={{ fontSize: 16 }} />}
+                  onClick={() => addRow(true)}
+                  sx={{
+                    ...adminButtonStartIconSx,
+                    backgroundColor: "var(--admin-accent)",
+                    fontSize: 12,
+                    minHeight: 30,
+                    py: 0.35,
+                    borderRadius: 1.5,
+                    "&:hover": { backgroundColor: "var(--admin-accent-hover)" },
+                  }}
+                >
+                  افزودن ردیف
+                </Button>
+              </Box>
+
+              <TableContainer component={Paper} elevation={0} sx={{ boxShadow: "none", bgcolor: "transparent" }}>
                 <Table size="small">
                   <TableHead>
                     <TableRow>
                       <StyledTableCell align="center">ردیف</StyledTableCell>
-                      <StyledTableCell align="center">عنوان</StyledTableCell>
+                      <StyledTableCell align="center">شرح کالا / خدمات</StyledTableCell>
                       <StyledTableCell align="center">فی</StyledTableCell>
                       <StyledTableCell align="center">تعداد</StyledTableCell>
                       {productEntryEnabled ? <StyledTableCell align="center">بارکد</StyledTableCell> : null}
-                      {productEntryEnabled ? <StyledTableCell align="center">قیمت فروش</StyledTableCell> : null}
-                      <StyledTableCell align="center">کل</StyledTableCell>
-                      <StyledTableCell align="center">عملیات</StyledTableCell>
+                      {productEntryEnabled ? <StyledTableCell align="center">قیمت خرید</StyledTableCell> : null}
+                      <StyledTableCell align="center">مبلغ کل</StyledTableCell>
+                      <StyledTableCell align="center">حذف</StyledTableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -514,15 +659,19 @@ export default function InvoiceDetailsDialog({
                         parseAmountInput(row.unitPrice) * parseQuantityInput(row.quantity);
                       return (
                         <StyledTableRow key={row.key}>
-                          <StyledTableCell align="center" sx={{ width: 44 }}>
-                            {index + 1}
+                          <StyledTableCell align="center" sx={{ width: 48, fontWeight: 700 }}>
+                            {formatAmountNumber(index + 1)}
                           </StyledTableCell>
-                          <StyledTableCell align="center" sx={{ minWidth: 140 }}>
+                          <StyledTableCell align="center" sx={{ minWidth: 160 }}>
                             <TextField
                               size="small"
-                              placeholder="عنوان"
+                              placeholder="شرح"
                               value={row.title}
                               onChange={(e) => updateDraft(row.key, { title: e.target.value })}
+                              onKeyDown={handleFieldEnter}
+                              inputRef={(el) => {
+                                titleInputRefs.current[row.key] = el;
+                              }}
                               fullWidth
                               sx={fieldSx}
                             />
@@ -541,6 +690,7 @@ export default function InvoiceDetailsDialog({
                                   ...(row.purchasePrice ? {} : { purchasePrice: unitPrice }),
                                 });
                               }}
+                              onKeyDown={handleFieldEnter}
                               fullWidth
                               sx={{
                                 ...fieldSx,
@@ -556,6 +706,7 @@ export default function InvoiceDetailsDialog({
                               inputMode="decimal"
                               value={row.quantity}
                               onChange={(e) => updateDraft(row.key, { quantity: e.target.value })}
+                              onKeyDown={handleFieldEnter}
                               fullWidth
                               sx={{
                                 ...fieldSx,
@@ -570,6 +721,7 @@ export default function InvoiceDetailsDialog({
                                 placeholder="بارکد"
                                 value={row.barcode}
                                 onChange={(e) => updateDraft(row.key, { barcode: e.target.value })}
+                                onKeyDown={handleFieldEnter}
                                 fullWidth
                                 sx={fieldSx}
                               />
@@ -592,6 +744,7 @@ export default function InvoiceDetailsDialog({
                                 onChange={(e) =>
                                   updateDraft(row.key, { purchasePrice: formatAmountInput(e.target.value) })
                                 }
+                                onKeyDown={handleFieldEnter}
                                 fullWidth
                                 sx={{
                                   ...fieldSx,
@@ -600,16 +753,22 @@ export default function InvoiceDetailsDialog({
                               />
                             </StyledTableCell>
                           ) : null}
-                          <StyledTableCell align="center" sx={{ whiteSpace: "nowrap" }}>
-                            <Typography sx={{ color: "var(--admin-accent)", fontWeight: 700, fontSize: 12 }}>
+                          <StyledTableCell align="center" sx={{ whiteSpace: "nowrap", minWidth: 100 }}>
+                            <Typography sx={{ color: "var(--admin-accent)", fontWeight: 800, fontSize: 13 }}>
                               {formatAmountNumber(lineTotal) || "۰"}
                             </Typography>
                           </StyledTableCell>
-                          <StyledTableCell align="center" sx={{ width: 44 }}>
+                          <StyledTableCell align="center" sx={{ width: 48 }}>
                             <IconButton
                               size="small"
-                              onClick={() => setDrafts((prev) => prev.filter((item) => item.key !== row.key))}
+                              onClick={() =>
+                                setDrafts((prev) => {
+                                  const next = prev.filter((item) => item.key !== row.key);
+                                  return next.length > 0 ? next : [emptyDraft()];
+                                })
+                              }
                               sx={{ color: "#ff6b6b", p: 0.4 }}
+                              aria-label="حذف ردیف"
                             >
                               <DeleteOutlineIcon sx={{ fontSize: 18 }} />
                             </IconButton>
@@ -620,39 +779,66 @@ export default function InvoiceDetailsDialog({
                   </TableBody>
                 </Table>
               </TableContainer>
-            )}
 
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
-              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>مبلغ کل فاکتور</Typography>
-                <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: 13 }}>
-                  {formatAmountNumber(invoiceAmount) || "۰"} تومان
-                </Typography>
-              </Box>
-              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>
-                  {drafts.length > 0 ? "مجموع ردیف‌ها" : "جمع ردیف‌ها"}
-                </Typography>
-                <Typography
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: { xs: "1fr", sm: "1fr auto" },
+                  gap: 1,
+                  px: 1.35,
+                  py: 1.25,
+                  borderTop: "1px solid var(--admin-border)",
+                  bgcolor: "var(--admin-surface-alt)",
+                }}
+              >
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 0.55, justifyContent: "center" }}>
+                  {amountMismatch ? (
+                    <Typography sx={{ color: "#e6a23c", fontSize: 12, lineHeight: 1.7 }}>
+                      مجموع ردیف‌ها با مبلغ کل فاکتور یکی نیست. با تأیید ذخیره، مبلغ فاکتور به مجموع ردیف‌ها تغییر می‌کند.
+                    </Typography>
+                  ) : (
+                    <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>
+                      مبالغ به تومان
+                    </Typography>
+                  )}
+                </Box>
+                <Box
                   sx={{
-                    color: amountMismatch ? "#e6a23c" : "var(--admin-accent)",
-                    fontWeight: 700,
-                    fontSize: 14,
+                    minWidth: { sm: 240 },
+                    p: 1.1,
+                    borderRadius: 1.75,
+                    border: "1px solid var(--admin-border)",
+                    bgcolor: "var(--admin-surface)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 0.65,
                   }}
                 >
-                  {formatAmountNumber(itemsTotal) || "۰"} تومان
-                </Typography>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}>
+                    <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>مبلغ ثبت‌شده فاکتور</Typography>
+                    <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: 13 }}>
+                      {formatAmountNumber(invoiceAmount) || "۰"}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}>
+                    <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>جمع اقلام</Typography>
+                    <Typography
+                      sx={{
+                        color: amountMismatch ? "#e6a23c" : "var(--admin-accent)",
+                        fontWeight: 900,
+                        fontSize: 15,
+                      }}
+                    >
+                      {formatAmountNumber(itemsTotal) || "۰"}
+                    </Typography>
+                  </Box>
+                </Box>
               </Box>
-              {amountMismatch ? (
-                <Typography sx={{ color: "#e6a23c", fontSize: 12 }}>
-                  مجموع ردیف‌ها با مبلغ کل فاکتور یکی نیست. برای ذخیره باید تأیید کنید تا مبلغ فاکتور به مجموع ردیف‌ها تغییر کند.
-                </Typography>
-              ) : null}
             </Box>
           </Box>
         )}
       </DialogContent>
-      <DialogActions sx={{ padding: "10px 16px" }}>
+      <DialogActions sx={{ px: 2.25, py: 1.35, borderTop: "1px solid var(--admin-border)", gap: 1 }}>
         <Button onClick={onClose} disabled={saving} sx={{ color: "var(--admin-text-muted)" }}>
           انصراف
         </Button>
@@ -675,10 +861,12 @@ export default function InvoiceDetailsDialog({
           disabled={loading || saving}
           sx={{
             backgroundColor: "var(--admin-accent)",
+            fontWeight: 800,
+            borderRadius: 1.75,
             "&:hover": { backgroundColor: "var(--admin-accent-hover)" },
           }}
         >
-          {saving ? "در حال ذخیره..." : "ذخیره جزئیات"}
+          {saving ? "در حال ذخیره..." : "ذخیره فاکتور"}
         </Button>
       </DialogActions>
     </Dialog>
