@@ -13,6 +13,7 @@ import {
   ListItemIcon,
   ListItemText,
   Divider,
+  Tooltip,
   useMediaQuery,
 } from "@mui/material";
 import { useTableOrdersPending } from "@/app/admin/table-orders/TableOrdersPendingProvider";
@@ -460,48 +461,6 @@ export default function Header({
           </Box>
         )}
 
-        {isAuditor && (
-          <Box
-            sx={{
-              mb: 1,
-              px: { xs: 1.25, md: 2 },
-              py: 0.75,
-              borderRadius: "10px",
-              backgroundColor: "var(--admin-info-bg)",
-              border: "1px solid var(--admin-info-border)",
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-              minWidth: 0,
-            }}
-          >
-            <FactCheckIcon sx={{ color: "var(--admin-info-icon)", fontSize: 18, flexShrink: 0 }} />
-            <Typography
-              sx={{
-                flex: 1,
-                minWidth: 0,
-                fontSize: { xs: "11px", md: "13px" },
-                color: "var(--admin-text)",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              حالت حسابرسی — فروشگاه: <strong>{shopDisplayName}</strong>
-            </Typography>
-            {auditorShopCount > 1 && (
-              <Button
-                size="small"
-                startIcon={<SwapHorizIcon sx={{ fontSize: 16 }} />}
-                onClick={handleSwitchShop}
-                sx={{ flexShrink: 0, fontSize: "12px", color: "var(--admin-accent)", textTransform: "none" }}
-              >
-                تغییر فروشگاه
-              </Button>
-            )}
-          </Box>
-        )}
-
         <Box
           sx={{
             backgroundColor: "var(--admin-surface)",
@@ -759,6 +718,33 @@ export default function Header({
                   onClose={() => setChangePasswordOpen(false)}
                 />
                 <FinanceRemindersBell />
+                {isAuditor ? (
+                  <Tooltip
+                    title={
+                      auditorShopCount > 1
+                        ? `حالت حسابرسی — ${shopDisplayName} (کلیک برای تغییر فروشگاه)`
+                        : `حالت حسابرسی — ${shopDisplayName}`
+                    }
+                    arrow
+                  >
+                    <IconButton
+                      onClick={auditorShopCount > 1 ? handleSwitchShop : undefined}
+                      aria-label={`حالت حسابرسی — فروشگاه ${shopDisplayName}`}
+                      sx={{
+                        color: "var(--admin-info-icon, var(--admin-accent))",
+                        backgroundColor: "var(--admin-info-bg, var(--admin-icon-bg))",
+                        padding: { xs: "5px", md: "8px" },
+                        flexShrink: 0,
+                        cursor: auditorShopCount > 1 ? "pointer" : "default",
+                        "&:hover": {
+                          backgroundColor: "var(--admin-icon-bg-hover)",
+                        },
+                      }}
+                    >
+                      <FactCheckIcon sx={{ fontSize: { xs: "18px", md: "24px" } }} />
+                    </IconButton>
+                  </Tooltip>
+                ) : null}
                 <IconButton
                   onClick={() => window.dispatchEvent(new Event(WEBINO_CHATBOT_TOGGLE_EVENT))}
                   aria-label="دستیار وبینو"
