@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Box,
   Button,
@@ -22,6 +22,7 @@ import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import { toast } from "react-toastify";
 import {
   fetchShopAccountTransactions,
+  SHOP_ACCOUNT_TX_PAGE_SIZE,
   type ShopAccount,
   type ShopAccountTransactionEvent,
   type ShopAccountTransactionHistory,
@@ -162,22 +163,34 @@ type Props = {
 
 export default function ShopAccountHistoryDialog({ open, account, onClose }: Props) {
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [history, setHistory] = useState<ShopAccountTransactionHistory | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const loadingMoreRef = useRef(false);
 
   useEffect(() => {
     if (!open || !account) {
       setHistory(null);
+      setHasMore(false);
       return;
     }
     let cancelled = false;
     const load = async () => {
       setLoading(true);
       try {
-        const data = await fetchShopAccountTransactions(account.id, { limit: 800 });
-        if (!cancelled) setHistory(data);
+        const data = await fetchShopAccountTransactions(account.id, {
+          limit: SHOP_ACCOUNT_TX_PAGE_SIZE,
+          offset: 0,
+        });
+        if (!cancelled) {
+          setHistory(data);
+          setHasMore(data.pagination.has_more);
+        }
       } catch (e) {
         if (!cancelled) {
           setHistory(null);
+          setHasMore(false);
           toast.error(e instanceof Error ? e.message : "خطا در دریافت گردش حساب");
         }
       } finally {
@@ -190,15 +203,69 @@ export default function ShopAccountHistoryDialog({ open, account, onClose }: Pro
     };
   }, [open, account]);
 
-  const handlePrint = () => {
-    if (!history) return;
-    printHistory(history);
+  const loadMore = useCallback(async () => {
+    if (!account || !history || !hasMore || loadingMoreRef.current) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    try {
+      const data = await fetchShopAccountTransactions(account.id, {
+        limit: SHOP_ACCOUNT_TX_PAGE_SIZE,
+        offset: history.events.length,
+      });
+      setHistory((prev) => {
+        if (!prev) return data;
+        const seen = new Set(prev.events.map((e) => e.id));
+        const appended = data.events.filter((e) => !seen.has(e.id));
+        return {
+          ...prev,
+          summary: data.summary,
+          pagination: data.pagination,
+          events: [...prev.events, ...appended],
+        };
+      });
+      setHasMore(data.pagination.has_more);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "خطا در بارگذاری بیشتر");
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }, [account, history, hasMore]);
+
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el || !hasMore || loadingMoreRef.current) return;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 80) {
+      void loadMore();
+    }
+  };
+
+  const fetchAllForExport = async (): Promise<ShopAccountTransactionHistory | null> => {
+    if (!account || !history) return null;
+    const total = history.summary.events_count || history.pagination.total;
+    if (!hasMore && history.events.length >= total) return history;
+    try {
+      return await fetchShopAccountTransactions(account.id, {
+        limit: Math.min(Math.max(total, SHOP_ACCOUNT_TX_PAGE_SIZE), 2000),
+        offset: 0,
+      });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "خطا در دریافت کامل گردش");
+      return null;
+    }
+  };
+
+  const handlePrint = async () => {
+    const full = await fetchAllForExport();
+    if (!full) return;
+    printHistory(full);
   };
 
   const handleExport = async () => {
-    if (!history) return;
+    const full = await fetchAllForExport();
+    if (!full) return;
     try {
-      await downloadHistoryExcel(history);
+      await downloadHistoryExcel(full);
     } catch {
       toast.error("خروجی اکسل ساخته نشد");
     }
@@ -276,7 +343,7 @@ export default function ShopAccountHistoryDialog({ open, account, onClose }: Pro
                 size="small"
                 variant="outlined"
                 startIcon={<PrintIcon />}
-                onClick={handlePrint}
+                onClick={() => void handlePrint()}
                 disabled={history.events.length === 0}
                 sx={{ ...adminButtonStartIconSx, color: "var(--admin-text)", borderColor: "var(--admin-border)" }}
               >
@@ -295,6 +362,8 @@ export default function ShopAccountHistoryDialog({ open, account, onClose }: Pro
             </Box>
 
             <TableContainer
+              ref={scrollRef}
+              onScroll={handleScroll}
               sx={{
                 border: "1px solid var(--admin-border)",
                 borderRadius: 2,
@@ -322,6 +391,24 @@ export default function ShopAccountHistoryDialog({ open, account, onClose }: Pro
                   ) : (
                     history.events.map((event) => <EventRow key={event.id} event={event} />)
                   )}
+                  {loadingMore ? (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center" sx={{ py: 1.5 }}>
+                        <CircularProgress size={18} sx={{ color: "var(--admin-accent)" }} />
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                  {!loadingMore && hasMore ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={5}
+                        align="center"
+                        sx={{ color: "var(--admin-text-muted)", fontSize: 11, py: 1 }}
+                      >
+                        برای دیدن بقیه به پایین اسکرول کنید
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
                 </TableBody>
               </Table>
             </TableContainer>

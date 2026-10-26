@@ -312,18 +312,29 @@ export type ShopAccountTransactionHistory = {
     computed_balance: number;
     current_balance: number;
   };
+  pagination: {
+    limit: number;
+    offset: number;
+    total: number;
+    has_more: boolean;
+  };
   events: ShopAccountTransactionEvent[];
 };
 
+export const SHOP_ACCOUNT_TX_PAGE_SIZE = 30;
+
 export async function fetchShopAccountTransactions(
   accountId: number,
-  options?: { limit?: number; token?: string }
+  options?: { limit?: number; offset?: number; token?: string }
 ): Promise<ShopAccountTransactionHistory> {
   const token =
     options?.token ?? (typeof window !== "undefined" ? localStorage.getItem("token") || "" : "");
   const params = new URLSearchParams();
-  if (options?.limit) params.set("limit", String(options.limit));
-  const query = params.toString() ? `?${params.toString()}` : "";
+  const limit = options?.limit ?? SHOP_ACCOUNT_TX_PAGE_SIZE;
+  const offset = options?.offset ?? 0;
+  params.set("limit", String(limit));
+  params.set("offset", String(offset));
+  const query = `?${params.toString()}`;
   const res = await apiRequestError(
     "Get",
     {},
@@ -347,7 +358,45 @@ export async function fetchShopAccountTransactions(
     string,
     unknown
   >;
+  const paginationRaw = (
+    rec.pagination && typeof rec.pagination === "object" ? rec.pagination : {}
+  ) as Record<string, unknown>;
   const eventsRaw = Array.isArray(rec.events) ? rec.events : [];
+  const events = eventsRaw
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const row = item as Record<string, unknown>;
+      const id = typeof row.id === "string" ? row.id : String(row.id ?? "");
+      if (!id) return null;
+      return {
+        id,
+        kind: typeof row.kind === "string" ? row.kind : "",
+        kind_label: typeof row.kind_label === "string" ? row.kind_label : "",
+        direction: typeof row.direction === "string" ? row.direction : "out",
+        amount: Math.round(Number(row.amount) || 0),
+        signed_amount: Math.round(Number(row.signed_amount) || 0),
+        title: typeof row.title === "string" ? row.title : "",
+        description: typeof row.description === "string" ? row.description : null,
+        at: typeof row.at === "string" ? row.at : null,
+        at_jalali: typeof row.at_jalali === "string" ? row.at_jalali : null,
+        date: typeof row.date === "string" ? row.date : null,
+        date_jalali: typeof row.date_jalali === "string" ? row.date_jalali : null,
+        href: typeof row.href === "string" ? row.href : null,
+        balance_after:
+          row.balance_after == null ? null : Math.round(Number(row.balance_after) || 0),
+      } satisfies ShopAccountTransactionEvent;
+    })
+    .filter((item): item is ShopAccountTransactionEvent => item != null);
+  const total =
+    Number(paginationRaw.total) ||
+    Number(summaryRaw.events_count) ||
+    events.length;
+  const pageLimit = Number(paginationRaw.limit) || limit;
+  const pageOffset = Number(paginationRaw.offset) || offset;
+  const hasMore =
+    typeof paginationRaw.has_more === "boolean"
+      ? paginationRaw.has_more
+      : pageOffset + events.length < total;
   return {
     account: {
       id: Number(accountRaw.id) || accountId,
@@ -361,34 +410,16 @@ export async function fetchShopAccountTransactions(
       in_total: Math.round(Number(summaryRaw.in_total) || 0),
       out_total: Math.round(Number(summaryRaw.out_total) || 0),
       net: Math.round(Number(summaryRaw.net) || 0),
-      events_count: Number(summaryRaw.events_count) || 0,
+      events_count: Number(summaryRaw.events_count) || total,
       computed_balance: Math.round(Number(summaryRaw.computed_balance) || 0),
       current_balance: Math.round(Number(summaryRaw.current_balance) || 0),
     },
-    events: eventsRaw
-      .map((item) => {
-        if (!item || typeof item !== "object") return null;
-        const row = item as Record<string, unknown>;
-        const id = typeof row.id === "string" ? row.id : String(row.id ?? "");
-        if (!id) return null;
-        return {
-          id,
-          kind: typeof row.kind === "string" ? row.kind : "",
-          kind_label: typeof row.kind_label === "string" ? row.kind_label : "",
-          direction: typeof row.direction === "string" ? row.direction : "out",
-          amount: Math.round(Number(row.amount) || 0),
-          signed_amount: Math.round(Number(row.signed_amount) || 0),
-          title: typeof row.title === "string" ? row.title : "",
-          description: typeof row.description === "string" ? row.description : null,
-          at: typeof row.at === "string" ? row.at : null,
-          at_jalali: typeof row.at_jalali === "string" ? row.at_jalali : null,
-          date: typeof row.date === "string" ? row.date : null,
-          date_jalali: typeof row.date_jalali === "string" ? row.date_jalali : null,
-          href: typeof row.href === "string" ? row.href : null,
-          balance_after:
-            row.balance_after == null ? null : Math.round(Number(row.balance_after) || 0),
-        } satisfies ShopAccountTransactionEvent;
-      })
-      .filter((item): item is ShopAccountTransactionEvent => item != null),
+    pagination: {
+      limit: pageLimit,
+      offset: pageOffset,
+      total,
+      has_more: hasMore,
+    },
+    events,
   };
 }

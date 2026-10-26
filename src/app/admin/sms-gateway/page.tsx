@@ -37,6 +37,7 @@ type GatewaySettings = {
     otp_vars_mode: "code" | "shop_code";
     credit_body_id: number | null;
     low_quota_body_id: number | null;
+    welcome_body_id: number | null;
     purchase_body_id: number | null;
     category_restock_body_id: number | null;
     category_link_body_id: number | null;
@@ -72,6 +73,7 @@ export default function SmsGatewayPage() {
   const [otpBodyId, setOtpBodyId] = useState("");
   const [creditBodyId, setCreditBodyId] = useState("564775");
   const [lowQuotaBodyId, setLowQuotaBodyId] = useState("");
+  const [welcomeBodyId, setWelcomeBodyId] = useState("568953");
   const [purchaseBodyId, setPurchaseBodyId] = useState("566903");
   const [categoryRestockBodyId, setCategoryRestockBodyId] = useState("566901");
   const [categoryLinkBodyId, setCategoryLinkBodyId] = useState("566902");
@@ -109,6 +111,11 @@ export default function SmsGatewayPage() {
         data.melipayamak.low_quota_body_id != null
           ? String(data.melipayamak.low_quota_body_id)
           : "",
+      );
+      setWelcomeBodyId(
+        data.melipayamak.welcome_body_id != null
+          ? String(data.melipayamak.welcome_body_id)
+          : "568953",
       );
       setPurchaseBodyId(
         data.melipayamak.purchase_body_id != null
@@ -153,6 +160,7 @@ export default function SmsGatewayPage() {
         melipayamak_otp_body_id: otpBodyId.trim(),
         melipayamak_credit_body_id: creditBodyId.trim(),
         melipayamak_low_quota_body_id: lowQuotaBodyId.trim(),
+        melipayamak_welcome_body_id: welcomeBodyId.trim(),
         melipayamak_purchase_body_id: purchaseBodyId.trim(),
         melipayamak_category_restock_body_id: categoryRestockBodyId.trim(),
         melipayamak_category_link_body_id: categoryLinkBodyId.trim(),
@@ -361,6 +369,15 @@ export default function SmsGatewayPage() {
               inputProps={{ dir: "ltr" }}
             />
             <TextField
+              label="شناسه پترن خوش‌آمد باشگاه مشتریان (bodyId)"
+              value={welcomeBodyId}
+              onChange={(e) => setWelcomeBodyId(e.target.value.replace(/\D/g, ""))}
+              helperText="الگوی ۵۶۸۹۵۳: به باشگاه مشتریان {0} خوش آمدید"
+              fullWidth
+              sx={fieldSx}
+              inputProps={{ dir: "ltr" }}
+            />
+            <TextField
               label="شناسه پترن تشکر از خرید (bodyId)"
               value={purchaseBodyId}
               onChange={(e) => setPurchaseBodyId(e.target.value.replace(/\D/g, ""))}
@@ -392,9 +409,9 @@ export default function SmsGatewayPage() {
           <Typography
             sx={{ color: "var(--admin-text-muted)", fontSize: 12, mt: 2, lineHeight: 1.7 }}
           >
-            پترن‌های خدماتی (OTP، اعتبار، تشکر خرید ۵۶۶۹۰۳، موجود شدن دسته ۵۶۶۹۰۱، لینک کالا ۵۶۶۹۰۲ و …)
-            از وب‌سرویس می‌روند. برای «کالای جدید در دسته» هنوز پترن جدا ثبت نشده؛ تا تأیید، متن آزاد /
-            خط اختصاصی استفاده می‌شود.
+            پترن‌های خدماتی (OTP، اعتبار، خوش‌آمد باشگاه ۵۶۸۹۵۳، تشکر خرید ۵۶۶۹۰۳، موجود شدن دسته ۵۶۶۹۰۱،
+            لینک کالا ۵۶۶۹۰۲ و …) از وب‌سرویس می‌روند. برای «کالای جدید در دسته» هنوز پترن جدا ثبت نشده؛ تا
+            تأیید، متن آزاد / خط اختصاصی استفاده می‌شود.
           </Typography>
 
           <Button
