@@ -4,23 +4,69 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Box,
+  Button,
   Chip,
   CircularProgress,
   Container,
   Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   Typography,
 } from "@mui/material";
+import { styled } from "@mui/material/styles";
+import { tableCellClasses } from "@mui/material/TableCell";
 import EventNoteIcon from "@mui/icons-material/EventNote";
-import SouthWestIcon from "@mui/icons-material/SouthWest";
-import NorthEastIcon from "@mui/icons-material/NorthEast";
+import DatePicker from "react-multi-date-picker";
+import DateObject from "react-date-object";
+import persian from "react-date-object/calendars/persian";
+import persian_fa from "react-date-object/locales/persian_fa";
+import "react-multi-date-picker/styles/layouts/mobile.css";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { apiRequestError } from "@/app/lib/apiRequestError/client";
 import tokenCode from "@/app/coponent/tokenCode";
 import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
+import { jalaliYmd } from "@/app/lib/accounting";
+import { todayJalaliDateObject } from "@/app/lib/cheques";
 import { adminPageSx } from "@/app/admin/theme/adminTheme";
 
-type FilterMode = "today" | "week" | "month";
+const StyledTableCell = styled(TableCell)(() => ({
+  [`&.${tableCellClasses.head}`]: {
+    backgroundColor: "var(--admin-surface-alt)",
+    color: "var(--admin-text-muted)",
+    fontWeight: 700,
+    fontSize: "12px",
+    padding: "10px 12px",
+    whiteSpace: "nowrap",
+    borderBottom: "1px solid var(--admin-border)",
+  },
+  [`&.${tableCellClasses.body}`]: {
+    color: "var(--admin-text)",
+    fontSize: "13px",
+    padding: "10px 12px",
+    verticalAlign: "middle",
+    borderBottom: "1px solid var(--admin-border)",
+  },
+}));
+
+const StyledTableRow = styled(TableRow)(() => ({
+  backgroundColor: "var(--admin-surface)",
+  "&:nth-of-type(even)": {
+    backgroundColor: "var(--admin-surface-alt)",
+  },
+  "&:last-child td": {
+    borderBottom: "none",
+  },
+  "&:hover": {
+    backgroundColor: "var(--admin-menu-hover)",
+  },
+}));
+
+type FilterMode = "today" | "week" | "month" | "custom";
 
 type Bucket = { count: number; amount: number };
 
@@ -72,10 +118,31 @@ const FILTERS: Array<{ value: FilterMode; label: string }> = [
   { value: "today", label: "روزانه" },
   { value: "week", label: "هفتگی" },
   { value: "month", label: "ماهانه" },
+  { value: "custom", label: "تاریخ دلخواه" },
 ];
 
 const formatNumber = (num: number) =>
   new Intl.NumberFormat("fa-IR").format(Math.round(num || 0));
+
+const datePickerBoxSx = {
+  minWidth: 128,
+  "& .rmdp-wrapper": { width: "100%" },
+  "& .rmdp-input": {
+    width: "100%",
+    height: "32px",
+    borderRadius: "8px",
+    backgroundColor: "var(--admin-surface)",
+    border: "1px solid var(--admin-border)",
+    color: "var(--admin-text)",
+    fontSize: "12.5px",
+    padding: "4px 10px",
+    boxSizing: "border-box",
+  },
+  "& .rmdp-input:focus": {
+    borderColor: "var(--admin-accent)",
+    outline: "none",
+  },
+} as const;
 
 function bucket(side: SummarySide | undefined, key: keyof SummarySide): Bucket {
   const value = side?.[key];
@@ -122,19 +189,32 @@ function StatCard({
 
 export default function FinancialActivityPage() {
   const [filter, setFilter] = useState<FilterMode>("today");
+  const [customFrom, setCustomFrom] = useState<DateObject | null>(() => todayJalaliDateObject());
+  const [customTo, setCustomTo] = useState<DateObject | null>(() => todayJalaliDateObject());
+  const [appliedFrom, setAppliedFrom] = useState("");
+  const [appliedTo, setAppliedTo] = useState("");
   const [loading, setLoading] = useState(true);
   const [report, setReport] = useState<Report | null>(null);
   const [directionTab, setDirectionTab] = useState<"all" | "in" | "out">("all");
 
   const load = useCallback(async () => {
+    if (filter === "custom" && !appliedFrom && !appliedTo) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const token = tokenCode();
+      const params = new URLSearchParams({ filter });
+      if (filter === "custom") {
+        if (appliedFrom) params.set("from_date", appliedFrom);
+        if (appliedTo) params.set("to_date", appliedTo || appliedFrom);
+      }
       const res = await apiRequestError(
         "Get",
         {},
         {},
-        `/api/financial-day-activity?filter=${filter}`,
+        `/api/financial-day-activity?${params.toString()}`,
         true,
         true,
         token
@@ -151,11 +231,37 @@ export default function FinancialActivityPage() {
     } finally {
       setLoading(false);
     }
-  }, [filter]);
+  }, [filter, appliedFrom, appliedTo]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  const selectPreset = (value: FilterMode) => {
+    setFilter(value);
+    if (value !== "custom") {
+      setAppliedFrom("");
+      setAppliedTo("");
+    } else if (!appliedFrom && !appliedTo) {
+      const today = jalaliYmd(todayJalaliDateObject());
+      setCustomFrom(todayJalaliDateObject());
+      setCustomTo(todayJalaliDateObject());
+      setAppliedFrom(today);
+      setAppliedTo(today);
+    }
+  };
+
+  const applyCustomRange = () => {
+    const from = jalaliYmd(customFrom);
+    const to = jalaliYmd(customTo) || from;
+    if (!from && !to) {
+      toast.error("حداقل یک تاریخ انتخاب کنید");
+      return;
+    }
+    setFilter("custom");
+    setAppliedFrom(from || to);
+    setAppliedTo(to || from);
+  };
 
   const events = useMemo(() => {
     const list = report?.events ?? [];
@@ -201,13 +307,13 @@ export default function FinancialActivityPage() {
             </Box>
           </Box>
 
-          <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap" }}>
+          <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap", alignItems: "center" }}>
             {FILTERS.map((item) => (
               <Chip
                 key={item.value}
                 label={item.label}
                 clickable
-                onClick={() => setFilter(item.value)}
+                onClick={() => selectPreset(item.value)}
                 sx={{
                   fontWeight: 700,
                   bgcolor: filter === item.value ? "var(--admin-accent)" : "var(--admin-surface)",
@@ -216,6 +322,77 @@ export default function FinancialActivityPage() {
                 }}
               />
             ))}
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 0.75,
+                flexWrap: "wrap",
+                p: 0.6,
+                borderRadius: 2,
+                border: filter === "custom" ? "1px solid var(--admin-accent)" : "1px solid var(--admin-border)",
+                bgcolor: "var(--admin-surface-alt)",
+              }}
+            >
+              <Typography sx={{ fontSize: 11.5, color: "var(--admin-text-muted)", whiteSpace: "nowrap" }}>
+                از
+              </Typography>
+              <Box sx={datePickerBoxSx}>
+                <DatePicker
+                  value={customFrom}
+                  onChange={(value) => {
+                    const next = Array.isArray(value) ? value[0] : value;
+                    setCustomFrom(next || null);
+                    setFilter("custom");
+                  }}
+                  calendar={persian}
+                  locale={persian_fa}
+                  calendarPosition="bottom-right"
+                  format="YYYY/MM/DD"
+                  editable={false}
+                  inputClass="rmdp-input"
+                  placeholder="تاریخ شروع"
+                />
+              </Box>
+              <Typography sx={{ fontSize: 11.5, color: "var(--admin-text-muted)", whiteSpace: "nowrap" }}>
+                تا
+              </Typography>
+              <Box sx={datePickerBoxSx}>
+                <DatePicker
+                  value={customTo}
+                  onChange={(value) => {
+                    const next = Array.isArray(value) ? value[0] : value;
+                    setCustomTo(next || null);
+                    setFilter("custom");
+                  }}
+                  calendar={persian}
+                  locale={persian_fa}
+                  calendarPosition="bottom-right"
+                  format="YYYY/MM/DD"
+                  editable={false}
+                  inputClass="rmdp-input"
+                  placeholder="تاریخ پایان"
+                />
+              </Box>
+              <Button
+                size="small"
+                variant="contained"
+                onClick={applyCustomRange}
+                sx={{
+                  minWidth: 0,
+                  px: 1.25,
+                  py: 0.45,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  borderRadius: 1.5,
+                  bgcolor: "var(--admin-accent)",
+                  color: "var(--admin-on-accent, #fff)",
+                  "&:hover": { bgcolor: "var(--admin-accent-hover)" },
+                }}
+              >
+                اعمال
+              </Button>
+            </Box>
           </Box>
         </Box>
 
@@ -377,52 +554,33 @@ export default function FinancialActivityPage() {
                 </Typography>
               </Paper>
             ) : (
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 0.85 }}>
-                {events.map((event) => {
-                  const isIn = event.direction === "in";
-                  return (
-                    <Paper
-                      key={event.id}
-                      elevation={0}
-                      sx={{
-                        p: 1.25,
-                        borderRadius: 2,
-                        bgcolor: "var(--admin-surface)",
-                        border: "1px solid var(--admin-border)",
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          gap: 1,
-                          alignItems: "flex-start",
-                          flexWrap: "wrap",
-                        }}
-                      >
-                        <Box sx={{ display: "flex", gap: 1, minWidth: 0, flex: 1 }}>
-                          <Box
-                            sx={{
-                              mt: 0.2,
-                              width: 28,
-                              height: 28,
-                              borderRadius: "50%",
-                              display: "grid",
-                              placeItems: "center",
-                              bgcolor: isIn
-                                ? "rgba(120, 181, 104, 0.18)"
-                                : "rgba(248, 113, 113, 0.15)",
-                              color: isIn ? "var(--admin-accent)" : "var(--admin-error, #f87171)",
-                              flexShrink: 0,
-                            }}
-                          >
-                            {isIn ? (
-                              <SouthWestIcon sx={{ fontSize: 16 }} />
-                            ) : (
-                              <NorthEastIcon sx={{ fontSize: 16 }} />
-                            )}
-                          </Box>
-                          <Box sx={{ minWidth: 0 }}>
+              <TableContainer
+                component={Paper}
+                elevation={0}
+                sx={{
+                  bgcolor: "var(--admin-surface)",
+                  borderRadius: 2.5,
+                  border: "1px solid var(--admin-border)",
+                  overflowX: "auto",
+                }}
+              >
+                <Table size="small" aria-label="اتفاقات مالی">
+                  <TableHead>
+                    <TableRow>
+                      <StyledTableCell align="right">شرح</StyledTableCell>
+                      <StyledTableCell align="center">نوع</StyledTableCell>
+                      <StyledTableCell align="center">روش</StyledTableCell>
+                      <StyledTableCell align="right">جزئیات</StyledTableCell>
+                      <StyledTableCell align="center">زمان</StyledTableCell>
+                      <StyledTableCell align="left">مبلغ</StyledTableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {events.map((event) => {
+                      const isIn = event.direction === "in";
+                      return (
+                        <StyledTableRow key={event.id}>
+                          <StyledTableCell align="right" sx={{ minWidth: 160 }}>
                             {event.href ? (
                               <Link
                                 href={event.href}
@@ -436,61 +594,49 @@ export default function FinancialActivityPage() {
                                 {event.title}
                               </Link>
                             ) : (
-                              <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: 13 }}>
+                              <Typography sx={{ fontWeight: 700, fontSize: 13, color: "var(--admin-text)" }}>
                                 {event.title}
                               </Typography>
                             )}
-                            <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap", mt: 0.35 }}>
-                              <Chip
-                                size="small"
-                                label={isIn ? "دریافتی" : "پرداختی"}
-                                sx={{
-                                  height: 22,
-                                  fontSize: 10,
-                                  bgcolor: isIn
-                                    ? "rgba(120, 181, 104, 0.15)"
-                                    : "rgba(248, 113, 113, 0.12)",
-                                  color: "var(--admin-text)",
-                                }}
-                              />
-                              <Chip
-                                size="small"
-                                label={event.method_label || event.method}
-                                sx={{
-                                  height: 22,
-                                  fontSize: 10,
-                                  bgcolor: "var(--admin-surface-alt)",
-                                  color: "var(--admin-text)",
-                                }}
-                              />
-                            </Box>
-                            {event.subtitle ? (
-                              <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, mt: 0.35 }}>
-                                {event.subtitle}
-                              </Typography>
-                            ) : null}
-                            {event.at_jalali ? (
-                              <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, mt: 0.2 }}>
-                                {event.at_jalali}
-                              </Typography>
-                            ) : null}
-                          </Box>
-                        </Box>
-                        <Typography
-                          sx={{
-                            fontWeight: 800,
-                            fontSize: 14,
-                            color: isIn ? "var(--admin-accent)" : "var(--admin-error, #f87171)",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {formatNumber(event.amount)}
-                        </Typography>
-                      </Box>
-                    </Paper>
-                  );
-                })}
-              </Box>
+                          </StyledTableCell>
+                          <StyledTableCell align="center">
+                            <Typography
+                              sx={{
+                                fontSize: 12,
+                                fontWeight: 700,
+                                color: isIn ? "var(--admin-accent)" : "var(--admin-error, #f87171)",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {isIn ? "دریافتی" : "پرداختی"}
+                            </Typography>
+                          </StyledTableCell>
+                          <StyledTableCell align="center" sx={{ whiteSpace: "nowrap" }}>
+                            {event.method_label || event.method || "—"}
+                          </StyledTableCell>
+                          <StyledTableCell align="right" sx={{ color: "var(--admin-text-muted)", maxWidth: 220 }}>
+                            {event.subtitle || "—"}
+                          </StyledTableCell>
+                          <StyledTableCell align="center" sx={{ color: "var(--admin-text-muted)", whiteSpace: "nowrap" }}>
+                            {event.at_jalali || "—"}
+                          </StyledTableCell>
+                          <StyledTableCell
+                            align="left"
+                            sx={{
+                              fontWeight: 800,
+                              fontVariantNumeric: "tabular-nums",
+                              whiteSpace: "nowrap",
+                              color: isIn ? "var(--admin-accent)" : "var(--admin-error, #f87171)",
+                            }}
+                          >
+                            {formatNumber(event.amount)}
+                          </StyledTableCell>
+                        </StyledTableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             )}
           </>
         )}

@@ -8,13 +8,11 @@ import {
   DialogTitle,
   Divider,
   IconButton,
-  List,
-  ListItemButton,
-  ListItemText,
   Typography,
 } from "@mui/material";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import CloseIcon from "@mui/icons-material/Close";
+import RefreshIcon from "@mui/icons-material/Refresh";
 import { useRouter } from "next/navigation";
 import {
   useFinanceReminders,
@@ -90,45 +88,81 @@ function Section({
           {emptyText}
         </Typography>
       ) : (
-        <List dense disablePadding sx={{ bgcolor: "var(--admin-icon-bg)", borderRadius: 2 }}>
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 1,
+          }}
+        >
           {items.map((item) => (
-            <ListItemButton
+            <Box
               key={`${item.kind}-${item.source_type}-${item.id}`}
+              component="button"
+              type="button"
               onClick={() => onPick(item)}
               sx={{
-                borderRadius: 1.5,
-                alignItems: "flex-start",
-                py: 1,
-                "&:hover": { backgroundColor: "var(--admin-menu-hover, rgba(255,255,255,0.06))" },
+                all: "unset",
+                boxSizing: "border-box",
+                cursor: "pointer",
+                display: "flex",
+                flexDirection: "column",
+                gap: 0.45,
+                p: 1.15,
+                minWidth: 0,
+                borderRadius: 2,
+                bgcolor: "var(--admin-surface-alt)",
+                border: "1px solid var(--admin-border)",
+                transition: "background-color 0.15s ease, border-color 0.15s ease",
+                "&:hover": {
+                  bgcolor: "var(--admin-menu-hover, rgba(255,255,255,0.06))",
+                  borderColor: "var(--admin-accent)",
+                },
               }}
             >
-              <ListItemText
-                primary={
-                  <Typography sx={{ fontSize: 13, fontWeight: 600, color: "var(--admin-text)" }}>
-                    {item.title || item.kind_label || "مورد"}
-                    {item.reference ? (
-                      <Typography component="span" sx={{ mr: 0.75, fontWeight: 400, color: "var(--admin-text-muted)", fontSize: 12 }}>
-                        — {item.reference}
-                      </Typography>
-                    ) : null}
+              <Typography
+                sx={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: "var(--admin-text)",
+                  lineHeight: 1.45,
+                  overflow: "hidden",
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                }}
+              >
+                {item.title || item.kind_label || "مورد"}
+                {item.reference ? (
+                  <Typography
+                    component="span"
+                    sx={{ mr: 0.5, fontWeight: 400, color: "var(--admin-text-muted)", fontSize: 12 }}
+                  >
+                    — {item.reference}
                   </Typography>
-                }
-                secondary={
-                  <Box sx={{ mt: 0.35, display: "flex", flexDirection: "column", gap: 0.2 }}>
-                    <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)" }}>
-                      {[item.party, item.due_date_jalali ? `سررسید ${item.due_date_jalali}` : null, item.direction_label]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </Typography>
-                    <Typography sx={{ fontSize: 13, fontWeight: 700, color: "var(--admin-accent)" }}>
-                      {formatMoney(item.amount)} تومان
-                    </Typography>
-                  </Box>
-                }
-              />
-            </ListItemButton>
+                ) : null}
+              </Typography>
+              <Typography
+                sx={{
+                  fontSize: 11.5,
+                  color: "var(--admin-text-muted)",
+                  lineHeight: 1.5,
+                  overflow: "hidden",
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                }}
+              >
+                {[item.party, item.due_date_jalali ? `سررسید ${item.due_date_jalali}` : null, item.direction_label]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </Typography>
+              <Typography sx={{ fontSize: 13, fontWeight: 800, color: "var(--admin-accent)", mt: "auto" }}>
+                {formatMoney(item.amount)} تومان
+              </Typography>
+            </Box>
           ))}
-        </List>
+        </Box>
       )}
     </Box>
   );
@@ -136,7 +170,7 @@ function Section({
 
 export default function FinanceRemindersBell() {
   const router = useRouter();
-  const { data, totalCount, open, setOpen, loading } = useFinanceReminders();
+  const { data, totalCount, open, setOpen, loading, refresh } = useFinanceReminders();
 
   if (!data && !loading && totalCount === 0) {
     // هنوز لود نشده یا دسترسی نیست — زنگوله را فقط وقتی داده داریم یا در حال لودیم نشان بده
@@ -202,14 +236,38 @@ export default function FinanceRemindersBell() {
           }}
         >
           <Typography sx={{ fontWeight: 800, fontSize: 16 }}>یادآوری وصول و پرداخت</Typography>
-          <IconButton
-            size="small"
-            onClick={() => setOpen(false)}
-            sx={{ color: "var(--admin-text-muted)" }}
-            aria-label="بستن"
-          >
-            <CloseIcon fontSize="small" />
-          </IconButton>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.25 }}>
+            <IconButton
+              size="small"
+              onClick={() => void refresh(true)}
+              disabled={loading}
+              sx={{ color: "var(--admin-text-muted)" }}
+              aria-label="بروزرسانی"
+              title="بروزرسانی"
+            >
+              <RefreshIcon
+                fontSize="small"
+                sx={
+                  loading
+                    ? {
+                        "@keyframes financeReminderSpin": {
+                          to: { transform: "rotate(-360deg)" },
+                        },
+                        animation: "financeReminderSpin 0.85s linear infinite",
+                      }
+                    : undefined
+                }
+              />
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={() => setOpen(false)}
+              sx={{ color: "var(--admin-text-muted)" }}
+              aria-label="بستن"
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </Box>
         </DialogTitle>
         <Divider sx={{ borderColor: "var(--admin-border)" }} />
         <DialogContent sx={{ px: 2, py: 2 }}>
