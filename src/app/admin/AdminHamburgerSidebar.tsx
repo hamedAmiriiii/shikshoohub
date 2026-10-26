@@ -286,7 +286,7 @@ export default function AdminHamburgerSidebar({
       },
       {
         id: "financial-activity",
-        label: "اتفاقات مالی",
+        label: "رویدادهای مالی",
         href: "/admin/financial-activity",
         icon: <EventAvailableIcon />,
         permission: "reports",

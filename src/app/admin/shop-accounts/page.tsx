@@ -21,6 +21,8 @@ import AddIcon from "@mui/icons-material/Add";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import HistoryIcon from "@mui/icons-material/History";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import { apiRequestError } from "@/app/lib/apiRequestError/client";
 import tokenCode from "@/app/coponent/tokenCode";
 import { toast, ToastContainer } from "react-toastify";
@@ -39,6 +41,8 @@ import { jalaliYmd, todayJalaliYmd } from "@/app/lib/accounting";
 import { todayJalaliDateObject } from "@/app/lib/cheques";
 import { AccountingJalaliDateField } from "@/app/admin/accounting/ui";
 import ShopAccountBalanceAdjustLog from "@/app/admin/ShopAccountBalanceAdjustLog";
+import ShopAccountHistoryDialog from "@/app/admin/ShopAccountHistoryDialog";
+import { adminButtonStartIconSx } from "@/app/admin/theme/adminTheme";
 import DateObject from "react-date-object";
 
 const formatNumber = (num: number) =>
@@ -86,6 +90,8 @@ export default function ShopAccountsPage() {
   const [balanceTargets, setBalanceTargets] = useState<Record<number, string>>({});
   const [adjustLogs, setAdjustLogs] = useState<ShopAccountBalanceAdjustmentLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
+  const [adjustLogOpen, setAdjustLogOpen] = useState(false);
+  const [historyAccount, setHistoryAccount] = useState<ShopAccount | null>(null);
 
   const loadLogs = useCallback(async () => {
     setLogsLoading(true);
@@ -95,14 +101,22 @@ export default function ShopAccountsPage() {
         fetchShopAccountBalanceAdjustments({ type: "shop", limit: 80 }),
         fetchShopAccountBalanceAdjustments({ type: "till", limit: 40 }),
       ]);
-      const merged = [...shopRows, ...tillRows].sort((a, b) => b.id - a.id).slice(0, 100);
+      const merged = [...shopRows, ...tillRows]
+        .sort((a, b) => Number(b.id) - Number(a.id))
+        .slice(0, 100);
       setAdjustLogs(merged);
     } catch {
       setAdjustLogs([]);
+      toast.error("خطا در دریافت لاگ اصلاح موجودی");
     } finally {
       setLogsLoading(false);
     }
   }, []);
+
+  const openAdjustLog = () => {
+    setAdjustLogOpen(true);
+    void loadLogs();
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -119,14 +133,13 @@ export default function ShopAccountsPage() {
             return (a.sort_order ?? a.id) - (b.sort_order ?? b.id);
           }),
       );
-      await loadLogs();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "خطا در دریافت حساب‌ها");
       setAccounts([]);
     } finally {
       setLoading(false);
     }
-  }, [loadLogs]);
+  }, []);
 
   useEffect(() => {
     load();
@@ -181,6 +194,7 @@ export default function ShopAccountsPage() {
       toast.success(result.message);
       setBalanceOpen(false);
       await load();
+      if (adjustLogOpen) void loadLogs();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "خطا در تنظیم مانده");
     } finally {
@@ -324,9 +338,25 @@ export default function ShopAccountsPage() {
               startIcon={<RefreshIcon />}
               onClick={load}
               disabled={loading}
-              sx={{ color: "var(--admin-text)", borderColor: "var(--admin-border)" }}
+              sx={{
+                ...adminButtonStartIconSx,
+                color: "var(--admin-text)",
+                borderColor: "var(--admin-border)",
+              }}
             >
               بروزرسانی
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<HistoryIcon />}
+              onClick={openAdjustLog}
+              sx={{
+                ...adminButtonStartIconSx,
+                color: "var(--admin-text)",
+                borderColor: "var(--admin-border)",
+              }}
+            >
+              لاگ اصلاح موجودی
             </Button>
             <Button
               variant="outlined"
@@ -341,6 +371,7 @@ export default function ShopAccountsPage() {
               startIcon={<AddIcon />}
               onClick={openCreate}
               sx={{
+                ...adminButtonStartIconSx,
                 bgcolor: "var(--admin-accent)",
                 "&:hover": { bgcolor: "var(--admin-accent-hover)" },
               }}
@@ -459,7 +490,21 @@ export default function ShopAccountsPage() {
                         : `واریز: ${formatNumber(account.deposits_total ?? 0)} · شارژ تنخواه: ${formatNumber(account.charged_total ?? 0)} · هزینه: ${formatNumber(account.expenses_total ?? 0)} · فاکتور: ${formatNumber(account.invoices_total ?? 0)}`}
                     </Typography>
                   </Box>
-                  <Box sx={{ display: "flex", gap: 0.5, alignItems: "center" }}>
+                  <Box sx={{ display: "flex", gap: 0.5, alignItems: "center", flexWrap: "wrap" }}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={<VisibilityOutlinedIcon />}
+                      onClick={() => setHistoryAccount(account)}
+                      sx={{
+                        ...adminButtonStartIconSx,
+                        color: "var(--admin-text)",
+                        borderColor: "var(--admin-border)",
+                        fontSize: 12,
+                      }}
+                    >
+                      مشاهده
+                    </Button>
                     <IconButton
                       size="small"
                       aria-label="ویرایش حساب"
@@ -541,18 +586,48 @@ export default function ShopAccountsPage() {
           </DialogActions>
         </Dialog>
 
-        <ShopAccountBalanceAdjustLog
-          rows={adjustLogs}
-          loading={logsLoading}
-          title="لاگ اصلاح موجودی حساب‌ها"
-          emptyText="هنوز اصلاح دستی برای حساب‌های فروشگاه ثبت نشده"
+        <Dialog
+          open={adjustLogOpen}
+          onClose={() => setAdjustLogOpen(false)}
+          fullWidth
+          maxWidth="sm"
+          PaperProps={{
+            sx: {
+              bgcolor: "var(--admin-surface)",
+              color: "var(--admin-text)",
+              borderRadius: 2.5,
+              border: "1px solid var(--admin-border)",
+              direction: "rtl",
+            },
+          }}
+        >
+          <DialogTitle sx={{ fontWeight: 800, pb: 0.5 }}>لاگ اصلاح موجودی حساب‌ها</DialogTitle>
+          <DialogContent sx={{ pt: 1 }}>
+            <ShopAccountBalanceAdjustLog
+              rows={adjustLogs}
+              loading={logsLoading}
+              title=""
+              emptyText="هنوز اصلاح دستی برای حساب‌های فروشگاه ثبت نشده"
+            />
+          </DialogContent>
+          <DialogActions sx={{ px: 2, pb: 2 }}>
+            <Button onClick={() => setAdjustLogOpen(false)} sx={{ color: "var(--admin-text-muted)" }}>
+              بستن
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <ShopAccountHistoryDialog
+          open={Boolean(historyAccount)}
+          account={historyAccount}
+          onClose={() => setHistoryAccount(null)}
         />
 
         <Dialog open={balanceOpen} onClose={() => setBalanceOpen(false)} fullWidth maxWidth="sm">
           <DialogTitle sx={{ color: "var(--admin-text)" }}>تنظیم مانده واقعی</DialogTitle>
           <DialogContent>
             <Typography sx={{ fontSize: 13, color: "var(--admin-text-muted)", mb: 2 }}>
-              موجودی صفحهٔ حساب‌ها و دفتر همان حساب با رقمی که وارد می‌کنید یکی می‌شود. اختلاف به سرمایه می‌رود. همهٔ تغییرات در لاگ پایین صفحه ثبت می‌شود.
+              موجودی صفحهٔ حساب‌ها و دفتر همان حساب با رقمی که وارد می‌کنید یکی می‌شود. اختلاف به سرمایه می‌رود. همهٔ تغییرات در لاگ اصلاح موجودی ثبت می‌شود.
             </Typography>
             <Box sx={{ mb: 2 }}>
               <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)", mb: 0.5 }}>

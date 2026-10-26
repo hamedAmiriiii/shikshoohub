@@ -61,6 +61,11 @@ export function DocumentPaymentBreakdownView({ doc }: { doc?: DocumentPaymentFie
     credit > 0 ? ["نسیه", credit] : null,
     remaining > 0 ? ["باقی‌مانده نسیه", remaining] : null,
   ].filter(Boolean) as Array<[string, number]>;
+  const methodLabel =
+    `پرداخت: ${documentPaymentLabel(doc)}` +
+    (doc.payment_status && String(doc.payment_status).toLowerCase() !== "paid"
+      ? ` — ${documentPaymentStatusLabel(doc.payment_status)}`
+      : "");
   if (rows.length === 0) {
     return (
       <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>
@@ -69,18 +74,25 @@ export function DocumentPaymentBreakdownView({ doc }: { doc?: DocumentPaymentFie
     );
   }
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 0.35 }}>
-      <Typography sx={{ color: "var(--admin-text)", fontSize: 12, fontWeight: 600 }}>
-        پرداخت: {documentPaymentLabel(doc)}
-        {doc.payment_status && String(doc.payment_status).toLowerCase() !== "paid"
-          ? ` — ${documentPaymentStatusLabel(doc.payment_status)}`
-          : ""}
+    <Box
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 1.5,
+        flexWrap: "wrap",
+      }}
+    >
+      <Typography sx={{ color: "var(--admin-text)", fontSize: 12.5, fontWeight: 700 }}>
+        {methodLabel}
       </Typography>
-      {rows.map(([label, amount]) => (
-        <Typography key={label} sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>
-          {label}: {formatAmountNumber(amount)} تومان
-        </Typography>
-      ))}
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, flexWrap: "wrap" }}>
+        {rows.map(([label, amount]) => (
+          <Typography key={label} sx={{ color: "var(--admin-accent)", fontSize: 12.5, fontWeight: 800 }}>
+            {label}: {formatAmountNumber(amount)} تومان
+          </Typography>
+        ))}
+      </Box>
     </Box>
   );
 }

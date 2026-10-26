@@ -36,7 +36,7 @@ import { jalaliYmd, todayJalaliYmd } from "@/app/lib/accounting";
 import { todayJalaliDateObject } from "@/app/lib/cheques";
 import DateObject from "react-date-object";
 import {
-  fetchShopAccountBalanceAdjustments,
+  fetchPettyCashTransactions,
   fetchShopAccounts,
   isMainShopAccount,
   remainingBalanceDeleteMessage,
@@ -134,7 +134,7 @@ export default function PettyCashPage() {
   const loadLogs = useCallback(async () => {
     setLogsLoading(true);
     try {
-      const rows = await fetchShopAccountBalanceAdjustments({ type: "petty_cash", limit: 80 });
+      const rows = await fetchPettyCashTransactions({ limit: 100 });
       setAdjustLogs(rows);
     } catch {
       setAdjustLogs([]);
@@ -502,8 +502,8 @@ export default function PettyCashPage() {
         <ShopAccountBalanceAdjustLog
           rows={adjustLogs}
           loading={logsLoading}
-          title="لاگ اصلاح موجودی تنخواه"
-          emptyText="هنوز اصلاح دستی برای تنخواه ثبت نشده"
+          title="لاگ تراکنش‌های تنخواه"
+          emptyText="هنوز شارژ یا اصلاح موجودی برای تنخواه ثبت نشده"
         />
 
         <Dialog

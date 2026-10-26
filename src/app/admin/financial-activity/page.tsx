@@ -221,13 +221,13 @@ export default function FinancialActivityPage() {
         token
       );
       if (res?.hasError) {
-        toast.error(getApiErrorMessage(res, "خطا در دریافت اتفاقات مالی"));
+        toast.error(getApiErrorMessage(res, "خطا در دریافت رویدادهای مالی"));
         setReport(null);
         return;
       }
       setReport(res as Report);
     } catch {
-      toast.error("خطا در دریافت اتفاقات مالی");
+      toast.error("خطا در دریافت رویدادهای مالی");
       setReport(null);
     } finally {
       setLoading(false);
@@ -293,7 +293,7 @@ export default function FinancialActivityPage() {
             <EventNoteIcon sx={{ color: "var(--admin-accent)", fontSize: 28 }} />
             <Box>
               <Typography sx={{ fontSize: 18, fontWeight: 800, color: "var(--admin-text)" }}>
-                اتفاقات مالی
+                رویدادهای مالی
               </Typography>
               <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)" }}>
                 دریافتی و پرداختی: نقد، کارت، ترکیبی، تسویه نسیه و چک
@@ -565,7 +565,7 @@ export default function FinancialActivityPage() {
                   overflowX: "auto",
                 }}
               >
-                <Table size="small" aria-label="اتفاقات مالی">
+                <Table size="small" aria-label="رویدادهای مالی">
                   <TableHead>
                     <TableRow>
                       <StyledTableCell align="right">شرح</StyledTableCell>

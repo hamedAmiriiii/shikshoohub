@@ -194,25 +194,16 @@ function draftsFromInvoice(invoice: InvoiceRecord): DraftItem[] {
   });
 }
 
-function MetaBox({ label, value }: { label: string; value: string }) {
+function HeaderMetaItem({ label, value }: { label: string; value: string }) {
   return (
-    <Box
-      sx={{
-        flex: 1,
-        minWidth: 0,
-        p: 1.15,
-        borderRadius: 1.75,
-        border: "1px solid var(--admin-border)",
-        bgcolor: "var(--admin-surface-alt)",
-      }}
-    >
-      <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)", mb: 0.35 }}>{label}</Typography>
+    <Box sx={{ minWidth: 0 }}>
+      <Typography sx={{ fontSize: 10.5, color: "var(--admin-text-muted)", mb: 0.2 }}>{label}</Typography>
       <Typography
         sx={{
-          fontSize: 13,
+          fontSize: 12.5,
           fontWeight: 700,
           color: "var(--admin-text)",
-          lineHeight: 1.5,
+          lineHeight: 1.45,
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
@@ -497,14 +488,14 @@ export default function InvoiceDetailsDialog({
         sx={{
           px: 2.25,
           pt: 2,
-          pb: 1.5,
+          pb: 1.75,
           borderBottom: "1px solid var(--admin-border)",
           bgcolor: "var(--admin-surface-alt)",
           backgroundImage:
             "linear-gradient(180deg, rgba(120,181,104,0.08), transparent 70%)",
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 1.5 }}>
+        <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 1.5, mb: 1.35 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.1, minWidth: 0 }}>
             <Box
               sx={{
@@ -537,6 +528,52 @@ export default function InvoiceDetailsDialog({
             </Typography>
           </Box>
         </Box>
+
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(4, 1fr)" },
+            gap: 1.1,
+            pt: 1.15,
+            borderTop: "1px solid var(--admin-border)",
+          }}
+        >
+          <HeaderMetaItem label="طرف حساب / ذینفع" value={formatBeneficiaryLabel(beneficiary) || "—"} />
+          <HeaderMetaItem label="حساب پرداخت" value={shopAccountName || "—"} />
+          <HeaderMetaItem
+            label="شماره فاکتور"
+            value={display?.id != null ? formatAmountNumber(display.id) : "—"}
+          />
+          <HeaderMetaItem label="عنوان سند" value={display?.title || "—"} />
+        </Box>
+
+        {display?.description ? (
+          <Box sx={{ mt: 1.15, pt: 1.1, borderTop: "1px solid var(--admin-border)" }}>
+            <Typography sx={{ fontSize: 10.5, color: "var(--admin-text-muted)", mb: 0.25 }}>توضیحات</Typography>
+            <Typography sx={{ fontSize: 12.5, color: "var(--admin-text)", lineHeight: 1.7 }}>
+              {display.description}
+            </Typography>
+          </Box>
+        ) : null}
+
+        <Box sx={{ mt: 1.15, pt: 1.1, borderTop: "1px solid var(--admin-border)" }}>
+          <DocumentPaymentBreakdownView doc={display} />
+          {documentNeedsSettle(display) ? (
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => setSettleOpen(true)}
+              sx={{
+                mt: 1,
+                color: "var(--admin-accent)",
+                borderColor: "var(--admin-accent-border)",
+                fontSize: 12,
+              }}
+            >
+              تسویه نسیه
+            </Button>
+          ) : null}
+        </Box>
       </Box>
 
       <DialogContent sx={{ px: 2.25, py: 2 }}>
@@ -546,51 +583,6 @@ export default function InvoiceDetailsDialog({
           </Box>
         ) : (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
-                gap: 1,
-              }}
-            >
-              <MetaBox label="طرف حساب / ذینفع" value={formatBeneficiaryLabel(beneficiary) || "—"} />
-              <MetaBox label="حساب پرداخت" value={shopAccountName || "—"} />
-              <MetaBox label="شماره فاکتور" value={display?.id != null ? formatAmountNumber(display.id) : "—"} />
-              <MetaBox label="عنوان سند" value={display?.title || "—"} />
-            </Box>
-
-            {display?.description ? (
-              <Box
-                sx={{
-                  p: 1.15,
-                  borderRadius: 1.75,
-                  border: "1px dashed var(--admin-border)",
-                  bgcolor: "var(--admin-surface-alt)",
-                }}
-              >
-                <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)", mb: 0.3 }}>توضیحات</Typography>
-                <Typography sx={{ fontSize: 12.5, color: "var(--admin-text)", lineHeight: 1.7 }}>
-                  {display.description}
-                </Typography>
-              </Box>
-            ) : null}
-
-            <DocumentPaymentBreakdownView doc={display} />
-            {documentNeedsSettle(display) ? (
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={() => setSettleOpen(true)}
-                sx={{
-                  alignSelf: "flex-start",
-                  color: "var(--admin-accent)",
-                  borderColor: "var(--admin-accent-border)",
-                  fontSize: 12,
-                }}
-              >
-                تسویه نسیه
-              </Button>
-            ) : null}
 
             <Box
               sx={{
