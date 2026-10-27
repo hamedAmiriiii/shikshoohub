@@ -540,8 +540,6 @@ const amountFieldSxFull = {
   },
   "& .MuiInputBase-input": {
     ...amountFieldSx["& .MuiInputBase-input"],
-    textAlign: "right",
-    direction: "rtl",
     py: 0.85,
     px: 1,
     fontSize: "13px",
@@ -716,54 +714,21 @@ function MobileStat({
   label,
   value,
   accent,
-  boxed,
 }: {
   label: string;
   value: number;
   accent?: boolean;
-  boxed?: boolean;
 }) {
   return (
-    <Box
-      sx={
-        boxed
-          ? {
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 1,
-              px: 1.1,
-              py: 0.85,
-              borderRadius: 1.5,
-              bgcolor: "var(--admin-surface)",
-              border: "1px solid var(--admin-border)",
-              minWidth: 0,
-            }
-          : undefined
-      }
-    >
-      <Typography
-        sx={{
-          color: "var(--admin-text-muted)",
-          fontSize: boxed ? 12 : 11,
-          mb: boxed ? 0 : 0.25,
-          flexShrink: 0,
-          whiteSpace: "nowrap",
-        }}
-      >
+    <Box>
+      <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, mb: 0.25 }}>
         {label}
       </Typography>
       <Typography
         sx={{
           color: accent ? "var(--admin-accent)" : "var(--admin-text)",
-          fontWeight: accent || boxed ? 700 : 500,
-          fontSize: boxed ? 13 : 13,
-          textAlign: "left",
-          direction: "ltr",
-          fontVariantNumeric: "tabular-nums",
-          minWidth: 0,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
+          fontWeight: accent ? 700 : 500,
+          fontSize: 13,
         }}
       >
         {formatNumber(value)}
@@ -1491,15 +1456,19 @@ export default function DailyReconciliationPage() {
                   sx={{
                     display: "grid",
                     gridTemplateColumns: "1fr 1fr",
-                    gap: 1,
+                    gap: 1.1,
+                    p: 1.35,
+                    borderRadius: 2,
+                    bgcolor: "var(--admin-surface-alt)",
+                    border: "1px solid var(--admin-border)",
                   }}
                 >
-                  <MobileStat boxed label="فروش" value={depositModalRow.sales.total_sales} />
-                  <MobileStat boxed label="جمع وصول" value={depositModalRow.sales.total_collected} accent />
-                  <MobileStat boxed label="نقد" value={depositModalRow.sales.cash_amount} />
-                  <MobileStat boxed label="کارت" value={depositModalRow.sales.card_amount} />
-                  <MobileStat boxed label="اقساط" value={depositModalRow.sales.installments_collected} />
-                  <MobileStat boxed label="وصول نسیه" value={depositModalRow.sales.debts_collected} accent />
+                  <MobileStat label="فروش" value={depositModalRow.sales.total_sales} />
+                  <MobileStat label="جمع وصول" value={depositModalRow.sales.total_collected} accent />
+                  <MobileStat label="نقد" value={depositModalRow.sales.cash_amount} />
+                  <MobileStat label="کارت" value={depositModalRow.sales.card_amount} />
+                  <MobileStat label="اقساط" value={depositModalRow.sales.installments_collected} />
+                  <MobileStat label="وصول نسیه" value={depositModalRow.sales.debts_collected} />
                 </Box>
               ) : null}
 
@@ -1508,41 +1477,33 @@ export default function DailyReconciliationPage() {
                   <Typography sx={{ fontSize: 13, fontWeight: 800, color: "var(--admin-text)", mt: 0.25 }}>
                     مبالغ واریز
                   </Typography>
-                  <Box
-                    sx={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr",
-                      gap: 1.1,
-                    }}
-                  >
-                    {shopAccounts.map((account) => (
-                      <TextField
-                        key={account.id}
-                        fullWidth
-                        size="small"
-                        label={account.name}
-                        value={modalDraft.accounts[String(account.id)] || ""}
-                        disabled={!depositModalRow.editable}
-                        onChange={(e) => updateAccountDraft(depositModalRow.date, account.id, e.target.value)}
-                        placeholder="۰"
-                        sx={amountFieldSxFull}
-                        inputProps={{ style: { direction: "rtl", textAlign: "right" } }}
-                      />
-                    ))}
+                  {shopAccounts.map((account) => (
                     <TextField
+                      key={account.id}
                       fullWidth
                       size="small"
-                      label="نقدی"
-                      value={modalDraft.deposit_cash}
+                      label={account.name}
+                      value={modalDraft.accounts[String(account.id)] || ""}
                       disabled={!depositModalRow.editable}
-                      onChange={(e) =>
-                        updateDraft(depositModalRow.date, { deposit_cash: formatAmountInput(e.target.value) })
-                      }
+                      onChange={(e) => updateAccountDraft(depositModalRow.date, account.id, e.target.value)}
                       placeholder="۰"
                       sx={amountFieldSxFull}
-                      inputProps={{ style: { direction: "rtl", textAlign: "right" } }}
+                      inputProps={{ style: { direction: "ltr", textAlign: "left" } }}
                     />
-                  </Box>
+                  ))}
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="نقدی"
+                    value={modalDraft.deposit_cash}
+                    disabled={!depositModalRow.editable}
+                    onChange={(e) =>
+                      updateDraft(depositModalRow.date, { deposit_cash: formatAmountInput(e.target.value) })
+                    }
+                    placeholder="۰"
+                    sx={amountFieldSxFull}
+                    inputProps={{ style: { direction: "ltr", textAlign: "left" } }}
+                  />
                   <TextField
                     fullWidth
                     size="small"
