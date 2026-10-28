@@ -1297,3 +1297,84 @@ export async function reopenPeriodClose(): Promise<{ message: string; data: Acco
     data: parseVoucher(obj.data),
   };
 }
+
+export type AccountingPostingMapRow = {
+  event_key: string;
+  group: string;
+  group_label: string;
+  label: string;
+  description: string;
+  default_code: string;
+  is_custom: boolean;
+  account_id: number | null;
+  account: {
+    id: number;
+    code: string;
+    name: string;
+    level: string;
+    kind: string;
+    is_active: boolean;
+  } | null;
+};
+
+export type AccountingPostingMapsResponse = {
+  table_ready: boolean;
+  data: AccountingPostingMapRow[];
+};
+
+function parsePostingMapRow(raw: unknown): AccountingPostingMapRow | null {
+  const obj = asRecord(raw);
+  if (!obj) return null;
+  const eventKey = asString(obj.event_key);
+  if (!eventKey) return null;
+  const accountRaw = asRecord(obj.account);
+  return {
+    event_key: eventKey,
+    group: asString(obj.group),
+    group_label: asString(obj.group_label),
+    label: asString(obj.label),
+    description: asString(obj.description),
+    default_code: asString(obj.default_code),
+    is_custom: asBool(obj.is_custom, false),
+    account_id: obj.account_id == null ? null : asNumber(obj.account_id, 0) || null,
+    account: accountRaw
+      ? {
+          id: asNumber(accountRaw.id, 0),
+          code: asString(accountRaw.code),
+          name: asString(accountRaw.name),
+          level: asString(accountRaw.level),
+          kind: asString(accountRaw.kind),
+          is_active: asBool(accountRaw.is_active, true),
+        }
+      : null,
+  };
+}
+
+export async function fetchAccountingPostingMaps(): Promise<AccountingPostingMapsResponse> {
+  const res = await FetchWithJwtClient("GET", "/api/accounting/posting-maps", authToken());
+  const obj = asRecord(res) ?? {};
+  if (obj.hasError) throwApiError(obj, "خطا در دریافت نگاشت حساب‌ها");
+  const list = Array.isArray(obj.data) ? obj.data : [];
+  return {
+    table_ready: asBool(obj.table_ready, true),
+    data: list.map(parsePostingMapRow).filter((item): item is AccountingPostingMapRow => item != null),
+  };
+}
+
+export async function updateAccountingPostingMap(
+  eventKey: string,
+  accountId: number | null,
+): Promise<AccountingPostingMapRow> {
+  const res = await FetchWithJwtClient(
+    "PUT",
+    `/api/accounting/posting-maps/${encodeURIComponent(eventKey)}`,
+    authToken(),
+    {},
+    { body: JSON.stringify({ account_id: accountId }) },
+  );
+  const obj = asRecord(res) ?? {};
+  if (obj.hasError) throwApiError(obj, "خطا در ذخیره نگاشت");
+  const parsed = parsePostingMapRow(obj.data);
+  if (!parsed) throwApiError(obj, "ذخیره شد ولی پاسخ نامعتبر بود.");
+  return parsed;
+}

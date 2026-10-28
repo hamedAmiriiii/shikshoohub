@@ -52,6 +52,7 @@ import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
 import { formatAmountInput, parseAmountInput } from "@/app/lib/amountInput";
 import BeneficiarySelect from "@/app/admin/BeneficiarySelect";
 import DocumentPaymentFields from "@/app/admin/DocumentPaymentFields";
+import DocumentVatFields from "@/app/admin/DocumentVatFields";
 import { DocumentPaymentChips, documentNeedsSettle } from "@/app/admin/DocumentPaymentBadge";
 import DocumentPaymentSettleDialog from "@/app/admin/DocumentPaymentSettleDialog";
 import ShopAccountSelect from "@/app/admin/ShopAccountSelect";
@@ -73,6 +74,15 @@ import {
   type DocumentPaymentFields as DocumentPaymentInfo,
   type DocumentPaymentFormState,
 } from "@/app/lib/documentPayments";
+import {
+  asPurchaseVatEnabled,
+  buildPurchaseVatPayload,
+  emptyPurchaseVatForm,
+  purchaseVatFromDocument,
+  purchaseVatPayable,
+  PURCHASE_VAT_SETTING_KEY,
+  type PurchaseVatFormState,
+} from "@/app/lib/purchaseVat";
 import { fetchExpenseAccounts, type ExpenseAccountOption } from "@/app/lib/accounting";
 import { readShopFeatures } from "@/app/lib/shopFeatures";
 import {
@@ -322,6 +332,8 @@ export default function ExpensesPage() {
   const [amount, setAmount] = useState("");
   const [userName, setUserName] = useState("");
   const [paymentForm, setPaymentForm] = useState<DocumentPaymentFormState>(emptyDocumentPaymentForm);
+  const [vatForm, setVatForm] = useState<PurchaseVatFormState>(emptyPurchaseVatForm);
+  const [vatEnabled, setVatEnabled] = useState(false);
   const [settleExpense, setSettleExpense] = useState<Expense | null>(null);
   const [clearCheques, setClearCheques] = useState<LinkedCheque[]>([]);
   const [clearChequeId, setClearChequeId] = useState<number | "">("");
@@ -447,11 +459,21 @@ export default function ExpensesPage() {
     };
   }, [openForm]);
 
+  useEffect(() => {
+    const token = tokenCode();
+    if (!token) return;
+    void FetchWithJwtClient("GET", `/api/settings/${PURCHASE_VAT_SETTING_KEY}`, token).then((res) => {
+      if (!res || res.hasError) return;
+      setVatEnabled(asPurchaseVatEnabled(res.value ?? res?.data?.value));
+    });
+  }, []);
+
   const resetForm = () => {
     setAccountingAccountId(null);
     setTitle("");
     setAmount("");
     setPaymentForm(emptyDocumentPaymentForm());
+    setVatForm(emptyPurchaseVatForm());
     setBeneficiaryId("");
     setBeneficiaryOption(null);
     setEditingExpense(null);
@@ -491,6 +513,7 @@ export default function ExpensesPage() {
       ...formFromDocumentPayment(expense),
       shopAccountId: resolveShopAccountId(expense),
     });
+    setVatForm(purchaseVatFromDocument(expense));
     const beneficiary = beneficiaryFromRecord(expense);
     setBeneficiaryId(beneficiary?.id ?? "");
     setBeneficiaryOption(beneficiary);
@@ -547,7 +570,9 @@ export default function ExpensesPage() {
       payload.accounting_account_id = Number(accountingAccountId);
     }
     Object.assign(payload, beneficiaryPayload(beneficiaryId));
-    const payment = buildDocumentPaymentPayload(paymentForm, amountNum);
+    Object.assign(payload, buildPurchaseVatPayload(amountNum, vatForm, vatEnabled));
+    const payable = purchaseVatPayable(amountNum, vatEnabled ? vatForm : emptyPurchaseVatForm());
+    const payment = buildDocumentPaymentPayload(paymentForm, payable);
     if (payment.error) {
       toast.error(payment.error);
       return;
@@ -1063,7 +1088,7 @@ export default function ExpensesPage() {
               ) : null}
               <TextField
                 size="small"
-                label="مبلغ"
+                label="مبلغ (بدون ارزش افزوده)"
                 type="text"
                 inputMode="numeric"
                 value={amount}
@@ -1071,10 +1096,19 @@ export default function ExpensesPage() {
                 fullWidth
                 sx={fieldSx}
               />
+              <DocumentVatFields
+                enabled={vatEnabled}
+                value={vatForm}
+                onChange={setVatForm}
+                baseAmount={parseAmountInput(amount) || 0}
+              />
               <DocumentPaymentFields
                 value={paymentForm}
                 onChange={setPaymentForm}
-                totalAmount={parseAmountInput(amount) || 0}
+                totalAmount={purchaseVatPayable(
+                  parseAmountInput(amount) || 0,
+                  vatEnabled ? vatForm : emptyPurchaseVatForm(),
+                )}
               />
               <BeneficiarySelect
                 value={beneficiaryId}

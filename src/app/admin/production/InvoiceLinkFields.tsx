@@ -25,6 +25,7 @@ import {
 } from "@/app/admin/invoices/InvoiceDetailsDialog";
 import BeneficiarySelect from "@/app/admin/BeneficiarySelect";
 import DocumentPaymentFields from "@/app/admin/DocumentPaymentFields";
+import DocumentVatFields from "@/app/admin/DocumentVatFields";
 import { dateObjectToPayload, todayJalaliDateObject } from "@/app/lib/cheques";
 import { beneficiaryPayload, type Beneficiary } from "@/app/lib/beneficiaries";
 import { CHEQUE_DATE_PICKER_Z } from "@/app/admin/cheques/ChequeFormSheet";
@@ -33,6 +34,16 @@ import {
   emptyDocumentPaymentForm,
   type DocumentPaymentFormState,
 } from "@/app/lib/documentPayments";
+import {
+  asPurchaseVatEnabled,
+  buildPurchaseVatPayload,
+  emptyPurchaseVatForm,
+  purchaseVatPayable,
+  PURCHASE_VAT_SETTING_KEY,
+  readPurchaseVatEnabledCache,
+  setPurchaseVatEnabledCache,
+  type PurchaseVatFormState,
+} from "@/app/lib/purchaseVat";
 
 export type InvoiceLinkMode = "new" | "whole" | "item";
 
@@ -45,6 +56,7 @@ export type InvoiceLinkState = {
   invoiceDate: DateObject | null;
   invoiceDescription: string;
   payment: DocumentPaymentFormState;
+  vat: PurchaseVatFormState;
   beneficiaryId: number | "";
   beneficiaryOption: Beneficiary | null;
 };
@@ -59,6 +71,7 @@ export function emptyInvoiceLinkState(): InvoiceLinkState {
     invoiceDate: todayJalaliDateObject(),
     invoiceDescription: "",
     payment: emptyDocumentPaymentForm(),
+    vat: emptyPurchaseVatForm(),
     beneficiaryId: "",
     beneficiaryOption: null,
   };
@@ -80,6 +93,7 @@ function jalaliDateString(d: DateObject | null | undefined): string | null {
 export function buildInvoiceLinkPayload(
   state: InvoiceLinkState,
   lotTotal = 0,
+  vatEnabled = readPurchaseVatEnabledCache(),
 ): Record<string, unknown> {
   if (!state.createInvoice) return {};
   const payload: Record<string, unknown> = { create_invoice: true };
@@ -102,7 +116,10 @@ export function buildInvoiceLinkPayload(
       payload.description = description;
     }
     Object.assign(payload, beneficiaryPayload(state.beneficiaryId));
-    const payment = buildDocumentPaymentPayload(state.payment, lotTotal);
+    const vat = vatEnabled ? state.vat || emptyPurchaseVatForm() : emptyPurchaseVatForm();
+    Object.assign(payload, buildPurchaseVatPayload(lotTotal, vat, vatEnabled));
+    const payable = purchaseVatPayable(lotTotal, vat);
+    const payment = buildDocumentPaymentPayload(state.payment, payable);
     if (!payment.error) Object.assign(payload, payment.payload);
   }
   if (state.mode === "whole" && state.invoiceId !== "") {
@@ -119,12 +136,18 @@ export function buildInvoiceLinkPayload(
   return payload;
 }
 
-export function validateInvoiceLink(state: InvoiceLinkState, lotTotal = 0): string | null {
+export function validateInvoiceLink(
+  state: InvoiceLinkState,
+  lotTotal = 0,
+  vatEnabled = readPurchaseVatEnabledCache(),
+): string | null {
   if (!state.createInvoice) return null;
   if (state.mode === "new") {
     if (!state.invoiceTitle.trim()) return "عنوان فاکتور را وارد کنید";
     if (!state.invoiceDate) return "تاریخ فاکتور را انتخاب کنید";
-    const payment = buildDocumentPaymentPayload(state.payment, lotTotal);
+    const vat = vatEnabled ? state.vat || emptyPurchaseVatForm() : emptyPurchaseVatForm();
+    const payable = purchaseVatPayable(lotTotal, vat);
+    const payment = buildDocumentPaymentPayload(state.payment, payable);
     if (payment.error) return payment.error;
   }
   if ((state.mode === "whole" || state.mode === "item") && state.invoiceId === "") {
@@ -222,7 +245,19 @@ export default function InvoiceLinkFields({ value, onChange, lotTotal = 0 }: Pro
   const [pickedInvoice, setPickedInvoice] = useState<InvoiceRecord | null>(null);
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [loadingInvoices, setLoadingInvoices] = useState(false);
+  const [vatEnabled, setVatEnabled] = useState(false);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const token = tokenCode();
+    if (!token) return;
+    void FetchWithJwtClient("GET", `/api/settings/${PURCHASE_VAT_SETTING_KEY}`, token).then((res) => {
+      if (!res || res.hasError) return;
+      const enabled = asPurchaseVatEnabled(res.value ?? res?.data?.value);
+      setPurchaseVatEnabledCache(enabled);
+      setVatEnabled(enabled);
+    });
+  }, []);
 
   const loadInvoices = (query = "") => {
     const token = tokenCode();
@@ -411,10 +446,20 @@ export default function InvoiceLinkFields({ value, onChange, lotTotal = 0 }: Pro
                 helperText=""
                 compact
               />
+              <DocumentVatFields
+                enabled={vatEnabled}
+                value={value.vat || emptyPurchaseVatForm()}
+                onChange={(vat) => patch({ vat })}
+                baseAmount={lotTotal}
+                compact
+              />
               <DocumentPaymentFields
                 value={value.payment}
                 onChange={(payment) => patch({ payment })}
-                totalAmount={lotTotal}
+                totalAmount={purchaseVatPayable(
+                  lotTotal,
+                  vatEnabled ? value.vat || emptyPurchaseVatForm() : emptyPurchaseVatForm(),
+                )}
                 compact
               />
             </>

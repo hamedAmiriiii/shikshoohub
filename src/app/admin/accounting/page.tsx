@@ -27,6 +27,7 @@ import EventAvailableIcon from "@mui/icons-material/EventAvailable";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import HistoryIcon from "@mui/icons-material/History";
+import SettingsIcon from "@mui/icons-material/Settings";
 import DateObject from "react-date-object";
 import { toast } from "react-toastify";
 import {
@@ -44,6 +45,12 @@ import {
 
 const LINKS = [
   { href: "/admin/accounting/accounts", title: "درخت حساب", desc: "کدینگ گروه / کل / معین / تفصیلی", icon: <AccountTreeIcon /> },
+  {
+    href: "/admin/accounting/settings",
+    title: "تنظیمات",
+    desc: "اتصال تراکنش‌های نرم‌افزار به شاخه‌های درخت حساب",
+    icon: <SettingsIcon />,
+  },
   { href: "/admin/accounting/vouchers", title: "اسناد", desc: "لیست، جزئیات، سند دستی و برگشت", icon: <ReceiptLongIcon /> },
   { href: "/admin/accounting/trial-balance", title: "تراز آزمایشی", desc: "گردش و مانده حساب‌ها", icon: <BalanceIcon /> },
   { href: "/admin/accounting/ledger", title: "دفتر حساب", desc: "آرتیکل‌های یک حساب با مانده جاری", icon: <MenuBookIcon /> },

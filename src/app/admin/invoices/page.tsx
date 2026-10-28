@@ -44,6 +44,7 @@ import ReceiptIcon from '@mui/icons-material/Receipt';
 import SearchIcon from '@mui/icons-material/Search';
 import BeneficiarySelect from '@/app/admin/BeneficiarySelect';
 import DocumentPaymentFields from '@/app/admin/DocumentPaymentFields';
+import DocumentVatFields from '@/app/admin/DocumentVatFields';
 import { DocumentPaymentChips, documentNeedsSettle } from '@/app/admin/DocumentPaymentBadge';
 import DocumentPaymentSettleDialog from '@/app/admin/DocumentPaymentSettleDialog';
 import InvoiceDetailsDialog, { invoiceUsesItemAmount, type InvoiceRecord } from '@/app/admin/invoices/InvoiceDetailsDialog';
@@ -56,6 +57,15 @@ import {
   formFromDocumentPayment,
   type DocumentPaymentFormState,
 } from '@/app/lib/documentPayments';
+import {
+  asPurchaseVatEnabled,
+  buildPurchaseVatPayload,
+  emptyPurchaseVatForm,
+  purchaseVatFromDocument,
+  purchaseVatPayable,
+  PURCHASE_VAT_SETTING_KEY,
+  type PurchaseVatFormState,
+} from '@/app/lib/purchaseVat';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import DatePicker from "react-multi-date-picker";
 import DateObject from "react-date-object";
@@ -184,6 +194,8 @@ export default function InvoicesPage() {
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [paymentForm, setPaymentForm] = useState<DocumentPaymentFormState>(emptyDocumentPaymentForm);
+  const [vatForm, setVatForm] = useState<PurchaseVatFormState>(emptyPurchaseVatForm);
+  const [vatEnabled, setVatEnabled] = useState(false);
   const [settleInvoice, setSettleInvoice] = useState<Invoice | null>(null);
   const [beneficiaryId, setBeneficiaryId] = useState<number | "">("");
   const [beneficiaryOption, setBeneficiaryOption] = useState<Beneficiary | null>(null);
@@ -205,6 +217,15 @@ export default function InvoicesPage() {
   useEffect(() => {
     fetchInvoices();
   }, [filterMode, dateRange, searchQuery, currentPage, perPage, filterBeneficiaryId]);
+
+  useEffect(() => {
+    const token = tokenCode();
+    if (!token) return;
+    void FetchWithJwtClient("GET", `/api/settings/${PURCHASE_VAT_SETTING_KEY}`, token).then((res) => {
+      if (!res || res.hasError) return;
+      setVatEnabled(asPurchaseVatEnabled(res.value ?? res?.data?.value));
+    });
+  }, []);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -389,8 +410,10 @@ export default function InvoicesPage() {
         data.date = `${date.year}/${String(date.month).padStart(2, "0")}/${String(date.day).padStart(2, "0")}`;
       }
       Object.assign(data, beneficiaryPayload(beneficiaryId));
+      Object.assign(data, buildPurchaseVatPayload(amountNum, vatForm, vatEnabled));
+      const payable = purchaseVatPayable(amountNum, vatEnabled ? vatForm : emptyPurchaseVatForm());
 
-      const payment = buildDocumentPaymentPayload(paymentForm, amountNum);
+      const payment = buildDocumentPaymentPayload(paymentForm, payable);
       if (payment.error) {
         toast.error(payment.error);
         return;
@@ -408,10 +431,14 @@ export default function InvoicesPage() {
       if (!res || res.hasError) {
         toast.error(getApiErrorMessage(res, 'خطا در ثبت فاکتور'));
       } else {
+        const created = (res.data ?? res) as Invoice;
         toast.success("فاکتور با موفقیت ثبت شد");
         setOpenCreateDialog(false);
         resetForm();
         fetchInvoices();
+        if (created?.id) {
+          setDetailsInvoice(created);
+        }
       }
     } catch (error) {
       console.error("Error creating invoice:", error);
@@ -441,7 +468,9 @@ export default function InvoicesPage() {
       if (!usesItemAmount) {
         data.amount = amountNum;
       }
-      const paymentTotal = usesItemAmount ? Number(editingInvoice.amount) || 0 : amountNum;
+      const baseAmount = usesItemAmount ? Number(editingInvoice.amount) || 0 : amountNum;
+      Object.assign(data, buildPurchaseVatPayload(baseAmount, vatForm, vatEnabled));
+      const paymentTotal = purchaseVatPayable(baseAmount, vatEnabled ? vatForm : emptyPurchaseVatForm());
       const payment = buildDocumentPaymentPayload(paymentForm, paymentTotal);
       if (payment.error) {
         toast.error(payment.error);
@@ -503,6 +532,7 @@ export default function InvoicesPage() {
     setAmount("");
     setDescription("");
     setPaymentForm(emptyDocumentPaymentForm());
+    setVatForm(emptyPurchaseVatForm());
     setBeneficiaryId("");
     setBeneficiaryOption(null);
     setInvoiceDate(todayJalaliDateObject());
@@ -514,6 +544,7 @@ export default function InvoicesPage() {
     setAmount(formatNumber(invoice.amount));
     setDescription(invoice.description || "");
     setPaymentForm(formFromDocumentPayment(invoice));
+    setVatForm(purchaseVatFromDocument(invoice));
     const beneficiary = beneficiaryFromRecord(invoice);
     setBeneficiaryId(beneficiary?.id ?? "");
     setBeneficiaryOption(beneficiary);
@@ -971,7 +1002,7 @@ export default function InvoicesPage() {
               </Box>
               <TextField
                 size="small"
-                label="مبلغ"
+                label="مبلغ (بدون ارزش افزوده)"
                 type="text"
                 inputMode="numeric"
                 value={amount}
@@ -988,10 +1019,19 @@ export default function InvoicesPage() {
                 }}
                 helperText=""
               />
+              <DocumentVatFields
+                enabled={vatEnabled}
+                value={vatForm}
+                onChange={setVatForm}
+                baseAmount={parseAmountInput(amount) || 0}
+              />
               <DocumentPaymentFields
                 value={paymentForm}
                 onChange={setPaymentForm}
-                totalAmount={parseAmountInput(amount) || 0}
+                totalAmount={purchaseVatPayable(
+                  parseAmountInput(amount) || 0,
+                  vatEnabled ? vatForm : emptyPurchaseVatForm(),
+                )}
               />
               <TextField
                 size="small"
@@ -1155,14 +1195,25 @@ export default function InvoicesPage() {
                   setBeneficiaryOption(option);
                 }}
               />
-              <DocumentPaymentFields
-                value={paymentForm}
-                onChange={setPaymentForm}
-                totalAmount={
+              <DocumentVatFields
+                enabled={vatEnabled}
+                value={vatForm}
+                onChange={setVatForm}
+                baseAmount={
                   invoiceUsesItemAmount(editingInvoice)
                     ? Number(editingInvoice?.amount) || 0
                     : parseAmountInput(amount) || 0
                 }
+              />
+              <DocumentPaymentFields
+                value={paymentForm}
+                onChange={setPaymentForm}
+                totalAmount={purchaseVatPayable(
+                  invoiceUsesItemAmount(editingInvoice)
+                    ? Number(editingInvoice?.amount) || 0
+                    : parseAmountInput(amount) || 0,
+                  vatEnabled ? vatForm : emptyPurchaseVatForm(),
+                )}
               />
             </Box>
           </DialogContent>

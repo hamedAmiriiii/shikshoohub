@@ -55,6 +55,11 @@ import {
 } from "@/app/lib/adminPosSettings";
 import { readShopFeatures } from "@/app/lib/shopFeatures";
 import {
+  asPurchaseVatEnabled,
+  PURCHASE_VAT_SETTING_KEY,
+  setPurchaseVatEnabledCache,
+} from "@/app/lib/purchaseVat";
+import {
   getShopAccessFromUser,
   isShopAccessExpiredInfo,
 } from "@/app/lib/shopAccess";
@@ -342,6 +347,8 @@ export default function SettingsPage() {
   const [sequentialProductBarcodeEnabled, setSequentialProductBarcodeEnabled] = useState(false);
   const [proformaEnabled, setProformaEnabled] = useState(false);
   const [invoiceProductEntryEnabled, setInvoiceProductEntryEnabled] = useState(false);
+  const [purchaseVatEnabled, setPurchaseVatEnabled] = useState(false);
+  const [isSavingPurchaseVat, setIsSavingPurchaseVat] = useState(false);
   const [restaurantCafeEnabled, setRestaurantCafeEnabled] = useState(false);
   const [menuTableOrdersPopupEnabled, setMenuTableOrdersPopupEnabled] = useState(false);
   const [receiptPrintSettings, setReceiptPrintSettings] = useState<SaleReceiptPrintSettings>(
@@ -460,6 +467,20 @@ export default function SettingsPage() {
         if (Number.isFinite(rate) && rate >= 0) {
           setInstallmentInterestRate(rate);
         }
+      });
+      void apiRequestError(
+        "Get",
+        {},
+        {},
+        `/api/settings/${PURCHASE_VAT_SETTING_KEY}`,
+        true,
+        true,
+        token,
+      ).then((res) => {
+        if (!res || res.hasError) return;
+        const enabled = asPurchaseVatEnabled((res as { value?: unknown }).value);
+        setPurchaseVatEnabled(enabled);
+        setPurchaseVatEnabledCache(enabled);
       });
     }
     return () => window.removeEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, syncPosSettings);
@@ -609,6 +630,43 @@ export default function SettingsPage() {
         ? "ورود کالا از فاکتور فعال شد — در جزئیات فاکتور می‌توانید کالا را همان‌جا ثبت کنید"
         : "ورود کالا از فاکتور غیرفعال شد",
     );
+  };
+
+  const handleTogglePurchaseVat = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    const token = tokenCode();
+    if (!token) return;
+    setIsSavingPurchaseVat(true);
+    setPurchaseVatEnabled(enabled);
+    setPurchaseVatEnabledCache(enabled);
+    try {
+      const res = await apiRequestError(
+        "Put",
+        {},
+        { value: enabled ? "1" : "0" },
+        `/api/settings/${PURCHASE_VAT_SETTING_KEY}`,
+        true,
+        true,
+        token,
+      );
+      if (res?.hasError) {
+        setPurchaseVatEnabled(!enabled);
+        setPurchaseVatEnabledCache(!enabled);
+        toast.error(typeof res.message === "string" ? res.message : "ذخیره تنظیم ارزش افزوده ناموفق بود");
+        return;
+      }
+      toast.success(
+        enabled
+          ? "ارزش افزوده خرید فعال شد — در فاکتور و هزینه می‌توانید درصد یا مبلغ ثابت بزنید"
+          : "ارزش افزوده خرید غیرفعال شد",
+      );
+    } catch {
+      setPurchaseVatEnabled(!enabled);
+      setPurchaseVatEnabledCache(!enabled);
+      toast.error("خطا در ذخیره تنظیم ارزش افزوده");
+    } finally {
+      setIsSavingPurchaseVat(false);
+    }
   };
 
   const handleToggleSequentialBarcode = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1303,6 +1361,14 @@ export default function SettingsPage() {
             hint="در جزئیات فاکتور، بارکد و قیمت خرید را وارد کنید و کالا را همان‌جا ثبت کنید"
             checked={invoiceProductEntryEnabled}
             onChange={handleToggleInvoiceProductEntry}
+          />
+          <SettingsToggleRow
+            icon={<ReceiptLongIcon sx={{ fontSize: 18 }} />}
+            title="ارزش افزوده خرید"
+            hint="در فاکتور، هزینه و خرید مواد اولیه می‌توانید ارزش افزوده درصدی یا مبلغی ثبت کنید"
+            checked={purchaseVatEnabled}
+            onChange={(e) => void handleTogglePurchaseVat(e)}
+            disabled={isSavingPurchaseVat}
           />
           <SettingsToggleRow
             icon={<QrCode2Icon sx={{ fontSize: 18 }} />}
