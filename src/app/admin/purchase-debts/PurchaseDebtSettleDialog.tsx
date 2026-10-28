@@ -269,7 +269,7 @@ export default function PurchaseDebtSettleDialog({
             onChange={setAccountId}
             required
             label="حساب مقصد"
-            helperText="پول وصول‌شده فقط به همین حساب می‌رود و در فروش نقد و کارت امروز حساب نمی‌شود"
+            helperText="مبلغ اول به صندوق/کارتخوان می‌رود؛ بعد از تطبیق روزانه به این حساب واریز می‌شود"
           />
         </Box>
 

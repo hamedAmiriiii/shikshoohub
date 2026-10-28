@@ -273,7 +273,7 @@ export default function ChequesPage() {
         typeof res?.message === "string"
           ? res.message
           : clearTarget.type === "received"
-            ? "چک وصول شد و به حساب واریز شد"
+            ? "چک وصول شد؛ تا تطبیق در صندوق می‌ماند"
             : "چک وصول شد و از حساب کسر شد",
       );
       setClearTarget(null);
@@ -772,7 +772,7 @@ export default function ChequesPage() {
             چک شماره {clearTarget?.cheque_number} به مبلغ{" "}
             {formatNumber(parseAmount(clearTarget?.amount))} تومان وصول شود؟
             {clearTarget?.type === "received"
-              ? " مبلغ به حساب انتخاب‌شده واریز می‌شود."
+              ? " مبلغ تا تطبیق در صندوق می‌ماند؛ بعد از تطبیق به حساب مقصد واریز می‌شود."
               : " مبلغ از حساب انتخاب‌شده کسر می‌شود."}
           </DialogContentText>
           <Box sx={{ mb: 2 }}>
@@ -780,8 +780,12 @@ export default function ChequesPage() {
               value={clearAccountId}
               onChange={setClearAccountId}
               required
-              label={clearTarget?.type === "received" ? "حساب مقصد" : "حساب برداشت"}
-              helperText="حساب بانکی، تنخواه یا صندوق"
+              label={clearTarget?.type === "received" ? "حساب مقصد (بعد از تطبیق)" : "حساب برداشت"}
+              helperText={
+                clearTarget?.type === "received"
+                  ? "الان شارژ نمی‌شود؛ بعد از تطبیق روزانه به این حساب واریز کنید"
+                  : "حساب بانکی، تنخواه یا صندوق"
+              }
             />
           </Box>
           <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12, mb: 0.5 }}>
