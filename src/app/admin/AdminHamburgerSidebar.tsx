@@ -227,6 +227,13 @@ export default function AdminHamburgerSidebar({
         icon: <ReceiptLongIcon />,
         permission: "cheques",
       },
+      {
+        id: "cheque-books",
+        label: "دسته چک",
+        href: "/admin/cheque-books",
+        icon: <ReceiptLongIcon />,
+        permission: "cheques",
+      },
       { id: "installments", label: "لیست اقساط", href: "/admin/installments", icon: <CreditCardIcon />, permission: "installments" },
       {
         id: "installment-credits",

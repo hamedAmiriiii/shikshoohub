@@ -70,7 +70,12 @@ import {
   formatToman,
   isPieceMaterial,
   materialPriceLabel,
+  materialPriceLabelFromCode,
+  materialQtyFieldLabel,
+  materialQtyFieldLabelFromCode,
+  materialUnitFromCode,
   materialUnitLabel,
+  parseRawMaterialUnit,
   isPercentSaleMode,
   isRoundSalePrice,
   clampLayerGap,
@@ -296,7 +301,7 @@ export default function ProductionCostingPage() {
   const [materialDialogOpen, setMaterialDialogOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<RawMaterial | null>(null);
   const [materialName, setMaterialName] = useState("");
-  const [materialUnit, setMaterialUnit] = useState<"kg" | "piece">("kg");
+  const [materialUnit, setMaterialUnit] = useState<"kg" | "liter" | "piece">("kg");
   const [lotQty, setLotQty] = useState("");
   const [lotPrice, setLotPrice] = useState("");
   const [invoiceLink, setInvoiceLink] = useState<InvoiceLinkState>(emptyInvoiceLinkState);
@@ -306,7 +311,7 @@ export default function ProductionCostingPage() {
   const [goodDialogOpen, setGoodDialogOpen] = useState(false);
   const [editingGood, setEditingGood] = useState<ProducedGood | null>(null);
   const [goodName, setGoodName] = useState("");
-  const [goodUnit, setGoodUnit] = useState<"kg" | "piece">("kg");
+  const [goodUnit, setGoodUnit] = useState<"kg" | "liter" | "piece">("kg");
   const [goodIsFinal, setGoodIsFinal] = useState(true);
   const [recipeLines, setRecipeLines] = useState<RecipeLine[]>([emptyLine()]);
   const [layerOrder, setLayerOrder] = useState<LayerOrderEntry[]>([]);
@@ -497,7 +502,7 @@ export default function ProductionCostingPage() {
   const openEditMaterial = (material: RawMaterial) => {
     setEditingMaterial(material);
     setMaterialName(material.name);
-    setMaterialUnit(isPieceMaterial(material) ? "piece" : "kg");
+    setMaterialUnit(parseRawMaterialUnit(material.unit_type));
     setLotQty("");
     setLotPrice("");
     setInvoiceLink(emptyInvoiceLinkState());
@@ -619,7 +624,7 @@ export default function ProductionCostingPage() {
         const price = parseAmount(lotPrice);
         const isPiece = materialUnit === "piece";
         if (invoiceLink.createInvoice && (qty <= 0 || price <= 0)) {
-          toast.error(`برای ایجاد فاکتور، مقدار و ${isPiece ? "قیمت هر عدد" : "قیمت هر کیلو"} را وارد کنید`);
+          toast.error(`برای ایجاد فاکتور، مقدار و ${materialPriceLabelFromCode(materialUnit)} را وارد کنید`);
           return;
         }
         if (isPiece && qty > 0 && !Number.isInteger(qty)) {
@@ -699,7 +704,11 @@ export default function ProductionCostingPage() {
     const price = parseAmount(lotPrice);
     const lotIsPiece = isPieceMaterial(lotDialogMaterial);
     if (qty <= 0 || price <= 0) {
-      toast.error(lotIsPiece ? "تعداد و قیمت هر عدد را وارد کنید" : "مقدار کیلو و قیمت هر کیلو را وارد کنید");
+      toast.error(
+        lotIsPiece
+          ? "تعداد و قیمت هر عدد را وارد کنید"
+          : `مقدار ${materialUnitLabel(lotDialogMaterial)} و ${materialPriceLabel(lotDialogMaterial)} را وارد کنید`,
+      );
       return;
     }
     if (lotIsPiece && !Number.isInteger(qty)) {
@@ -846,7 +855,7 @@ export default function ProductionCostingPage() {
   const openEditGood = (good: ProducedGood) => {
     setEditingGood(good);
     setGoodName(good.name);
-    setGoodUnit(isPieceMaterial(good) ? "piece" : "kg");
+    setGoodUnit(parseRawMaterialUnit(good.unit_type));
     setGoodIsFinal(isFinalProducedGood(good));
     setRecipeLines(recipeLinesFromGood(good));
     setLayerOrder(layerOrderFromGood(good));
@@ -1080,7 +1089,11 @@ export default function ProductionCostingPage() {
     if (!produceGood) return;
     const kg = parseAmount(produceKg);
     if (kg <= 0) {
-      toast.error(isPieceMaterial(produceGood) ? "تعداد تولید را وارد کنید" : "مقدار تولید را به کیلو وارد کنید");
+      toast.error(
+        isPieceMaterial(produceGood)
+          ? "تعداد تولید را وارد کنید"
+          : `مقدار تولید را به ${materialUnitLabel(produceGood)} وارد کنید`,
+      );
       return;
     }
     if (isPieceMaterial(produceGood) && !Number.isInteger(kg)) {
@@ -1316,7 +1329,7 @@ export default function ProductionCostingPage() {
         )
       ) : tab === "materials" ? (
         materials.length === 0 ? (
-          <EmptyHint title="هنوز ماده اولیه‌ای نیست" text="اول نام ماده را بسازید (کیلویی یا تعدادی)، بعد خرید انبار را با مقدار و قیمت هر کیلو یا هر عدد اضافه کنید." />
+          <EmptyHint title="هنوز ماده اولیه‌ای نیست" text="اول نام ماده را بسازید (کیلویی، لیتری یا تعدادی)، بعد خرید انبار را با مقدار و قیمت هر واحد اضافه کنید." />
         ) : filteredMaterials.length === 0 ? (
           <EmptyHint title="نتیجه‌ای پیدا نشد" text="نام دیگری جستجو کنید." />
         ) : (
@@ -1738,13 +1751,14 @@ export default function ProductionCostingPage() {
               label="واحد"
               value={materialUnit}
               onChange={(e) => {
-                const unit = e.target.value === "piece" ? "piece" : "kg";
+                const unit = parseRawMaterialUnit(e.target.value);
                 setMaterialUnit(unit);
                 if (unit === "piece") setLotQty((prev) => String(Math.trunc(parseAmount(prev)) || ""));
               }}
               sx={fieldSx}
             >
               <MenuItem value="kg">کیلویی</MenuItem>
+              <MenuItem value="liter">لیتری</MenuItem>
               <MenuItem value="piece">تعدادی (عدد)</MenuItem>
             </TextField>
           )}
@@ -1752,7 +1766,7 @@ export default function ProductionCostingPage() {
             <>
               <TextField
                 size="small"
-                label={materialUnit === "piece" ? "تعداد (عدد)" : "مقدار (کیلو)"}
+                label={materialQtyFieldLabelFromCode(materialUnit)}
                 value={lotQty}
                 onChange={(e) => setLotQty(e.target.value)}
                 inputMode={materialUnit === "piece" ? "numeric" : "decimal"}
@@ -1760,7 +1774,7 @@ export default function ProductionCostingPage() {
               />
               <TextField
                 size="small"
-                label={materialUnit === "piece" ? "قیمت هر عدد" : "قیمت هر کیلو"}
+                label={materialPriceLabelFromCode(materialUnit)}
                 value={lotPrice}
                 onChange={(e) => setLotPrice(formatAmountInput(e.target.value))}
                 inputMode="numeric"
@@ -1871,7 +1885,7 @@ export default function ProductionCostingPage() {
         <DialogContent sx={dialogGridSx}>
           <TextField
             size="small"
-            label={isPieceMaterial(lotDialogMaterial) ? "تعداد (عدد)" : "مقدار (کیلو)"}
+            label={materialQtyFieldLabel(lotDialogMaterial)}
             value={lotQty}
             onChange={(e) => setLotQty(e.target.value)}
             inputMode={isPieceMaterial(lotDialogMaterial) ? "numeric" : "decimal"}
@@ -1919,11 +1933,12 @@ export default function ProductionCostingPage() {
               size="small"
               label="واحد"
               value={goodUnit}
-              onChange={(e) => setGoodUnit(e.target.value === "piece" ? "piece" : "kg")}
+              onChange={(e) => setGoodUnit(parseRawMaterialUnit(e.target.value))}
               disabled={!!editingGood}
               sx={fieldSx}
             >
               <MenuItem value="kg">کیلویی</MenuItem>
+              <MenuItem value="liter">لیتری</MenuItem>
               <MenuItem value="piece">تعدادی</MenuItem>
             </TextField>
             <TextField
@@ -2057,7 +2072,9 @@ export default function ProductionCostingPage() {
           <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mt: 0.5 }}>
             <Typography sx={{ fontSize: 12, fontWeight: 700, color: "var(--admin-text)" }}>فرمول</Typography>
             <Typography sx={{ fontSize: 10.5, color: "var(--admin-text-muted)" }}>
-              {goodUnit === "piece" ? "برای ۱ عدد · گرم / عدد" : "برای ۱ کیلو · گرم / عدد"}
+              {goodUnit === "piece"
+                ? "برای ۱ عدد · گرم / عدد"
+                : `برای ۱ ${materialUnitFromCode(goodUnit)} · گرم / عدد`}
             </Typography>
           </Box>
          
@@ -2672,7 +2689,11 @@ export default function ProductionCostingPage() {
         <DialogTitle>ثبت تولید {produceGood?.name || ""}</DialogTitle>
         <DialogContent sx={{ display: "grid", gap: 2, pt: "16px !important" }}>
           <TextField
-            label={isPieceMaterial(produceGood) ? "چند عدد تولید شود؟" : "چند کیلو تولید شود؟"}
+            label={
+              isPieceMaterial(produceGood)
+                ? "چند عدد تولید شود؟"
+                : `چند ${materialUnitLabel(produceGood)} تولید شود؟`
+            }
             value={produceKg}
             onChange={(e) => setProduceKg(e.target.value)}
             inputMode="decimal"
@@ -2986,7 +3007,7 @@ export default function ProductionCostingPage() {
           </Typography>
           <TextField
             size="small"
-            label={isPieceMaterial(wasteTarget?.item) ? "تعداد" : "مقدار (کیلو)"}
+            label={isPieceMaterial(wasteTarget?.item) ? "تعداد" : materialQtyFieldLabel(wasteTarget?.item)}
             value={wasteQty}
             onChange={(e) => setWasteQty(e.target.value)}
             inputMode="decimal"

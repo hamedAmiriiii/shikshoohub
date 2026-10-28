@@ -1,7 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { Box, FormControlLabel, IconButton, Radio, RadioGroup, TextField, Typography } from "@mui/material";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Box,
+  FormControlLabel,
+  IconButton,
+  MenuItem,
+  Radio,
+  RadioGroup,
+  TextField,
+  Typography,
+} from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
@@ -12,7 +21,15 @@ import persian_fa from "react-date-object/locales/persian_fa";
 import "react-multi-date-picker/styles/layouts/mobile.css";
 import ShopAccountSelect from "@/app/admin/ShopAccountSelect";
 import { CHEQUE_DATE_PICKER_Z, chequeDatePickerBoxSx, chequeFormFieldSx } from "@/app/admin/cheques/ChequeFormSheet";
+import tokenCode from "@/app/coponent/tokenCode";
+import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
 import { formatAmountInput, formatAmountNumber, parseAmountInput } from "@/app/lib/amountInput";
+import {
+  chequeBookLabel,
+  chequeBookUnusedCount,
+  type ChequeBook,
+  type ChequeBookLeaf,
+} from "@/app/lib/chequeBooks";
 import {
   appendDocumentCheque,
   beginEditDocumentCheque,
@@ -52,6 +69,7 @@ export default function DocumentPaymentFields({
   compact,
 }: Props) {
   const [chequeError, setChequeError] = useState("");
+  const [chequeBooks, setChequeBooks] = useState<ChequeBook[]>([]);
   const patch = (partial: Partial<DocumentPaymentFormState>) => onChange({ ...value, ...partial });
   const cash = parseAmountInput(value.cashAmount);
   const cheque = parseAmountInput(value.chequeAmount);
@@ -61,6 +79,45 @@ export default function DocumentPaymentFields({
   const needsAccount = value.mode === "account" || (value.mode === "mixed" && cash > 0);
   const needsCheque = value.mode === "cheque" || value.mode === "mixed";
   const listedChequeTotal = documentChequeTotal(value.cheques);
+  const usedLeafIds = useMemo(() => {
+    const ids = new Set<number>();
+    for (const row of value.cheques) {
+      if (row.chequeBookLeafId) ids.add(row.chequeBookLeafId);
+    }
+    return ids;
+  }, [value.cheques]);
+
+  useEffect(() => {
+    if (!needsCheque) return;
+    const token = tokenCode();
+    if (!token) return;
+    let cancelled = false;
+    void (async () => {
+      const res = await FetchWithJwtClient(
+        "GET",
+        "/api/cheque-books?with_unused_leaves=1",
+        token,
+      );
+      if (cancelled || res?.hasError) return;
+      const list = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
+      setChequeBooks(list as ChequeBook[]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [needsCheque]);
+
+  const selectedBook = useMemo(
+    () => chequeBooks.find((b) => b.id === Number(value.draftChequeBookId)) || null,
+    [chequeBooks, value.draftChequeBookId],
+  );
+  const availableLeaves = useMemo(() => {
+    const leaves = (selectedBook?.unused_leaves || []) as ChequeBookLeaf[];
+    return leaves.filter(
+      (leaf) =>
+        !usedLeafIds.has(leaf.id) || leaf.id === Number(value.draftChequeBookLeafId),
+    );
+  }, [selectedBook, usedLeafIds, value.draftChequeBookLeafId]);
   const addCheque = () => {
     const added = appendDocumentCheque(value);
     if (added.error || !added.form) {
@@ -276,16 +333,95 @@ export default function DocumentPaymentFields({
             sx={chequeFormFieldSx}
           />
           <TextField
+            select
             size="small"
-            label="شماره چک"
-            value={value.chequeNumber}
+            label="منبع شماره چک"
+            value={value.draftChequeSource}
             onChange={(e) => {
+              const source = e.target.value === "book" ? "book" : "manual";
               setChequeError("");
-              patch({ chequeNumber: e.target.value });
+              patch({
+                draftChequeSource: source,
+                draftChequeBookId: source === "book" ? value.draftChequeBookId : "",
+                draftChequeBookLeafId: "",
+                chequeNumber: source === "manual" ? value.chequeNumber : "",
+              });
             }}
             disabled={disabled}
             sx={chequeFormFieldSx}
-          />
+          >
+            <MenuItem value="manual">ورود دستی</MenuItem>
+            <MenuItem value="book">از دسته چک</MenuItem>
+          </TextField>
+          {value.draftChequeSource === "book" ? (
+            <>
+              <TextField
+                select
+                size="small"
+                label="دسته چک"
+                value={value.draftChequeBookId === "" ? "" : String(value.draftChequeBookId)}
+                onChange={(e) => {
+                  const bookId = e.target.value ? Number(e.target.value) : "";
+                  const book = chequeBooks.find((b) => b.id === Number(bookId));
+                  setChequeError("");
+                  patch({
+                    draftChequeBookId: bookId,
+                    draftChequeBookLeafId: "",
+                    chequeNumber: "",
+                    chequeBank: book?.bank_name ? String(book.bank_name) : value.chequeBank,
+                  });
+                }}
+                disabled={disabled || chequeBooks.length === 0}
+                helperText={
+                  chequeBooks.length === 0
+                    ? "هنوز دسته چکی ثبت نشده — از منوی مالی → دسته چک اضافه کنید"
+                    : undefined
+                }
+                sx={chequeFormFieldSx}
+              >
+                {chequeBooks.map((book) => (
+                  <MenuItem key={book.id} value={String(book.id)} disabled={chequeBookUnusedCount(book) <= 0}>
+                    {chequeBookLabel(book)} ({chequeBookUnusedCount(book)} آزاد)
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                select
+                size="small"
+                label="برگه"
+                value={value.draftChequeBookLeafId === "" ? "" : String(value.draftChequeBookLeafId)}
+                onChange={(e) => {
+                  const leafId = e.target.value ? Number(e.target.value) : "";
+                  const leaf = availableLeaves.find((row) => row.id === Number(leafId));
+                  setChequeError("");
+                  patch({
+                    draftChequeBookLeafId: leafId,
+                    chequeNumber: leaf ? String(leaf.leaf_number) : "",
+                  });
+                }}
+                disabled={disabled || !selectedBook || availableLeaves.length === 0}
+                sx={chequeFormFieldSx}
+              >
+                {availableLeaves.map((leaf) => (
+                  <MenuItem key={leaf.id} value={String(leaf.id)}>
+                    شماره {leaf.leaf_number_label || leaf.leaf_number}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </>
+          ) : (
+            <TextField
+              size="small"
+              label="شماره چک"
+              value={value.chequeNumber}
+              onChange={(e) => {
+                setChequeError("");
+                patch({ chequeNumber: e.target.value, draftChequeBookLeafId: "" });
+              }}
+              disabled={disabled}
+              sx={chequeFormFieldSx}
+            />
+          )}
           <TextField
             size="small"
             label="نام بانک"

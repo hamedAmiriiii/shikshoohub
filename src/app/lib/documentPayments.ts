@@ -54,6 +54,8 @@ export type DocumentChequeDraft = {
   chequeDueDate: DateObject | null;
   /** شناسه چک ذخیره‌شده؛ در ویرایش همان رکورد به‌روز می‌شود */
   chequeId?: number;
+  /** برگه از دسته چک (اختیاری؛ بدون آن همان ورود دستی شماره است) */
+  chequeBookLeafId?: number;
 };
 
 export type DocumentPaymentFormState = {
@@ -70,6 +72,11 @@ export type DocumentPaymentFormState = {
   chequeDueDate: DateObject | null;
   /** اگر چک باز از لیست ویرایش شده باشد */
   draftChequeId: number | null;
+  /** برگه انتخاب‌شده از دسته چک برای چک جاری */
+  draftChequeBookLeafId: number | "";
+  /** منبع شماره: دستی یا دسته چک */
+  draftChequeSource: "manual" | "book";
+  draftChequeBookId: number | "";
   cheques: DocumentChequeDraft[];
 };
 
@@ -103,6 +110,9 @@ export function emptyDocumentPaymentForm(): DocumentPaymentFormState {
     chequePayee: "",
     chequeDueDate: null,
     draftChequeId: null,
+    draftChequeBookLeafId: "",
+    draftChequeSource: "manual",
+    draftChequeBookId: "",
     cheques: [],
   };
 }
@@ -215,7 +225,9 @@ export function formFromDocumentPayment(
 }
 
 function chequeDraftError(draft: DocumentChequeDraft): string | null {
-  if (!draft.chequeNumber.trim()) return "شماره چک را وارد کنید";
+  if (!draft.chequeBookLeafId && !draft.chequeNumber.trim()) {
+    return "شماره چک را وارد کنید یا برگه دسته چک را انتخاب کنید";
+  }
   if (parseAmountInput(draft.amount) <= 0) return "مبلغ چک را وارد کنید";
   if (!dateObjectToPayload(draft.chequeDueDate)) return "تاریخ سررسید چک را انتخاب کنید";
   return null;
@@ -224,10 +236,13 @@ function chequeDraftError(draft: DocumentChequeDraft): string | null {
 function chequePayloadFromDraft(draft: DocumentChequeDraft): Record<string, unknown> {
   const due = dateObjectToPayload(draft.chequeDueDate);
   const cheque: Record<string, unknown> = {
-    cheque_number: draft.chequeNumber.trim(),
     due_date: due,
     type: "issued",
   };
+  if (draft.chequeBookLeafId) {
+    cheque.cheque_book_leaf_id = draft.chequeBookLeafId;
+  }
+  if (draft.chequeNumber.trim()) cheque.cheque_number = draft.chequeNumber.trim();
   if (draft.chequeBank.trim()) cheque.bank_name = draft.chequeBank.trim();
   if (draft.chequePayee.trim()) cheque.payee = draft.chequePayee.trim();
   return cheque;
@@ -244,12 +259,15 @@ function documentChequeSourceRows(doc: DocumentPaymentFields) {
 }
 
 function draftFromOpenFields(form: DocumentPaymentFormState): DocumentChequeDraft | null {
+  const leafId =
+    form.draftChequeBookLeafId === "" ? undefined : Number(form.draftChequeBookLeafId);
   const touched =
     form.draftChequeAmount.trim() !== "" ||
     form.chequeNumber.trim() !== "" ||
     form.chequeBank.trim() !== "" ||
     form.chequePayee.trim() !== "" ||
-    form.chequeDueDate != null;
+    form.chequeDueDate != null ||
+    (Number.isFinite(leafId) && (leafId as number) > 0);
   if (!touched) return null;
   return {
     key: "open",
@@ -259,6 +277,8 @@ function draftFromOpenFields(form: DocumentPaymentFormState): DocumentChequeDraf
     chequePayee: form.chequePayee,
     chequeDueDate: form.chequeDueDate,
     chequeId: form.draftChequeId ?? undefined,
+    chequeBookLeafId:
+      Number.isFinite(leafId) && (leafId as number) > 0 ? (leafId as number) : undefined,
   };
 }
 
@@ -307,6 +327,7 @@ export function appendDocumentCheque(
       chequePayee: "",
       chequeDueDate: null,
       draftChequeId: null,
+      draftChequeBookLeafId: "",
     },
   };
 }
@@ -335,6 +356,8 @@ export function beginEditDocumentCheque(
       chequePayee: target.chequePayee,
       chequeDueDate: target.chequeDueDate,
       draftChequeId: target.chequeId ?? null,
+      draftChequeBookLeafId: target.chequeBookLeafId ?? "",
+      draftChequeSource: target.chequeBookLeafId ? "book" : form.draftChequeSource,
     },
   };
 }

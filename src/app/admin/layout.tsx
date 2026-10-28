@@ -43,6 +43,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/beneficiaries': 'ذینفعان خرید',
     '/admin/manual-trades': 'ثبت سند',
     '/admin/cheques': 'چک',
+    '/admin/cheque-books': 'دسته چک',
     '/admin/inventory': 'موجودی انبار',
     '/admin/reports': 'گزارشات',
     '/admin/customers': 'خریداران',

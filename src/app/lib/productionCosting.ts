@@ -12,7 +12,7 @@ export type RawMaterialLot = {
   invoice_link?: "whole" | "item" | string | null;
 };
 
-export type RawMaterialUnit = "kg" | "piece";
+export type RawMaterialUnit = "kg" | "liter" | "piece";
 
 export type RawMaterial = {
   unit_type?: RawMaterialUnit | string | null;
@@ -242,6 +242,17 @@ export function isPieceMaterial(material?: { unit_type?: string | null } | null)
   return material?.unit_type === "piece";
 }
 
+export function isLiterMaterial(material?: { unit_type?: string | null } | null): boolean {
+  return material?.unit_type === "liter";
+}
+
+/** نرمال‌سازی واحد از ورودی فرم / API */
+export function parseRawMaterialUnit(value: string | null | undefined): RawMaterialUnit {
+  if (value === "piece") return "piece";
+  if (value === "liter") return "liter";
+  return "kg";
+}
+
 /** پیش‌فرض نهایی است؛ فقط false صریح = نیمه‌ساخته */
 export function isFinalProducedGood(good?: Pick<ProducedGood, "is_final"> | null): boolean {
   if (!good) return true;
@@ -250,14 +261,43 @@ export function isFinalProducedGood(good?: Pick<ProducedGood, "is_final"> | null
   return true;
 }
 
-/** «کیلو» یا «عدد» */
+/** «کیلو»، «لیتر» یا «عدد» */
 export function materialUnitLabel(material?: { unit_type?: string | null } | null): string {
-  return isPieceMaterial(material) ? "عدد" : "کیلو";
+  if (isPieceMaterial(material)) return "عدد";
+  if (isLiterMaterial(material)) return "لیتر";
+  return "کیلو";
 }
 
-/** «قیمت هر کیلو» یا «قیمت هر عدد» */
+/** «قیمت هر کیلو»، «قیمت هر لیتر» یا «قیمت هر عدد» */
 export function materialPriceLabel(material?: { unit_type?: string | null } | null): string {
-  return isPieceMaterial(material) ? "قیمت هر عدد" : "قیمت هر کیلو";
+  if (isPieceMaterial(material)) return "قیمت هر عدد";
+  if (isLiterMaterial(material)) return "قیمت هر لیتر";
+  return "قیمت هر کیلو";
+}
+
+/** برچسب فیلد مقدار خرید / ضایعات */
+export function materialQtyFieldLabel(material?: { unit_type?: string | null } | null): string {
+  if (isPieceMaterial(material)) return "تعداد (عدد)";
+  if (isLiterMaterial(material)) return "مقدار (لیتر)";
+  return "مقدار (کیلو)";
+}
+
+export function materialUnitFromCode(unit: RawMaterialUnit): string {
+  if (unit === "piece") return "عدد";
+  if (unit === "liter") return "لیتر";
+  return "کیلو";
+}
+
+export function materialPriceLabelFromCode(unit: RawMaterialUnit): string {
+  if (unit === "piece") return "قیمت هر عدد";
+  if (unit === "liter") return "قیمت هر لیتر";
+  return "قیمت هر کیلو";
+}
+
+export function materialQtyFieldLabelFromCode(unit: RawMaterialUnit): string {
+  if (unit === "piece") return "تعداد (عدد)";
+  if (unit === "liter") return "مقدار (لیتر)";
+  return "مقدار (کیلو)";
 }
 
 function normalizeDigits(value: string): string {
