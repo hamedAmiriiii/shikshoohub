@@ -145,19 +145,55 @@ export function writeSadrScaleSettings(partial: Partial<SadrScaleSettings>): Sad
   return merged;
 }
 
+const SCALE_MAX_KG = 200;
+/** حداکثر گرم معقول برای ترازوهای فروشگاهی (۲۰۰ کیلو) */
+const SCALE_MAX_GRAMS = SCALE_MAX_KG * 1000;
+
+function roundScaleKg(kg: number): number | null {
+  if (!Number.isFinite(kg) || kg < 0 || kg > SCALE_MAX_KG) return null;
+  return Math.round(kg * 1000) / 1000;
+}
+
+/**
+ * بسیاری از ترازوهای ساده فقط عدد گرم می‌فرستند، مثلاً:
+ * 01120 → ۱۱۲۰ گرم = ۱.۱۲ کیلو
+ * 00880 → ۸۸۰ گرم = ۰.۸۸ کیلو
+ * (معمولاً چندبار با \n تکرار می‌شود)
+ */
+function gramsTokenToKg(token: string): number | null {
+  const t = token.trim();
+  if (!/^\d{4,6}$/.test(t)) return null;
+  const grams = Number(t);
+  if (!Number.isFinite(grams) || grams < 0 || grams > SCALE_MAX_GRAMS) return null;
+  return roundScaleKg(grams / 1000);
+}
+
+function bareNumberToKg(n: number, rawToken: string): number | null {
+  if (!Number.isFinite(n) || n < 0) return null;
+  // عدد صحیح بزرگ‌تر از ۲۰۰ کیلو نیست → گرم است (مثل 880 یا 1120)
+  if (Number.isInteger(n) && n > SCALE_MAX_KG && n <= SCALE_MAX_GRAMS) {
+    return roundScaleKg(n / 1000);
+  }
+  // توکن صفر‌پرشده ۴–۶ رقمی حتی اگر مقدارش کوچک باشد (مثلاً 00050 = ۵۰ گرم)
+  if (/^\d{4,6}$/.test(rawToken.trim())) {
+    return gramsTokenToKg(rawToken);
+  }
+  return roundScaleKg(n);
+}
+
 /** استخراج وزن (کیلو) از متن خام ترازو */
 export function parseScaleWeightKg(raw: string): number | null {
   if (!raw) return null;
   const text = String(raw);
 
-  const packet = text.match(/[\x01\x02]?[SUFsu\x53\x55\x46]?\s*([+-]?\d+[.,]?\d*)\s*(KG|kg|Kg|G|g)?/);
-  if (packet) {
-    const n = Number(packet[1].replace(",", "."));
-    if (Number.isFinite(n)) {
-      const unit = (packet[2] || "KG").toUpperCase();
-      const kg = unit === "G" ? n / 1000 : n;
-      if (kg >= 0 && kg <= 200) return Math.round(kg * 1000) / 1000;
-    }
+  // آخر خط کامل را اول چک کن (استریم تکراری 01120\n01120\n…)
+  const lines = text
+    .split(/[\r\n]+/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  for (let i = lines.length - 1; i >= 0; i -= 1) {
+    const fromGrams = gramsTokenToKg(lines[i]);
+    if (fromGrams != null) return fromGrams;
   }
 
   const withUnit = [...text.matchAll(/([+-]?\d+[.,]\d+|\d+)\s*(KG|kg|Kg|G|g)\b/g)];
@@ -166,15 +202,34 @@ export function parseScaleWeightKg(raw: string): number | null {
     const n = Number(m[1].replace(",", "."));
     if (!Number.isFinite(n)) continue;
     const kg = m[2].toUpperCase() === "G" ? n / 1000 : n;
-    if (kg >= 0 && kg <= 200) return Math.round(kg * 1000) / 1000;
+    const rounded = roundScaleKg(kg);
+    if (rounded != null) return rounded;
+  }
+
+  // پروتکل‌هایی مثل S/U/F + عدد + واحد اختیاری
+  const packet = text.match(/[\x01\x02]?[SUFsu\x53\x55\x46]\s*([+-]?\d+[.,]?\d*)\s*(KG|kg|Kg|G|g)?/);
+  if (packet) {
+    const token = packet[1];
+    const n = Number(token.replace(",", "."));
+    if (Number.isFinite(n)) {
+      if (packet[2]) {
+        const kg = packet[2].toUpperCase() === "G" ? n / 1000 : n;
+        const rounded = roundScaleKg(kg);
+        if (rounded != null) return rounded;
+      } else {
+        const rounded = bareNumberToKg(n, token);
+        if (rounded != null) return rounded;
+      }
+    }
   }
 
   const printable = text.replace(/[^\x20-\x7E]/g, " ");
   const nums = [...printable.matchAll(/([+-]?\d+[.,]\d+|\d+)/g)];
   for (let i = nums.length - 1; i >= 0; i -= 1) {
-    const n = Number(nums[i][1].replace(",", "."));
-    if (!Number.isFinite(n)) continue;
-    if (n >= 0 && n <= 200) return Math.round(n * 1000) / 1000;
+    const token = nums[i][1];
+    const n = Number(token.replace(",", "."));
+    const rounded = bareNumberToKg(n, token);
+    if (rounded != null) return rounded;
   }
   return null;
 }
