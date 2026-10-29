@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import {
   apiFetch,
@@ -18,10 +18,27 @@ export default function AdminTournamentDetailPage() {
   const [regs, setRegs] = useState<any[]>([]);
   const [bracket, setBracket] = useState<any[]>([]);
   const [tables, setTables] = useState<any[]>([]);
+  const [players, setPlayers] = useState<any[]>([]);
+  const [playerQuery, setPlayerQuery] = useState("");
+  const [selectedPlayerId, setSelectedPlayerId] = useState("");
+  const [waiveFee, setWaiveFee] = useState(true);
   const [tableName, setTableName] = useState("میز 1");
   const [msg, setMsg] = useState("");
   const [scores, setScores] = useState<Record<number, { s1: string; s2: string }>>({});
   const [busy, setBusy] = useState<string | null>(null);
+  const [playersLoading, setPlayersLoading] = useState(false);
+
+  async function loadPlayers(q = "") {
+    setPlayersLoading(true);
+    try {
+      const qs = new URLSearchParams({ per_page: "200" });
+      if (q.trim()) qs.set("q", q.trim());
+      const p = await apiFetch<{ data: any[] }>(`/admin/players?${qs}`);
+      setPlayers(p.data || []);
+    } finally {
+      setPlayersLoading(false);
+    }
+  }
 
   async function load() {
     const list = await apiFetch<{ data: any[] }>("/admin/tournaments");
@@ -34,6 +51,7 @@ export default function AdminTournamentDetailPage() {
     ]);
     setRegs(r.data || []);
     setTables(tb.data || []);
+    await loadPlayers(playerQuery);
     if (t.slug) {
       const pub = await apiFetch<any>(`/tournaments/${t.slug}`, { auth: false });
       setBracket(pub.bracket || []);
@@ -42,7 +60,26 @@ export default function AdminTournamentDetailPage() {
 
   useEffect(() => {
     load().catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      loadPlayers(playerQuery).catch(() => {});
+    }, 300);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playerQuery]);
+
+  const activePlayerIds = useMemo(
+    () => new Set(regs.filter((r) => isRegistrationSettled(r)).map((r) => Number(r.player_id))),
+    [regs],
+  );
+
+  const availablePlayers = useMemo(
+    () => players.filter((p) => !activePlayerIds.has(Number(p.id))),
+    [players, activePlayerIds],
+  );
 
   async function draw() {
     setMsg("");
@@ -138,6 +175,31 @@ export default function AdminTournamentDetailPage() {
     }
   }
 
+  async function addPlayer() {
+    if (!selectedPlayerId) {
+      setMsg("بازیکن را انتخاب کنید.");
+      return;
+    }
+    setBusy("add-player");
+    setMsg("");
+    try {
+      await apiFetch(`/admin/tournaments/${id}/registrations`, {
+        method: "POST",
+        body: JSON.stringify({
+          player_id: Number(selectedPlayerId),
+          waive_fee: waiveFee,
+        }),
+      });
+      setSelectedPlayerId("");
+      setMsg("بازیکن به مسابقه اضافه شد.");
+      await load();
+    } catch (err) {
+      setMsg((err as ApiError).message || "خطا در افزودن بازیکن");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   if (!tournament) return <p className="text-slate-400">در حال بارگذاری...</p>;
 
   return (
@@ -146,7 +208,7 @@ export default function AdminTournamentDetailPage() {
         <h1 className="font-display text-3xl text-slate-100">{tournament.name}</h1>
         <p className="text-sm text-slate-400">{statusLabel[tournament.status]}</p>
       </div>
-      {msg && <p className="text-sm text-cyan-300">{msg}</p>}
+      {msg && <p className="text-sm text-cyan-300 whitespace-pre-wrap">{msg}</p>}
 
       <div className="flex flex-wrap gap-2">
         <BilliardButton
@@ -185,10 +247,69 @@ export default function AdminTournamentDetailPage() {
         </div>
       </section>
 
-      <section className="card-soft">
-        <h2 className="mb-3 font-display text-xl text-slate-100">
-          ثبت‌نام‌ها ({regs.filter((r) => isRegistrationSettled(r)).length} قطعی / {regs.length} کل)
-        </h2>
+      <section className="card-soft space-y-4">
+        <div>
+          <h2 className="font-display text-xl text-slate-100">
+            ثبت‌نام‌ها ({regs.filter((r) => isRegistrationSettled(r)).length} قطعی / {regs.length} کل)
+          </h2>
+          <p className="mt-1 text-sm text-slate-400">بازیکن را از لیست انتخاب کنید و به مسابقه اضافه کنید.</p>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
+          <div>
+            <label className="label">جستجوی بازیکن</label>
+            <input
+              className="input"
+              value={playerQuery}
+              onChange={(e) => {
+                setPlayerQuery(e.target.value);
+                setSelectedPlayerId("");
+              }}
+              placeholder="نام، موبایل، شهر..."
+            />
+          </div>
+          <div>
+            <label className="label">انتخاب از لیست {playersLoading ? "(در حال جستجو...)" : ""}</label>
+            <select
+              className="input"
+              value={selectedPlayerId}
+              onChange={(e) => setSelectedPlayerId(e.target.value)}
+            >
+              <option value="">انتخاب بازیکن</option>
+              {availablePlayers.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.full_name} — {p.phone}
+                  {p.city ? ` · ${p.city}` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+          <BilliardButton
+            type="button"
+            loading={busy === "add-player"}
+            disabled={!selectedPlayerId || (busy !== null && busy !== "add-player")}
+            onClick={addPlayer}
+          >
+            افزودن به مسابقه
+          </BilliardButton>
+        </div>
+
+        <label className="flex items-center gap-2 text-sm text-slate-300">
+          <input
+            type="checkbox"
+            checked={waiveFee}
+            onChange={(e) => setWaiveFee(e.target.checked)}
+            className="h-4 w-4 accent-fuchsia-500"
+          />
+          بدون پرداخت / رایگان ثبت شود (پیشنهادی برای افزودن دستی ادمین)
+        </label>
+
+        {!availablePlayers.length && (
+          <p className="text-sm text-slate-500">
+            بازیکن قابل‌افزودنی نیست — یا همه اضافه شده‌اند یا لیست بازیکن خالی است.
+          </p>
+        )}
+
         <div className="divide-y divide-white/10 text-sm">
           {regs.map((r) => {
             const settled = isRegistrationSettled(r);
@@ -213,6 +334,7 @@ export default function AdminTournamentDetailPage() {
               </div>
             );
           })}
+          {!regs.length && <p className="py-3 text-slate-500">هنوز ثبت‌نامی نیست.</p>}
         </div>
       </section>
 
