@@ -1971,75 +1971,69 @@ export default function ProductionCostingPage() {
               </Box>
             }
           />
-          <Autocomplete
-            multiple
-            size="small"
-            options={flattenCategories(shopCategories)}
-            value={flattenCategories(shopCategories).filter((cat) => goodCategoryIds.includes(cat.id))}
-            onChange={(_, value) => setGoodCategoryIds(value.map((cat) => cat.id))}
-            getOptionLabel={(option) => option.name}
-            isOptionEqualToValue={(option, value) => option.id === value.id}
-            renderTags={(value, getTagProps) =>
-              value.map((option, index) => (
-                <Chip {...getTagProps({ index })} key={option.id} label={option.name} size="small" />
-              ))
-            }
-            renderInput={(params) => (
-              <TextField {...params} size="small" label="دسته‌بندی" sx={fieldSx} />
-            )}
-          />
+          <Box sx={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 1, alignItems: "start" }}>
+            <Autocomplete
+              multiple
+              size="small"
+              options={flattenCategories(shopCategories)}
+              value={flattenCategories(shopCategories).filter((cat) => goodCategoryIds.includes(cat.id))}
+              onChange={(_, value) => setGoodCategoryIds(value.map((cat) => cat.id))}
+              getOptionLabel={(option) => option.name}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              renderTags={(value, getTagProps) =>
+                value.map((option, index) => (
+                  <Chip {...getTagProps({ index })} key={option.id} label={option.name} size="small" />
+                ))
+              }
+              renderInput={(params) => (
+                <TextField {...params} size="small" label="دسته‌بندی" sx={fieldSx} />
+              )}
+            />
 
-          {(() => {
-            const existing = coverRemoved ? null : layerImageSrc(editingGood?.cover_image_url);
-            const shown = coverDataUrl || existing;
-            return (
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1.5,
-                  p: 1,
-                  borderRadius: "12px",
-                  border: "1px dashed var(--admin-border)",
-                }}
-              >
+            {(() => {
+              const existing = coverRemoved ? null : layerImageSrc(editingGood?.cover_image_url);
+              const shown = coverDataUrl || existing;
+              return (
                 <Box
                   sx={{
-                    width: 84,
-                    height: 64,
-                    flexShrink: 0,
-                    borderRadius: "10px",
-                    display: "grid",
-                    placeItems: "center",
-                    overflow: "hidden",
-                    bgcolor: "var(--admin-surface-alt)",
-                    border: "1px solid var(--admin-border)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    p: 0.75,
+                    borderRadius: "12px",
+                    border: "1px dashed var(--admin-border)",
                   }}
                 >
-                  {shown ? (
-                    <Box component="img" src={shown} alt="" sx={{ maxWidth: "100%", maxHeight: "100%", objectFit: "cover" }} />
-                  ) : (
-                    <Typography sx={{ fontSize: 10, color: "#888", textAlign: "center", px: 0.5 }}>
-                      بدون عکس کلی
-                    </Typography>
-                  )}
-                </Box>
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography sx={{ fontSize: 12, fontWeight: 700, color: "var(--admin-text)" }}>
-                    عکس کلی کالا
-                  </Typography>
-                  <Typography sx={{ fontSize: 10.5, color: "var(--admin-text-muted)", lineHeight: 1.7 }}>
-                    عکس تمام‌شده بدون مواد تشکیل‌دهنده. اگر نباشد، لایه‌های مواد در منو نمایش داده می‌شود. jpg / png / webp · حداکثر ۵ مگابایت.
-                  </Typography>
-                  <Box sx={{ display: "flex", gap: 0.8, mt: 0.6, flexWrap: "wrap" }}>
+                  <Box
+                    sx={{
+                      width: 64,
+                      height: 48,
+                      flexShrink: 0,
+                      borderRadius: "8px",
+                      display: "grid",
+                      placeItems: "center",
+                      overflow: "hidden",
+                      bgcolor: "var(--admin-surface-alt)",
+                      border: "1px solid var(--admin-border)",
+                    }}
+                  >
+                    {shown ? (
+                      <Box component="img" src={shown} alt="" sx={{ maxWidth: "100%", maxHeight: "100%", objectFit: "cover" }} />
+                    ) : (
+                      <Typography sx={{ fontSize: 9, color: "#888", textAlign: "center", px: 0.5 }}>
+                        عکس کلی
+                      </Typography>
+                    )}
+                  </Box>
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 0.4 }}>
                     <Button
                       size="small"
                       variant="outlined"
                       component="label"
                       startIcon={<CloudUploadIcon />}
-                      sx={{ fontSize: 11 }}
+                      sx={{ fontSize: 11, whiteSpace: "nowrap" }}
                     >
-                      {shown ? "تغییر عکس" : "انتخاب عکس"}
+                      {shown ? "تغییر" : "انتخاب"}
                       <input
                         hidden
                         type="file"
@@ -2060,14 +2054,14 @@ export default function ProductionCostingPage() {
                         }}
                         sx={{ fontSize: 11 }}
                       >
-                        حذف عکس
+                        حذف
                       </Button>
                     ) : null}
                   </Box>
                 </Box>
-              </Box>
-            );
-          })()}
+              );
+            })()}
+          </Box>
 
           <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mt: 0.5 }}>
             <Typography sx={{ fontSize: 12, fontWeight: 700, color: "var(--admin-text)" }}>فرمول</Typography>
