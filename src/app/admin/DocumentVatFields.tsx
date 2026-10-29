@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, MenuItem, TextField, Typography } from "@mui/material";
+import { Box, TextField, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
 import { formatAmountNumber, parseAmountInput } from "@/app/lib/amountInput";
 import {
   computePurchaseVat,
@@ -20,6 +20,8 @@ type Props = {
 };
 
 const fieldSx = {
+  minWidth: 100,
+  flex: "1 1 100px",
   "& .MuiOutlinedInput-root": {
     bgcolor: "var(--admin-surface)",
     color: "var(--admin-text)",
@@ -28,13 +30,26 @@ const fieldSx = {
   "& .MuiInputLabel-root": { color: "var(--admin-text-muted)" },
 };
 
+const toggleSx = {
+  height: 36,
+  px: 1.25,
+  fontSize: 12,
+  color: "var(--admin-text-muted)",
+  borderColor: "var(--admin-border)",
+  "&.Mui-selected": {
+    bgcolor: "var(--admin-accent)",
+    color: "var(--admin-on-accent)",
+    borderColor: "var(--admin-accent)",
+    "&:hover": { bgcolor: "var(--admin-accent-hover)" },
+  },
+};
+
 export default function DocumentVatFields({
   enabled,
   value,
   onChange,
   baseAmount,
   disabled,
-  compact,
 }: Props) {
   if (!enabled) return null;
 
@@ -42,79 +57,102 @@ export default function DocumentVatFields({
   const payable = purchaseVatPayable(baseAmount, value);
   const patch = (partial: Partial<PurchaseVatFormState>) => onChange({ ...value, ...partial });
 
+  const setMode = (_: unknown, next: PurchaseVatMode | null) => {
+    if (!next) return;
+    patch({ mode: next });
+  };
+
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 1, gridColumn: "1 / -1" }}>
-      <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>ارزش افزوده</Typography>
-      <Box
+    <Box
+      sx={{
+        gridColumn: "1 / -1",
+        display: "flex",
+        flexWrap: "wrap",
+        alignItems: "center",
+        gap: 1,
+      }}
+    >
+      <Typography
         sx={{
-          display: "grid",
-          gridTemplateColumns: compact ? "1fr" : { xs: "1fr", sm: "1fr 1fr 1fr" },
-          gap: 1,
+          color: "var(--admin-text-muted)",
+          fontSize: 12,
+          fontWeight: 600,
+          whiteSpace: "nowrap",
         }}
       >
+        ارزش افزوده
+      </Typography>
+
+      <ToggleButtonGroup
+        exclusive
+        size="small"
+        value={value.mode}
+        disabled={disabled}
+        onChange={setMode}
+        sx={{ flexShrink: 0 }}
+      >
+        <ToggleButton value="none" sx={toggleSx}>
+          بدون
+        </ToggleButton>
+        <ToggleButton value="percent" sx={toggleSx}>
+          درصدی
+        </ToggleButton>
+        <ToggleButton value="amount" sx={toggleSx}>
+          مبلغ
+        </ToggleButton>
+      </ToggleButtonGroup>
+
+      {value.mode === "percent" ? (
         <TextField
-          select
           size="small"
-          label="نوع"
-          value={value.mode}
+          label="درصد"
+          value={value.percent}
           disabled={disabled}
-          onChange={(e) => patch({ mode: e.target.value as PurchaseVatMode })}
+          onChange={(e) => patch({ percent: formatAmountInput(e.target.value) })}
+          inputMode="decimal"
           sx={fieldSx}
+        />
+      ) : null}
+
+      {value.mode === "amount" ? (
+        <TextField
+          size="small"
+          label="مبلغ"
+          value={value.amount}
+          disabled={disabled}
+          onChange={(e) => patch({ amount: formatAmountInput(e.target.value) })}
+          inputMode="numeric"
+          sx={fieldSx}
+        />
+      ) : null}
+
+      {value.mode !== "none" ? (
+        <Box
+          sx={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "baseline",
+            gap: 1,
+            px: 1,
+            py: 0.5,
+            borderRadius: "8px",
+            border: "1px solid var(--admin-border)",
+            bgcolor: "var(--admin-surface-alt)",
+            flex: "1 1 180px",
+            minWidth: 160,
+          }}
         >
-          <MenuItem value="none">بدون ارزش افزوده</MenuItem>
-          <MenuItem value="percent">درصدی</MenuItem>
-          <MenuItem value="amount">مبلغ ثابت</MenuItem>
-        </TextField>
-        {value.mode === "percent" ? (
-          <TextField
-            size="small"
-            label="درصد"
-            value={value.percent}
-            disabled={disabled}
-            onChange={(e) => patch({ percent: formatAmountInput(e.target.value) })}
-            inputMode="decimal"
-            sx={fieldSx}
-          />
-        ) : null}
-        {value.mode === "amount" ? (
-          <TextField
-            size="small"
-            label="مبلغ ارزش افزوده"
-            value={value.amount}
-            disabled={disabled}
-            onChange={(e) => patch({ amount: formatAmountInput(e.target.value) })}
-            inputMode="numeric"
-            sx={fieldSx}
-          />
-        ) : null}
-        {value.mode !== "none" ? (
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-              px: 1,
-              py: 0.75,
-              borderRadius: "8px",
-              border: "1px solid var(--admin-border)",
-              bgcolor: "var(--admin-surface-alt)",
-            }}
-          >
-            <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)" }}>
-              ارزش افزوده: {formatAmountNumber(vat)} تومان
-            </Typography>
-            <Typography sx={{ fontSize: 12, fontWeight: 700, color: "var(--admin-text)" }}>
-              جمع قابل پرداخت: {formatAmountNumber(payable)} تومان
-            </Typography>
-            {baseAmount > 0 && value.mode === "percent" ? (
-              <Typography sx={{ fontSize: 10, color: "var(--admin-text-muted)" }}>
-                پایه {formatAmountNumber(Math.round(baseAmount || 0))}
-                {parseAmountInput(value.percent) > 0 ? ` × ${value.percent}%` : ""}
-              </Typography>
-            ) : null}
-          </Box>
-        ) : null}
-      </Box>
+          <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)", whiteSpace: "nowrap" }}>
+            VAT {formatAmountNumber(vat)}
+            {baseAmount > 0 && value.mode === "percent" && parseAmountInput(value.percent) > 0
+              ? ` (${formatAmountNumber(Math.round(baseAmount || 0))}×${value.percent}%)`
+              : ""}
+          </Typography>
+          <Typography sx={{ fontSize: 12, fontWeight: 700, color: "var(--admin-text)", whiteSpace: "nowrap" }}>
+            قابل پرداخت {formatAmountNumber(payable)}
+          </Typography>
+        </Box>
+      ) : null}
     </Box>
   );
 }
