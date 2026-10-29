@@ -69,32 +69,37 @@ export default function RegisterClient() {
   if (loading) return <p>در حال بارگذاری...</p>;
 
   return (
-    <div className="card-soft mx-auto max-w-lg space-y-4">
-      <h1 className="font-display text-2xl">ثبت‌نام مسابقات</h1>
-      {!user && (
-        <p className="text-sm text-felt-700">
-          ابتدا{" "}
-          <Link href="/billiard/login" className="underline">
-            وارد شوید
-          </Link>{" "}
-          سپس ثبت‌نام و پرداخت را انجام دهید.
-        </p>
-      )}
-      <form onSubmit={submit} className="space-y-3">
-        <label className="label">انتخاب مسابقه</label>
-        <select className="input" value={slug} onChange={(e) => setSlug(e.target.value)}>
-          <option value="">انتخاب کنید</option>
-          {tournaments.map((t) => (
-            <option key={t.id} value={t.slug}>
-              {t.name} — {formatToman(t.fee_toman || 0)} ({statusLabel[t.status] || t.status})
-            </option>
-          ))}
-        </select>
-        <button className="btn-primary w-full" disabled={busy || !user} type="submit">
-          ادامه ثبت‌نام / پرداخت
-        </button>
-      </form>
-      {msg && <p className="text-sm text-felt-800">{msg}</p>}
+    <div className="mx-auto max-w-lg">
+      <div className="mb-6 text-center">
+        <p className="text-sm text-cyan-400">ثبت‌نام آنلاین</p>
+        <h1 className="mt-1 font-display text-3xl text-slate-100">ثبت‌نام مسابقات</h1>
+      </div>
+      <div className="card-soft space-y-4">
+        {!user && (
+          <p className="text-sm text-slate-400">
+            ابتدا{" "}
+            <Link href="/billiard/login" className="text-cyan-400 hover:text-cyan-300">
+              وارد شوید
+            </Link>{" "}
+            سپس ثبت‌نام و پرداخت را انجام دهید.
+          </p>
+        )}
+        <form onSubmit={submit} className="space-y-3">
+          <label className="label">انتخاب مسابقه</label>
+          <select className="input" value={slug} onChange={(e) => setSlug(e.target.value)}>
+            <option value="">انتخاب کنید</option>
+            {tournaments.map((t) => (
+              <option key={t.id} value={t.slug}>
+                {t.name} — {formatToman(t.fee_toman || 0)} ({statusLabel[t.status] || t.status})
+              </option>
+            ))}
+          </select>
+          <button className="btn-primary w-full" disabled={busy || !user} type="submit">
+            ادامه ثبت‌نام / پرداخت
+          </button>
+        </form>
+        {msg && <p className="text-sm text-cyan-300">{msg}</p>}
+      </div>
     </div>
   );
 }

@@ -26,21 +26,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [loading, user, isStaff, router]);
 
   if (loading || !isStaff) {
-    return <p className="py-10 text-center">در حال بررسی دسترسی...</p>;
+    return <p className="py-10 text-center text-slate-400">در حال بررسی دسترسی...</p>;
   }
 
   return (
-    <div className="grid gap-6 md:grid-cols-[200px_1fr]">
+    <div className="grid gap-6 md:grid-cols-[220px_1fr]">
       <aside className="card-soft h-fit space-y-1 p-3">
-        <div className="mb-2 px-2 text-xs text-felt-600">پنل مدیریت</div>
+        <div className="mb-2 px-2 text-xs font-medium tracking-wide text-cyan-400/90">پنل مدیریت</div>
         {links.map((l) => {
           const href = billiardHref(l.href);
+          const active = pathname === href;
           return (
             <Link
               key={l.href}
               href={href}
-              className={`block rounded-md px-3 py-2 text-sm ${
-                pathname === href ? "bg-felt-700 text-white" : "hover:bg-felt-100"
+              className={`block rounded-xl px-3 py-2.5 text-sm transition ${
+                active
+                  ? "bg-gradient-to-l from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-fuchsia-900/20"
+                  : "text-slate-300 hover:bg-white/5 hover:text-cyan-300"
               }`}
             >
               {l.label}

@@ -22,24 +22,35 @@ export default async function TournamentsPage({
 }) {
   const sp = await searchParams;
   const data = await getTournaments(sp);
+  const status = sp.status || "";
+
+  const filters = [
+    { href: "/billiard/tournaments", label: "همه", value: "" },
+    { href: "/billiard/tournaments?status=live", label: "زنده", value: "live" },
+    { href: "/billiard/tournaments?status=registration_open", label: "ثبت‌نام باز", value: "registration_open" },
+  ];
 
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl">مسابقات</h1>
-          <p className="mt-1 text-sm text-felt-700/70">لیست تورنمنت‌های هیأت</p>
+          <h1 className="font-display text-3xl text-slate-100">مسابقات</h1>
+          <p className="mt-1 text-sm text-slate-400">لیست تورنمنت‌های هیأت</p>
         </div>
-        <div className="flex gap-2 text-sm">
-          <Link href="/billiard/tournaments" className="btn-secondary">
-            همه
-          </Link>
-          <Link href="/billiard/tournaments?status=live" className="btn-secondary">
-            زنده
-          </Link>
-          <Link href="/billiard/tournaments?status=registration_open" className="btn-secondary">
-            ثبت‌نام باز
-          </Link>
+        <div className="flex flex-wrap gap-2 text-sm">
+          {filters.map((f) => (
+            <Link
+              key={f.href}
+              href={f.href}
+              className={`rounded-xl px-3.5 py-2 transition ${
+                status === f.value
+                  ? "bg-gradient-to-l from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-fuchsia-900/30"
+                  : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+              }`}
+            >
+              {f.label}
+            </Link>
+          ))}
         </div>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -47,6 +58,9 @@ export default async function TournamentsPage({
           <TournamentCard key={t.id} t={t} />
         ))}
       </div>
+      {!data.data?.length && (
+        <p className="card-soft mt-2 text-center text-sm text-slate-500">مسابقه‌ای پیدا نشد.</p>
+      )}
     </div>
   );
 }

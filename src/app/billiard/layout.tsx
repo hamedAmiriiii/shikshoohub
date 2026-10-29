@@ -20,7 +20,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
-  themeColor: "#0b1e16",
+  themeColor: "#0b0f1a",
 };
 
 export default function BilliardLayout({ children }: { children: React.ReactNode }) {

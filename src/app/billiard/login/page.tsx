@@ -53,29 +53,46 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="card-soft mx-auto max-w-md">
-      <h1 className="mb-4 font-display text-2xl">ورود با موبایل</h1>
-      {step === "phone" ? (
-        <form onSubmit={sendCode} className="space-y-3">
-          <label className="label">شماره موبایل</label>
-          <input className="input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="09xxxxxxxxx" />
-          <button className="btn-primary w-full" disabled={loading} type="submit">
-            دریافت کد
-          </button>
-        </form>
-      ) : (
-        <form onSubmit={verify} className="space-y-3">
-          <label className="label">کد تأیید</label>
-          <input className="input" value={code} onChange={(e) => setCode(e.target.value)} />
-          <button className="btn-primary w-full" disabled={loading} type="submit">
-            ورود
-          </button>
-          <button type="button" className="btn-secondary w-full" onClick={() => setStep("phone")}>
-            تغییر شماره
-          </button>
-        </form>
-      )}
-      {msg && <p className="mt-3 text-sm text-felt-700">{msg}</p>}
+    <div className="mx-auto max-w-md">
+      <div className="mb-6 text-center">
+        <p className="text-sm text-cyan-400">ورود امن</p>
+        <h1 className="mt-1 font-display text-3xl text-slate-100">ورود با موبایل</h1>
+        <p className="mt-2 text-sm text-slate-400">کد یکبارمصرف به شماره شما ارسال می‌شود</p>
+      </div>
+      <div className="card-soft">
+        {step === "phone" ? (
+          <form onSubmit={sendCode} className="space-y-3">
+            <label className="label">شماره موبایل</label>
+            <input
+              className="input"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="09xxxxxxxxx"
+              inputMode="tel"
+            />
+            <button className="btn-primary w-full" disabled={loading} type="submit">
+              دریافت کد
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={verify} className="space-y-3">
+            <label className="label">کد تأیید</label>
+            <input
+              className="input"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              inputMode="numeric"
+            />
+            <button className="btn-primary w-full" disabled={loading} type="submit">
+              ورود
+            </button>
+            <button type="button" className="btn-secondary w-full" onClick={() => setStep("phone")}>
+              تغییر شماره
+            </button>
+          </form>
+        )}
+        {msg && <p className="mt-3 text-sm text-cyan-300">{msg}</p>}
+      </div>
     </div>
   );
 }

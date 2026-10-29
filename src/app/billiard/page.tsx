@@ -44,41 +44,73 @@ export default async function HomePage() {
     "هیأت بیلیارد";
 
   return (
-    <div className="space-y-12">
-      <section className="relative overflow-hidden rounded-3xl bg-felt-950 px-6 py-14 text-white md:px-12">
-        <div
-          className="pointer-events-none absolute inset-0 opacity-40"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 20% 30%, rgba(212,165,116,.35), transparent 40%), radial-gradient(circle at 80% 70%, rgba(79,154,112,.4), transparent 35%)",
-          }}
-        />
-        <div className="relative max-w-2xl">
-          <p className="mb-3 text-sm uppercase tracking-[0.2em] text-cue-400">{brand}</p>
-          <h1 className="font-display text-3xl leading-tight md:text-5xl">
-            مسابقات، جدول و رنکینگ در یک نگاه
-          </h1>
-          <p className="mt-4 text-felt-100/80">
-            ثبت‌نام آنلاین، برنامه بازی‌ها، نتایج زنده و آرشیو کامل هیأت.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/billiard/register" className="btn bg-cue-500 text-felt-950 hover:bg-cue-400">
-              ثبت‌نام مسابقه
-            </Link>
-            <Link href="/billiard/tournaments" className="btn border border-white/30 hover:bg-white/10">
-              مشاهده مسابقات
-            </Link>
+    <div className="space-y-14">
+      <section className="relative overflow-hidden pt-2 pb-4 md:pt-4 md:pb-8">
+        <div className="pointer-events-none absolute inset-0 -mx-4 bg-[radial-gradient(ellipse_at_top_right,_rgba(139,92,246,0.22),_transparent_50%)]" />
+        <div className="pointer-events-none absolute inset-0 -mx-4 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(6,182,212,0.12),_transparent_45%)]" />
+        <div className="relative grid items-center gap-10 lg:grid-cols-2">
+          <div className="text-center lg:text-right">
+            <p className="mb-3 text-sm font-medium text-cyan-400">{brand}</p>
+            <h1 className="font-display text-3xl leading-tight sm:text-4xl md:text-5xl">
+              <span className="bg-gradient-to-l from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">
+                مسابقات، جدول
+              </span>
+              <br />
+              <span className="bg-gradient-to-l from-cyan-400 via-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
+                و رنکینگ در یک نگاه
+              </span>
+            </h1>
+            <p className="mx-auto mt-4 max-w-xl text-base leading-8 text-slate-400 lg:mx-0">
+              ثبت‌نام آنلاین، برنامه بازی‌ها، نتایج زنده و آرشیو کامل هیأت — با ظاهر و تجربه وبینو.
+            </p>
+            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row lg:justify-start">
+              <Link
+                href="/billiard/register"
+                className="rounded-xl bg-gradient-to-l from-violet-600 via-fuchsia-600 to-pink-600 px-7 py-3.5 text-center text-sm font-semibold text-white shadow-xl shadow-fuchsia-900/40 transition hover:opacity-90"
+              >
+                ثبت‌نام مسابقه
+              </Link>
+              <Link
+                href="/billiard/tournaments"
+                className="rounded-xl border border-white/15 bg-white/5 px-7 py-3.5 text-center text-sm font-medium text-slate-200 transition hover:bg-white/10"
+              >
+                مشاهده مسابقات
+              </Link>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { href: "/billiard/tournaments?status=live", title: "زنده", desc: "مسابقات در حال برگزاری", color: "from-cyan-500 to-blue-500" },
+              { href: "/billiard/ranking", title: "رنکینگ", desc: "جدول امتیاز بازیکنان", color: "from-violet-500 to-fuchsia-500" },
+              { href: "/billiard/schedule", title: "برنامه", desc: "زمان‌بندی بازی‌ها", color: "from-fuchsia-500 to-pink-500" },
+              { href: "/billiard/results", title: "نتایج", desc: "آخرین اسکورها", color: "from-emerald-500 to-teal-500" },
+            ].map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 transition hover:border-cyan-400/40 hover:bg-white/[0.07]"
+              >
+                <div
+                  className={`mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${item.color} text-xs font-bold text-white`}
+                >
+                  {item.title[0]}
+                </div>
+                <div className="text-sm font-semibold text-slate-100">{item.title}</div>
+                <div className="mt-1 text-xs leading-5 text-slate-500">{item.desc}</div>
+              </Link>
+            ))}
           </div>
         </div>
       </section>
 
       {!home.ok ? (
-        <div className="card-soft space-y-2 text-felt-800">
-          <p className="font-medium">اتصال به API برقرار نشد.</p>
-          <p className="text-sm break-all">{home.message}</p>
-          <p className="text-xs text-felt-600 break-all">URL: {home.url}</p>
-          <p className="text-xs text-felt-600">
-            مقدار <code>NEXT_PUBLIC_BASE_URL</code> در env فرانت را چک کنید و بعد از تغییر،
+        <div className="card-soft space-y-2 text-slate-300">
+          <p className="font-medium text-slate-100">اتصال به API برقرار نشد.</p>
+          <p className="text-sm break-all text-slate-400">{home.message}</p>
+          <p className="text-xs break-all text-slate-500">URL: {home.url}</p>
+          <p className="text-xs text-slate-500">
+            مقدار <code className="text-cyan-300">NEXT_PUBLIC_BASE_URL</code> در env فرانت را چک کنید و بعد از تغییر،
             سرور Next را یک‌بار ری‌استارت کنید.
           </p>
         </div>
@@ -91,45 +123,45 @@ export default async function HomePage() {
             <Grid items={data.upcoming || []} />
           </Section>
           <section>
-            <h2 className="mb-4 font-display text-2xl">آخرین نتایج</h2>
-            <div className="card-soft divide-y divide-felt-900/5">
+            <h2 className="mb-4 font-display text-2xl text-slate-100">آخرین نتایج</h2>
+            <div className="card-soft divide-y divide-white/10">
               {(data.latest_results || []).slice(0, 8).map((m: any) => (
-                <div key={m.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
+                <div key={m.id} className="flex flex-wrap items-center justify-between gap-2 py-3.5 text-sm">
                   <div>
-                    <span className="font-medium">{m.player1?.full_name || "—"}</span>
-                    <span className="mx-2 text-felt-500">vs</span>
-                    <span className="font-medium">{m.player2?.full_name || "—"}</span>
-                    <div className="text-xs text-felt-500">{m.tournament?.name}</div>
+                    <span className="font-medium text-slate-100">{m.player1?.full_name || "—"}</span>
+                    <span className="mx-2 text-slate-500">vs</span>
+                    <span className="font-medium text-slate-100">{m.player2?.full_name || "—"}</span>
+                    <div className="text-xs text-slate-500">{m.tournament?.name}</div>
                   </div>
-                  <div className="font-display text-felt-800">
+                  <div className="font-display text-cyan-300">
                     {m.score1 ?? "-"} – {m.score2 ?? "-"}
                   </div>
                 </div>
               ))}
               {(data.latest_results || []).length === 0 && (
-                <p className="py-4 text-sm text-felt-600">هنوز نتیجه‌ای ثبت نشده است.</p>
+                <p className="py-4 text-sm text-slate-500">هنوز نتیجه‌ای ثبت نشده است.</p>
               )}
             </div>
           </section>
           <section>
             <div className="mb-4 flex items-end justify-between">
-              <h2 className="font-display text-2xl">رنکینگ برتر</h2>
-              <Link href="/billiard/ranking" className="text-sm text-felt-700 hover:underline">
+              <h2 className="font-display text-2xl text-slate-100">رنکینگ برتر</h2>
+              <Link href="/billiard/ranking" className="text-sm text-cyan-400 hover:text-cyan-300 transition">
                 مشاهده کامل
               </Link>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               {(data.rankings || []).map((block: any) => (
                 <div key={block.discipline?.id} className="card-soft">
-                  <h3 className="mb-3 font-display text-lg">{block.discipline?.name}</h3>
-                  <ol className="space-y-2 text-sm">
+                  <h3 className="mb-3 font-display text-lg text-slate-100">{block.discipline?.name}</h3>
+                  <ol className="space-y-2.5 text-sm">
                     {(block.entries || []).slice(0, 5).map((e: any) => (
-                      <li key={e.player_id} className="flex justify-between">
-                        <span>
-                          <span className="ml-2 text-felt-500">{e.rank}.</span>
+                      <li key={e.player_id} className="flex justify-between gap-3">
+                        <span className="text-slate-200">
+                          <span className="ml-2 text-cyan-400/80">{e.rank}.</span>
                           {e.player?.full_name}
                         </span>
-                        <span className="text-felt-700">{e.points}</span>
+                        <span className="text-fuchsia-300">{e.points}</span>
                       </li>
                     ))}
                   </ol>
@@ -143,26 +175,26 @@ export default async function HomePage() {
                 <Link
                   key={n.id}
                   href={`/billiard/news/${n.slug}`}
-                  className="group overflow-hidden rounded-[1.35rem] border border-felt-900/8 bg-white/80 shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:shadow-md"
+                  className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] transition hover:-translate-y-0.5 hover:border-cyan-400/35 hover:bg-white/[0.07]"
                 >
                   <div
-                    className="aspect-[16/10] bg-felt-800 bg-cover bg-center"
+                    className="aspect-[16/10] bg-cover bg-center"
                     style={
                       n.cover_url
                         ? {
-                            backgroundImage: `linear-gradient(180deg, transparent 40%, rgba(11,30,22,.7)), url(${n.cover_url})`,
+                            backgroundImage: `linear-gradient(180deg, transparent 40%, rgba(11,15,26,.85)), url(${n.cover_url})`,
                           }
                         : {
                             backgroundImage:
-                              "radial-gradient(circle at 20% 20%, rgba(196,137,74,.35), transparent 45%), linear-gradient(135deg, #1f5038, #0b1e16)",
+                              "radial-gradient(circle at 20% 20%, rgba(34,211,238,.3), transparent 45%), linear-gradient(135deg, #1e1b4b, #0b0f1a)",
                           }
                     }
                   />
                   <div className="space-y-2 p-4">
-                    <h3 className="text-base font-semibold leading-7 text-felt-950 group-hover:text-felt-700">
+                    <h3 className="text-base font-semibold leading-7 text-slate-100 group-hover:text-cyan-300">
                       {n.title}
                     </h3>
-                    <p className="line-clamp-2 text-sm leading-6 text-felt-700/75">{n.excerpt}</p>
+                    <p className="line-clamp-2 text-sm leading-6 text-slate-400">{n.excerpt}</p>
                   </div>
                 </Link>
               ))}
@@ -188,9 +220,9 @@ function Section({
 }) {
   return (
     <section>
-      <div className="mb-4 flex items-end justify-between">
-        <h2 className="font-display text-2xl">{title}</h2>
-        <Link href={href} className="text-sm text-felt-700 hover:underline">
+      <div className="mb-4 flex items-end justify-between gap-3">
+        <h2 className="font-display text-2xl text-slate-100">{title}</h2>
+        <Link href={href} className="text-sm text-cyan-400 transition hover:text-cyan-300">
           همه
         </Link>
       </div>
@@ -201,7 +233,7 @@ function Section({
 
 function Grid({ items }: { items: Tournament[] }) {
   if (!items?.length) {
-    return <p className="text-sm text-felt-600">موردی نیست.</p>;
+    return <p className="text-sm text-slate-500">موردی نیست.</p>;
   }
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

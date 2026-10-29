@@ -37,9 +37,12 @@ export function SiteHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0b1e16]/95 text-white backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
-          <Link href={billiardHref("/")} className="min-w-0 truncate text-base font-semibold tracking-tight sm:text-lg">
+      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0b0f1a]/80 text-slate-100 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 h-16">
+          <Link
+            href={billiardHref("/")}
+            className="min-w-0 truncate text-lg font-bold tracking-tight bg-gradient-to-l from-cyan-400 to-fuchsia-400 bg-clip-text text-transparent sm:text-xl"
+          >
             {brand}
           </Link>
           <nav className="hidden items-center gap-1 lg:flex">
@@ -50,7 +53,11 @@ export function SiteHeader() {
                 <Link
                   key={l.href}
                   href={href}
-                  className={`rounded-full px-2.5 py-1.5 text-sm ${active ? "bg-white/15" : "hover:bg-white/10"}`}
+                  className={`rounded-xl px-2.5 py-1.5 text-sm transition ${
+                    active
+                      ? "bg-white/10 text-cyan-300"
+                      : "text-slate-300 hover:bg-white/5 hover:text-cyan-300"
+                  }`}
                 >
                   {l.label}
                 </Link>
@@ -60,22 +67,31 @@ export function SiteHeader() {
           <div className="flex items-center gap-2">
             <div className="hidden items-center gap-2 md:flex">
               {isStaff && (
-                <Link href={billiardHref("/admin")} className="rounded-full bg-cue-500 px-3 py-1.5 text-sm text-felt-950">
+                <Link
+                  href={billiardHref("/admin")}
+                  className="rounded-xl bg-gradient-to-l from-violet-600 to-fuchsia-600 px-3.5 py-1.5 text-sm font-medium text-white shadow-lg shadow-fuchsia-900/30"
+                >
                   پنل
                 </Link>
               )}
               {user ? (
-                <Link href={billiardHref("/me")} className="max-w-[120px] truncate text-sm text-white/90">
+                <Link
+                  href={billiardHref("/me")}
+                  className="max-w-[120px] truncate text-sm text-slate-300 hover:text-cyan-300 transition"
+                >
                   {user.full_name || user.phone}
                 </Link>
               ) : (
-                <Link href={billiardHref("/login")} className="rounded-full border border-white/30 px-3 py-1.5 text-sm">
+                <Link
+                  href={billiardHref("/login")}
+                  className="rounded-xl border border-white/15 bg-white/5 px-3.5 py-1.5 text-sm text-slate-200 hover:bg-white/10 transition"
+                >
                   ورود
                 </Link>
               )}
             </div>
             <button
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 text-lg lg:hidden"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-lg lg:hidden"
               onClick={() => setOpen(true)}
               type="button"
               aria-label="منو"
@@ -90,16 +106,18 @@ export function SiteHeader() {
         <div className="fixed inset-0 z-[60] lg:hidden">
           <button
             type="button"
-            className="absolute inset-0 bg-black/55"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             aria-label="بستن"
             onClick={() => setOpen(false)}
           />
-          <div className="absolute inset-y-0 right-0 flex w-[86%] max-w-sm flex-col bg-[#0f241c] text-white shadow-2xl">
+          <div className="absolute inset-y-0 right-0 flex w-[86%] max-w-sm flex-col border-l border-white/10 bg-[#0b0f1a] text-slate-100 shadow-2xl">
             <div className="flex items-center justify-between border-b border-white/10 px-4 py-4">
-              <div className="font-semibold">{brand}</div>
+              <div className="font-bold bg-gradient-to-l from-cyan-400 to-fuchsia-400 bg-clip-text text-transparent">
+                {brand}
+              </div>
               <button
                 type="button"
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/15"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/5"
                 onClick={() => setOpen(false)}
               >
                 ✕
@@ -114,7 +132,11 @@ export function SiteHeader() {
                     <Link
                       key={l.href}
                       href={href}
-                      className={`rounded-2xl px-4 py-3.5 text-base ${active ? "bg-white/12 text-cue-400" : "hover:bg-white/8"}`}
+                      className={`rounded-2xl px-4 py-3.5 text-base transition ${
+                        active
+                          ? "bg-white/10 text-cyan-300"
+                          : "text-slate-300 hover:bg-white/5"
+                      }`}
                     >
                       {l.label}
                     </Link>
@@ -124,16 +146,23 @@ export function SiteHeader() {
             </div>
             <div className="space-y-2 border-t border-white/10 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
               {isStaff && (
-                <Link href={billiardHref("/admin")} className="btn block bg-cue-500 text-center text-felt-950">
+                <Link
+                  href={billiardHref("/admin")}
+                  className="btn block text-center bg-gradient-to-l from-violet-600 to-fuchsia-600 text-white"
+                >
                   پنل مدیریت
                 </Link>
               )}
               {user ? (
                 <>
-                  <Link href={billiardHref("/me")} className="btn-secondary block text-center text-felt-950">
+                  <Link href={billiardHref("/me")} className="btn-secondary block text-center">
                     پروفایل من
                   </Link>
-                  <button type="button" className="btn block w-full border border-white/20 text-white" onClick={() => logout()}>
+                  <button
+                    type="button"
+                    className="btn block w-full border border-white/15 text-slate-200"
+                    onClick={() => logout()}
+                  >
                     خروج
                   </button>
                 </>
