@@ -21,6 +21,10 @@ function isRepairPath(pathname: string | null) {
   return pathname === "/repair" || Boolean(pathname?.startsWith("/repair/"));
 }
 
+function isBilliardPath(pathname: string | null) {
+  return pathname === "/billiard" || Boolean(pathname?.startsWith("/billiard/"));
+}
+
 function isMarketerPanelPath(pathname: string | null) {
   return pathname === "/newuser" || Boolean(pathname?.startsWith("/newuser/"));
 }
@@ -43,6 +47,8 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
   const isTableReserv = isTableReservPath(pathname);
   const isOilApp = isOilPath(pathname);
   const isOilPublic = isOilPublicPath(pathname);
+  const isRepairApp = isRepairPath(pathname);
+  const isBilliardApp = isBilliardPath(pathname);
 
   if (
     isAdminPage ||
@@ -52,7 +58,9 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
     isReferralPage ||
     isTableReserv ||
     isOilApp ||
-    isOilPublic
+    isOilPublic ||
+    isRepairApp ||
+    isBilliardApp
   ) {
     return <>{children}</>;
   }
@@ -71,6 +79,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     isOilPath(pathname) ||
     isOilPublicPath(pathname) ||
     isRepairPath(pathname) ||
+    isBilliardPath(pathname) ||
     isMarketerPanelPath(pathname)
   ) {
     return <>{children}</>;

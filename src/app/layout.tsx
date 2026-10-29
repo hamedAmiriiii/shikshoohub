@@ -10,6 +10,7 @@ import ServiceWorkerRegistration from "./components/ServiceWorkerRegistration";
 import PWAHead from "./components/PWAHead";
 import AppShell from "./AppShell";
 import RepairHostRedirect from "./components/RepairHostRedirect";
+import BilliardHostRedirect from "./components/BilliardHostRedirect";
 import MarketingRefTracker from "./components/MarketingRefTracker";
 import GoogleAnalytics from "./components/GoogleAnalytics";
 import { LEGACY_BROWSER_BOOTSTRAP } from "./legacyBrowserBootstrap";
@@ -116,6 +117,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: LEGACY_BROWSER_BOOTSTRAP }} />
         <PWAHead />
         <RepairHostRedirect />
+        <BilliardHostRedirect />
         <MarketingRefTracker />
         <QueryClientProvider client={queryClient}>
         {/* <AuthProvider > */}

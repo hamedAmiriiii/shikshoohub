@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { billiardPathFor, isBilliardHostname } from "./app/lib/billiardHosts";
 import { isRepairHostname, repairPathFor } from "./app/lib/repairHosts";
 
 function requestHosts(request: NextRequest) {
@@ -12,6 +13,7 @@ function requestHosts(request: NextRequest) {
  * فقط pathname را برای metadata می‌فرستد.
  * هیچ redirectای از / به /admin نگذار — لندینگ باید روی آدرس اصلی بماند.
  * روی دامنهٔ تعمیرات (مثل omidtamir.ir) همهٔ مسیرها زیر /repair می‌روند.
+ * روی billiard.webinoplus.ir همهٔ مسیرها زیر /billiard می‌روند.
  */
 /**
  * لینک بازاریاب منوی آنلاین → مستقیم لندینگ منو (با حفظ ?mref=).
@@ -20,8 +22,18 @@ const MENU_LANDING_MREFS = new Set(["9834", "4366", "4Z3T6F"]);
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const hosts = requestHosts(request);
 
-  if (isRepairHostname(requestHosts(request))) {
+  if (isBilliardHostname(hosts)) {
+    const nextPath = billiardPathFor(pathname);
+    if (nextPath) {
+      const url = request.nextUrl.clone();
+      url.pathname = nextPath;
+      return NextResponse.redirect(url);
+    }
+  }
+
+  if (isRepairHostname(hosts)) {
     const nextPath = repairPathFor(pathname);
     if (nextPath) {
       const url = request.nextUrl.clone();

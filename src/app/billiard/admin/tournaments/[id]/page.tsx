@@ -1,0 +1,243 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { apiFetch, statusLabel, type ApiError } from "@/app/lib/billiard/api";
+
+export default function AdminTournamentDetailPage() {
+  const params = useParams<{ id: string }>();
+  const id = params.id;
+  const [tournament, setTournament] = useState<any>(null);
+  const [regs, setRegs] = useState<any[]>([]);
+  const [bracket, setBracket] = useState<any[]>([]);
+  const [tables, setTables] = useState<any[]>([]);
+  const [tableName, setTableName] = useState("میز 1");
+  const [msg, setMsg] = useState("");
+  const [scores, setScores] = useState<Record<number, { s1: string; s2: string }>>({});
+
+  async function load() {
+    const list = await apiFetch<{ data: any[] }>("/admin/tournaments");
+    const t = (list.data || []).find((x) => String(x.id) === String(id));
+    setTournament(t || null);
+    if (!t) return;
+    const [r, tb] = await Promise.all([
+      apiFetch<{ data: any[] }>(`/admin/registrations?tournament_id=${id}`),
+      apiFetch<{ data: any[] }>(`/admin/tournaments/${id}/tables`),
+    ]);
+    setRegs(r.data || []);
+    setTables(tb.data || []);
+    if (t.slug) {
+      const pub = await apiFetch<any>(`/tournaments/${t.slug}`, { auth: false });
+      setBracket(pub.bracket || []);
+    }
+  }
+
+  useEffect(() => {
+    load().catch(() => {});
+  }, [id]);
+
+  async function draw() {
+    setMsg("");
+    try {
+      const res = await apiFetch<{ bracket: any[] }>(`/admin/tournaments/${id}/draw`, {
+        method: "POST",
+        body: JSON.stringify({ shuffle: true }),
+      });
+      setBracket(res.bracket || []);
+      setMsg("قرعه‌کشی انجام شد.");
+      await load();
+    } catch (err) {
+      setMsg((err as ApiError).message || "خطا");
+    }
+  }
+
+  async function addTable() {
+    try {
+      await apiFetch(`/admin/tournaments/${id}/tables`, {
+        method: "POST",
+        body: JSON.stringify({ name: tableName }),
+      });
+      setTableName(`میز ${tables.length + 2}`);
+      await load();
+    } catch (err) {
+      setMsg((err as ApiError).message || "خطا");
+    }
+  }
+
+  async function saveSchedule(matchId: number, tableId: string, date: string, time: string) {
+    try {
+      await apiFetch(`/admin/matches/${matchId}/schedule`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          table_id: tableId ? Number(tableId) : null,
+          scheduled_on: date || null,
+          scheduled_at: time || null,
+        }),
+      });
+      await load();
+    } catch (err) {
+      setMsg((err as ApiError).message || "خطا");
+    }
+  }
+
+  async function saveResult(matchId: number) {
+    const s = scores[matchId] || { s1: "0", s2: "0" };
+    try {
+      await apiFetch(`/admin/matches/${matchId}/result`, {
+        method: "POST",
+        body: JSON.stringify({ score1: Number(s.s1), score2: Number(s.s2) }),
+      });
+      setMsg("نتیجه ثبت شد.");
+      await load();
+    } catch (err) {
+      setMsg((err as ApiError).message || "خطا");
+    }
+  }
+
+  async function setStatus(status: string) {
+    try {
+      await apiFetch(`/admin/tournaments/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      });
+      await load();
+    } catch (err) {
+      setMsg((err as ApiError).message || "خطا");
+    }
+  }
+
+  if (!tournament) return <p>در حال بارگذاری...</p>;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="font-display text-3xl">{tournament.name}</h1>
+        <p className="text-sm text-felt-600">{statusLabel[tournament.status]}</p>
+      </div>
+      {msg && <p className="text-sm">{msg}</p>}
+
+      <div className="flex flex-wrap gap-2">
+        <button className="btn-secondary" type="button" onClick={() => setStatus("registration_closed")}>
+          بستن ثبت‌نام
+        </button>
+        <button className="btn-primary" type="button" onClick={draw}>
+          قرعه‌کشی + ساخت جدول
+        </button>
+      </div>
+
+      <section className="card-soft space-y-3">
+        <h2 className="font-display text-xl">میزها</h2>
+        <div className="flex gap-2">
+          <input className="input max-w-xs" value={tableName} onChange={(e) => setTableName(e.target.value)} />
+          <button className="btn-secondary" type="button" onClick={addTable}>
+            افزودن میز
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-2 text-sm">
+          {tables.map((t) => (
+            <span key={t.id} className="rounded-full bg-felt-100 px-3 py-1">
+              {t.name}
+            </span>
+          ))}
+        </div>
+      </section>
+
+      <section className="card-soft">
+        <h2 className="mb-3 font-display text-xl">ثبت‌نام‌ها ({regs.length})</h2>
+        <div className="divide-y divide-felt-900/5 text-sm">
+          {regs.map((r) => (
+            <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+              <span>
+                {r.player?.full_name} · {statusLabel[r.status]} · {statusLabel[r.payment_status] || r.payment_status}
+              </span>
+              {r.status === "pending" && (
+                <button
+                  className="btn-secondary"
+                  type="button"
+                  onClick={async () => {
+                    await apiFetch(`/admin/registrations/${r.id}/confirm`, { method: "POST" });
+                    await load();
+                  }}
+                >
+                  تأیید
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="font-display text-xl">جدول / نتایج</h2>
+        {bracket.map((m) => (
+          <div key={m.id} className="card-soft space-y-2 text-sm">
+            <div className="font-medium">
+              {m.round_label}: {m.player1?.full_name || "TBD"} vs {m.player2?.full_name || "TBD"}
+            </div>
+            <div className="text-xs text-felt-500">{statusLabel[m.status]}</div>
+            <div className="flex flex-wrap gap-2">
+              <select
+                className="input max-w-[140px]"
+                defaultValue={m.table_id || ""}
+                onChange={(e) =>
+                  saveSchedule(m.id, e.target.value, m.scheduled_on || "", m.scheduled_at || "")
+                }
+              >
+                <option value="">میز</option>
+                {tables.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="date"
+                className="input max-w-[160px]"
+                defaultValue={m.scheduled_on || ""}
+                onBlur={(e) =>
+                  saveSchedule(m.id, m.table_id || "", e.target.value, m.scheduled_at || "")
+                }
+              />
+              <input
+                type="time"
+                className="input max-w-[120px]"
+                defaultValue={m.scheduled_at || ""}
+                onBlur={(e) =>
+                  saveSchedule(m.id, m.table_id || "", m.scheduled_on || "", e.target.value)
+                }
+              />
+            </div>
+            {m.player1_id && m.player2_id && m.status !== "finished" && m.status !== "walkover" && (
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  className="input w-20"
+                  placeholder="امتیاز ۱"
+                  value={scores[m.id]?.s1 ?? ""}
+                  onChange={(e) =>
+                    setScores({ ...scores, [m.id]: { s1: e.target.value, s2: scores[m.id]?.s2 || "" } })
+                  }
+                />
+                <input
+                  className="input w-20"
+                  placeholder="امتیاز ۲"
+                  value={scores[m.id]?.s2 ?? ""}
+                  onChange={(e) =>
+                    setScores({ ...scores, [m.id]: { s1: scores[m.id]?.s1 || "", s2: e.target.value } })
+                  }
+                />
+                <button className="btn-primary" type="button" onClick={() => saveResult(m.id)}>
+                  ثبت نتیجه
+                </button>
+              </div>
+            )}
+            {(m.status === "finished" || m.status === "walkover") && (
+              <div className="font-display">
+                {m.score1} – {m.score2}
+              </div>
+            )}
+          </div>
+        ))}
+      </section>
+    </div>
+  );
+}
