@@ -2,19 +2,46 @@
 import { apiUrl } from "@/app/lib/billiard/api";
 import { TournamentCard, type Tournament } from "@/app/billiard/components/TournamentCard";
 
-async function getHome() {
+type HomeResult =
+  | { ok: true; data: any }
+  | { ok: false; message: string; url: string; status?: number };
+
+async function getHome(): Promise<HomeResult> {
+  const url = apiUrl("/home");
   try {
-    const res = await fetch(apiUrl("/home"), { next: { revalidate: 30 } });
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
-    return null;
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) {
+      let detail = "";
+      try {
+        const body = await res.json();
+        detail = body?.message ? ` — ${body.message}` : "";
+      } catch {
+        /* ignore */
+      }
+      return {
+        ok: false,
+        url,
+        status: res.status,
+        message: `پاسخ API: ${res.status}${detail}`,
+      };
+    }
+    return { ok: true, data: await res.json() };
+  } catch (e: any) {
+    return {
+      ok: false,
+      url,
+      message: e?.message || "خطای شبکه در اتصال به API",
+    };
   }
 }
 
 export default async function HomePage() {
-  const data = await getHome();
-  const brand = process.env.NEXT_PUBLIC_BRAND_NAME || "هیأت بیلیارد";
+  const home = await getHome();
+  const data = home.ok ? home.data : null;
+  const brand =
+    process.env.NEXT_PUBLIC_BILLIARD_BRAND_NAME ||
+    process.env.NEXT_PUBLIC_BRAND_NAME ||
+    "هیأت بیلیارد";
 
   return (
     <div className="space-y-12">
@@ -45,9 +72,15 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {!data ? (
-        <div className="card-soft text-center text-felt-800">
-          اتصال به API برقرار نشد. پس از migrate و اجرای بک‌اند دوباره تلاش کنید.
+      {!home.ok ? (
+        <div className="card-soft space-y-2 text-felt-800">
+          <p className="font-medium">اتصال به API برقرار نشد.</p>
+          <p className="text-sm break-all">{home.message}</p>
+          <p className="text-xs text-felt-600 break-all">URL: {home.url}</p>
+          <p className="text-xs text-felt-600">
+            مقدار <code>NEXT_PUBLIC_BASE_URL</code> در env فرانت را چک کنید و بعد از تغییر،
+            سرور Next را یک‌بار ری‌استارت کنید.
+          </p>
         </div>
       ) : (
         <>
