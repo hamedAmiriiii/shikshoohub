@@ -1,5 +1,5 @@
 export default function AboutPage() {
-  const brand = process.env.NEXT_PUBLIC_BILLIARD_BRAND_NAME || process.env.NEXT_PUBLIC_BRAND_NAME || "هیأت بیلیارد";
+  const brand = process.env.NEXT_PUBLIC_BILLIARD_BRAND_NAME || process.env.NEXT_PUBLIC_BRAND_NAME || "هیأت بیلیارد شهرستان کرمان";
   return (
     <div className="card-soft mx-auto max-w-3xl space-y-4">
       <p className="text-sm text-cyan-400">درباره</p>

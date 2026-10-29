@@ -70,7 +70,21 @@ export const statusLabel: Record<string, string> = {
   unpaid: "پرداخت‌نشده",
   paid: "پرداخت‌شده",
   waived: "رایگان",
+  failed: "ناموفق",
 };
+
+/** برچسب وضعیت پرداخت (جدا از وضعیت ثبت‌نام تا «pending» اشتباه نشود) */
+export const paymentStatusLabel: Record<string, string> = {
+  unpaid: "پرداخت‌نشده",
+  pending: "در انتظار پرداخت",
+  paid: "پرداخت‌شده",
+  waived: "رایگان",
+  failed: "پرداخت ناموفق",
+};
+
+export function isRegistrationSettled(r: { payment_status?: string; status?: string }): boolean {
+  return r.payment_status === "paid" || r.payment_status === "waived";
+}
 
 export function formatToman(n: number): string {
   return new Intl.NumberFormat("fa-IR").format(n) + " تومان";

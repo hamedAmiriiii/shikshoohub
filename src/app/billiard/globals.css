@@ -24,29 +24,34 @@
   letter-spacing: -0.02em;
 }
 
+/* لینک‌ها / دکمه‌های ساده — هم‌سبک حسابداری + BilliardButton */
 .billiard-app .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  border-radius: 0.75rem;
-  padding: 0.7rem 1.15rem;
-  font-size: 0.875rem;
+  min-height: 40px;
+  border-radius: 10px;
+  padding: 0.5rem 1rem;
+  font-size: 13px;
   font-weight: 600;
-  transition: opacity 0.15s ease, background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  line-height: 1.2;
+  text-decoration: none;
+  box-shadow: none;
+  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+.billiard-app .btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .billiard-app .btn-primary {
-  background: linear-gradient(to left, #7c3aed, #c026d3, #db2777);
+  background: linear-gradient(to left, #7c3aed, #c026d3);
   color: #fff;
-  box-shadow: 0 12px 28px -12px rgba(192, 38, 211, 0.55);
 }
 .billiard-app .btn-primary:hover {
-  opacity: 0.92;
-}
-.billiard-app .btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  background: linear-gradient(to left, #6d28d9, #a21caf);
+  box-shadow: 0 10px 24px -12px rgba(192, 38, 211, 0.55);
 }
 
 .billiard-app .btn-secondary {

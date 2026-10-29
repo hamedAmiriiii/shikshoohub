@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch, type ApiError } from "@/app/lib/billiard/api";
+import { BilliardButton } from "@/app/billiard/components/BilliardButton";
 
 type Discipline = {
   id: number;
@@ -16,6 +17,8 @@ export default function AdminDisciplinesPage() {
   const [name, setName] = useState("");
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
+  const [seedBusy, setSeedBusy] = useState(false);
+  const [toggleId, setToggleId] = useState<number | null>(null);
 
   async function load() {
     const data = await apiFetch<{ data: Discipline[] }>("/admin/disciplines");
@@ -47,6 +50,7 @@ export default function AdminDisciplinesPage() {
   }
 
   async function toggleActive(d: Discipline) {
+    setToggleId(d.id);
     setMsg("");
     try {
       await apiFetch(`/admin/disciplines/${d.id}`, {
@@ -56,11 +60,13 @@ export default function AdminDisciplinesPage() {
       await load();
     } catch (err) {
       setMsg((err as ApiError).message || "خطا");
+    } finally {
+      setToggleId(null);
     }
   }
 
   async function seedDefaults() {
-    setBusy(true);
+    setSeedBusy(true);
     setMsg("");
     const defaults = [
       { name: "اسنوکر", slug: "snooker", sort_order: 1 },
@@ -80,7 +86,7 @@ export default function AdminDisciplinesPage() {
     } catch (err) {
       setMsg((err as ApiError).message || "خطا در افزودن پیش‌فرض");
     } finally {
-      setBusy(false);
+      setSeedBusy(false);
     }
   }
 
@@ -88,14 +94,12 @@ export default function AdminDisciplinesPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl">رشته‌ها</h1>
-          <p className="mt-1 text-sm text-felt-700/70">
-            تعریف رشته‌های بیلیارد برای مسابقات و رنکینگ
-          </p>
+          <h1 className="font-display text-3xl text-slate-100">رشته‌ها</h1>
+          <p className="mt-1 text-sm text-slate-400">تعریف رشته‌های بیلیارد برای مسابقات و رنکینگ</p>
         </div>
-        <button type="button" className="btn-secondary" disabled={busy} onClick={seedDefaults}>
+        <BilliardButton type="button" variant="secondary" loading={seedBusy} onClick={seedDefaults}>
           افزودن اسنوکر و پاکت
-        </button>
+        </BilliardButton>
       </div>
 
       <form onSubmit={create} className="card-soft flex flex-wrap gap-2">
@@ -106,42 +110,47 @@ export default function AdminDisciplinesPage() {
           onChange={(e) => setName(e.target.value)}
           required
         />
-        <button className="btn-primary" type="submit" disabled={busy}>
+        <BilliardButton type="submit" loading={busy}>
           افزودن رشته
-        </button>
+        </BilliardButton>
       </form>
 
-      {msg && <p className="text-sm text-felt-800">{msg}</p>}
+      {msg && <p className="text-sm text-cyan-300">{msg}</p>}
 
       <div className="card-soft overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-felt-900/10 text-right text-felt-600">
-              <th className="py-2">نام</th>
-              <th>اسلاگ</th>
-              <th>ترتیب</th>
-              <th>وضعیت</th>
+            <tr className="border-b border-white/10 text-right text-slate-500">
+              <th className="py-2 font-medium">نام</th>
+              <th className="font-medium">اسلاگ</th>
+              <th className="font-medium">ترتیب</th>
+              <th className="font-medium">وضعیت</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             {items.map((d) => (
-              <tr key={d.id} className="border-b border-felt-900/5">
+              <tr key={d.id} className="border-b border-white/5 text-slate-200">
                 <td className="py-2.5 font-medium">{d.name}</td>
-                <td className="text-felt-600">{d.slug}</td>
+                <td className="text-slate-500">{d.slug}</td>
                 <td>{d.sort_order}</td>
                 <td>{d.is_active ? "فعال" : "غیرفعال"}</td>
                 <td>
-                  <button type="button" className="btn-secondary" onClick={() => toggleActive(d)}>
+                  <BilliardButton
+                    type="button"
+                    variant="secondary"
+                    loading={toggleId === d.id}
+                    onClick={() => toggleActive(d)}
+                  >
                     {d.is_active ? "غیرفعال کردن" : "فعال کردن"}
-                  </button>
+                  </BilliardButton>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
         {!items.length && (
-          <p className="py-6 text-center text-felt-600">
+          <p className="py-6 text-center text-slate-500">
             هنوز رشته‌ای نیست. دکمه «افزودن اسنوکر و پاکت» را بزنید.
           </p>
         )}

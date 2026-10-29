@@ -3,8 +3,15 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { apiFetch, statusLabel, type ApiError } from "@/app/lib/billiard/api";
+import {
+  apiFetch,
+  isRegistrationSettled,
+  paymentStatusLabel,
+  statusLabel,
+  type ApiError,
+} from "@/app/lib/billiard/api";
 import { useAuth } from "@/app/lib/billiard/auth";
+import { BilliardButton } from "@/app/billiard/components/BilliardButton";
 
 export default function MeClient() {
   const { user, loading, refresh } = useAuth();
@@ -22,6 +29,8 @@ export default function MeClient() {
   const [regs, setRegs] = useState<any[]>([]);
   const [matches, setMatches] = useState<any[]>([]);
   const [msg, setMsg] = useState(sp.get("paid") === "1" ? "پرداخت با موفقیت انجام شد." : "");
+  const [saving, setSaving] = useState(false);
+  const [payingId, setPayingId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!loading && !user) router.push("/billiard/login");
@@ -44,6 +53,7 @@ export default function MeClient() {
   async function save(e: React.FormEvent) {
     e.preventDefault();
     setMsg("");
+    setSaving(true);
     try {
       const body: any = {
         first_name: form.first_name,
@@ -59,6 +69,8 @@ export default function MeClient() {
       setMsg("پروفایل ذخیره شد.");
     } catch (err) {
       setMsg((err as ApiError).message || "خطا");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -69,19 +81,35 @@ export default function MeClient() {
     reader.readAsDataURL(file);
   }
 
-  if (loading || !user) return <p>در حال بارگذاری...</p>;
+  async function resumePay(registrationId: number) {
+    setPayingId(registrationId);
+    setMsg("");
+    try {
+      const site = (process.env.NEXT_PUBLIC_SITE_URL || window.location.origin).replace(/\/$/, "");
+      const pay = await apiFetch<{ payment_url: string }>(`/registrations/${registrationId}/pay`, {
+        method: "POST",
+        body: JSON.stringify({ return_url: `${site}/billiard/me?paid=1` }),
+      });
+      window.location.href = pay.payment_url;
+    } catch (err) {
+      setMsg((err as ApiError).message || "خطا در پرداخت");
+      setPayingId(null);
+    }
+  }
+
+  if (loading || !user) return <p className="text-slate-400">در حال بارگذاری...</p>;
 
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-3xl text-slate-100">پروفایل من</h1>
-        <div className="flex gap-2">
-          <button type="button" className="btn-secondary" onClick={() => setEdit((v) => !v)}>
+        <div className="flex flex-wrap gap-2">
+          <BilliardButton type="button" variant="secondary" onClick={() => setEdit((v) => !v)}>
             {edit ? "بستن ویرایش" : "ویرایش پروفایل"}
-          </button>
-          <Link href="/billiard/me/matches" className="btn-secondary">
+          </BilliardButton>
+          <BilliardButton href="/billiard/me/matches" variant="secondary">
             بازی‌های من
-          </Link>
+          </BilliardButton>
         </div>
       </div>
       {msg && <p className="text-sm text-cyan-300">{msg}</p>}
@@ -117,9 +145,9 @@ export default function MeClient() {
             <label className="label">عکس چهره</label>
             <input type="file" accept="image/*" onChange={(e) => onFile(e.target.files?.[0] || null)} />
           </div>
-          <button className="btn-primary" type="submit">
+          <BilliardButton type="submit" loading={saving}>
             ذخیره
-          </button>
+          </BilliardButton>
         </form>
       ) : (
         <div className="card-soft flex items-center gap-4">
@@ -137,21 +165,36 @@ export default function MeClient() {
       <section>
         <h2 className="mb-3 font-display text-xl text-slate-100">ثبت‌نام‌های من</h2>
         <div className="card-soft divide-y divide-white/10">
-          {regs.map((r) => (
-            <div key={r.id} className="flex flex-wrap justify-between gap-2 py-3 text-sm">
-              <div>
-                <Link
-                  href={`/billiard/tournaments/${r.tournament?.slug}`}
-                  className="font-medium text-slate-100 hover:text-cyan-300 transition"
-                >
-                  {r.tournament?.name}
-                </Link>
-                <div className="text-xs text-slate-500">
-                  {statusLabel[r.status]} · پرداخت: {statusLabel[r.payment_status] || r.payment_status}
+          {regs.map((r) => {
+            const settled = isRegistrationSettled(r);
+            return (
+              <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
+                <div>
+                  <Link
+                    href={`/billiard/tournaments/${r.tournament?.slug}`}
+                    className="font-medium text-slate-100 hover:text-cyan-300 transition"
+                  >
+                    {r.tournament?.name}
+                  </Link>
+                  <div className="text-xs text-slate-500">
+                    {settled
+                      ? `${statusLabel[r.status] || r.status} · ${paymentStatusLabel[r.payment_status] || r.payment_status}`
+                      : `هنوز در مسابقه ثبت نشده · ${paymentStatusLabel[r.payment_status] || r.payment_status}`}
+                  </div>
                 </div>
+                {!settled && r.fee_toman > 0 && r.status !== "rejected" && r.status !== "cancelled" && (
+                  <BilliardButton
+                    type="button"
+                    loading={payingId === r.id}
+                    disabled={payingId !== null && payingId !== r.id}
+                    onClick={() => resumePay(r.id)}
+                  >
+                    ادامه پرداخت
+                  </BilliardButton>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
           {!regs.length && <p className="py-4 text-sm text-slate-500">ثبت‌نامی ندارید.</p>}
         </div>
       </section>

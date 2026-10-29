@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { apiFetch, formatToman, statusLabel, type ApiError } from "@/app/lib/billiard/api";
 import { useAuth } from "@/app/lib/billiard/auth";
+import { BilliardButton } from "@/app/billiard/components/BilliardButton";
 
 export default function RegisterClient() {
   const { user, loading } = useAuth();
@@ -61,12 +62,11 @@ export default function RegisterClient() {
       router.push("/billiard/me");
     } catch (err) {
       setMsg((err as ApiError).message || "خطا در ثبت‌نام");
-    } finally {
       setBusy(false);
     }
   }
 
-  if (loading) return <p>در حال بارگذاری...</p>;
+  if (loading) return <p className="text-slate-400">در حال بارگذاری...</p>;
 
   return (
     <div className="mx-auto max-w-lg">
@@ -94,9 +94,9 @@ export default function RegisterClient() {
               </option>
             ))}
           </select>
-          <button className="btn-primary w-full" disabled={busy || !user} type="submit">
+          <BilliardButton type="submit" fullWidth loading={busy} disabled={!user}>
             ادامه ثبت‌نام / پرداخت
-          </button>
+          </BilliardButton>
         </form>
         {msg && <p className="text-sm text-cyan-300">{msg}</p>}
       </div>

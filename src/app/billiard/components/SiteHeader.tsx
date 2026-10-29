@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/app/lib/billiard/auth";
 import { billiardHref } from "@/app/lib/billiardHosts";
+import { BilliardButton } from "@/app/billiard/components/BilliardButton";
 
 const links = [
   { href: "/", label: "خانه" },
@@ -22,7 +23,7 @@ export function SiteHeader() {
   const pathname = usePathname();
   const { user, isStaff, logout } = useAuth();
   const [open, setOpen] = useState(false);
-  const brand = process.env.NEXT_PUBLIC_BILLIARD_BRAND_NAME || "هیأت بیلیارد";
+  const brand = process.env.NEXT_PUBLIC_BILLIARD_BRAND_NAME || "هیأت بیلیارد شهرستان کرمان";
 
   useEffect(() => {
     setOpen(false);
@@ -67,12 +68,9 @@ export function SiteHeader() {
           <div className="flex items-center gap-2">
             <div className="hidden items-center gap-2 md:flex">
               {isStaff && (
-                <Link
-                  href={billiardHref("/admin")}
-                  className="rounded-xl bg-gradient-to-l from-violet-600 to-fuchsia-600 px-3.5 py-1.5 text-sm font-medium text-white shadow-lg shadow-fuchsia-900/30"
-                >
+                <BilliardButton href={billiardHref("/admin")} sx={{ minHeight: 36, px: 1.5 }}>
                   پنل
-                </Link>
+                </BilliardButton>
               )}
               {user ? (
                 <Link
@@ -82,12 +80,9 @@ export function SiteHeader() {
                   {user.full_name || user.phone}
                 </Link>
               ) : (
-                <Link
-                  href={billiardHref("/login")}
-                  className="rounded-xl border border-white/15 bg-white/5 px-3.5 py-1.5 text-sm text-slate-200 hover:bg-white/10 transition"
-                >
+                <BilliardButton href={billiardHref("/login")} variant="secondary" sx={{ minHeight: 36, px: 1.5 }}>
                   ورود
-                </Link>
+                </BilliardButton>
               )}
             </div>
             <button
@@ -146,30 +141,23 @@ export function SiteHeader() {
             </div>
             <div className="space-y-2 border-t border-white/10 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
               {isStaff && (
-                <Link
-                  href={billiardHref("/admin")}
-                  className="btn block text-center bg-gradient-to-l from-violet-600 to-fuchsia-600 text-white"
-                >
+                <BilliardButton href={billiardHref("/admin")} fullWidth>
                   پنل مدیریت
-                </Link>
+                </BilliardButton>
               )}
               {user ? (
                 <>
-                  <Link href={billiardHref("/me")} className="btn-secondary block text-center">
+                  <BilliardButton href={billiardHref("/me")} variant="secondary" fullWidth>
                     پروفایل من
-                  </Link>
-                  <button
-                    type="button"
-                    className="btn block w-full border border-white/15 text-slate-200"
-                    onClick={() => logout()}
-                  >
+                  </BilliardButton>
+                  <BilliardButton type="button" variant="ghost" fullWidth onClick={() => logout()}>
                     خروج
-                  </button>
+                  </BilliardButton>
                 </>
               ) : (
-                <Link href={billiardHref("/login")} className="btn-primary block text-center">
+                <BilliardButton href={billiardHref("/login")} fullWidth>
                   ورود / ثبت‌نام
-                </Link>
+                </BilliardButton>
               )}
             </div>
           </div>

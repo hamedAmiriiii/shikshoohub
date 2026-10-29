@@ -9,10 +9,10 @@ import { NOINDEX_ROBOTS } from "@/app/lib/seo";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: process.env.NEXT_PUBLIC_BILLIARD_BRAND_NAME || "هیأت بیلیارد",
+  title: process.env.NEXT_PUBLIC_BILLIARD_BRAND_NAME || "هیأت بیلیارد شهرستان کرمان",
   description: "سامانه مدیریت مسابقات بیلیارد هیأت",
   robots: NOINDEX_ROBOTS,
-  applicationName: "هیأت بیلیارد",
+  applicationName: "هیأت بیلیارد شهرستان کرمان",
 };
 
 export const viewport: Viewport = {

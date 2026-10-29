@@ -2,7 +2,7 @@ import Link from "next/link";
 import { billiardHref } from "@/app/lib/billiardHosts";
 
 export function SiteFooter() {
-  const brand = process.env.NEXT_PUBLIC_BILLIARD_BRAND_NAME || "هیأت بیلیارد";
+  const brand = process.env.NEXT_PUBLIC_BILLIARD_BRAND_NAME || "هیأت بیلیارد شهرستان کرمان";
   return (
     <footer className="mt-16 border-t border-white/10 bg-[#090d19]/80 text-slate-300">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 md:grid-cols-3">

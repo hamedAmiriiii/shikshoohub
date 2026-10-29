@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { apiFetch, type ApiError } from "@/app/lib/billiard/api";
+import { BilliardButton } from "@/app/billiard/components/BilliardButton";
 
 type NewsItem = {
   id: number;
@@ -27,6 +28,7 @@ export default function AdminNewsPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [removeCover, setRemoveCover] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -112,7 +114,7 @@ export default function AdminNewsPage() {
 
   async function remove(n: NewsItem) {
     if (!window.confirm(`خبر «${n.title}» حذف شود؟`)) return;
-    setBusy(true);
+    setDeletingId(n.id);
     setMsg("");
     try {
       await apiFetch(`/admin/news/${n.id}`, { method: "DELETE" });
@@ -122,7 +124,7 @@ export default function AdminNewsPage() {
     } catch (err) {
       setMsg((err as ApiError).message || "خطا در حذف");
     } finally {
-      setBusy(false);
+      setDeletingId(null);
     }
   }
 
@@ -131,15 +133,13 @@ export default function AdminNewsPage() {
   return (
     <div className="space-y-5 pb-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-felt-950 sm:text-3xl">اخبار</h1>
-        <p className="mt-1 text-sm text-felt-700/70">انتشار، ویرایش و حذف اطلاعیه‌ها با تصویر کاور</p>
+        <h1 className="font-display text-2xl tracking-tight text-slate-100 sm:text-3xl">اخبار</h1>
+        <p className="mt-1 text-sm text-slate-400">انتشار، ویرایش و حذف اطلاعیه‌ها با تصویر کاور</p>
       </div>
 
-      <form onSubmit={submit} className="overflow-hidden rounded-3xl border border-felt-900/8 bg-white/80 shadow-sm backdrop-blur">
-        <div className="border-b border-felt-900/5 px-4 py-3 sm:px-5">
-          <div className="text-sm font-medium text-felt-900">
-            {editingId ? "ویرایش خبر" : "خبر جدید"}
-          </div>
+      <form onSubmit={submit} className="card-soft overflow-hidden !p-0">
+        <div className="border-b border-white/10 px-4 py-3 sm:px-5">
+          <div className="text-sm font-medium text-slate-100">{editingId ? "ویرایش خبر" : "خبر جدید"}</div>
         </div>
 
         <div className="space-y-4 p-4 sm:p-5">
@@ -167,21 +167,17 @@ export default function AdminNewsPage() {
 
           <div>
             <label className="label">عکس کاور</label>
-            <div className="overflow-hidden rounded-2xl border border-dashed border-felt-700/25 bg-felt-50/60">
+            <div className="overflow-hidden rounded-2xl border border-dashed border-white/15 bg-white/[0.03]">
               {preview ? (
                 <div className="relative">
                   <img src={preview} alt="" className="aspect-[16/10] w-full object-cover" />
                   <div className="absolute inset-x-0 bottom-0 flex gap-2 bg-gradient-to-t from-black/55 to-transparent p-3">
-                    <button
-                      type="button"
-                      className="rounded-full bg-white/95 px-3 py-1.5 text-xs font-medium text-felt-900"
-                      onClick={() => fileRef.current?.click()}
-                    >
+                    <BilliardButton type="button" variant="secondary" onClick={() => fileRef.current?.click()}>
                       تعویض عکس
-                    </button>
-                    <button
+                    </BilliardButton>
+                    <BilliardButton
                       type="button"
-                      className="rounded-full bg-red-500/90 px-3 py-1.5 text-xs font-medium text-white"
+                      variant="danger"
                       onClick={() => {
                         setForm((f) => ({ ...f, cover_base64: "", cover_preview: "" }));
                         setRemoveCover(true);
@@ -189,18 +185,20 @@ export default function AdminNewsPage() {
                       }}
                     >
                       حذف عکس
-                    </button>
+                    </BilliardButton>
                   </div>
                 </div>
               ) : (
                 <button
                   type="button"
-                  className="flex min-h-[140px] w-full flex-col items-center justify-center gap-2 px-4 py-8 text-sm text-felt-700"
+                  className="flex min-h-[140px] w-full flex-col items-center justify-center gap-2 px-4 py-8 text-sm text-slate-400"
                   onClick={() => fileRef.current?.click()}
                 >
-                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-felt-700 text-xl text-white">＋</span>
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-l from-violet-600 to-fuchsia-600 text-xl text-white">
+                    ＋
+                  </span>
                   انتخاب تصویر از گالری
-                  <span className="text-xs text-felt-500">JPG / PNG / WEBP تا ۵ مگابایت</span>
+                  <span className="text-xs text-slate-500">JPG / PNG / WEBP تا ۵ مگابایت</span>
                 </button>
               )}
               <input
@@ -213,77 +211,75 @@ export default function AdminNewsPage() {
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-felt-800">
+          <label className="flex items-center gap-2 text-sm text-slate-300">
             <input
               type="checkbox"
               checked={form.is_published}
               onChange={(e) => setForm({ ...form, is_published: e.target.checked })}
-              className="h-4 w-4 accent-felt-700"
+              className="h-4 w-4 accent-fuchsia-500"
             />
             منتشر شود
           </label>
 
           <div className="flex flex-col gap-2 sm:flex-row">
-            <button className="btn-primary min-h-11 flex-1 text-base" disabled={busy} type="submit">
+            <BilliardButton type="submit" loading={busy} fullWidth sx={{ flex: 1 }}>
               {editingId ? "ذخیره تغییرات" : "انتشار خبر"}
-            </button>
+            </BilliardButton>
             {editingId && (
-              <button type="button" className="btn-secondary min-h-11" disabled={busy} onClick={resetForm}>
+              <BilliardButton type="button" variant="secondary" disabled={busy} onClick={resetForm}>
                 انصراف
-              </button>
+              </BilliardButton>
             )}
           </div>
-          {msg && <p className="text-sm text-felt-800">{msg}</p>}
+          {msg && <p className="text-sm text-cyan-300">{msg}</p>}
         </div>
       </form>
 
       <div className="space-y-3">
-        <h2 className="text-lg font-semibold text-felt-950">لیست اخبار</h2>
+        <h2 className="text-lg font-semibold text-slate-100">لیست اخبار</h2>
         {items.map((n) => (
-          <article
-            key={n.id}
-            className="overflow-hidden rounded-3xl border border-felt-900/8 bg-white/80 shadow-sm backdrop-blur"
-          >
+          <article key={n.id} className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
             <div className="flex flex-col sm:flex-row">
               <div
-                className="aspect-[16/10] w-full shrink-0 bg-felt-200 bg-cover bg-center sm:aspect-auto sm:h-auto sm:w-40"
+                className="aspect-[16/10] w-full shrink-0 bg-white/10 bg-cover bg-center sm:aspect-auto sm:h-auto sm:w-40"
                 style={n.cover_url ? { backgroundImage: `url(${n.cover_url})` } : undefined}
               />
               <div className="flex flex-1 flex-col gap-3 p-4">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-base font-semibold text-felt-950">{n.title}</h3>
+                    <h3 className="text-base font-semibold text-slate-100">{n.title}</h3>
                     <span
-                      className={`rounded-full px-2 py-0.5 text-[11px] ${
-                        n.is_published ? "bg-felt-100 text-felt-800" : "bg-amber-100 text-amber-800"
+                      className={`rounded-lg px-2 py-0.5 text-[11px] ${
+                        n.is_published
+                          ? "bg-cyan-500/15 text-cyan-300"
+                          : "bg-amber-500/15 text-amber-300"
                       }`}
                     >
                       {n.is_published ? "منتشر شده" : "پیش‌نویس"}
                     </span>
                   </div>
-                  <p className="mt-1 line-clamp-2 text-sm leading-6 text-felt-700/80">{n.body}</p>
+                  <p className="mt-1 line-clamp-2 text-sm leading-6 text-slate-400">{n.body}</p>
                 </div>
                 <div className="mt-auto flex flex-wrap gap-2">
-                  <button type="button" className="btn-secondary min-h-10 flex-1 sm:flex-none" onClick={() => startEdit(n)}>
+                  <BilliardButton type="button" variant="secondary" onClick={() => startEdit(n)}>
                     ویرایش
-                  </button>
-                  <button
+                  </BilliardButton>
+                  <BilliardButton
                     type="button"
-                    className="min-h-10 flex-1 rounded-lg bg-red-50 px-4 text-sm font-medium text-red-700 sm:flex-none"
+                    variant="danger"
+                    loading={deletingId === n.id}
+                    disabled={busy || (deletingId !== null && deletingId !== n.id)}
                     onClick={() => remove(n)}
-                    disabled={busy}
                   >
                     حذف
-                  </button>
+                  </BilliardButton>
                 </div>
               </div>
             </div>
           </article>
         ))}
         {!items.length && (
-          <div className="rounded-3xl border border-felt-900/8 bg-white/70 px-4 py-10 text-center text-sm text-felt-600">
-            هنوز خبری ثبت نشده است.
-          </div>
+          <div className="card-soft px-4 py-10 text-center text-sm text-slate-500">هنوز خبری ثبت نشده است.</div>
         )}
       </div>
     </div>

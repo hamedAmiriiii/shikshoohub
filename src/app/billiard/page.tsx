@@ -41,7 +41,7 @@ export default async function HomePage() {
   const brand =
     process.env.NEXT_PUBLIC_BILLIARD_BRAND_NAME ||
     process.env.NEXT_PUBLIC_BRAND_NAME ||
-    "هیأت بیلیارد";
+    "هیأت بیلیارد شهرستان کرمان";
 
   return (
     <div className="space-y-14">
@@ -64,16 +64,10 @@ export default async function HomePage() {
               ثبت‌نام آنلاین، برنامه بازی‌ها، نتایج زنده و آرشیو کامل هیأت — با ظاهر و تجربه وبینو.
             </p>
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row lg:justify-start">
-              <Link
-                href="/billiard/register"
-                className="rounded-xl bg-gradient-to-l from-violet-600 via-fuchsia-600 to-pink-600 px-7 py-3.5 text-center text-sm font-semibold text-white shadow-xl shadow-fuchsia-900/40 transition hover:opacity-90"
-              >
+              <Link href="/billiard/register" className="btn-primary text-center">
                 ثبت‌نام مسابقه
               </Link>
-              <Link
-                href="/billiard/tournaments"
-                className="rounded-xl border border-white/15 bg-white/5 px-7 py-3.5 text-center text-sm font-medium text-slate-200 transition hover:bg-white/10"
-              >
+              <Link href="/billiard/tournaments" className="btn-secondary text-center">
                 مشاهده مسابقات
               </Link>
             </div>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiFetch, formatToman, statusLabel, type ApiError } from "@/app/lib/billiard/api";
+import { BilliardButton } from "@/app/billiard/components/BilliardButton";
 
 export default function AdminTournamentsPage() {
   const [items, setItems] = useState<any[]>([]);
@@ -16,6 +17,7 @@ export default function AdminTournamentsPage() {
     venue: "",
   });
   const [msg, setMsg] = useState("");
+  const [creating, setCreating] = useState(false);
 
   async function load() {
     const [t, d] = await Promise.all([
@@ -33,6 +35,7 @@ export default function AdminTournamentsPage() {
   async function create(e: React.FormEvent) {
     e.preventDefault();
     setMsg("");
+    setCreating(true);
     try {
       await apiFetch("/admin/tournaments", {
         method: "POST",
@@ -49,19 +52,21 @@ export default function AdminTournamentsPage() {
       await load();
     } catch (err) {
       setMsg((err as ApiError).message || "خطا");
+    } finally {
+      setCreating(false);
     }
   }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <h1 className="font-display text-3xl">مسابقات</h1>
-        <Link href="/billiard/admin/disciplines" className="btn-secondary">
+        <h1 className="font-display text-3xl text-slate-100">مسابقات</h1>
+        <BilliardButton href="/billiard/admin/disciplines" variant="secondary">
           مدیریت رشته‌ها
-        </Link>
+        </BilliardButton>
       </div>
       {!disciplines.length && (
-        <p className="rounded-lg bg-cue-500/15 px-3 py-2 text-sm">
+        <p className="rounded-xl border border-fuchsia-500/30 bg-fuchsia-500/10 px-3 py-2.5 text-sm text-fuchsia-200">
           هنوز رشته‌ای تعریف نشده. اول از{" "}
           <Link href="/billiard/admin/disciplines" className="underline">
             بخش رشته‌ها
@@ -87,23 +92,23 @@ export default function AdminTournamentsPage() {
           <option value="registration_open">ثبت‌نام فعال</option>
           <option value="registration_closed">ثبت‌نام بسته</option>
         </select>
-        <button className="btn-primary md:col-span-2" type="submit">
+        <BilliardButton type="submit" loading={creating} sx={{ gridColumn: { md: "span 2" } }}>
           ایجاد مسابقه
-        </button>
+        </BilliardButton>
       </form>
-      {msg && <p className="text-sm">{msg}</p>}
-      <div className="card-soft divide-y divide-felt-900/5">
+      {msg && <p className="text-sm text-cyan-300">{msg}</p>}
+      <div className="card-soft divide-y divide-white/10">
         {items.map((t) => (
           <div key={t.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
             <div>
-              <div className="font-medium">{t.name}</div>
-              <div className="text-xs text-felt-600">
+              <div className="font-medium text-slate-100">{t.name}</div>
+              <div className="text-xs text-slate-500">
                 {t.discipline?.name} · {statusLabel[t.status]} · {formatToman(t.fee_toman || 0)}
               </div>
             </div>
-            <Link href={`/billiard/admin/tournaments/${t.id}`} className="btn-secondary">
+            <BilliardButton href={`/billiard/admin/tournaments/${t.id}`} variant="secondary">
               مدیریت / قرعه / نتیجه
-            </Link>
+            </BilliardButton>
           </div>
         ))}
       </div>

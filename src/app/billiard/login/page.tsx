@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch, type ApiError } from "@/app/lib/billiard/api";
 import { useAuth } from "@/app/lib/billiard/auth";
+import { BilliardButton } from "@/app/billiard/components/BilliardButton";
 
 export default function LoginPage() {
   const { loginWithToken } = useAuth();
@@ -47,7 +48,6 @@ export default function LoginPage() {
       router.push(data.user.profile_complete ? "/billiard/me" : "/billiard/me?edit=1");
     } catch (err) {
       setMsg((err as ApiError).message || "خطا");
-    } finally {
       setLoading(false);
     }
   }
@@ -70,9 +70,9 @@ export default function LoginPage() {
               placeholder="09xxxxxxxxx"
               inputMode="tel"
             />
-            <button className="btn-primary w-full" disabled={loading} type="submit">
+            <BilliardButton type="submit" fullWidth loading={loading}>
               دریافت کد
-            </button>
+            </BilliardButton>
           </form>
         ) : (
           <form onSubmit={verify} className="space-y-3">
@@ -83,12 +83,18 @@ export default function LoginPage() {
               onChange={(e) => setCode(e.target.value)}
               inputMode="numeric"
             />
-            <button className="btn-primary w-full" disabled={loading} type="submit">
+            <BilliardButton type="submit" fullWidth loading={loading}>
               ورود
-            </button>
-            <button type="button" className="btn-secondary w-full" onClick={() => setStep("phone")}>
+            </BilliardButton>
+            <BilliardButton
+              type="button"
+              variant="secondary"
+              fullWidth
+              disabled={loading}
+              onClick={() => setStep("phone")}
+            >
               تغییر شماره
-            </button>
+            </BilliardButton>
           </form>
         )}
         {msg && <p className="mt-3 text-sm text-cyan-300">{msg}</p>}
