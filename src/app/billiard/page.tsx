@@ -138,11 +138,32 @@ export default async function HomePage() {
             </div>
           </section>
           <Section title="اطلاعیه‌ها" href="/billiard/news">
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {(data.news || []).map((n: any) => (
-                <Link key={n.id} href={`/billiard/news/${n.slug}`} className="card-soft block hover:border-felt-400">
-                  <h3 className="font-medium">{n.title}</h3>
-                  <p className="mt-2 text-xs text-felt-600">{n.excerpt}</p>
+                <Link
+                  key={n.id}
+                  href={`/billiard/news/${n.slug}`}
+                  className="group overflow-hidden rounded-[1.35rem] border border-felt-900/8 bg-white/80 shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <div
+                    className="aspect-[16/10] bg-felt-800 bg-cover bg-center"
+                    style={
+                      n.cover_url
+                        ? {
+                            backgroundImage: `linear-gradient(180deg, transparent 40%, rgba(11,30,22,.7)), url(${n.cover_url})`,
+                          }
+                        : {
+                            backgroundImage:
+                              "radial-gradient(circle at 20% 20%, rgba(196,137,74,.35), transparent 45%), linear-gradient(135deg, #1f5038, #0b1e16)",
+                          }
+                    }
+                  />
+                  <div className="space-y-2 p-4">
+                    <h3 className="text-base font-semibold leading-7 text-felt-950 group-hover:text-felt-700">
+                      {n.title}
+                    </h3>
+                    <p className="line-clamp-2 text-sm leading-6 text-felt-700/75">{n.excerpt}</p>
+                  </div>
                 </Link>
               ))}
             </div>

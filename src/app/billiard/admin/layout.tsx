@@ -8,6 +8,7 @@ import { billiardHref } from "@/app/lib/billiardHosts";
 
 const links = [
   { href: "/admin", label: "داشبورد" },
+  { href: "/admin/disciplines", label: "رشته‌ها" },
   { href: "/admin/players", label: "بازیکنان" },
   { href: "/admin/tournaments", label: "مسابقات" },
   { href: "/admin/registrations", label: "ثبت‌نام‌ها" },

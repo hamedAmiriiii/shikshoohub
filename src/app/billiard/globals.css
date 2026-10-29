@@ -58,7 +58,7 @@
   border: 1px solid rgba(21, 53, 38, 0.1);
   background: #fff;
   padding: 0.625rem 0.75rem;
-  font-size: 0.875rem;
+  font-size: 16px; /* جلوگیری از زوم خودکار iOS */
   outline: none;
 }
 .billiard-app .input:focus {
@@ -70,4 +70,26 @@
   margin-bottom: 0.25rem;
   font-size: 0.875rem;
   color: rgba(21, 53, 38, 0.7);
+}
+
+.billiard-app a,
+.billiard-app button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.billiard-tabbar {
+  box-shadow: 0 -8px 24px rgba(11, 30, 22, 0.18);
+}
+
+@supports (padding: max(0px)) {
+  .billiard-tabbar {
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 767px) {
+  .billiard-app .card-soft {
+    border-radius: 1.25rem;
+    padding: 1rem;
+  }
 }

@@ -15,7 +15,6 @@ export default function AdminTournamentsPage() {
     status: "registration_open",
     venue: "",
   });
-  const [newDiscipline, setNewDiscipline] = useState("");
   const [msg, setMsg] = useState("");
 
   async function load() {
@@ -24,26 +23,12 @@ export default function AdminTournamentsPage() {
       apiFetch<{ data: any[] }>("/admin/disciplines"),
     ]);
     setItems(t.data || []);
-    setDisciplines(d.data || []);
+    setDisciplines((d.data || []).filter((x: any) => x.is_active !== false));
   }
 
   useEffect(() => {
     load().catch(() => {});
   }, []);
-
-  async function addDiscipline() {
-    if (!newDiscipline.trim()) return;
-    try {
-      await apiFetch("/admin/disciplines", {
-        method: "POST",
-        body: JSON.stringify({ name: newDiscipline }),
-      });
-      setNewDiscipline("");
-      await load();
-    } catch (err) {
-      setMsg((err as ApiError).message || "خطا");
-    }
-  }
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
@@ -69,17 +54,25 @@ export default function AdminTournamentsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-display text-3xl">مسابقات</h1>
-      <div className="card-soft flex flex-wrap gap-2">
-        <input className="input max-w-xs" placeholder="رشته جدید (مثلاً اسنوکر)" value={newDiscipline} onChange={(e) => setNewDiscipline(e.target.value)} />
-        <button type="button" className="btn-secondary" onClick={addDiscipline}>
-          افزودن رشته
-        </button>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <h1 className="font-display text-3xl">مسابقات</h1>
+        <Link href="/billiard/admin/disciplines" className="btn-secondary">
+          مدیریت رشته‌ها
+        </Link>
       </div>
+      {!disciplines.length && (
+        <p className="rounded-lg bg-cue-500/15 px-3 py-2 text-sm">
+          هنوز رشته‌ای تعریف نشده. اول از{" "}
+          <Link href="/billiard/admin/disciplines" className="underline">
+            بخش رشته‌ها
+          </Link>{" "}
+          اسنوکر و پاکت را اضافه کنید.
+        </p>
+      )}
       <form onSubmit={create} className="card-soft grid gap-3 md:grid-cols-2">
         <input className="input" placeholder="نام مسابقه" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
         <select className="input" value={form.discipline_id} onChange={(e) => setForm({ ...form, discipline_id: e.target.value })} required>
-          <option value="">رشته</option>
+          <option value="">انتخاب رشته</option>
           {disciplines.map((d) => (
             <option key={d.id} value={d.id}>
               {d.name}
