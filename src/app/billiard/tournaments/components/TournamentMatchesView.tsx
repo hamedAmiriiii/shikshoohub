@@ -67,20 +67,43 @@ function Avatar({ player, size = 36 }: { player?: PlayerMini; size?: number }) {
   );
 }
 
-function SlotLine({
-  player,
-  sourceLabel,
-  mine,
-}: {
-  player?: PlayerMini;
-  sourceLabel?: string;
-  mine?: boolean;
-}) {
-  const name = player?.full_name || sourceLabel || "TBD";
+function sideName(player?: PlayerMini, source?: string) {
+  return player?.full_name || source || "—";
+}
+
+function MatchFaceOff({ m, myId }: { m: MatchRow; myId?: number | null }) {
+  const name1 = sideName(m.player1, m.player1_source?.label);
+  const name2 = sideName(m.player2, m.player2_source?.label);
+  const mine1 = !!myId && m.player1_id === myId;
+  const mine2 = !!myId && m.player2_id === myId;
+  const when = [m.scheduled_on, m.scheduled_at].filter(Boolean).join(" ");
+  const done = m.status === "finished" || m.status === "walkover";
+
   return (
-    <div className={`flex min-w-0 items-center gap-2 ${mine ? "text-amber-100" : "text-slate-100"}`}>
-      <Avatar player={player} size={28} />
-      <span className="truncate text-xs font-medium">{name}</span>
+    <div className="flex items-center gap-2">
+      <div className={`flex min-w-0 flex-1 items-center gap-1.5 ${mine1 ? "text-amber-100" : "text-slate-100"}`}>
+        <Avatar player={m.player1} size={32} />
+        <span className="truncate text-xs font-medium" title={name1}>
+          {name1}
+        </span>
+      </div>
+      <div className="w-[92px] shrink-0 text-center leading-4">
+        <div className="text-[10px] text-slate-400">{when || "زمان ندارد"}</div>
+        {m.table?.name && <div className="text-[10px] text-slate-500">{m.table.name}</div>}
+        {done && (
+          <div className="font-display text-xs text-cyan-300">
+            {m.score1 ?? "-"} – {m.score2 ?? "-"}
+          </div>
+        )}
+      </div>
+      <div
+        className={`flex min-w-0 flex-1 items-center justify-end gap-1.5 ${mine2 ? "text-amber-100" : "text-slate-100"}`}
+      >
+        <span className="truncate text-xs font-medium" title={name2}>
+          {name2}
+        </span>
+        <Avatar player={m.player2} size={32} />
+      </div>
     </div>
   );
 }
@@ -88,14 +111,11 @@ function SlotLine({
 function MatchCard({
   m,
   myId,
-  showSchedule,
 }: {
   m: MatchRow;
   myId?: number | null;
-  showSchedule?: boolean;
 }) {
   const mine = isMine(m, myId);
-  const done = m.status === "finished" || m.status === "walkover";
   return (
     <div
       className={`rounded-xl border px-2.5 py-2 text-sm transition ${
@@ -122,29 +142,7 @@ function MatchCard({
         </div>
         <span className="text-[10px] text-slate-500">{statusLabel[m.status || ""] || m.status}</span>
       </div>
-      <div className="space-y-1.5">
-        <SlotLine
-          player={m.player1}
-          sourceLabel={m.player1_source?.label}
-          mine={!!myId && m.player1_id === myId}
-        />
-        <div className="text-center text-[9px] text-slate-600">vs</div>
-        <SlotLine
-          player={m.player2}
-          sourceLabel={m.player2_source?.label}
-          mine={!!myId && m.player2_id === myId}
-        />
-      </div>
-      {(showSchedule || m.scheduled_on || m.table?.name) && (
-        <div className="mt-1.5 text-[10px] text-slate-500">
-          {[m.scheduled_on, m.scheduled_at, m.table?.name].filter(Boolean).join(" · ") || "زمان‌بندی نشده"}
-        </div>
-      )}
-      {done && (
-        <div className="mt-1 font-display text-sm text-cyan-300">
-          {m.score1 ?? "-"} – {m.score2 ?? "-"}
-        </div>
-      )}
+      <MatchFaceOff m={m} myId={myId} />
     </div>
   );
 }
@@ -248,7 +246,7 @@ function KnockoutTree({ matches, myId }: { matches: MatchRow[]; myId?: number | 
     <div className="overflow-x-auto pb-2">
       <div className="flex min-w-max gap-4">
         {byRound.map(([round, list]) => (
-          <div key={round} className="flex w-[200px] shrink-0 flex-col justify-around gap-3 sm:w-[220px]">
+          <div key={round} className="flex w-[320px] shrink-0 flex-col justify-around gap-3 sm:w-[360px]">
             <div className="sticky top-0 text-center text-[11px] text-slate-500">
               {list[0]?.round_label || `دور ${round}`}
             </div>
@@ -283,7 +281,7 @@ function ScheduleList({ matches, myId }: { matches: MatchRow[]; myId?: number | 
   return (
     <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
       {sorted.map((m) => (
-        <MatchCard key={m.id} m={m} myId={myId} showSchedule />
+        <MatchCard key={m.id} m={m} myId={myId}  />
       ))}
     </div>
   );
@@ -294,7 +292,7 @@ function ResultsList({ matches, myId }: { matches: MatchRow[]; myId?: number | n
   return (
     <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
       {matches.map((m) => (
-        <MatchCard key={m.id} m={m} myId={myId} showSchedule />
+        <MatchCard key={m.id} m={m} myId={myId}  />
       ))}
     </div>
   );
@@ -378,7 +376,7 @@ export function TournamentMatchesView({
               <h3 className="text-sm text-slate-400">بازی‌های گروهی</h3>
               <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                 {groupMatches.map((m) => (
-                  <MatchCard key={m.id} m={m} myId={myId} showSchedule />
+                  <MatchCard key={m.id} m={m} myId={myId}  />
                 ))}
               </div>
             </div>

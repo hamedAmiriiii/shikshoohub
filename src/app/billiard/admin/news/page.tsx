@@ -134,7 +134,7 @@ export default function AdminNewsPage() {
     <div className="space-y-5 pb-8">
       <div>
         <h1 className="font-display text-2xl tracking-tight text-slate-100 sm:text-3xl">اخبار</h1>
-        <p className="mt-1 text-sm text-slate-400">انتشار، ویرایش و حذف اطلاعیه‌ها با تصویر کاور</p>
+        <p className="mt-1 text-sm text-slate-400">تیتر، اصل خبر و عکس کوچک کنار خبر</p>
       </div>
 
       <form onSubmit={submit} className="card-soft overflow-hidden !p-0">
@@ -144,24 +144,24 @@ export default function AdminNewsPage() {
 
         <div className="space-y-4 p-4 sm:p-5">
           <div>
-            <label className="label">عنوان</label>
+            <label className="label">تیتر</label>
             <input
-              className="input text-base"
+              className="input text-base font-semibold"
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
               required
-              placeholder="عنوان خبر"
+              placeholder="تیتر خبر"
             />
           </div>
 
           <div>
-            <label className="label">متن</label>
+            <label className="label">اصل خبر</label>
             <textarea
-              className="input min-h-[160px] text-base leading-7"
+              className="input min-h-[180px] text-base leading-7"
               value={form.body}
               onChange={(e) => setForm({ ...form, body: e.target.value })}
               required
-              placeholder="متن کامل خبر..."
+              placeholder="متن اصلی خبر..."
             />
           </div>
 

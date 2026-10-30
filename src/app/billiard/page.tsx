@@ -1,4 +1,5 @@
 ﻿import Link from "next/link";
+import { NewsCover } from "@/app/billiard/news/NewsCover";
 import { apiUrl } from "@/app/lib/billiard/api";
 import { TournamentCard, type Tournament } from "@/app/billiard/components/TournamentCard";
 
@@ -156,32 +157,18 @@ export default async function HomePage() {
             </div>
           </section>
           <Section title="اطلاعیه‌ها" href="/billiard/news">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-2 sm:grid-cols-2">
               {(data.news || []).map((n: any) => (
                 <Link
                   key={n.id}
                   href={`/billiard/news/${n.slug}`}
-                  className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] transition hover:-translate-y-0.5 hover:border-cyan-400/35 hover:bg-white/[0.07]"
+                  className="group block overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] p-2.5 transition hover:border-cyan-400/30"
                 >
-                  <div
-                    className="aspect-[16/10] bg-cover bg-center"
-                    style={
-                      n.cover_url
-                        ? {
-                            backgroundImage: `linear-gradient(180deg, transparent 40%, rgba(11,15,26,.85)), url(${n.cover_url})`,
-                          }
-                        : {
-                            backgroundImage:
-                              "radial-gradient(circle at 20% 20%, rgba(34,211,238,.3), transparent 45%), linear-gradient(135deg, #1e1b4b, #0b0f1a)",
-                          }
-                    }
-                  />
-                  <div className="space-y-2 p-4">
-                    <h3 className="text-base font-semibold leading-7 text-slate-100 group-hover:text-cyan-300">
-                      {n.title}
-                    </h3>
-                    <p className="line-clamp-2 text-sm leading-6 text-slate-400">{n.excerpt}</p>
-                  </div>
+                  <NewsCover url={n.cover_url} alt={n.title} />
+                  <h3 className="text-sm font-semibold leading-6 text-slate-100 group-hover:text-cyan-300">
+                    {n.title}
+                  </h3>
+                  <p className="mt-0.5 line-clamp-3 text-xs leading-5 text-slate-400">{n.excerpt}</p>
                 </Link>
               ))}
             </div>

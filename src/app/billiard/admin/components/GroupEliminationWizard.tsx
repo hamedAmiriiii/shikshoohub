@@ -105,6 +105,9 @@ export function GroupEliminationWizard({
     time: "",
   });
   const [formNote, setFormNote] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const [koDrafts, setKoDrafts] = useState<
+    Record<number, { slot1: string; slot2: string; tableId: string; date: string; time: string }>
+  >({});
   const formDateValue = useMemo(() => fromGregorianYmd(matchForm.date || null), [matchForm.date]);
 
   useEffect(() => {
@@ -565,28 +568,54 @@ export function GroupEliminationWizard({
     }
   }
 
-  async function setKnockoutSource(matchId: number, slot: 1 | 2, matchNo: string) {
-    setBusy(`ko-slot-${matchId}-${slot}`);
+  function koBase(m: any) {
+    return {
+      slot1: m.player1_source?.match_no ? String(m.player1_source.match_no) : "",
+      slot2: m.player2_source?.match_no ? String(m.player2_source.match_no) : "",
+      tableId: m.table_id ? String(m.table_id) : "",
+      date: m.scheduled_on || defaultScheduleDate || "",
+      time: timeForUi(m.scheduled_at) || defaultScheduleTime || "",
+    };
+  }
+
+  function koDraft(m: any) {
+    return koDrafts[m.id] ?? koBase(m);
+  }
+
+  function patchKo(m: any, patch: Partial<ReturnType<typeof koBase>>) {
+    setKoDrafts((prev) => ({
+      ...prev,
+      [m.id]: { ...(prev[m.id] ?? koBase(m)), ...patch },
+    }));
+  }
+
+  async function saveKoCard(m: any, withSlots: boolean) {
+    const d = koDraft(m);
+    setBusy(`ko-save-${m.id}`);
+    setMsg("");
     try {
-      if (!matchNo) {
-        await apiFetch(`/admin/matches/${matchId}/slot`, {
-          method: "PATCH",
-          body: JSON.stringify({ slot, type: "empty" }),
-        });
-      } else {
-        await apiFetch(`/admin/matches/${matchId}/slot`, {
-          method: "PATCH",
-          body: JSON.stringify({
-            slot,
-            type: "source",
-            match_no: Number(matchNo),
-            outcome: "winner",
-          }),
-        });
+      if (withSlots) {
+        for (const slot of [1, 2] as const) {
+          const matchNo = slot === 1 ? d.slot1 : d.slot2;
+          await apiFetch(`/admin/matches/${m.id}/slot`, {
+            method: "PATCH",
+            body: JSON.stringify(
+              matchNo
+                ? { slot, type: "source", match_no: Number(matchNo), outcome: "winner" }
+                : { slot, type: "empty" },
+            ),
+          });
+        }
       }
-      await onReload();
+      await onSchedule(m.id, d.tableId, toAsciiDigits(d.date), d.time);
+      setKoDrafts((prev) => {
+        const next = { ...prev };
+        delete next[m.id];
+        return next;
+      });
+      setMsg(`بازی ${m.match_no ?? m.id} ذخیره شد.`);
     } catch (err) {
-      setMsg((err as ApiError).message || "خطا");
+      setMsg((err as ApiError).message || "خطا در ذخیره کارت");
     } finally {
       setBusy(null);
     }
@@ -596,14 +625,13 @@ export function GroupEliminationWizard({
   const rightHalf = round1Knockout.slice(Math.ceil(round1Knockout.length / 2));
 
   function renderKoSlotSelect(m: any, slot: 1 | 2) {
-    const src = slot === 1 ? m.player1_source : m.player2_source;
-    const current = src?.match_no ? String(src.match_no) : "";
+    const d = koDraft(m);
+    const value = slot === 1 ? d.slot1 : d.slot2;
     return (
       <select
         className="input input-sm"
-        value={current}
-        disabled={busy !== null}
-        onChange={(e) => setKnockoutSource(m.id, slot, e.target.value)}
+        value={value}
+        onChange={(e) => patchKo(m, slot === 1 ? { slot1: e.target.value } : { slot2: e.target.value })}
       >
         <option value="">جایگاه {slot} — انتخاب برنده بازی</option>
         {groupMatches.map((gm) => (
@@ -622,35 +650,57 @@ export function GroupEliminationWizard({
     );
   }
 
+  function renderKoCard(m: any, withSlots: boolean) {
+    const d = koDraft(m);
+    const saving = busy === `ko-save-${m.id}`;
+    return (
+      <div key={m.id} className="space-y-1.5 rounded-xl border border-white/10 bg-white/[0.03] p-2.5">
+        <div className="flex items-center gap-2 text-xs">
+          <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-md bg-fuchsia-500/20 px-1.5 font-bold text-fuchsia-300">
+            {m.match_no ?? m.id}
+          </span>
+          <span className="text-slate-400">{m.round_label}</span>
+        </div>
+        {withSlots ? (
+          <>
+            {renderKoSlotSelect(m, 1)}
+            <div className="text-center text-[10px] text-slate-600">vs</div>
+            {renderKoSlotSelect(m, 2)}
+          </>
+        ) : (
+          <div className="text-[11px] text-slate-400">
+            {slotText(m, 1)} — {slotText(m, 2)}
+          </div>
+        )}
+        <MatchScheduleFields
+          tableId={d.tableId}
+          scheduledOn={d.date}
+          scheduledAt={d.time}
+          tables={tables}
+          defaultDate=""
+          defaultTime=""
+          disabled={saving}
+          onChange={({ tableId, date, time }) => patchKo(m, { tableId, date, time })}
+        />
+        <div className="flex justify-end pt-1">
+          <BilliardButton
+            type="button"
+            loading={saving}
+            sx={{ minHeight: 32, py: "2px", px: 1.25, fontSize: 12 }}
+            onClick={() => saveKoCard(m, withSlots)}
+          >
+            ذخیره
+          </BilliardButton>
+        </div>
+      </div>
+    );
+  }
+
   function renderKoSide(matches: any[], title: string) {
     return (
       <div className="min-w-[260px] flex-1 space-y-2">
         <div className="text-xs text-slate-500">{title}</div>
-        {matches.map((m) => (
-          <div key={m.id} className="space-y-1.5 rounded-xl border border-white/10 bg-white/[0.03] p-2.5">
-            <div className="flex items-center gap-2 text-xs">
-              <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-md bg-fuchsia-500/20 px-1.5 font-bold text-fuchsia-300">
-                {m.match_no ?? m.id}
-              </span>
-              <span className="text-slate-400">{m.round_label}</span>
-            </div>
-            {renderKoSlotSelect(m, 1)}
-            <div className="text-center text-[10px] text-slate-600">vs</div>
-            {renderKoSlotSelect(m, 2)}
-            <div className="text-[11px] text-slate-500">
-              {slotText(m, 1)} — {slotText(m, 2)}
-            </div>
-            <MatchScheduleFields
-              tableId={m.table_id}
-              scheduledOn={m.scheduled_on}
-              scheduledAt={m.scheduled_at}
-              tables={tables}
-              defaultDate={defaultScheduleDate}
-              defaultTime={defaultScheduleTime}
-              onChange={({ tableId, date, time }) => onSchedule(m.id, tableId, date, time)}
-            />
-          </div>
-        ))}
+        {matches.map((m) => renderKoCard(m, true))}
       </div>
     );
   }
@@ -918,7 +968,7 @@ export function GroupEliminationWizard({
                       {matches
                         .slice()
                         .sort((a, b) => a.position - b.position)
-                        .map(renderMatchCard)}
+                        .map((m) => renderKoCard(m, false))}
                     </div>
                   ))}
               </div>
