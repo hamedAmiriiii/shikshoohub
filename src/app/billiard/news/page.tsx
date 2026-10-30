@@ -31,7 +31,6 @@ export default async function NewsPage() {
   return (
     <div className="space-y-6 pb-8">
       <header className="space-y-2">
-        <p className="text-xs font-medium tracking-[0.18em] text-cyan-400">NEWS</p>
         <h1 className="font-display text-3xl tracking-tight text-slate-100 sm:text-4xl">اخبار و اطلاعیه‌ها</h1>
         <p className="max-w-xl text-sm leading-7 text-slate-400">
           آخرین خبرهای هیأت، زمان‌بندی مسابقات و اطلاعیه‌های رسمی.
