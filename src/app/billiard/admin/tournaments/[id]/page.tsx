@@ -18,20 +18,7 @@ import {
   timeForApi,
   writeScheduleDefault,
 } from "@/app/billiard/admin/components/MatchScheduleFields";
-
-type SlotDraft = {
-  type: "player" | "source" | "empty";
-  player_id: string;
-  match_id: string;
-  outcome: "winner" | "loser";
-};
-
-const emptySlot = (): SlotDraft => ({
-  type: "player",
-  player_id: "",
-  match_id: "",
-  outcome: "winner",
-});
+import { GroupEliminationWizard } from "@/app/billiard/admin/components/GroupEliminationWizard";
 
 function slotLabel(m: any, side: 1 | 2): string {
   const p = side === 1 ? m.player1 : m.player2;
@@ -64,18 +51,9 @@ export default function AdminTournamentDetailPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [playersLoading, setPlayersLoading] = useState(false);
   const [bracketSize, setBracketSize] = useState("8");
-  const [groupCount, setGroupCount] = useState("2");
-  const [knockoutSize, setKnockoutSize] = useState("4");
   const [picking, setPicking] = useState<{ matchId: number; slot: 1 | 2 } | null>(null);
   const [defaultScheduleDate, setDefaultScheduleDate] = useState("");
   const [defaultScheduleTime, setDefaultScheduleTime] = useState("");
-  const [groupForm, setGroupForm] = useState({
-    group_code: "A",
-    position: "1",
-    slot1: emptySlot(),
-    slot2: emptySlot(),
-  });
-
   useEffect(() => {
     setDefaultScheduleDate(readScheduleDefault(BILLIARD_LS_DATE));
     setDefaultScheduleTime(readScheduleDefault(BILLIARD_LS_TIME));
@@ -160,10 +138,6 @@ export default function AdminTournamentDetailPage() {
     [settledRegs, picking, placedPlayerIds],
   );
 
-  const groupMatches = useMemo(
-    () => bracket.filter((m) => (m.phase || "knockout") === "group"),
-    [bracket],
-  );
   const knockoutMatches = useMemo(
     () => bracket.filter((m) => (m.phase || "knockout") === "knockout"),
     [bracket],
@@ -370,50 +344,6 @@ export default function AdminTournamentDetailPage() {
     }
   }
 
-  function toApiSlot(s: SlotDraft) {
-    if (s.type === "empty") return { type: "empty" };
-    if (s.type === "source") {
-      return {
-        type: "source",
-        match_id: Number(s.match_id),
-        outcome: s.outcome,
-      };
-    }
-    return {
-      type: "player",
-      player_id: s.player_id ? Number(s.player_id) : null,
-    };
-  }
-
-  async function saveGroupMatch() {
-    setBusy("group-match");
-    setMsg("");
-    try {
-      const res = await apiFetch<{ bracket: any[] }>(`/admin/tournaments/${id}/group-matches`, {
-        method: "POST",
-        body: JSON.stringify({
-          group_code: groupForm.group_code,
-          position: Number(groupForm.position),
-          slot1: toApiSlot(groupForm.slot1),
-          slot2: toApiSlot(groupForm.slot2),
-        }),
-      });
-      setBracket(res.bracket || []);
-      setGroupForm((f) => ({
-        ...f,
-        position: String(Number(f.position) + 1),
-        slot1: emptySlot(),
-        slot2: emptySlot(),
-      }));
-      setMsg("بازی گروهی ذخیره شد.");
-      await load();
-    } catch (err) {
-      setMsg((err as ApiError).message || "خطا");
-    } finally {
-      setBusy(null);
-    }
-  }
-
   async function deleteMatch(matchId: number) {
     if (!confirm("این بازی حذف شود؟")) return;
     setBusy(`del-${matchId}`);
@@ -426,73 +356,6 @@ export default function AdminTournamentDetailPage() {
     } finally {
       setBusy(null);
     }
-  }
-
-  function renderSlotEditor(key: "slot1" | "slot2", label: string) {
-    const s = groupForm[key];
-    return (
-      <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.03] p-3">
-        <div className="text-xs text-slate-400">{label}</div>
-        <select
-          className="input"
-          value={s.type}
-          onChange={(e) =>
-            setGroupForm({
-              ...groupForm,
-              [key]: { ...s, type: e.target.value as SlotDraft["type"] },
-            })
-          }
-        >
-          <option value="player">بازیکن مشخص</option>
-          <option value="source">برنده / بازنده یک بازی</option>
-          <option value="empty">خالی (بعداً)</option>
-        </select>
-        {s.type === "player" && (
-          <select
-            className="input"
-            value={s.player_id}
-            onChange={(e) => setGroupForm({ ...groupForm, [key]: { ...s, player_id: e.target.value } })}
-          >
-            <option value="">انتخاب بازیکن</option>
-            {settledRegs.map((r) => (
-              <option key={r.id} value={r.player_id}>
-                {r.player?.full_name}
-              </option>
-            ))}
-          </select>
-        )}
-        {s.type === "source" && (
-          <div className="grid gap-2 sm:grid-cols-2">
-            <select
-              className="input"
-              value={s.match_id}
-              onChange={(e) => setGroupForm({ ...groupForm, [key]: { ...s, match_id: e.target.value } })}
-            >
-              <option value="">بازی مرجع</option>
-              {bracket.map((m) => (
-                <option key={m.id} value={m.id}>
-                  بازی {m.match_no ?? m.id}
-                  {m.round_label ? ` · ${m.round_label}` : ""}
-                </option>
-              ))}
-            </select>
-            <select
-              className="input"
-              value={s.outcome}
-              onChange={(e) =>
-                setGroupForm({
-                  ...groupForm,
-                  [key]: { ...s, outcome: e.target.value as "winner" | "loser" },
-                })
-              }
-            >
-              <option value="winner">برنده</option>
-              <option value="loser">بازنده</option>
-            </select>
-          </div>
-        )}
-      </div>
-    );
   }
 
   function renderMatchCard(m: any) {
@@ -589,10 +452,6 @@ export default function AdminTournamentDetailPage() {
   }
 
   if (!tournament) return <p className="text-slate-400">در حال بارگذاری...</p>;
-
-  const groupCodes = Array.from({ length: Math.max(1, Number(groupCount) || 1) }, (_, i) =>
-    String.fromCharCode(65 + i),
-  );
 
   return (
     <div className="space-y-6">
@@ -833,94 +692,27 @@ export default function AdminTournamentDetailPage() {
       )}
 
       {isGroupFormat && (
-        <section className="card-soft space-y-4">
-          <div>
-            <h2 className="font-display text-xl text-slate-100">مرحله گروهی</h2>
-            <p className="mt-1 text-sm text-slate-400">
-              تعداد گروه را مشخص کنید، بعد برای هر گروه بازی‌ها را تعریف کنید — بازیکن با بازیکن، یا برنده/بازنده یک جایگاه دیگر.
-            </p>
-          </div>
-          <div>
-            <label className="label">تعداد گروه</label>
-            <select className="input max-w-[120px]" value={groupCount} onChange={(e) => setGroupCount(e.target.value)}>
-              {[1, 2, 3, 4, 5, 6, 8].map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-            <p className="mt-1 text-xs text-slate-500">گروه‌ها: {groupCodes.join("، ")}</p>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            <div>
-              <label className="label">گروه</label>
-              <select
-                className="input"
-                value={groupForm.group_code}
-                onChange={(e) => setGroupForm({ ...groupForm, group_code: e.target.value })}
-              >
-                {groupCodes.map((c) => (
-                  <option key={c} value={c}>
-                    گروه {c}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="label">شماره بازی در گروه</label>
-              <input
-                className="input"
-                value={groupForm.position}
-                onChange={(e) => setGroupForm({ ...groupForm, position: e.target.value })}
-              />
-            </div>
-          </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            {renderSlotEditor("slot1", "طرف اول")}
-            {renderSlotEditor("slot2", "طرف دوم")}
-          </div>
-          <BilliardButton type="button" loading={busy === "group-match"} onClick={saveGroupMatch}>
-            افزودن بازی به گروه
-          </BilliardButton>
-
-          {groupMatches.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium text-slate-300">بازی‌های گروهی</h3>
-              {groupMatches.map(renderMatchCard)}
-            </div>
-          )}
-
-          <div className="border-t border-white/10 pt-4 space-y-3">
-            <h3 className="font-display text-lg text-slate-100">مرحله حذفی بعد از گروه</h3>
-            <div className="flex flex-wrap items-end gap-2">
-              <div>
-                <label className="label">تعداد جایگاه حذفی</label>
-                <select
-                  className="input w-32"
-                  value={knockoutSize}
-                  onChange={(e) => setKnockoutSize(e.target.value)}
-                >
-                  {[2, 4, 8, 16].map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <BilliardButton
-                type="button"
-                loading={busy === "bracket"}
-                onClick={() => buildKnockout(Number(knockoutSize), true)}
-              >
-                ساخت جدول حذفی
-              </BilliardButton>
-            </div>
-          </div>
-        </section>
+        <GroupEliminationWizard
+          tournamentId={String(id)}
+          tournament={tournament}
+          regs={regs}
+          bracket={bracket}
+          tables={tables}
+          defaultScheduleDate={defaultScheduleDate}
+          defaultScheduleTime={defaultScheduleTime}
+          onSchedule={saveSchedule}
+          onResult={saveResult}
+          scores={scores}
+          setScores={setScores}
+          busy={busy}
+          setBusy={setBusy}
+          setMsg={setMsg}
+          onReload={load}
+          renderMatchCard={renderMatchCard}
+        />
       )}
 
-      {knockoutMatches.length > 0 && (
+      {!isGroupFormat && knockoutMatches.length > 0 && (
         <section className="space-y-4">
           <h2 className="font-display text-xl text-slate-100">جدول حذفی / نتایج</h2>
           <div className="overflow-x-auto pb-2">
@@ -939,7 +731,7 @@ export default function AdminTournamentDetailPage() {
         </section>
       )}
 
-      {!knockoutMatches.length && !groupMatches.length && (
+      {!isGroupFormat && !knockoutMatches.length && (
         <p className="text-sm text-slate-500">هنوز جدولی ساخته نشده.</p>
       )}
     </div>
