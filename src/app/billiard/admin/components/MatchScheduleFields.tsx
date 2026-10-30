@@ -111,7 +111,7 @@ export function MatchScheduleFields({
   }, [timeValue]);
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div className="flex flex-nowrap items-center gap-1.5">
       <select
         className="input input-sm max-w-[100px]"
         disabled={disabled}

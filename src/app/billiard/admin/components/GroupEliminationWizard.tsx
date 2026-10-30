@@ -4,11 +4,15 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { apiFetch, type ApiError } from "@/app/lib/billiard/api";
 import { BilliardButton } from "@/app/billiard/components/BilliardButton";
 import {
+  BILLIARD_LS_DATE,
+  BILLIARD_LS_TIME,
   BILLIARD_TIME_OPTIONS,
   MatchScheduleFields,
   fromGregorianYmd,
+  timeForApi,
   timeForUi,
   toGregorianYmd,
+  writeScheduleDefault,
 } from "@/app/billiard/admin/components/MatchScheduleFields";
 import DatePicker from "react-multi-date-picker";
 import DateObject from "react-date-object";
@@ -281,9 +285,11 @@ export function GroupEliminationWizard({
     if (matchForm.mode === "player") {
       return (
         <select
-          className="input input-sm min-w-0 flex-1"
+          className="input input-sm w-full"
           value={s.player_id}
-          onChange={(e) => setMatchForm({ ...matchForm, [key]: { ...s, player_id: e.target.value } })}
+          onChange={(e) =>
+            setMatchForm((f) => ({ ...f, [key]: { ...f[key], player_id: e.target.value } }))
+          }
         >
           <option value="">{placeholder}</option>
           {playersInGroup.map((r) => (
@@ -295,15 +301,15 @@ export function GroupEliminationWizard({
       );
     }
     return (
-      <div className="flex min-w-0 flex-1 gap-1">
+      <div className="flex w-full gap-1">
         <select
-          className="input input-sm w-[72px] shrink-0"
+          className="input input-sm w-[68px] shrink-0"
           value={s.outcome}
           onChange={(e) =>
-            setMatchForm({
-              ...matchForm,
-              [key]: { ...s, outcome: e.target.value as "winner" | "loser" },
-            })
+            setMatchForm((f) => ({
+              ...f,
+              [key]: { ...f[key], outcome: e.target.value as "winner" | "loser" },
+            }))
           }
         >
           <option value="winner">برنده</option>
@@ -312,7 +318,9 @@ export function GroupEliminationWizard({
         <select
           className="input input-sm min-w-0 flex-1"
           value={s.match_no}
-          onChange={(e) => setMatchForm({ ...matchForm, [key]: { ...s, match_no: e.target.value } })}
+          onChange={(e) =>
+            setMatchForm((f) => ({ ...f, [key]: { ...f[key], match_no: e.target.value } }))
+          }
         >
           <option value="">بازی</option>
           {allMatchesForSource.map((m) => (
@@ -328,30 +336,32 @@ export function GroupEliminationWizard({
   async function saveGroupMatch() {
     setBusy("group-match");
     setMsg("");
+    const date = matchForm.date || defaultScheduleDate || "";
+    const time = matchForm.time || defaultScheduleTime || "";
+    const tableId = matchForm.tableId || "";
     try {
-      const res = await apiFetch<{ match: any }>(`/admin/tournaments/${tournamentId}/group-matches`, {
+      await apiFetch<{ match: any }>(`/admin/tournaments/${tournamentId}/group-matches`, {
         method: "POST",
         body: JSON.stringify({
           group_code: activeGroup,
           position: Number(matchForm.position),
           slot1: toApiSlot({ ...matchForm.slot1, type: matchForm.mode }),
           slot2: toApiSlot({ ...matchForm.slot2, type: matchForm.mode }),
+          table_id: tableId ? Number(tableId) : null,
+          scheduled_on: date || null,
+          scheduled_at: time ? timeForApi(time) : null,
         }),
       });
-      const matchId = res.match?.id;
-      if (matchId && (matchForm.tableId || matchForm.date || matchForm.time)) {
-        await onSchedule(
-          matchId,
-          matchForm.tableId,
-          matchForm.date || defaultScheduleDate,
-          matchForm.time || defaultScheduleTime,
-        );
-      }
+      if (date) writeScheduleDefault(BILLIARD_LS_DATE, date);
+      if (time) writeScheduleDefault(BILLIARD_LS_TIME, time);
       setMatchForm((f) => ({
         ...f,
         position: String(Number(f.position) + 1),
         slot1: emptySlot(f.mode),
         slot2: emptySlot(f.mode),
+        tableId: tableId,
+        date,
+        time,
       }));
       setMsg("بازی گروهی ذخیره شد.");
       await onReload();
@@ -380,85 +390,94 @@ export function GroupEliminationWizard({
     const no = m.match_no ?? m.id;
     const canResult = !!m.player1_id && !!m.player2_id && !done;
     return (
-      <div
-        key={m.id}
-        className="flex w-full min-w-0 flex-wrap items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-2 py-1.5"
-      >
-        <span className="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md bg-fuchsia-500/20 px-1.5 text-xs font-bold text-fuchsia-300">
-          {no}
-        </span>
-        <span className="min-w-[100px] max-w-[160px] truncate text-xs text-slate-200" title={slotText(m, 1)}>
-          {slotText(m, 1)}
-        </span>
-        <span className="text-[10px] text-slate-600">vs</span>
-        <span className="min-w-[100px] max-w-[160px] truncate text-xs text-slate-200" title={slotText(m, 2)}>
-          {slotText(m, 2)}
-        </span>
-        <div className="min-w-0 flex-1">
-          <MatchScheduleFields
-            tableId={m.table_id}
-            scheduledOn={m.scheduled_on}
-            scheduledAt={m.scheduled_at}
-            tables={tables}
-            defaultDate={defaultScheduleDate}
-            defaultTime={defaultScheduleTime}
-            disabled={done}
-            onChange={({ tableId, date, time }) => onSchedule(m.id, tableId, date, time)}
-          />
-        </div>
-        {canResult && (
-          <>
-            <input
-              className="input input-sm w-12"
-              placeholder="۱"
-              value={scores[m.id]?.s1 ?? ""}
-              onChange={(e) =>
-                setScores((prev: Record<number, { s1: string; s2: string }>) => ({
-                  ...prev,
-                  [m.id]: { s1: e.target.value, s2: prev[m.id]?.s2 || "" },
-                }))
-              }
-            />
-            <input
-              className="input input-sm w-12"
-              placeholder="۲"
-              value={scores[m.id]?.s2 ?? ""}
-              onChange={(e) =>
-                setScores((prev: Record<number, { s1: string; s2: string }>) => ({
-                  ...prev,
-                  [m.id]: { s1: prev[m.id]?.s1 || "", s2: e.target.value },
-                }))
-              }
-            />
-            <BilliardButton
-              type="button"
-              loading={busy === `result-${m.id}`}
-              sx={{ minHeight: 34, py: "4px", px: 1.25, fontSize: 12 }}
-              onClick={() => onResult(m.id)}
-            >
-              نتیجه
-            </BilliardButton>
-          </>
-        )}
-        {done && (
-          <span className="text-xs font-display text-cyan-300">
-            {m.score1} – {m.score2}
+      <div key={m.id} className="w-full overflow-x-auto">
+        <div className="flex w-max min-w-full flex-nowrap items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-2 py-1.5">
+          <span className="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md bg-fuchsia-500/20 px-1.5 text-xs font-bold text-fuchsia-300">
+            {no}
           </span>
-        )}
-        {!done && (
-          <button
-            type="button"
-            className="shrink-0 text-[10px] text-rose-300 hover:underline"
-            onClick={() => deleteGroupMatch(m.id)}
-          >
-            حذف
-          </button>
-        )}
+          <span className="w-[120px] shrink-0 truncate text-xs text-slate-200" title={slotText(m, 1)}>
+            {slotText(m, 1)}
+          </span>
+          <span className="shrink-0 text-[10px] text-slate-600">vs</span>
+          <span className="w-[120px] shrink-0 truncate text-xs text-slate-200" title={slotText(m, 2)}>
+            {slotText(m, 2)}
+          </span>
+          <div className="shrink-0">
+            <MatchScheduleFields
+              tableId={m.table_id}
+              scheduledOn={m.scheduled_on}
+              scheduledAt={m.scheduled_at}
+              tables={tables}
+              defaultDate={defaultScheduleDate}
+              defaultTime={defaultScheduleTime}
+              disabled={done}
+              onChange={({ tableId, date, time }) => onSchedule(m.id, tableId, date, time)}
+            />
+          </div>
+          {canResult && (
+            <>
+              <input
+                className="input input-sm w-12 shrink-0"
+                placeholder="۱"
+                value={scores[m.id]?.s1 ?? ""}
+                onChange={(e) =>
+                  setScores((prev: Record<number, { s1: string; s2: string }>) => ({
+                    ...prev,
+                    [m.id]: { s1: e.target.value, s2: prev[m.id]?.s2 || "" },
+                  }))
+                }
+              />
+              <input
+                className="input input-sm w-12 shrink-0"
+                placeholder="۲"
+                value={scores[m.id]?.s2 ?? ""}
+                onChange={(e) =>
+                  setScores((prev: Record<number, { s1: string; s2: string }>) => ({
+                    ...prev,
+                    [m.id]: { s1: prev[m.id]?.s1 || "", s2: e.target.value },
+                  }))
+                }
+              />
+              <BilliardButton
+                type="button"
+                loading={busy === `result-${m.id}`}
+                sx={{ minHeight: 34, py: "4px", px: 1.25, fontSize: 12 }}
+                onClick={() => onResult(m.id)}
+              >
+                نتیجه
+              </BilliardButton>
+            </>
+          )}
+          {done && (
+            <span className="shrink-0 text-xs font-display text-cyan-300">
+              {m.score1} – {m.score2}
+            </span>
+          )}
+          {!done && (
+            <button
+              type="button"
+              className="shrink-0 text-[10px] text-rose-300 hover:underline"
+              onClick={() => deleteGroupMatch(m.id)}
+            >
+              حذف
+            </button>
+          )}
+        </div>
       </div>
     );
   }
 
   async function buildKnockout() {
+    if (!groupMatches.length) {
+      setMsg("اول بازی‌های گروهی را کامل کنید، بعد جدول حذفی را بسازید.");
+      return;
+    }
+    if (
+      knockoutMatches.length &&
+      !confirm("جدول حذفی فعلی پاک و دوباره ساخته می‌شود. ادامه؟")
+    ) {
+      return;
+    }
     setBusy("bracket");
     setMsg("");
     try {
@@ -654,91 +673,92 @@ export function GroupEliminationWizard({
         <div className="card-soft space-y-2 !p-3 sm:!p-4">
           <h2 className="font-display text-xl text-slate-100">۳) بازی‌های گروه {activeGroup}</h2>
           <p className="text-sm text-slate-400">
-            بازیکن با بازیکن، یا مثلاً بازنده بازی ۳ با برنده بازی ۲. شماره‌ها از ۱ شروع می‌شوند و با حذف بازی دوباره پشت‌سرهم می‌شوند.
+            سوییچ بازیکن/بازی · طرف‌ها · میز · تاریخ · ساعت · ثبت — همه در یک خط
           </p>
 
-          {/* ردیف ایجاد — تمام عرض، همه در یک ردیف */}
-          <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5 rounded-xl border border-cyan-400/20 bg-cyan-500/[0.04] px-2 py-2">
-            <input
-              className="input input-sm w-12 shrink-0"
-              title="ترتیب در گروه"
-              value={matchForm.position}
-              onChange={(e) => setMatchForm({ ...matchForm, position: e.target.value })}
-            />
-
-            <button
-              type="button"
-              role="switch"
-              aria-checked={matchForm.mode === "source"}
-              onClick={() => setMode(matchForm.mode === "player" ? "source" : "player")}
-              className={`shrink-0 rounded-lg border px-2 py-1.5 text-[11px] font-medium transition ${
-                matchForm.mode === "source"
-                  ? "border-amber-400/40 bg-amber-500/15 text-amber-100"
-                  : "border-white/15 bg-white/5 text-slate-300"
-              }`}
-              title="سوییچ بازیکن / برنده-بازنده بازی"
-            >
-              {matchForm.mode === "player" ? "بازیکن" : "بازی"}
-            </button>
-
-            {renderSideSelect("slot1", "بازیکن ۱")}
-            <span className="shrink-0 text-[10px] text-slate-600">vs</span>
-            {renderSideSelect("slot2", "بازیکن ۲")}
-
-            <select
-              className="input input-sm w-[88px] shrink-0"
-              value={matchForm.tableId}
-              onChange={(e) => setMatchForm({ ...matchForm, tableId: e.target.value })}
-            >
-              <option value="">میز</option>
-              {tables.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-
-            <div className="billiard-date-picker w-[118px] shrink-0">
-              <DatePicker
-                value={fromGregorianYmd(matchForm.date || null)}
-                calendar={persian}
-                locale={persian_fa}
-                calendarPosition="bottom-right"
-                format="YYYY/MM/DD"
-                placeholder="تاریخ"
-                editable={false}
-                portal
-                zIndex={80}
-                containerStyle={{ width: "100%" }}
-                inputClass="input input-sm"
-                onChange={(d) => {
-                  const obj = d && !Array.isArray(d) ? (d as DateObject) : null;
-                  setMatchForm({ ...matchForm, date: toGregorianYmd(obj) });
-                }}
+          <div className="w-full overflow-x-auto">
+            <div className="flex w-max min-w-full flex-nowrap items-center gap-1.5 rounded-xl border border-cyan-400/20 bg-cyan-500/[0.04] px-2 py-2">
+              <input
+                className="input input-sm w-11 shrink-0"
+                title="ترتیب در گروه"
+                value={matchForm.position}
+                onChange={(e) => setMatchForm((f) => ({ ...f, position: e.target.value }))}
               />
+
+              <button
+                type="button"
+                role="switch"
+                aria-checked={matchForm.mode === "source"}
+                onClick={() => setMode(matchForm.mode === "player" ? "source" : "player")}
+                className={`shrink-0 rounded-lg border px-2 py-1.5 text-[11px] font-medium transition ${
+                  matchForm.mode === "source"
+                    ? "border-amber-400/40 bg-amber-500/15 text-amber-100"
+                    : "border-white/15 bg-white/5 text-slate-300"
+                }`}
+                title="سوییچ بازیکن / برنده-بازنده بازی"
+              >
+                {matchForm.mode === "player" ? "بازیکن" : "بازی"}
+              </button>
+
+              <div className="w-[140px] shrink-0">{renderSideSelect("slot1", "بازیکن ۱")}</div>
+              <span className="shrink-0 text-[10px] text-slate-600">vs</span>
+              <div className="w-[140px] shrink-0">{renderSideSelect("slot2", "بازیکن ۲")}</div>
+
+              <select
+                className="input input-sm w-[88px] shrink-0"
+                value={matchForm.tableId}
+                onChange={(e) => setMatchForm((f) => ({ ...f, tableId: e.target.value }))}
+              >
+                <option value="">میز</option>
+                {tables.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+
+              <div className="billiard-date-picker w-[118px] shrink-0">
+                <DatePicker
+                  value={fromGregorianYmd(matchForm.date || null)}
+                  calendar={persian}
+                  locale={persian_fa}
+                  calendarPosition="bottom-right"
+                  format="YYYY/MM/DD"
+                  placeholder="تاریخ"
+                  editable={false}
+                  portal
+                  zIndex={80}
+                  containerStyle={{ width: "100%" }}
+                  inputClass="input input-sm"
+                  onChange={(d) => {
+                    const obj = d && !Array.isArray(d) ? (d as DateObject) : null;
+                    setMatchForm((f) => ({ ...f, date: toGregorianYmd(obj) }));
+                  }}
+                />
+              </div>
+
+              <select
+                className="input input-sm w-[84px] shrink-0"
+                value={timeForUi(matchForm.time) || matchForm.time}
+                onChange={(e) => setMatchForm((f) => ({ ...f, time: e.target.value }))}
+              >
+                <option value="">ساعت</option>
+                {BILLIARD_TIME_OPTIONS.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+
+              <BilliardButton
+                type="button"
+                loading={busy === "group-match"}
+                sx={{ minHeight: 34, py: "4px", px: 1.5, fontSize: 12 }}
+                onClick={saveGroupMatch}
+              >
+                ثبت
+              </BilliardButton>
             </div>
-
-            <select
-              className="input input-sm w-[84px] shrink-0"
-              value={timeForUi(matchForm.time) || matchForm.time}
-              onChange={(e) => setMatchForm({ ...matchForm, time: e.target.value })}
-            >
-              <option value="">ساعت</option>
-              {BILLIARD_TIME_OPTIONS.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-
-            <BilliardButton
-              type="button"
-              loading={busy === "group-match"}
-              sx={{ minHeight: 34, py: "4px", px: 1.5, fontSize: 12 }}
-              onClick={saveGroupMatch}
-            >
-              ثبت
-            </BilliardButton>
           </div>
         </div>
 
@@ -761,12 +781,12 @@ export function GroupEliminationWizard({
         )}
       </section>
 
-      {/* ۴. جدول حذفی درختی */}
+      {/* ۴. جدول حذفی — فقط بعد از بازی‌های گروهی و با دکمه ایجاد */}
       <section className="card-soft space-y-4">
         <div>
           <h2 className="font-display text-xl text-slate-100">۴) جدول حذفی (دو طرفه)</h2>
           <p className="mt-1 text-sm text-slate-400">
-            اندازه جدول را بسازید، بعد برای هر جایگاه دور اول بگویید برنده کدام بازی می‌نشیند؛ بقیه درخت تا فینال خودکار چیده می‌شود.
+            اول همه بازی‌های گروهی را بسازید. با زدن «ایجاد جدول حذفی» شماره‌های حذفی بعد از بازی‌های گروهی اختصاص می‌یابد.
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-2">
@@ -780,46 +800,62 @@ export function GroupEliminationWizard({
               ))}
             </select>
           </div>
-          <BilliardButton type="button" loading={busy === "bracket"} onClick={buildKnockout}>
-            {knockoutMatches.length ? "بازسازی جدول حذفی" : "ساخت جدول حذفی"}
+          <BilliardButton
+            type="button"
+            loading={busy === "bracket"}
+            disabled={!groupMatches.length || busy !== null}
+            onClick={buildKnockout}
+          >
+            {knockoutMatches.length ? "بازسازی جدول حذفی" : "ایجاد جدول حذفی"}
           </BilliardButton>
+          {!groupMatches.length && (
+            <span className="text-xs text-amber-300/90">هنوز بازی گروهی ندارید.</span>
+          )}
         </div>
 
-        {round1Knockout.length > 0 && (
-          <div className="overflow-x-auto pb-2">
-            <div className="flex min-w-max gap-6">
-              {renderKoSide(leftHalf, "سمت راست جدول")}
-              <div className="flex w-16 shrink-0 items-center justify-center text-xs text-slate-600">فینال ←</div>
-              {renderKoSide(rightHalf, "سمت چپ جدول")}
-            </div>
-          </div>
-        )}
-
-        {knockoutMatches.filter((m) => Number(m.round) > 1).length > 0 && (
-          <div className="space-y-3 border-t border-white/10 pt-3">
-            <div className="text-sm text-slate-400">ادامه جدول — هر جایگاه برنده بازی قبلی است</div>
-            {Array.from(
-              knockoutMatches
-                .filter((m) => Number(m.round) > 1)
-                .reduce((map, m) => {
-                  const r = Number(m.round);
-                  const arr = map.get(r) || [];
-                  arr.push(m);
-                  map.set(r, arr);
-                  return map;
-                }, new Map<number, any[]>()),
-            )
-              .sort((a, b) => a[0] - b[0])
-              .map(([round, matches]) => (
-                <div key={round} className="space-y-2">
-                  <div className="text-[11px] text-slate-500">{matches[0]?.round_label || `دور ${round}`}</div>
-                  {matches
-                    .slice()
-                    .sort((a, b) => a.position - b.position)
-                    .map(renderMatchCard)}
+        {!knockoutMatches.length ? (
+          <p className="text-sm text-slate-500">
+            جدول حذفی هنوز ساخته نشده — شماره‌ای برای حذفی رزرو نمی‌شود تا دکمه ایجاد را بزنید.
+          </p>
+        ) : (
+          <>
+            {round1Knockout.length > 0 && (
+              <div className="overflow-x-auto pb-2">
+                <div className="flex min-w-max gap-6">
+                  {renderKoSide(leftHalf, "سمت راست جدول")}
+                  <div className="flex w-16 shrink-0 items-center justify-center text-xs text-slate-600">فینال ←</div>
+                  {renderKoSide(rightHalf, "سمت چپ جدول")}
                 </div>
-              ))}
-          </div>
+              </div>
+            )}
+
+            {knockoutMatches.filter((m) => Number(m.round) > 1).length > 0 && (
+              <div className="space-y-3 border-t border-white/10 pt-3">
+                <div className="text-sm text-slate-400">ادامه جدول — هر جایگاه برنده بازی قبلی است</div>
+                {Array.from(
+                  knockoutMatches
+                    .filter((m) => Number(m.round) > 1)
+                    .reduce((map, m) => {
+                      const r = Number(m.round);
+                      const arr = map.get(r) || [];
+                      arr.push(m);
+                      map.set(r, arr);
+                      return map;
+                    }, new Map<number, any[]>()),
+                )
+                  .sort((a, b) => a[0] - b[0])
+                  .map(([round, matches]) => (
+                    <div key={round} className="space-y-2">
+                      <div className="text-[11px] text-slate-500">{matches[0]?.round_label || `دور ${round}`}</div>
+                      {matches
+                        .slice()
+                        .sort((a, b) => a.position - b.position)
+                        .map(renderMatchCard)}
+                    </div>
+                  ))}
+              </div>
+            )}
+          </>
         )}
       </section>
     </div>

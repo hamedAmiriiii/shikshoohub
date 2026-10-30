@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { apiUrl, formatToman, statusLabel } from "@/app/lib/billiard/api";
+import { TournamentMatchesView } from "@/app/billiard/tournaments/components/TournamentMatchesView";
 
 async function getTournament(slug: string) {
   try {
@@ -32,8 +33,8 @@ export default async function TournamentPage({
     { id: "bracket", label: "جدول" },
     { id: "schedule", label: "برنامه" },
     { id: "results", label: "نتایج" },
-    { id: "rules", label: "قوانین" },
-    { id: "stats", label: "آمار" },
+    // { id: "rules", label: "قوانین" },
+    // { id: "stats", label: "آمار" },
   ];
 
   return (
@@ -59,6 +60,7 @@ export default async function TournamentPage({
             {t.starts_on && <span>{t.starts_on}</span>}
             {t.venue && <span>{t.venue}</span>}
             <span>{formatToman(t.fee_toman || 0)}</span>
+            {t.format === "group_then_elimination" && <span>گروهی سپس حذفی</span>}
           </div>
           {(t.status === "registration_open" || t.status === "pre_registration") && (
             <Link
@@ -92,91 +94,33 @@ export default async function TournamentPage({
           {t.description || "توضیحی ثبت نشده است."}
         </div>
       )}
-      {tab === "rules" && (
-        <div className="card-soft whitespace-pre-wrap text-sm text-slate-300">
-          {t.rules || "قوانین ثبت نشده است."}
-        </div>
-      )}
+
       {tab === "players" && (
-        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-          {(data.players || []).map((r: any) => (
-            <Link
-              key={r.id}
-              href={`/billiard/players/${r.player_id}`}
-              className="card-soft flex items-center gap-3 transition hover:border-cyan-400/30"
-            >
-              <div
-                className="h-12 w-12 rounded-full border border-white/10 bg-white/10 bg-cover bg-center"
-                style={r.player?.photo_url ? { backgroundImage: `url(${r.player.photo_url})` } : undefined}
-              />
-              <div>
-                <div className="font-medium text-slate-100">{r.player?.full_name}</div>
-                <div className="text-xs text-slate-500">{r.player?.city || r.player?.club}</div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
-      {(tab === "bracket" || tab === "schedule" || tab === "results") && (
-        <MatchesList
-          matches={
-            tab === "results" ? data.results : tab === "schedule" ? data.schedule : data.bracket
-          }
+        <TournamentMatchesView
+          mode="players"
+          format={t.format}
+          groupCount={t.group_count}
+          players={data.players || []}
         />
       )}
-      {tab === "stats" && (
-        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
-          {Object.entries(data.stats || {}).map(([k, v]) => (
-            <div key={k} className="card-soft">
-              <div className="text-xs text-slate-500">{k}</div>
-              <div className="font-display text-2xl text-cyan-300">{String(v)}</div>
-            </div>
-          ))}
-        </div>
+
+      {tab === "bracket" && (
+        <TournamentMatchesView
+          mode="bracket"
+          format={t.format}
+          groupCount={t.group_count}
+          players={data.players || []}
+          matches={data.bracket || []}
+        />
       )}
-    </div>
-  );
-}
 
-function playerSlotLabel(m: any, side: 1 | 2) {
-  const p = side === 1 ? m.player1 : m.player2;
-  const src = side === 1 ? m.player1_source : m.player2_source;
-  if (p?.full_name) return p.full_name;
-  if (src?.label) return src.label;
-  return "TBD";
-}
+      {tab === "schedule" && (
+        <TournamentMatchesView mode="schedule" matches={data.schedule || []} format={t.format} />
+      )}
 
-function MatchesList({ matches }: { matches: any[] }) {
-  if (!matches?.length) return <p className="text-sm text-slate-500">موردی نیست.</p>;
-  return (
-    <div className="card-soft divide-y divide-white/10">
-      {matches.map((m) => (
-        <div key={m.id} className="flex flex-wrap items-center justify-between gap-3 py-3.5 text-sm">
-          <div className="flex min-w-0 items-start gap-3">
-            <span className="mt-0.5 inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded-lg bg-fuchsia-500/15 px-2 text-sm font-bold text-fuchsia-300">
-              {m.match_no ?? m.id}
-            </span>
-            <div className="min-w-0">
-              <div className="text-xs text-slate-500">
-                بازی {m.match_no ?? m.id}
-                {m.round_label ? ` · ${m.round_label}` : ""}
-              </div>
-              <div className="text-slate-100">
-                {playerSlotLabel(m, 1)} vs {playerSlotLabel(m, 2)}
-              </div>
-              <div className="text-xs text-slate-500">
-                {[m.scheduled_on, m.scheduled_at, m.table?.name].filter(Boolean).join(" · ") || "— – —"}
-              </div>
-            </div>
-          </div>
-          <div className="text-left">
-            <div className="font-display text-cyan-300">
-              {m.score1 ?? "-"} – {m.score2 ?? "-"}
-            </div>
-            <div className="text-xs text-slate-500">{statusLabel[m.status] || m.status}</div>
-          </div>
-        </div>
-      ))}
+      {tab === "results" && (
+        <TournamentMatchesView mode="results" matches={data.results || []} format={t.format} />
+      )}
     </div>
   );
 }
