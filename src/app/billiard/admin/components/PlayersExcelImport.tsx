@@ -7,9 +7,6 @@ import {
   InputLabel,
   MenuItem,
   Select,
-  Step,
-  StepLabel,
-  Stepper,
   Table,
   TableBody,
   TableCell,
@@ -197,27 +194,40 @@ export function PlayersExcelImport({ onImported }: Props) {
         </BilliardButton>
       </div>
 
-      <Stepper
-        activeStep={activeStep}
-        alternativeLabel
-        sx={{
-          mb: 1,
-          "& .MuiStepLabel-label": { color: "#94a3b8", fontSize: "12px" },
-          "& .MuiStepLabel-label.Mui-active, & .MuiStepLabel-label.Mui-completed": {
-            color: "#e2e8f0",
-          },
-          "& .MuiStepIcon-root": { color: "rgba(255,255,255,0.2)" },
-          "& .MuiStepIcon-root.Mui-active, & .MuiStepIcon-root.Mui-completed": {
-            color: "#c026d3",
-          },
-        }}
-      >
-        {STEPS.map((label) => (
-          <Step key={label}>
-            <StepLabel>{label}</StepLabel>
-          </Step>
-        ))}
-      </Stepper>
+      <ol className="mb-2 flex w-full list-none items-start gap-0 p-0">
+        {STEPS.map((label, index) => {
+          const done = index < activeStep;
+          const current = index === activeStep;
+          return (
+            <li key={label} className="relative flex min-w-0 flex-1 flex-col items-center px-1 text-center">
+              {index < STEPS.length - 1 && (
+                <span
+                  aria-hidden
+                  className={`pointer-events-none absolute top-4 start-[calc(50%+18px)] end-[calc(-50%+18px)] h-0.5 ${
+                    done ? "bg-fuchsia-500/80" : "bg-white/15"
+                  }`}
+                />
+              )}
+              <span
+                className={`relative z-[1] flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold ${
+                  done || current
+                    ? "bg-gradient-to-l from-violet-600 to-fuchsia-600 text-white"
+                    : "bg-white/10 text-slate-400"
+                }`}
+              >
+                {done ? "✓" : index + 1}
+              </span>
+              <span
+                className={`mt-2 max-w-full text-[11px] leading-snug sm:text-xs ${
+                  done || current ? "text-slate-100" : "text-slate-500"
+                }`}
+              >
+                {label}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
 
       {activeStep === 0 && (
         <Box

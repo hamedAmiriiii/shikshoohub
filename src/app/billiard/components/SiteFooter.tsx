@@ -11,7 +11,7 @@ export function SiteFooter() {
             {brand}
           </div>
           <p className="mt-3 text-sm leading-7 text-slate-400">
-            سامانه مدیریت مسابقات، جدول، رنکینگ و آرشیو هیأت — با تجربه وبینو.
+            سامانه مدیریت مسابقات، جدول، رنکینگ و آرشیو هیأت .
           </p>
         </div>
         <div className="flex flex-col gap-2.5 text-sm">
@@ -26,7 +26,7 @@ export function SiteFooter() {
           </Link>
         </div>
         <div className="text-sm text-slate-500">
-          <div>دامنه: billiard.webinoplus.ir</div>
+          
           <div className="mt-2 text-xs">قدرت‌گرفته از وبینو</div>
         </div>
       </div>

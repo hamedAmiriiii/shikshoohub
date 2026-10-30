@@ -10,6 +10,14 @@ import {
   type ApiError,
 } from "@/app/lib/billiard/api";
 import { BilliardButton } from "@/app/billiard/components/BilliardButton";
+import {
+  BILLIARD_LS_DATE,
+  BILLIARD_LS_TIME,
+  MatchScheduleFields,
+  readScheduleDefault,
+  timeForApi,
+  writeScheduleDefault,
+} from "@/app/billiard/admin/components/MatchScheduleFields";
 
 type SlotDraft = {
   type: "player" | "source" | "empty";
@@ -48,7 +56,7 @@ export default function AdminTournamentDetailPage() {
   const [tables, setTables] = useState<any[]>([]);
   const [players, setPlayers] = useState<any[]>([]);
   const [playerQuery, setPlayerQuery] = useState("");
-  const [selectedPlayerId, setSelectedPlayerId] = useState("");
+  const [selectedPlayerIds, setSelectedPlayerIds] = useState<number[]>([]);
   const [waiveFee, setWaiveFee] = useState(true);
   const [tableName, setTableName] = useState("میز 1");
   const [msg, setMsg] = useState("");
@@ -59,12 +67,19 @@ export default function AdminTournamentDetailPage() {
   const [groupCount, setGroupCount] = useState("2");
   const [knockoutSize, setKnockoutSize] = useState("4");
   const [picking, setPicking] = useState<{ matchId: number; slot: 1 | 2 } | null>(null);
+  const [defaultScheduleDate, setDefaultScheduleDate] = useState("");
+  const [defaultScheduleTime, setDefaultScheduleTime] = useState("");
   const [groupForm, setGroupForm] = useState({
     group_code: "A",
     position: "1",
     slot1: emptySlot(),
     slot2: emptySlot(),
   });
+
+  useEffect(() => {
+    setDefaultScheduleDate(readScheduleDefault(BILLIARD_LS_DATE));
+    setDefaultScheduleTime(readScheduleDefault(BILLIARD_LS_TIME));
+  }, []);
 
   async function loadPlayers(q = "") {
     setPlayersLoading(true);
@@ -117,9 +132,14 @@ export default function AdminTournamentDetailPage() {
   );
 
   const availablePlayers = useMemo(
-    () => players.filter((p) => !activePlayerIds.has(Number(p.id))),
+    () => players.filter((p) => !activePlayerIds.has(Number(p.id)) && p.is_active !== false),
     [players, activePlayerIds],
   );
+
+  const selectedInList = useMemo(() => {
+    const avail = new Set(availablePlayers.map((p) => Number(p.id)));
+    return selectedPlayerIds.filter((id) => avail.has(id));
+  }, [selectedPlayerIds, availablePlayers]);
 
   const placedPlayerIds = useMemo(() => {
     const s = new Set<number>();
@@ -232,13 +252,23 @@ export default function AdminTournamentDetailPage() {
   }
 
   async function saveSchedule(matchId: number, tableId: string, date: string, time: string) {
+    const resolvedDate = date || defaultScheduleDate || "";
+    const resolvedTime = time || defaultScheduleTime || "";
+    if (resolvedDate) {
+      writeScheduleDefault(BILLIARD_LS_DATE, resolvedDate);
+      setDefaultScheduleDate(resolvedDate);
+    }
+    if (resolvedTime) {
+      writeScheduleDefault(BILLIARD_LS_TIME, resolvedTime);
+      setDefaultScheduleTime(resolvedTime);
+    }
     try {
       await apiFetch(`/admin/matches/${matchId}/schedule`, {
         method: "PATCH",
         body: JSON.stringify({
           table_id: tableId ? Number(tableId) : null,
-          scheduled_on: date || null,
-          scheduled_at: time || null,
+          scheduled_on: resolvedDate || null,
+          scheduled_at: resolvedTime ? timeForApi(resolvedTime) : null,
         }),
       });
       await load();
@@ -291,26 +321,50 @@ export default function AdminTournamentDetailPage() {
     }
   }
 
-  async function addPlayer() {
-    if (!selectedPlayerId) {
-      setMsg("بازیکن را انتخاب کنید.");
+  function togglePlayerSelect(pid: number) {
+    setSelectedPlayerIds((prev) =>
+      prev.includes(pid) ? prev.filter((x) => x !== pid) : [...prev, pid],
+    );
+  }
+
+  function selectAllAvailable() {
+    setSelectedPlayerIds(availablePlayers.map((p) => Number(p.id)));
+  }
+
+  function clearPlayerSelection() {
+    setSelectedPlayerIds([]);
+  }
+
+  async function addPlayersBulk() {
+    const ids = selectedInList;
+    if (!ids.length) {
+      setMsg("حداقل یک بازیکن را انتخاب کنید.");
       return;
     }
-    setBusy("add-player");
+    setBusy("add-players");
     setMsg("");
     try {
-      await apiFetch(`/admin/tournaments/${id}/registrations`, {
+      const res = await apiFetch<{
+        message?: string;
+        added_count?: number;
+        skipped_count?: number;
+        errors?: string[];
+      }>(`/admin/tournaments/${id}/registrations/bulk`, {
         method: "POST",
         body: JSON.stringify({
-          player_id: Number(selectedPlayerId),
+          player_ids: ids,
           waive_fee: waiveFee,
         }),
       });
-      setSelectedPlayerId("");
-      setMsg("بازیکن به مسابقه اضافه شد.");
+      setSelectedPlayerIds([]);
+      const extra =
+        res.errors && res.errors.length
+          ? "\n" + res.errors.slice(0, 5).join("\n")
+          : "";
+      setMsg((res.message || "بازیکنان اضافه شدند.") + extra);
       await load();
     } catch (err) {
-      setMsg((err as ApiError).message || "خطا در افزودن بازیکن");
+      setMsg((err as ApiError).message || "خطا در افزودن بازیکنان");
     } finally {
       setBusy(null);
     }
@@ -442,100 +496,86 @@ export default function AdminTournamentDetailPage() {
 
   function renderMatchCard(m: any) {
     const done = m.status === "finished" || m.status === "walkover";
+    const title =
+      m.round_label ||
+      (m.group_code ? `گروه ${m.group_code} · بازی ${m.position}` : `بازی #${m.id}`);
     return (
-      <div key={m.id} className="card-soft space-y-2 text-sm">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div className="font-medium text-slate-100">
-            {m.round_label || `بازی #${m.id}`}
-            {m.group_code ? (
-              <span className="mr-2 text-xs font-normal text-slate-500">گروه {m.group_code}</span>
-            ) : null}
+      <div key={m.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-2.5 space-y-1.5 text-sm">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0 truncate text-[13px] font-medium text-slate-100">{title}</div>
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="text-[10px] text-slate-500">{statusLabel[m.status] || m.status}</span>
+            {!done && (m.phase === "group" || !m.player1_id || !m.player2_id) && (
+              <button
+                type="button"
+                className="text-[10px] text-rose-300 hover:underline"
+                onClick={() => deleteMatch(m.id)}
+              >
+                حذف
+              </button>
+            )}
           </div>
-          {!done && (m.phase === "group" || !m.player1_id || !m.player2_id) && (
-            <button
-              type="button"
-              className="text-xs text-rose-300 hover:underline"
-              onClick={() => deleteMatch(m.id)}
-            >
-              حذف
-            </button>
-          )}
         </div>
-        <div className="text-xs text-slate-500">{statusLabel[m.status] || m.status}</div>
 
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-1">
           {([1, 2] as const).map((slot) => (
             <button
               key={slot}
               type="button"
               disabled={done}
               onClick={() => setPicking({ matchId: m.id, slot })}
-              className={`rounded-xl border px-3 py-2 text-right transition ${
+              className={`rounded-lg border px-2 py-1.5 text-right text-xs transition ${
                 picking?.matchId === m.id && picking.slot === slot
                   ? "border-cyan-400/60 bg-cyan-500/10 text-cyan-100"
                   : "border-white/10 bg-white/5 text-slate-200 hover:border-white/25"
               } disabled:opacity-60`}
             >
-              <div className="text-[10px] text-slate-500">جایگاه {slot}</div>
-              <div>{slotLabel(m, slot)}</div>
+              <span className="block truncate">{slotLabel(m, slot)}</span>
             </button>
           ))}
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <select
-            className="input max-w-[140px]"
-            defaultValue={m.table_id || ""}
-            onChange={(e) =>
-              saveSchedule(m.id, e.target.value, m.scheduled_on || "", m.scheduled_at || "")
-            }
-          >
-            <option value="">میز</option>
-            {tables.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-          <input
-            type="date"
-            className="input max-w-[160px]"
-            defaultValue={m.scheduled_on || ""}
-            onBlur={(e) => saveSchedule(m.id, m.table_id || "", e.target.value, m.scheduled_at || "")}
-          />
-          <input
-            type="time"
-            className="input max-w-[120px]"
-            defaultValue={m.scheduled_at || ""}
-            onBlur={(e) => saveSchedule(m.id, m.table_id || "", m.scheduled_on || "", e.target.value)}
-          />
-        </div>
+        <MatchScheduleFields
+          tableId={m.table_id}
+          scheduledOn={m.scheduled_on}
+          scheduledAt={m.scheduled_at}
+          tables={tables}
+          defaultDate={defaultScheduleDate}
+          defaultTime={defaultScheduleTime}
+          disabled={done}
+          onChange={({ tableId, date, time }) => saveSchedule(m.id, tableId, date, time)}
+        />
 
         {m.player1_id && m.player2_id && !done && (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
             <input
-              className="input w-20"
-              placeholder="امتیاز ۱"
+              className="input input-sm w-14"
+              placeholder="۱"
               value={scores[m.id]?.s1 ?? ""}
               onChange={(e) =>
                 setScores({ ...scores, [m.id]: { s1: e.target.value, s2: scores[m.id]?.s2 || "" } })
               }
             />
             <input
-              className="input w-20"
-              placeholder="امتیاز ۲"
+              className="input input-sm w-14"
+              placeholder="۲"
               value={scores[m.id]?.s2 ?? ""}
               onChange={(e) =>
                 setScores({ ...scores, [m.id]: { s1: scores[m.id]?.s1 || "", s2: e.target.value } })
               }
             />
-            <BilliardButton type="button" loading={busy === `result-${m.id}`} onClick={() => saveResult(m.id)}>
-              ثبت نتیجه
+            <BilliardButton
+              type="button"
+              loading={busy === `result-${m.id}`}
+              sx={{ minHeight: 34, py: "4px", px: 1.25, fontSize: 12 }}
+              onClick={() => saveResult(m.id)}
+            >
+              نتیجه
             </BilliardButton>
           </div>
         )}
         {done && (
-          <div className="font-display text-cyan-300">
+          <div className="text-xs font-display text-cyan-300">
             {m.score1} – {m.score2}
           </div>
         )}
@@ -648,46 +688,71 @@ export default function AdminTournamentDetailPage() {
           <h2 className="font-display text-xl text-slate-100">
             ثبت‌نام‌ها ({settledRegs.length} قطعی / {regs.length} کل)
           </h2>
-          <p className="mt-1 text-sm text-slate-400">بازیکن را از لیست انتخاب کنید و به مسابقه اضافه کنید.</p>
+          <p className="mt-1 text-sm text-slate-400">
+            یک یا چند بازیکن را تیک بزنید و دسته‌جمعی به مسابقه اضافه کنید.
+          </p>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
-          <div>
-            <label className="label">جستجوی بازیکن</label>
-            <input
-              className="input"
-              value={playerQuery}
-              onChange={(e) => {
-                setPlayerQuery(e.target.value);
-                setSelectedPlayerId("");
-              }}
-              placeholder="نام، موبایل، شهر..."
-            />
-          </div>
-          <div>
-            <label className="label">انتخاب از لیست {playersLoading ? "(در حال جستجو...)" : ""}</label>
-            <select
-              className="input"
-              value={selectedPlayerId}
-              onChange={(e) => setSelectedPlayerId(e.target.value)}
-            >
-              <option value="">انتخاب بازیکن</option>
-              {availablePlayers.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.full_name} — {p.phone}
-                  {p.city ? ` · ${p.city}` : ""}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div>
+          <label className="label">جستجوی بازیکن {playersLoading ? "(در حال جستجو...)" : ""}</label>
+          <input
+            className="input"
+            value={playerQuery}
+            onChange={(e) => setPlayerQuery(e.target.value)}
+            placeholder="نام، موبایل، شهر..."
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
           <BilliardButton
             type="button"
-            loading={busy === "add-player"}
-            disabled={!selectedPlayerId || (busy !== null && busy !== "add-player")}
-            onClick={addPlayer}
+            variant="secondary"
+            disabled={!availablePlayers.length}
+            onClick={selectAllAvailable}
           >
-            افزودن به مسابقه
+            انتخاب همهٔ لیست ({availablePlayers.length})
           </BilliardButton>
+          <BilliardButton
+            type="button"
+            variant="ghost"
+            disabled={!selectedInList.length}
+            onClick={clearPlayerSelection}
+          >
+            پاک کردن انتخاب
+          </BilliardButton>
+          <span className="text-xs text-slate-500">{selectedInList.length} نفر انتخاب‌شده</span>
+        </div>
+
+        <div className="max-h-64 overflow-y-auto rounded-xl border border-white/10 bg-white/[0.03] divide-y divide-white/5">
+          {availablePlayers.map((p) => {
+            const pid = Number(p.id);
+            const checked = selectedInList.includes(pid);
+            return (
+              <label
+                key={p.id}
+                className="flex cursor-pointer items-center gap-3 px-3 py-2.5 text-sm hover:bg-white/5"
+              >
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-fuchsia-500"
+                  checked={checked}
+                  onChange={() => togglePlayerSelect(pid)}
+                />
+                <span className="min-w-0 flex-1 text-slate-200">
+                  {p.full_name}
+                  <span className="mr-2 text-xs text-slate-500">
+                    {p.phone}
+                    {p.city ? ` · ${p.city}` : ""}
+                  </span>
+                </span>
+              </label>
+            );
+          })}
+          {!availablePlayers.length && (
+            <p className="px-3 py-4 text-sm text-slate-500">
+              بازیکن قابل‌افزودنی نیست — یا همه اضافه شده‌اند یا نتیجه‌ای برای جستجو نیست.
+            </p>
+          )}
         </div>
 
         <label className="flex items-center gap-2 text-sm text-slate-300">
@@ -700,7 +765,17 @@ export default function AdminTournamentDetailPage() {
           بدون پرداخت / رایگان ثبت شود
         </label>
 
-        <div className="divide-y divide-white/10 text-sm">
+        <BilliardButton
+          type="button"
+          loading={busy === "add-players"}
+          disabled={!selectedInList.length || (busy !== null && busy !== "add-players")}
+          onClick={addPlayersBulk}
+        >
+          افزودن {selectedInList.length ? `${selectedInList.length} بازیکن` : "بازیکنان"} به مسابقه
+        </BilliardButton>
+
+        <div className="divide-y divide-white/10 border-t border-white/10 pt-3 text-sm">
+          <div className="pb-2 text-xs text-slate-500">ثبت‌نام‌های فعلی مسابقه</div>
           {regs.map((r) => {
             const settled = isRegistrationSettled(r);
             return (
@@ -846,8 +921,8 @@ export default function AdminTournamentDetailPage() {
           <div className="overflow-x-auto pb-2">
             <div className="flex min-w-max gap-4">
               {knockoutByRound.map(([round, matches]) => (
-                <div key={round} className="w-72 shrink-0 space-y-3">
-                  <div className="text-xs text-slate-500">{matches[0]?.round_label || `دور ${round}`}</div>
+                <div key={round} className="w-64 shrink-0 space-y-2 sm:w-72">
+                  <div className="text-[11px] text-slate-500">{matches[0]?.round_label || `دور ${round}`}</div>
                   {matches
                     .slice()
                     .sort((a, b) => a.position - b.position)

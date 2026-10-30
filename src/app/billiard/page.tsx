@@ -57,20 +57,12 @@ export default async function HomePage() {
               </span>
               <br />
               <span className="bg-gradient-to-l from-cyan-400 via-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
-                و رنکینگ در یک نگاه
+                و رنکینگ
               </span>
             </h1>
             <p className="mx-auto mt-4 max-w-xl text-base leading-8 text-slate-400 lg:mx-0">
-              ثبت‌نام آنلاین، برنامه بازی‌ها، نتایج زنده و آرشیو کامل هیأت — با ظاهر و تجربه وبینو.
+              ثبت‌نام آنلاین، برنامه بازی‌ها، نتایج زنده و آرشیو کامل هیأت.
             </p>
-            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row lg:justify-start">
-              <Link href="/billiard/register" className="btn-primary text-center">
-                ثبت‌نام مسابقه
-              </Link>
-              <Link href="/billiard/tournaments" className="btn-secondary text-center">
-                مشاهده مسابقات
-              </Link>
-            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

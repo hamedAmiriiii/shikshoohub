@@ -108,6 +108,28 @@
   padding-left: 2rem;
 }
 
+.billiard-app .input.input-sm,
+.billiard-app input.input.input-sm,
+.billiard-app select.input.input-sm {
+  min-height: 34px;
+  height: 34px;
+  padding: 0 0.55rem;
+  font-size: 12px;
+  border-radius: 8px;
+  line-height: 1.2;
+}
+.billiard-app select.input.input-sm {
+  background-position: calc(100% - 12px) calc(0.7em + 2px), calc(100% - 8px) calc(0.7em + 2px);
+  padding-left: 1.4rem;
+}
+.billiard-app .billiard-date-picker .rmdp-container {
+  width: 100%;
+}
+.billiard-app .billiard-date-picker input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .billiard-app a,
 .billiard-app button {
   -webkit-tap-highlight-color: transparent;
