@@ -53,12 +53,12 @@ export function timeForUi(time?: string | null): string {
   return t;
 }
 
-function toGregorianYmd(d: DateObject | null): string {
+export function toGregorianYmd(d: DateObject | null): string {
   if (!d) return "";
   return d.convert(gregorian).format("YYYY-MM-DD");
 }
 
-function fromGregorianYmd(ymd?: string | null): DateObject | null {
+export function fromGregorianYmd(ymd?: string | null): DateObject | null {
   if (!ymd) return null;
   try {
     return new DateObject({
@@ -69,6 +69,14 @@ function fromGregorianYmd(ymd?: string | null): DateObject | null {
   } catch {
     return null;
   }
+}
+
+/** جدا کردن تاریخ/ساعت از ISO یا Y-m-d H:i بدون شیفت timezone */
+export function splitIsoDateTime(iso?: string | null): { date: string; time: string } {
+  if (!iso) return { date: "", time: "" };
+  const m = String(iso).match(/^(\d{4}-\d{2}-\d{2})(?:[T ](\d{2}:\d{2}))?/);
+  if (!m) return { date: "", time: "" };
+  return { date: m[1], time: m[2] ? timeForUi(m[2]) : "" };
 }
 
 type Props = {

@@ -471,7 +471,8 @@ export default function AdminTournamentDetailPage() {
               <option value="">بازی مرجع</option>
               {bracket.map((m) => (
                 <option key={m.id} value={m.id}>
-                  #{m.id} · {m.round_label || m.group_code || "بازی"}
+                  بازی {m.match_no ?? m.id}
+                  {m.round_label ? ` · ${m.round_label}` : ""}
                 </option>
               ))}
             </select>
@@ -496,13 +497,17 @@ export default function AdminTournamentDetailPage() {
 
   function renderMatchCard(m: any) {
     const done = m.status === "finished" || m.status === "walkover";
-    const title =
-      m.round_label ||
-      (m.group_code ? `گروه ${m.group_code} · بازی ${m.position}` : `بازی #${m.id}`);
+    const no = m.match_no ?? m.id;
+    const title = m.round_label || (m.group_code ? `گروه ${m.group_code}` : `بازی ${no}`);
     return (
       <div key={m.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-2.5 space-y-1.5 text-sm">
         <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0 truncate text-[13px] font-medium text-slate-100">{title}</div>
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-md bg-fuchsia-500/20 px-1.5 text-xs font-bold text-fuchsia-300">
+              {no}
+            </span>
+            <div className="min-w-0 truncate text-[13px] font-medium text-slate-100">{title}</div>
+          </div>
           <div className="flex shrink-0 items-center gap-2">
             <span className="text-[10px] text-slate-500">{statusLabel[m.status] || m.status}</span>
             {!done && (m.phase === "group" || !m.player1_id || !m.player2_id) && (

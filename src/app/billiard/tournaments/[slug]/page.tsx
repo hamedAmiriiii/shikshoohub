@@ -138,19 +138,35 @@ export default async function TournamentPage({
   );
 }
 
+function playerSlotLabel(m: any, side: 1 | 2) {
+  const p = side === 1 ? m.player1 : m.player2;
+  const src = side === 1 ? m.player1_source : m.player2_source;
+  if (p?.full_name) return p.full_name;
+  if (src?.label) return src.label;
+  return "TBD";
+}
+
 function MatchesList({ matches }: { matches: any[] }) {
   if (!matches?.length) return <p className="text-sm text-slate-500">موردی نیست.</p>;
   return (
     <div className="card-soft divide-y divide-white/10">
       {matches.map((m) => (
         <div key={m.id} className="flex flex-wrap items-center justify-between gap-3 py-3.5 text-sm">
-          <div>
-            <div className="text-xs text-slate-500">{m.round_label}</div>
-            <div className="text-slate-100">
-              {m.player1?.full_name || "TBD"} vs {m.player2?.full_name || "TBD"}
-            </div>
-            <div className="text-xs text-slate-500">
-              {[m.scheduled_on, m.scheduled_at, m.table?.name].filter(Boolean).join(" · ")}
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="mt-0.5 inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded-lg bg-fuchsia-500/15 px-2 text-sm font-bold text-fuchsia-300">
+              {m.match_no ?? m.id}
+            </span>
+            <div className="min-w-0">
+              <div className="text-xs text-slate-500">
+                بازی {m.match_no ?? m.id}
+                {m.round_label ? ` · ${m.round_label}` : ""}
+              </div>
+              <div className="text-slate-100">
+                {playerSlotLabel(m, 1)} vs {playerSlotLabel(m, 2)}
+              </div>
+              <div className="text-xs text-slate-500">
+                {[m.scheduled_on, m.scheduled_at, m.table?.name].filter(Boolean).join(" · ") || "— – —"}
+              </div>
             </div>
           </div>
           <div className="text-left">

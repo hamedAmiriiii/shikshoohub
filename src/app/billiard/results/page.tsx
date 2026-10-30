@@ -21,10 +21,13 @@ export default async function ResultsPage() {
           <div key={m.id} className="flex flex-wrap items-center justify-between gap-3 py-3.5 text-sm">
             <div>
               <div className="text-xs text-slate-500">
-                {m.tournament?.name} · {m.round_label}
+                {m.tournament?.name}
+                {m.match_no != null ? ` · بازی ${m.match_no}` : ""}
+                {m.round_label ? ` · ${m.round_label}` : ""}
               </div>
               <div className="text-slate-100">
-                {m.player1?.full_name} vs {m.player2?.full_name}
+                {m.player1?.full_name || m.player1_source?.label || "TBD"} vs{" "}
+                {m.player2?.full_name || m.player2_source?.label || "TBD"}
               </div>
             </div>
             <div className="font-display text-lg text-cyan-300">

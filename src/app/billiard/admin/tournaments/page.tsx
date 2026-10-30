@@ -1,9 +1,20 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import DatePicker from "react-multi-date-picker";
+import DateObject from "react-date-object";
+import persian from "react-date-object/calendars/persian";
+import persian_fa from "react-date-object/locales/persian_fa";
 import { apiFetch, formatToman, statusLabel, type ApiError } from "@/app/lib/billiard/api";
 import { BilliardButton } from "@/app/billiard/components/BilliardButton";
+import {
+  BILLIARD_TIME_OPTIONS,
+  fromGregorianYmd,
+  splitIsoDateTime,
+  timeForApi,
+  toGregorianYmd,
+} from "@/app/billiard/admin/components/MatchScheduleFields";
 
 type TournamentForm = {
   name: string;
@@ -14,7 +25,8 @@ type TournamentForm = {
   venue: string;
   format: string;
   starts_on: string;
-  registration_deadline: string;
+  registration_deadline_date: string;
+  registration_deadline_time: string;
   poster_base64: string;
   poster_preview: string;
 };
@@ -28,17 +40,48 @@ const emptyForm = (): TournamentForm => ({
   venue: "",
   format: "single_elimination",
   starts_on: "",
-  registration_deadline: "",
+  registration_deadline_date: "",
+  registration_deadline_time: "",
   poster_base64: "",
   poster_preview: "",
 });
 
-function toDatetimeLocal(value?: string | null) {
-  if (!value) return "";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+function JalaliDateField({
+  label,
+  valueYmd,
+  onChange,
+  placeholder = "انتخاب تاریخ",
+}: {
+  label: string;
+  valueYmd: string;
+  onChange: (ymd: string) => void;
+  placeholder?: string;
+}) {
+  const value = useMemo(() => fromGregorianYmd(valueYmd || null), [valueYmd]);
+  return (
+    <div>
+      <label className="label">{label}</label>
+      <div className="billiard-date-picker">
+        <DatePicker
+          value={value}
+          calendar={persian}
+          locale={persian_fa}
+          calendarPosition="bottom-right"
+          format="YYYY/MM/DD"
+          placeholder={placeholder}
+          editable={false}
+          portal
+          zIndex={80}
+          containerStyle={{ width: "100%" }}
+          inputClass="input"
+          onChange={(d) => {
+            const obj = d && !Array.isArray(d) ? (d as DateObject) : null;
+            onChange(toGregorianYmd(obj));
+          }}
+        />
+      </div>
+    </div>
+  );
 }
 
 export default function AdminTournamentsPage() {
@@ -50,6 +93,14 @@ export default function AdminTournamentsPage() {
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const deadlineTimeOptions = useMemo(() => {
+    const list = [...BILLIARD_TIME_OPTIONS];
+    if (form.registration_deadline_time && !list.includes(form.registration_deadline_time)) {
+      list.unshift(form.registration_deadline_time);
+    }
+    return list;
+  }, [form.registration_deadline_time]);
 
   async function load() {
     const [t, d] = await Promise.all([
@@ -91,6 +142,7 @@ export default function AdminTournamentsPage() {
   }
 
   function startEdit(t: any) {
+    const deadline = splitIsoDateTime(t.registration_deadline);
     setEditingId(t.id);
     setForm({
       name: t.name || "",
@@ -101,7 +153,8 @@ export default function AdminTournamentsPage() {
       venue: t.venue || "",
       format: t.format || "single_elimination",
       starts_on: t.starts_on || "",
-      registration_deadline: toDatetimeLocal(t.registration_deadline),
+      registration_deadline_date: deadline.date,
+      registration_deadline_time: deadline.time,
       poster_base64: "",
       poster_preview: t.poster_url || "",
     });
@@ -116,6 +169,12 @@ export default function AdminTournamentsPage() {
     setMsg("");
     setBusy(true);
     try {
+      let registrationDeadline: string | null = null;
+      if (form.registration_deadline_date) {
+        const t = timeForApi(form.registration_deadline_time || "23:59");
+        registrationDeadline = `${form.registration_deadline_date} ${t}:00`;
+      }
+
       const payload: Record<string, unknown> = {
         name: form.name.trim(),
         discipline_id: Number(form.discipline_id),
@@ -125,9 +184,7 @@ export default function AdminTournamentsPage() {
         venue: form.venue.trim() || null,
         format: form.format,
         starts_on: form.starts_on || null,
-        registration_deadline: form.registration_deadline
-          ? new Date(form.registration_deadline).toISOString()
-          : null,
+        registration_deadline: registrationDeadline,
       };
       if (form.poster_base64) payload.poster_base64 = form.poster_base64;
       if (editingId && removePoster) payload.remove_poster = true;
@@ -237,23 +294,34 @@ export default function AdminTournamentsPage() {
           <option value="single_elimination">حذفی</option>
           <option value="group_then_elimination">گروهی سپس حذفی</option>
         </select>
-        <div>
-          <label className="label">تاریخ شروع</label>
-          <input
-            type="date"
-            className="input"
-            value={form.starts_on}
-            onChange={(e) => setForm({ ...form, starts_on: e.target.value })}
+
+        <JalaliDateField
+          label="تاریخ شروع"
+          valueYmd={form.starts_on}
+          onChange={(ymd) => setForm({ ...form, starts_on: ymd })}
+          placeholder="تاریخ شروع مسابقه"
+        />
+
+        <div className="space-y-2">
+          <JalaliDateField
+            label="مهلت ثبت‌نام"
+            valueYmd={form.registration_deadline_date}
+            onChange={(ymd) => setForm({ ...form, registration_deadline_date: ymd })}
+            placeholder="آخرین مهلت ثبت‌نام"
           />
-        </div>
-        <div>
-          <label className="label">مهلت ثبت‌نام</label>
-          <input
-            type="datetime-local"
+          <select
             className="input"
-            value={form.registration_deadline}
-            onChange={(e) => setForm({ ...form, registration_deadline: e.target.value })}
-          />
+            value={form.registration_deadline_time}
+            onChange={(e) => setForm({ ...form, registration_deadline_time: e.target.value })}
+            disabled={!form.registration_deadline_date}
+          >
+            <option value="">ساعت مهلت (اختیاری — پیش‌فرض ۲۳:۵۹)</option>
+            {deadlineTimeOptions.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="md:col-span-2 space-y-2">
