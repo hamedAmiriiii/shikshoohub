@@ -45,6 +45,7 @@ export default function AdminTournamentDetailPage() {
   const [players, setPlayers] = useState<any[]>([]);
   const [playerQuery, setPlayerQuery] = useState("");
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<number[]>([]);
+  const [selectedRegIds, setSelectedRegIds] = useState<number[]>([]);
   const [waiveFee, setWaiveFee] = useState(true);
   const [tableName, setTableName] = useState("میز 1");
   const [msg, setMsg] = useState("");
@@ -302,12 +303,65 @@ export default function AdminTournamentDetailPage() {
     setBusy(`confirm-${regId}`);
     try {
       await apiFetch(`/admin/registrations/${regId}/confirm`, { method: "POST" });
+      setMsg("ثبت‌نام تأیید شد.");
       await load();
     } catch (err) {
       setMsg((err as ApiError).message || "خطا");
     } finally {
       setBusy(null);
     }
+  }
+
+  async function rejectReg(regId: number) {
+    if (!confirm("این ثبت‌نام رد شود؟")) return;
+    setBusy(`reject-${regId}`);
+    try {
+      await apiFetch(`/admin/registrations/${regId}/reject`, { method: "POST" });
+      setMsg("ثبت‌نام رد شد.");
+      await load();
+    } catch (err) {
+      setMsg((err as ApiError).message || "خطا");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function deleteReg(regId: number) {
+    if (!confirm("این بازیکن از مسابقه حذف شود؟")) return;
+    setBusy(`del-reg-${regId}`);
+    try {
+      await apiFetch(`/admin/registrations/${regId}`, { method: "DELETE" });
+      setSelectedRegIds((prev) => prev.filter((x) => x !== regId));
+      setMsg("از لیست مسابقه حذف شد.");
+      await load();
+    } catch (err) {
+      setMsg((err as ApiError).message || "خطا");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function deleteRegsBulk() {
+    if (!selectedRegIds.length) return;
+    if (!confirm(`${selectedRegIds.length} ثبت‌نام از مسابقه حذف شود؟`)) return;
+    setBusy("del-regs");
+    try {
+      const res = await apiFetch<{ message?: string }>(`/admin/tournaments/${id}/registrations/bulk-remove`, {
+        method: "POST",
+        body: JSON.stringify({ registration_ids: selectedRegIds }),
+      });
+      setSelectedRegIds([]);
+      setMsg(res.message || "حذف شد.");
+      await load();
+    } catch (err) {
+      setMsg((err as ApiError).message || "خطا در حذف");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  function toggleRegSelect(regId: number) {
+    setSelectedRegIds((prev) => (prev.includes(regId) ? prev.filter((x) => x !== regId) : [...prev, regId]));
   }
 
   function togglePlayerSelect(pid: number) {
@@ -666,27 +720,71 @@ export default function AdminTournamentDetailPage() {
         </BilliardButton>
 
         <div className="divide-y divide-white/10 border-t border-white/10 pt-3 text-sm">
-          <div className="pb-2 text-xs text-slate-500">ثبت‌نام‌های فعلی مسابقه</div>
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-2">
+            <span className="text-xs text-slate-500">ثبت‌نام‌های فعلی مسابقه</span>
+            <BilliardButton
+              type="button"
+              variant="danger"
+              loading={busy === "del-regs"}
+              disabled={!selectedRegIds.length || (busy !== null && busy !== "del-regs")}
+              sx={{ minHeight: 32, py: "2px", px: 1.25, fontSize: 12 }}
+              onClick={deleteRegsBulk}
+            >
+              حذف {selectedRegIds.length ? `${selectedRegIds.length} نفر` : "انتخاب‌شده‌ها"}
+            </BilliardButton>
+          </div>
           {regs.map((r) => {
             const settled = isRegistrationSettled(r);
+            const canReview = r.status !== "rejected" && r.status !== "confirmed";
             return (
               <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
-                <span className="text-slate-200">
-                  {r.player?.full_name} · {settled ? statusLabel[r.status] : "پیش‌نویس"} ·{" "}
-                  <span className={settled ? "text-cyan-300" : "text-amber-300"}>
-                    {paymentStatusLabel[r.payment_status] || r.payment_status}
+                <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-slate-200">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-fuchsia-500"
+                    checked={selectedRegIds.includes(r.id)}
+                    onChange={() => toggleRegSelect(r.id)}
+                  />
+                  <span className="min-w-0">
+                    {r.player?.full_name} · {settled ? statusLabel[r.status] : "پیش‌نویس"} ·{" "}
+                    <span className={settled ? "text-cyan-300" : "text-amber-300"}>
+                      {paymentStatusLabel[r.payment_status] || r.payment_status}
+                    </span>
                   </span>
-                </span>
-                {settled && r.status === "pending" && (
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {canReview && (
+                    <BilliardButton
+                      type="button"
+                      variant="secondary"
+                      loading={busy === `confirm-${r.id}`}
+                      sx={{ minHeight: 32, py: "2px", px: 1.25, fontSize: 12 }}
+                      onClick={() => confirmReg(r.id)}
+                    >
+                      تأیید
+                    </BilliardButton>
+                  )}
+                  {r.status !== "rejected" && (
+                    <BilliardButton
+                      type="button"
+                      variant="ghost"
+                      loading={busy === `reject-${r.id}`}
+                      sx={{ minHeight: 32, py: "2px", px: 1.25, fontSize: 12 }}
+                      onClick={() => rejectReg(r.id)}
+                    >
+                      رد
+                    </BilliardButton>
+                  )}
                   <BilliardButton
                     type="button"
-                    variant="secondary"
-                    loading={busy === `confirm-${r.id}`}
-                    onClick={() => confirmReg(r.id)}
+                    variant="danger"
+                    loading={busy === `del-reg-${r.id}`}
+                    sx={{ minHeight: 32, py: "2px", px: 1.25, fontSize: 12 }}
+                    onClick={() => deleteReg(r.id)}
                   >
-                    تأیید
+                    حذف
                   </BilliardButton>
-                )}
+                </div>
               </div>
             );
           })}

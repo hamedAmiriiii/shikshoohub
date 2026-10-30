@@ -22,13 +22,14 @@ export default async function TournamentPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const { slug } = await params;
-  const { tab = "intro" } = await searchParams;
+  const { tab: requested = "bracket" } = await searchParams;
+  const tab = requested === "intro" ? "bracket" : requested;
   const data = await getTournament(slug);
   if (!data) notFound();
 
   const t = data.tournament;
   const tabs = [
-    { id: "intro", label: "معرفی" },
+    // { id: "intro", label: "معرفی" },
     { id: "players", label: "بازیکنان" },
     { id: "bracket", label: "جدول" },
     { id: "schedule", label: "برنامه" },
@@ -89,11 +90,11 @@ export default async function TournamentPage({
         ))}
       </div>
 
-      {tab === "intro" && (
+      {/* {tab === "intro" && (
         <div className="card-soft prose prose-sm max-w-none whitespace-pre-wrap text-slate-300">
           {t.description || "توضیحی ثبت نشده است."}
         </div>
-      )}
+      )} */}
 
       {tab === "players" && (
         <TournamentMatchesView
