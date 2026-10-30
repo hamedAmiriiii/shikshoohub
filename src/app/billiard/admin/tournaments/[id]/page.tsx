@@ -11,6 +11,34 @@ import {
 } from "@/app/lib/billiard/api";
 import { BilliardButton } from "@/app/billiard/components/BilliardButton";
 
+type SlotDraft = {
+  type: "player" | "source" | "empty";
+  player_id: string;
+  match_id: string;
+  outcome: "winner" | "loser";
+};
+
+const emptySlot = (): SlotDraft => ({
+  type: "player",
+  player_id: "",
+  match_id: "",
+  outcome: "winner",
+});
+
+function slotLabel(m: any, side: 1 | 2): string {
+  const p = side === 1 ? m.player1 : m.player2;
+  const src = side === 1 ? m.player1_source : m.player2_source;
+  if (p?.full_name) return p.full_name;
+  if (src?.label) return src.label;
+  return "خالی — انتخاب بازیکن";
+}
+
+function nextPowerOf2(n: number): number {
+  let s = 2;
+  while (s < Math.max(2, n)) s *= 2;
+  return s;
+}
+
 export default function AdminTournamentDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
@@ -27,6 +55,16 @@ export default function AdminTournamentDetailPage() {
   const [scores, setScores] = useState<Record<number, { s1: string; s2: string }>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [playersLoading, setPlayersLoading] = useState(false);
+  const [bracketSize, setBracketSize] = useState("8");
+  const [groupCount, setGroupCount] = useState("2");
+  const [knockoutSize, setKnockoutSize] = useState("4");
+  const [picking, setPicking] = useState<{ matchId: number; slot: 1 | 2 } | null>(null);
+  const [groupForm, setGroupForm] = useState({
+    group_code: "A",
+    position: "1",
+    slot1: emptySlot(),
+    slot2: emptySlot(),
+  });
 
   async function loadPlayers(q = "") {
     setPlayersLoading(true);
@@ -45,17 +83,17 @@ export default function AdminTournamentDetailPage() {
     const t = (list.data || []).find((x) => String(x.id) === String(id));
     setTournament(t || null);
     if (!t) return;
-    const [r, tb] = await Promise.all([
+    const [r, tb, matches] = await Promise.all([
       apiFetch<{ data: any[] }>(`/admin/registrations?tournament_id=${id}`),
       apiFetch<{ data: any[] }>(`/admin/tournaments/${id}/tables`),
+      apiFetch<{ data: any[] }>(`/admin/tournaments/${id}/matches`).catch(() => ({ data: [] as any[] })),
     ]);
     setRegs(r.data || []);
     setTables(tb.data || []);
+    setBracket(matches.data || []);
+    const settled = (r.data || []).filter((x) => isRegistrationSettled(x)).length;
+    setBracketSize(String(nextPowerOf2(settled || 8)));
     await loadPlayers(playerQuery);
-    if (t.slug) {
-      const pub = await apiFetch<any>(`/tournaments/${t.slug}`, { auth: false });
-      setBracket(pub.bracket || []);
-    }
   }
 
   useEffect(() => {
@@ -71,9 +109,11 @@ export default function AdminTournamentDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playerQuery]);
 
+  const settledRegs = useMemo(() => regs.filter((r) => isRegistrationSettled(r)), [regs]);
+
   const activePlayerIds = useMemo(
-    () => new Set(regs.filter((r) => isRegistrationSettled(r)).map((r) => Number(r.player_id))),
-    [regs],
+    () => new Set(settledRegs.map((r) => Number(r.player_id))),
+    [settledRegs],
   );
 
   const availablePlayers = useMemo(
@@ -81,16 +121,92 @@ export default function AdminTournamentDetailPage() {
     [players, activePlayerIds],
   );
 
-  async function draw() {
+  const placedPlayerIds = useMemo(() => {
+    const s = new Set<number>();
+    for (const m of bracket) {
+      if (m.player1_id) s.add(Number(m.player1_id));
+      if (m.player2_id) s.add(Number(m.player2_id));
+    }
+    return s;
+  }, [bracket]);
+
+  const pickablePlayers = useMemo(
+    () =>
+      settledRegs.filter((r) => {
+        const pid = Number(r.player_id);
+        if (!picking) return true;
+        return !placedPlayerIds.has(pid) || true; // اجازه جابجایی با پاک کردن قبلی
+      }),
+    [settledRegs, picking, placedPlayerIds],
+  );
+
+  const groupMatches = useMemo(
+    () => bracket.filter((m) => (m.phase || "knockout") === "group"),
+    [bracket],
+  );
+  const knockoutMatches = useMemo(
+    () => bracket.filter((m) => (m.phase || "knockout") === "knockout"),
+    [bracket],
+  );
+
+  const knockoutByRound = useMemo(() => {
+    const map = new Map<number, any[]>();
+    for (const m of knockoutMatches) {
+      const arr = map.get(m.round) || [];
+      arr.push(m);
+      map.set(m.round, arr);
+    }
+    return [...map.entries()].sort((a, b) => a[0] - b[0]);
+  }, [knockoutMatches]);
+
+  const isGroupFormat = tournament?.format === "group_then_elimination";
+
+  async function saveFormat(format: string) {
+    setBusy("format");
     setMsg("");
-    setBusy("draw");
     try {
-      const res = await apiFetch<{ bracket: any[] }>(`/admin/tournaments/${id}/draw`, {
+      await apiFetch(`/admin/tournaments/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ format }),
+      });
+      setMsg(format === "group_then_elimination" ? "فرمت: گروهی سپس حذفی" : "فرمت: حذفی");
+      await load();
+    } catch (err) {
+      setMsg((err as ApiError).message || "خطا");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function buildKnockout(size?: number, afterGroups = false) {
+    setBusy("bracket");
+    setMsg("");
+    try {
+      const res = await apiFetch<{ bracket: any[] }>(`/admin/tournaments/${id}/bracket`, {
         method: "POST",
-        body: JSON.stringify({ shuffle: true }),
+        body: JSON.stringify({
+          bracket_size: size || Number(bracketSize),
+          phase: afterGroups ? "after_groups" : "knockout",
+        }),
       });
       setBracket(res.bracket || []);
-      setMsg("قرعه‌کشی انجام شد.");
+      setMsg("جدول حذفی خالی ساخته شد — روی جایگاه‌ها کلیک کنید و بازیکن بگذارید.");
+      await load();
+    } catch (err) {
+      setMsg((err as ApiError).message || "خطا");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function assignSlot(matchId: number, slot: 1 | 2, playerId: number | null) {
+    setBusy(`slot-${matchId}-${slot}`);
+    try {
+      await apiFetch(`/admin/matches/${matchId}/slot`, {
+        method: "PATCH",
+        body: JSON.stringify({ slot, player_id: playerId }),
+      });
+      setPicking(null);
       await load();
     } catch (err) {
       setMsg((err as ApiError).message || "خطا");
@@ -200,35 +316,315 @@ export default function AdminTournamentDetailPage() {
     }
   }
 
+  function toApiSlot(s: SlotDraft) {
+    if (s.type === "empty") return { type: "empty" };
+    if (s.type === "source") {
+      return {
+        type: "source",
+        match_id: Number(s.match_id),
+        outcome: s.outcome,
+      };
+    }
+    return {
+      type: "player",
+      player_id: s.player_id ? Number(s.player_id) : null,
+    };
+  }
+
+  async function saveGroupMatch() {
+    setBusy("group-match");
+    setMsg("");
+    try {
+      const res = await apiFetch<{ bracket: any[] }>(`/admin/tournaments/${id}/group-matches`, {
+        method: "POST",
+        body: JSON.stringify({
+          group_code: groupForm.group_code,
+          position: Number(groupForm.position),
+          slot1: toApiSlot(groupForm.slot1),
+          slot2: toApiSlot(groupForm.slot2),
+        }),
+      });
+      setBracket(res.bracket || []);
+      setGroupForm((f) => ({
+        ...f,
+        position: String(Number(f.position) + 1),
+        slot1: emptySlot(),
+        slot2: emptySlot(),
+      }));
+      setMsg("بازی گروهی ذخیره شد.");
+      await load();
+    } catch (err) {
+      setMsg((err as ApiError).message || "خطا");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function deleteMatch(matchId: number) {
+    if (!confirm("این بازی حذف شود؟")) return;
+    setBusy(`del-${matchId}`);
+    try {
+      const res = await apiFetch<{ bracket: any[] }>(`/admin/matches/${matchId}`, { method: "DELETE" });
+      setBracket(res.bracket || []);
+      await load();
+    } catch (err) {
+      setMsg((err as ApiError).message || "خطا");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  function renderSlotEditor(key: "slot1" | "slot2", label: string) {
+    const s = groupForm[key];
+    return (
+      <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+        <div className="text-xs text-slate-400">{label}</div>
+        <select
+          className="input"
+          value={s.type}
+          onChange={(e) =>
+            setGroupForm({
+              ...groupForm,
+              [key]: { ...s, type: e.target.value as SlotDraft["type"] },
+            })
+          }
+        >
+          <option value="player">بازیکن مشخص</option>
+          <option value="source">برنده / بازنده یک بازی</option>
+          <option value="empty">خالی (بعداً)</option>
+        </select>
+        {s.type === "player" && (
+          <select
+            className="input"
+            value={s.player_id}
+            onChange={(e) => setGroupForm({ ...groupForm, [key]: { ...s, player_id: e.target.value } })}
+          >
+            <option value="">انتخاب بازیکن</option>
+            {settledRegs.map((r) => (
+              <option key={r.id} value={r.player_id}>
+                {r.player?.full_name}
+              </option>
+            ))}
+          </select>
+        )}
+        {s.type === "source" && (
+          <div className="grid gap-2 sm:grid-cols-2">
+            <select
+              className="input"
+              value={s.match_id}
+              onChange={(e) => setGroupForm({ ...groupForm, [key]: { ...s, match_id: e.target.value } })}
+            >
+              <option value="">بازی مرجع</option>
+              {bracket.map((m) => (
+                <option key={m.id} value={m.id}>
+                  #{m.id} · {m.round_label || m.group_code || "بازی"}
+                </option>
+              ))}
+            </select>
+            <select
+              className="input"
+              value={s.outcome}
+              onChange={(e) =>
+                setGroupForm({
+                  ...groupForm,
+                  [key]: { ...s, outcome: e.target.value as "winner" | "loser" },
+                })
+              }
+            >
+              <option value="winner">برنده</option>
+              <option value="loser">بازنده</option>
+            </select>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function renderMatchCard(m: any) {
+    const done = m.status === "finished" || m.status === "walkover";
+    return (
+      <div key={m.id} className="card-soft space-y-2 text-sm">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="font-medium text-slate-100">
+            {m.round_label || `بازی #${m.id}`}
+            {m.group_code ? (
+              <span className="mr-2 text-xs font-normal text-slate-500">گروه {m.group_code}</span>
+            ) : null}
+          </div>
+          {!done && (m.phase === "group" || !m.player1_id || !m.player2_id) && (
+            <button
+              type="button"
+              className="text-xs text-rose-300 hover:underline"
+              onClick={() => deleteMatch(m.id)}
+            >
+              حذف
+            </button>
+          )}
+        </div>
+        <div className="text-xs text-slate-500">{statusLabel[m.status] || m.status}</div>
+
+        <div className="grid gap-2 sm:grid-cols-2">
+          {([1, 2] as const).map((slot) => (
+            <button
+              key={slot}
+              type="button"
+              disabled={done}
+              onClick={() => setPicking({ matchId: m.id, slot })}
+              className={`rounded-xl border px-3 py-2 text-right transition ${
+                picking?.matchId === m.id && picking.slot === slot
+                  ? "border-cyan-400/60 bg-cyan-500/10 text-cyan-100"
+                  : "border-white/10 bg-white/5 text-slate-200 hover:border-white/25"
+              } disabled:opacity-60`}
+            >
+              <div className="text-[10px] text-slate-500">جایگاه {slot}</div>
+              <div>{slotLabel(m, slot)}</div>
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <select
+            className="input max-w-[140px]"
+            defaultValue={m.table_id || ""}
+            onChange={(e) =>
+              saveSchedule(m.id, e.target.value, m.scheduled_on || "", m.scheduled_at || "")
+            }
+          >
+            <option value="">میز</option>
+            {tables.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+          <input
+            type="date"
+            className="input max-w-[160px]"
+            defaultValue={m.scheduled_on || ""}
+            onBlur={(e) => saveSchedule(m.id, m.table_id || "", e.target.value, m.scheduled_at || "")}
+          />
+          <input
+            type="time"
+            className="input max-w-[120px]"
+            defaultValue={m.scheduled_at || ""}
+            onBlur={(e) => saveSchedule(m.id, m.table_id || "", m.scheduled_on || "", e.target.value)}
+          />
+        </div>
+
+        {m.player1_id && m.player2_id && !done && (
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              className="input w-20"
+              placeholder="امتیاز ۱"
+              value={scores[m.id]?.s1 ?? ""}
+              onChange={(e) =>
+                setScores({ ...scores, [m.id]: { s1: e.target.value, s2: scores[m.id]?.s2 || "" } })
+              }
+            />
+            <input
+              className="input w-20"
+              placeholder="امتیاز ۲"
+              value={scores[m.id]?.s2 ?? ""}
+              onChange={(e) =>
+                setScores({ ...scores, [m.id]: { s1: scores[m.id]?.s1 || "", s2: e.target.value } })
+              }
+            />
+            <BilliardButton type="button" loading={busy === `result-${m.id}`} onClick={() => saveResult(m.id)}>
+              ثبت نتیجه
+            </BilliardButton>
+          </div>
+        )}
+        {done && (
+          <div className="font-display text-cyan-300">
+            {m.score1} – {m.score2}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   if (!tournament) return <p className="text-slate-400">در حال بارگذاری...</p>;
+
+  const groupCodes = Array.from({ length: Math.max(1, Number(groupCount) || 1) }, (_, i) =>
+    String.fromCharCode(65 + i),
+  );
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="font-display text-3xl text-slate-100">{tournament.name}</h1>
-        <p className="text-sm text-slate-400">{statusLabel[tournament.status]}</p>
+        <p className="text-sm text-slate-400">
+          {statusLabel[tournament.status]} ·{" "}
+          {isGroupFormat ? "گروهی سپس حذفی" : "حذفی"}
+        </p>
       </div>
       {msg && <p className="text-sm text-cyan-300 whitespace-pre-wrap">{msg}</p>}
 
-      <div className="flex flex-wrap gap-2">
-        <BilliardButton
-          type="button"
-          variant="secondary"
-          loading={busy === "status"}
-          disabled={busy !== null && busy !== "status"}
-          onClick={() => setStatus("registration_closed")}
-        >
-          بستن ثبت‌نام
-        </BilliardButton>
-        <BilliardButton
-          type="button"
-          loading={busy === "draw"}
-          disabled={busy !== null && busy !== "draw"}
-          onClick={draw}
-        >
-          قرعه‌کشی + ساخت جدول
-        </BilliardButton>
-      </div>
+      {picking && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center">
+          <div className="card-soft w-full max-w-md space-y-3">
+            <h3 className="font-display text-xl text-slate-100">انتخاب بازیکن برای جایگاه {picking.slot}</h3>
+            <div className="max-h-72 space-y-1 overflow-y-auto">
+              {pickablePlayers.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  className="block w-full rounded-lg px-3 py-2 text-right text-sm text-slate-200 hover:bg-white/10"
+                  onClick={() => assignSlot(picking.matchId, picking.slot, Number(r.player_id))}
+                >
+                  {r.player?.full_name}
+                </button>
+              ))}
+              {!pickablePlayers.length && <p className="text-sm text-slate-500">بازیکن قطعی نیست.</p>}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <BilliardButton
+                type="button"
+                variant="secondary"
+                onClick={() => assignSlot(picking.matchId, picking.slot, null)}
+              >
+                خالی کردن جایگاه
+              </BilliardButton>
+              <BilliardButton type="button" variant="secondary" onClick={() => setPicking(null)}>
+                انصراف
+              </BilliardButton>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <section className="card-soft space-y-3">
+        <h2 className="font-display text-xl text-slate-100">نوع مسابقه</h2>
+        <p className="text-sm text-slate-400">
+          قرعه‌کشی خودکار نداریم. جدول را خالی می‌سازید و بازیکنان را دستی روی جایگاه می‌نشانید.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <BilliardButton
+            type="button"
+            variant={!isGroupFormat ? "primary" : "secondary"}
+            loading={busy === "format"}
+            onClick={() => saveFormat("single_elimination")}
+          >
+            حذفی
+          </BilliardButton>
+          <BilliardButton
+            type="button"
+            variant={isGroupFormat ? "primary" : "secondary"}
+            loading={busy === "format"}
+            onClick={() => saveFormat("group_then_elimination")}
+          >
+            گروهی سپس حذفی
+          </BilliardButton>
+          <BilliardButton
+            type="button"
+            variant="secondary"
+            loading={busy === "status"}
+            onClick={() => setStatus("registration_closed")}
+          >
+            بستن ثبت‌نام
+          </BilliardButton>
+        </div>
+      </section>
 
       <section className="card-soft space-y-3">
         <h2 className="font-display text-xl text-slate-100">میزها</h2>
@@ -250,7 +646,7 @@ export default function AdminTournamentDetailPage() {
       <section className="card-soft space-y-4">
         <div>
           <h2 className="font-display text-xl text-slate-100">
-            ثبت‌نام‌ها ({regs.filter((r) => isRegistrationSettled(r)).length} قطعی / {regs.length} کل)
+            ثبت‌نام‌ها ({settledRegs.length} قطعی / {regs.length} کل)
           </h2>
           <p className="mt-1 text-sm text-slate-400">بازیکن را از لیست انتخاب کنید و به مسابقه اضافه کنید.</p>
         </div>
@@ -301,14 +697,8 @@ export default function AdminTournamentDetailPage() {
             onChange={(e) => setWaiveFee(e.target.checked)}
             className="h-4 w-4 accent-fuchsia-500"
           />
-          بدون پرداخت / رایگان ثبت شود (پیشنهادی برای افزودن دستی ادمین)
+          بدون پرداخت / رایگان ثبت شود
         </label>
-
-        {!availablePlayers.length && (
-          <p className="text-sm text-slate-500">
-            بازیکن قابل‌افزودنی نیست — یا همه اضافه شده‌اند یا لیست بازیکن خالی است.
-          </p>
-        )}
 
         <div className="divide-y divide-white/10 text-sm">
           {regs.map((r) => {
@@ -338,81 +728,140 @@ export default function AdminTournamentDetailPage() {
         </div>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="font-display text-xl text-slate-100">جدول / نتایج</h2>
-        {bracket.map((m) => (
-          <div key={m.id} className="card-soft space-y-2 text-sm">
-            <div className="font-medium text-slate-100">
-              {m.round_label}: {m.player1?.full_name || "TBD"} vs {m.player2?.full_name || "TBD"}
-            </div>
-            <div className="text-xs text-slate-500">{statusLabel[m.status]}</div>
-            <div className="flex flex-wrap gap-2">
-              <select
-                className="input max-w-[140px]"
-                defaultValue={m.table_id || ""}
-                onChange={(e) =>
-                  saveSchedule(m.id, e.target.value, m.scheduled_on || "", m.scheduled_at || "")
-                }
-              >
-                <option value="">میز</option>
-                {tables.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
+      {!isGroupFormat && (
+        <section className="card-soft space-y-3">
+          <h2 className="font-display text-xl text-slate-100">جدول حذفی</h2>
+          <p className="text-sm text-slate-400">
+            تعداد جایگاه را بزنید (توان ۲). دو طرف جدول ساخته می‌شود؛ روی هر جایگاه کلیک کنید و بازیکن بگذارید.
+          </p>
+          <div className="flex flex-wrap items-end gap-2">
+            <div>
+              <label className="label">تعداد جایگاه</label>
+              <select className="input w-32" value={bracketSize} onChange={(e) => setBracketSize(e.target.value)}>
+                {[2, 4, 8, 16, 32, 64].map((n) => (
+                  <option key={n} value={n}>
+                    {n}
                   </option>
                 ))}
               </select>
+            </div>
+            <BilliardButton type="button" loading={busy === "bracket"} onClick={() => buildKnockout(Number(bracketSize))}>
+              {knockoutMatches.length ? "بازسازی جدول خالی" : "ساخت جدول حذفی"}
+            </BilliardButton>
+          </div>
+        </section>
+      )}
+
+      {isGroupFormat && (
+        <section className="card-soft space-y-4">
+          <div>
+            <h2 className="font-display text-xl text-slate-100">مرحله گروهی</h2>
+            <p className="mt-1 text-sm text-slate-400">
+              تعداد گروه را مشخص کنید، بعد برای هر گروه بازی‌ها را تعریف کنید — بازیکن با بازیکن، یا برنده/بازنده یک جایگاه دیگر.
+            </p>
+          </div>
+          <div>
+            <label className="label">تعداد گروه</label>
+            <select className="input max-w-[120px]" value={groupCount} onChange={(e) => setGroupCount(e.target.value)}>
+              {[1, 2, 3, 4, 5, 6, 8].map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-slate-500">گروه‌ها: {groupCodes.join("، ")}</p>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <div>
+              <label className="label">گروه</label>
+              <select
+                className="input"
+                value={groupForm.group_code}
+                onChange={(e) => setGroupForm({ ...groupForm, group_code: e.target.value })}
+              >
+                {groupCodes.map((c) => (
+                  <option key={c} value={c}>
+                    گروه {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="label">شماره بازی در گروه</label>
               <input
-                type="date"
-                className="input max-w-[160px]"
-                defaultValue={m.scheduled_on || ""}
-                onBlur={(e) =>
-                  saveSchedule(m.id, m.table_id || "", e.target.value, m.scheduled_at || "")
-                }
-              />
-              <input
-                type="time"
-                className="input max-w-[120px]"
-                defaultValue={m.scheduled_at || ""}
-                onBlur={(e) =>
-                  saveSchedule(m.id, m.table_id || "", m.scheduled_on || "", e.target.value)
-                }
+                className="input"
+                value={groupForm.position}
+                onChange={(e) => setGroupForm({ ...groupForm, position: e.target.value })}
               />
             </div>
-            {m.player1_id && m.player2_id && m.status !== "finished" && m.status !== "walkover" && (
-              <div className="flex flex-wrap items-center gap-2">
-                <input
-                  className="input w-20"
-                  placeholder="امتیاز ۱"
-                  value={scores[m.id]?.s1 ?? ""}
-                  onChange={(e) =>
-                    setScores({ ...scores, [m.id]: { s1: e.target.value, s2: scores[m.id]?.s2 || "" } })
-                  }
-                />
-                <input
-                  className="input w-20"
-                  placeholder="امتیاز ۲"
-                  value={scores[m.id]?.s2 ?? ""}
-                  onChange={(e) =>
-                    setScores({ ...scores, [m.id]: { s1: scores[m.id]?.s1 || "", s2: e.target.value } })
-                  }
-                />
-                <BilliardButton
-                  type="button"
-                  loading={busy === `result-${m.id}`}
-                  onClick={() => saveResult(m.id)}
-                >
-                  ثبت نتیجه
-                </BilliardButton>
-              </div>
-            )}
-            {(m.status === "finished" || m.status === "walkover") && (
-              <div className="font-display text-cyan-300">
-                {m.score1} – {m.score2}
-              </div>
-            )}
           </div>
-        ))}
-      </section>
+          <div className="grid gap-3 md:grid-cols-2">
+            {renderSlotEditor("slot1", "طرف اول")}
+            {renderSlotEditor("slot2", "طرف دوم")}
+          </div>
+          <BilliardButton type="button" loading={busy === "group-match"} onClick={saveGroupMatch}>
+            افزودن بازی به گروه
+          </BilliardButton>
+
+          {groupMatches.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium text-slate-300">بازی‌های گروهی</h3>
+              {groupMatches.map(renderMatchCard)}
+            </div>
+          )}
+
+          <div className="border-t border-white/10 pt-4 space-y-3">
+            <h3 className="font-display text-lg text-slate-100">مرحله حذفی بعد از گروه</h3>
+            <div className="flex flex-wrap items-end gap-2">
+              <div>
+                <label className="label">تعداد جایگاه حذفی</label>
+                <select
+                  className="input w-32"
+                  value={knockoutSize}
+                  onChange={(e) => setKnockoutSize(e.target.value)}
+                >
+                  {[2, 4, 8, 16].map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <BilliardButton
+                type="button"
+                loading={busy === "bracket"}
+                onClick={() => buildKnockout(Number(knockoutSize), true)}
+              >
+                ساخت جدول حذفی
+              </BilliardButton>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {knockoutMatches.length > 0 && (
+        <section className="space-y-4">
+          <h2 className="font-display text-xl text-slate-100">جدول حذفی / نتایج</h2>
+          <div className="overflow-x-auto pb-2">
+            <div className="flex min-w-max gap-4">
+              {knockoutByRound.map(([round, matches]) => (
+                <div key={round} className="w-72 shrink-0 space-y-3">
+                  <div className="text-xs text-slate-500">{matches[0]?.round_label || `دور ${round}`}</div>
+                  {matches
+                    .slice()
+                    .sort((a, b) => a.position - b.position)
+                    .map(renderMatchCard)}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {!knockoutMatches.length && !groupMatches.length && (
+        <p className="text-sm text-slate-500">هنوز جدولی ساخته نشده.</p>
+      )}
     </div>
   );
 }

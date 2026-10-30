@@ -57,7 +57,7 @@ export const statusLabel: Record<string, string> = {
   pre_registration: "پیش‌ثبت‌نام",
   registration_open: "ثبت‌نام فعال",
   registration_closed: "ثبت‌نام بسته",
-  drawn: "قرعه‌کشی‌شده",
+  drawn: "جدول آماده‌شده",
   live: "در حال برگزاری",
   finished: "پایان‌یافته",
   cancelled: "لغو شده",

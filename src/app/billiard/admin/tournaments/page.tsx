@@ -15,6 +15,7 @@ export default function AdminTournamentsPage() {
     capacity: "16",
     status: "registration_open",
     venue: "",
+    format: "single_elimination",
   });
   const [msg, setMsg] = useState("");
   const [creating, setCreating] = useState(false);
@@ -46,6 +47,7 @@ export default function AdminTournamentsPage() {
           capacity: Number(form.capacity),
           status: form.status,
           venue: form.venue,
+          format: form.format,
         }),
       });
       setMsg("مسابقه ساخته شد.");
@@ -92,6 +94,10 @@ export default function AdminTournamentsPage() {
           <option value="registration_open">ثبت‌نام فعال</option>
           <option value="registration_closed">ثبت‌نام بسته</option>
         </select>
+        <select className="input" value={form.format} onChange={(e) => setForm({ ...form, format: e.target.value })}>
+          <option value="single_elimination">حذفی</option>
+          <option value="group_then_elimination">گروهی سپس حذفی</option>
+        </select>
         <BilliardButton type="submit" loading={creating} sx={{ gridColumn: { md: "span 2" } }}>
           ایجاد مسابقه
         </BilliardButton>
@@ -107,7 +113,7 @@ export default function AdminTournamentsPage() {
               </div>
             </div>
             <BilliardButton href={`/billiard/admin/tournaments/${t.id}`} variant="secondary">
-              مدیریت / قرعه / نتیجه
+              مدیریت جدول / نتیجه
             </BilliardButton>
           </div>
         ))}
