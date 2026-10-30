@@ -11,6 +11,7 @@ import {
   fromGregorianYmd,
   timeForApi,
   timeForUi,
+  toAsciiDigits,
   toGregorianYmd,
   writeScheduleDefault,
 } from "@/app/billiard/admin/components/MatchScheduleFields";
@@ -385,7 +386,7 @@ export function GroupEliminationWizard({
       }
     }
     setBusy("group-match");
-    const date = matchForm.date || defaultScheduleDate || "";
+    const date = toAsciiDigits(matchForm.date || defaultScheduleDate || "");
     const time = matchForm.time || defaultScheduleTime || "";
     const tableId = matchForm.tableId || "";
     try {

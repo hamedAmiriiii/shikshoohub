@@ -6,6 +6,7 @@ import DateObject from "react-date-object";
 import persian from "react-date-object/calendars/persian";
 import gregorian from "react-date-object/calendars/gregorian";
 import persian_fa from "react-date-object/locales/persian_fa";
+import gregorian_en from "react-date-object/locales/gregorian_en";
 
 export const BILLIARD_LS_DATE = "billiard_match_default_date";
 export const BILLIARD_LS_TIME = "billiard_match_default_time";
@@ -53,6 +54,13 @@ export function timeForUi(time?: string | null): string {
   return t;
 }
 
+/** رقم‌های فارسی/عربی را به انگلیسی برمی‌گرداند تا API تاریخ را قبول کند. */
+export function toAsciiDigits(value: string): string {
+  return value
+    .replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)))
+    .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+}
+
 /** بدون دست‌کاری آبجکت خودِ تقویم (convert آن را عوض می‌کند و مقدار پاک می‌شود) */
 export function toGregorianYmd(d: DateObject | DateObject[] | null | undefined): string {
   const obj = Array.isArray(d) ? d[0] : d;
@@ -69,20 +77,22 @@ export function toGregorianYmd(d: DateObject | DateObject[] | null | undefined):
       month,
       day: Number(obj.day),
     });
-    return copy.convert(gregorian).format("YYYY-MM-DD");
+    return toAsciiDigits(copy.convert(gregorian, gregorian_en).format("YYYY-MM-DD"));
   } catch {
     return "";
   }
 }
 
 export function fromGregorianYmd(ymd?: string | null): DateObject | null {
-  if (!ymd) return null;
+  const ascii = ymd ? toAsciiDigits(ymd) : "";
+  if (!ascii) return null;
   try {
     return new DateObject({
-      date: ymd,
+      date: ascii,
       format: "YYYY-MM-DD",
       calendar: gregorian,
-    }).convert(persian);
+      locale: gregorian_en,
+    }).convert(persian, persian_fa);
   } catch {
     return null;
   }

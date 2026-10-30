@@ -16,6 +16,7 @@ import {
   MatchScheduleFields,
   readScheduleDefault,
   timeForApi,
+  toAsciiDigits,
   writeScheduleDefault,
 } from "@/app/billiard/admin/components/MatchScheduleFields";
 import { GroupEliminationWizard } from "@/app/billiard/admin/components/GroupEliminationWizard";
@@ -240,7 +241,7 @@ export default function AdminTournamentDetailPage() {
   }
 
   async function saveSchedule(matchId: number, tableId: string, date: string, time: string) {
-    const resolvedDate = date || defaultScheduleDate || "";
+    const resolvedDate = toAsciiDigits(date || defaultScheduleDate || "");
     const resolvedTime = time || defaultScheduleTime || "";
     if (resolvedDate) {
       writeScheduleDefault(BILLIARD_LS_DATE, resolvedDate);
