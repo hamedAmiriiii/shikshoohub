@@ -225,6 +225,20 @@ export default function AdminTournamentDetailPage() {
     }
   }
 
+  async function deleteTable(tableId: number, name: string) {
+    if (!confirm(`میز «${name}» حذف شود؟`)) return;
+    setBusy(`del-table-${tableId}`);
+    try {
+      await apiFetch(`/admin/tables/${tableId}`, { method: "DELETE" });
+      setMsg("میز حذف شد.");
+      await load();
+    } catch (err) {
+      setMsg((err as ApiError).message || "خطا در حذف میز");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function saveSchedule(matchId: number, tableId: string, date: string, time: string) {
     const resolvedDate = date || defaultScheduleDate || "";
     const resolvedTime = time || defaultScheduleTime || "";
@@ -540,10 +554,22 @@ export default function AdminTournamentDetailPage() {
         </div>
         <div className="flex flex-wrap gap-2 text-sm">
           {tables.map((t) => (
-            <span key={t.id} className="rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-slate-300">
+            <span
+              key={t.id}
+              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-slate-300"
+            >
               {t.name}
+              <button
+                type="button"
+                className="text-[11px] text-rose-300 hover:underline disabled:opacity-50"
+                disabled={busy !== null}
+                onClick={() => deleteTable(t.id, t.name)}
+              >
+                {busy === `del-table-${t.id}` ? "…" : "حذف"}
+              </button>
             </span>
           ))}
+          {!tables.length && <span className="text-slate-500">هنوز میزی نیست.</span>}
         </div>
       </section>
 

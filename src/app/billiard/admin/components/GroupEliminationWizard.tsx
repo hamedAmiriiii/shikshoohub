@@ -97,7 +97,6 @@ export function GroupEliminationWizard({
   const [knockoutSize, setKnockoutSize] = useState("8");
   const [matchForm, setMatchForm] = useState({
     position: "1",
-    mode: "player" as "player" | "source",
     slot1: emptySlot("player"),
     slot2: emptySlot("player"),
     tableId: "",
@@ -271,71 +270,104 @@ export function GroupEliminationWizard({
     }
   }
 
-  function setMode(mode: "player" | "source") {
+  function setSlotType(key: "slot1" | "slot2", type: "player" | "source") {
     setMatchForm((f) => ({
       ...f,
-      mode,
-      slot1: { ...f.slot1, type: mode },
-      slot2: { ...f.slot2, type: mode },
+      [key]: {
+        ...f[key],
+        type,
+        player_id: type === "player" ? f[key].player_id : "",
+        match_no: type === "source" ? f[key].match_no : "",
+        outcome: f[key].outcome || "winner",
+      },
     }));
   }
 
-  function renderSideSelect(key: "slot1" | "slot2", placeholder: string) {
+  /** هر طرف: نوع (بازیکن/بازی) + در حالت بازی: شماره بازی و برنده/بازنده */
+  function renderSideSelect(key: "slot1" | "slot2", label: string) {
     const s = matchForm[key];
-    if (matchForm.mode === "player") {
-      return (
-        <select
-          className="input input-sm w-full"
-          value={s.player_id}
-          onChange={(e) =>
-            setMatchForm((f) => ({ ...f, [key]: { ...f[key], player_id: e.target.value } }))
-          }
-        >
-          <option value="">{placeholder}</option>
-          {playersInGroup.map((r) => (
-            <option key={r.id} value={r.player_id}>
-              {r.player?.full_name}
-            </option>
-          ))}
-        </select>
-      );
-    }
     return (
-      <div className="flex w-full gap-1">
+      <div className="grid min-w-0 grid-cols-[5.5rem_1fr] gap-1 sm:grid-cols-[5.5rem_minmax(0,1fr)_auto]">
         <select
-          className="input input-sm w-[68px] shrink-0"
-          value={s.outcome}
-          onChange={(e) =>
-            setMatchForm((f) => ({
-              ...f,
-              [key]: { ...f[key], outcome: e.target.value as "winner" | "loser" },
-            }))
-          }
+          className="input input-sm"
+          value={s.type}
+          title={label}
+          onChange={(e) => setSlotType(key, e.target.value as "player" | "source")}
         >
-          <option value="winner">برنده</option>
-          <option value="loser">بازنده</option>
+          <option value="player">بازیکن</option>
+          <option value="source">بازی</option>
         </select>
-        <select
-          className="input input-sm min-w-0 flex-1"
-          value={s.match_no}
-          onChange={(e) =>
-            setMatchForm((f) => ({ ...f, [key]: { ...f[key], match_no: e.target.value } }))
-          }
-        >
-          <option value="">بازی</option>
-          {allMatchesForSource.map((m) => (
-            <option key={m.id} value={m.match_no ?? m.id}>
-              #{m.match_no ?? m.id}
-            </option>
-          ))}
-        </select>
+
+        {s.type === "player" ? (
+          <select
+            className="input input-sm min-w-0 sm:col-span-2"
+            value={s.player_id}
+            onChange={(e) =>
+              setMatchForm((f) => ({ ...f, [key]: { ...f[key], player_id: e.target.value } }))
+            }
+          >
+            <option value="">{label}</option>
+            {playersInGroup.map((r) => (
+              <option key={r.id} value={r.player_id}>
+                {r.player?.full_name}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <>
+            <select
+              className="input input-sm min-w-0"
+              value={s.match_no}
+              title="شماره بازی"
+              onChange={(e) =>
+                setMatchForm((f) => ({ ...f, [key]: { ...f[key], match_no: e.target.value } }))
+              }
+            >
+              <option value="">شماره بازی</option>
+              {allMatchesForSource.map((m) => (
+                <option key={m.id} value={m.match_no ?? m.id}>
+                  بازی {m.match_no ?? m.id}
+                  {m.group_code ? ` · گ${m.group_code}` : ""}
+                </option>
+              ))}
+            </select>
+            <select
+              className="input input-sm col-span-2 sm:col-span-1"
+              value={s.outcome}
+              title="برنده یا بازنده"
+              onChange={(e) =>
+                setMatchForm((f) => ({
+                  ...f,
+                  [key]: { ...f[key], outcome: e.target.value as "winner" | "loser" },
+                }))
+              }
+            >
+              <option value="winner">برنده</option>
+              <option value="loser">بازنده</option>
+            </select>
+          </>
+        )}
       </div>
     );
   }
 
   async function saveGroupMatch() {
-    setBusy("group-match");
     setMsg("");
+    for (const [key, label] of [
+      ["slot1", "طرف ۱"],
+      ["slot2", "طرف ۲"],
+    ] as const) {
+      const s = matchForm[key];
+      if (s.type === "player" && !s.player_id) {
+        setMsg(`برای ${label} بازیکن را انتخاب کنید.`);
+        return;
+      }
+      if (s.type === "source" && !s.match_no) {
+        setMsg(`برای ${label} شماره بازی و برنده/بازنده را مشخص کنید.`);
+        return;
+      }
+    }
+    setBusy("group-match");
     const date = matchForm.date || defaultScheduleDate || "";
     const time = matchForm.time || defaultScheduleTime || "";
     const tableId = matchForm.tableId || "";
@@ -345,8 +377,8 @@ export function GroupEliminationWizard({
         body: JSON.stringify({
           group_code: activeGroup,
           position: Number(matchForm.position),
-          slot1: toApiSlot({ ...matchForm.slot1, type: matchForm.mode }),
-          slot2: toApiSlot({ ...matchForm.slot2, type: matchForm.mode }),
+          slot1: toApiSlot(matchForm.slot1),
+          slot2: toApiSlot(matchForm.slot2),
           table_id: tableId ? Number(tableId) : null,
           scheduled_on: date || null,
           scheduled_at: time ? timeForApi(time) : null,
@@ -357,8 +389,8 @@ export function GroupEliminationWizard({
       setMatchForm((f) => ({
         ...f,
         position: String(Number(f.position) + 1),
-        slot1: emptySlot(f.mode),
-        slot2: emptySlot(f.mode),
+        slot1: emptySlot(f.slot1.type),
+        slot2: emptySlot(f.slot2.type),
         tableId: tableId,
         date,
         time,
@@ -390,34 +422,43 @@ export function GroupEliminationWizard({
     const no = m.match_no ?? m.id;
     const canResult = !!m.player1_id && !!m.player2_id && !done;
     return (
-      <div key={m.id} className="w-full overflow-x-auto">
-        <div className="flex w-max min-w-full flex-nowrap items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-2 py-1.5">
+      <div
+        key={m.id}
+        className="grid w-full min-w-0 grid-cols-1 gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-2.5 sm:grid-cols-[auto_1fr_auto] sm:items-center"
+      >
+        <div className="flex min-w-0 items-center gap-2">
           <span className="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md bg-fuchsia-500/20 px-1.5 text-xs font-bold text-fuchsia-300">
             {no}
           </span>
-          <span className="w-[120px] shrink-0 truncate text-xs text-slate-200" title={slotText(m, 1)}>
-            {slotText(m, 1)}
-          </span>
-          <span className="shrink-0 text-[10px] text-slate-600">vs</span>
-          <span className="w-[120px] shrink-0 truncate text-xs text-slate-200" title={slotText(m, 2)}>
-            {slotText(m, 2)}
-          </span>
-          <div className="shrink-0">
-            <MatchScheduleFields
-              tableId={m.table_id}
-              scheduledOn={m.scheduled_on}
-              scheduledAt={m.scheduled_at}
-              tables={tables}
-              defaultDate={defaultScheduleDate}
-              defaultTime={defaultScheduleTime}
-              disabled={done}
-              onChange={({ tableId, date, time }) => onSchedule(m.id, tableId, date, time)}
-            />
+          <div className="min-w-0 text-xs text-slate-200">
+            <div className="truncate" title={slotText(m, 1)}>
+              {slotText(m, 1)}
+            </div>
+            <div className="text-[10px] text-slate-600">vs</div>
+            <div className="truncate" title={slotText(m, 2)}>
+              {slotText(m, 2)}
+            </div>
           </div>
+        </div>
+
+        <div className="min-w-0 overflow-hidden">
+          <MatchScheduleFields
+            tableId={m.table_id}
+            scheduledOn={m.scheduled_on}
+            scheduledAt={m.scheduled_at}
+            tables={tables}
+            defaultDate={defaultScheduleDate}
+            defaultTime={defaultScheduleTime}
+            disabled={done}
+            onChange={({ tableId, date, time }) => onSchedule(m.id, tableId, date, time)}
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5">
           {canResult && (
             <>
               <input
-                className="input input-sm w-12 shrink-0"
+                className="input input-sm w-12"
                 placeholder="۱"
                 value={scores[m.id]?.s1 ?? ""}
                 onChange={(e) =>
@@ -428,7 +469,7 @@ export function GroupEliminationWizard({
                 }
               />
               <input
-                className="input input-sm w-12 shrink-0"
+                className="input input-sm w-12"
                 placeholder="۲"
                 value={scores[m.id]?.s2 ?? ""}
                 onChange={(e) =>
@@ -449,14 +490,14 @@ export function GroupEliminationWizard({
             </>
           )}
           {done && (
-            <span className="shrink-0 text-xs font-display text-cyan-300">
+            <span className="text-xs font-display text-cyan-300">
               {m.score1} – {m.score2}
             </span>
           )}
           {!done && (
             <button
               type="button"
-              className="shrink-0 text-[10px] text-rose-300 hover:underline"
+              className="text-[10px] text-rose-300 hover:underline"
               onClick={() => deleteGroupMatch(m.id)}
             >
               حذف
@@ -673,39 +714,31 @@ export function GroupEliminationWizard({
         <div className="card-soft space-y-2 !p-3 sm:!p-4">
           <h2 className="font-display text-xl text-slate-100">۳) بازی‌های گروه {activeGroup}</h2>
           <p className="text-sm text-slate-400">
-            سوییچ بازیکن/بازی · طرف‌ها · میز · تاریخ · ساعت · ثبت — همه در یک خط
+            برای هر طرف: بازیکن یا بازی — اگر بازی، شماره بازی + برنده/بازنده را انتخاب کنید.
           </p>
 
-          <div className="w-full overflow-x-auto">
-            <div className="flex w-max min-w-full flex-nowrap items-center gap-1.5 rounded-xl border border-cyan-400/20 bg-cyan-500/[0.04] px-2 py-2">
+          <div className="w-full min-w-0 space-y-2 rounded-xl border border-cyan-400/20 bg-cyan-500/[0.04] p-2.5">
+            <div className="grid w-full min-w-0 gap-2 lg:grid-cols-2">
+              <div className="min-w-0 space-y-1">
+                <div className="text-[10px] text-slate-500">طرف ۱</div>
+                {renderSideSelect("slot1", "طرف ۱")}
+              </div>
+              <div className="min-w-0 space-y-1">
+                <div className="text-[10px] text-slate-500">طرف ۲</div>
+                {renderSideSelect("slot2", "طرف ۲")}
+              </div>
+            </div>
+
+            <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-[4.5rem_1fr_7.5rem_6rem_auto]">
               <input
-                className="input input-sm w-11 shrink-0"
+                className="input input-sm"
                 title="ترتیب در گروه"
+                placeholder="#"
                 value={matchForm.position}
                 onChange={(e) => setMatchForm((f) => ({ ...f, position: e.target.value }))}
               />
-
-              <button
-                type="button"
-                role="switch"
-                aria-checked={matchForm.mode === "source"}
-                onClick={() => setMode(matchForm.mode === "player" ? "source" : "player")}
-                className={`shrink-0 rounded-lg border px-2 py-1.5 text-[11px] font-medium transition ${
-                  matchForm.mode === "source"
-                    ? "border-amber-400/40 bg-amber-500/15 text-amber-100"
-                    : "border-white/15 bg-white/5 text-slate-300"
-                }`}
-                title="سوییچ بازیکن / برنده-بازنده بازی"
-              >
-                {matchForm.mode === "player" ? "بازیکن" : "بازی"}
-              </button>
-
-              <div className="w-[140px] shrink-0">{renderSideSelect("slot1", "بازیکن ۱")}</div>
-              <span className="shrink-0 text-[10px] text-slate-600">vs</span>
-              <div className="w-[140px] shrink-0">{renderSideSelect("slot2", "بازیکن ۲")}</div>
-
               <select
-                className="input input-sm w-[88px] shrink-0"
+                className="input input-sm min-w-0"
                 value={matchForm.tableId}
                 onChange={(e) => setMatchForm((f) => ({ ...f, tableId: e.target.value }))}
               >
@@ -716,8 +749,7 @@ export function GroupEliminationWizard({
                   </option>
                 ))}
               </select>
-
-              <div className="billiard-date-picker w-[118px] shrink-0">
+              <div className="billiard-date-picker min-w-0">
                 <DatePicker
                   value={fromGregorianYmd(matchForm.date || null)}
                   calendar={persian}
@@ -736,9 +768,8 @@ export function GroupEliminationWizard({
                   }}
                 />
               </div>
-
               <select
-                className="input input-sm w-[84px] shrink-0"
+                className="input input-sm min-w-0"
                 value={timeForUi(matchForm.time) || matchForm.time}
                 onChange={(e) => setMatchForm((f) => ({ ...f, time: e.target.value }))}
               >
@@ -749,15 +780,16 @@ export function GroupEliminationWizard({
                   </option>
                 ))}
               </select>
-
-              <BilliardButton
-                type="button"
-                loading={busy === "group-match"}
-                sx={{ minHeight: 34, py: "4px", px: 1.5, fontSize: 12 }}
-                onClick={saveGroupMatch}
-              >
-                ثبت
-              </BilliardButton>
+              <div className="col-span-2 sm:col-span-4 lg:col-span-1">
+                <BilliardButton
+                  type="button"
+                  loading={busy === "group-match"}
+                  sx={{ minHeight: 34, py: "4px", px: 1.5, fontSize: 12, width: "100%" }}
+                  onClick={saveGroupMatch}
+                >
+                  ثبت
+                </BilliardButton>
+              </div>
             </div>
           </div>
         </div>

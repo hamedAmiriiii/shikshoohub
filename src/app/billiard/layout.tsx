@@ -28,7 +28,7 @@ export default function BilliardLayout({ children }: { children: React.ReactNode
     <div className="billiard-app" dir="rtl">
       <AuthProvider>
         <SiteHeader />
-        <main className="mx-auto min-h-[70vh] max-w-6xl px-4 py-5 pb-28 sm:py-8 md:pb-10">
+        <main className="mx-auto min-h-[70vh] w-full max-w-6xl px-4 py-5 pb-28 sm:py-8 md:pb-10">
           {children}
         </main>
         <div className="hidden md:block">
