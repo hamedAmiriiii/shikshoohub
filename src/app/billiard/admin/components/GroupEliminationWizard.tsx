@@ -103,6 +103,8 @@ export function GroupEliminationWizard({
     date: "",
     time: "",
   });
+  const [formNote, setFormNote] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const formDateValue = useMemo(() => fromGregorianYmd(matchForm.date || null), [matchForm.date]);
 
   useEffect(() => {
     setMatchForm((f) => ({
@@ -351,19 +353,34 @@ export function GroupEliminationWizard({
     );
   }
 
+  function noteError(text: string) {
+    setFormNote({ kind: "err", text });
+    setMsg(text);
+  }
+
   async function saveGroupMatch() {
+    setFormNote(null);
     setMsg("");
+    if (busy) {
+      noteError("یک عملیات دیگر در حال انجام است. چند لحظه صبر کنید.");
+      return;
+    }
+    const pos = Number(matchForm.position);
+    if (!Number.isFinite(pos) || pos < 1) {
+      noteError("ترتیب بازی را درست وارد کنید.");
+      return;
+    }
     for (const [key, label] of [
       ["slot1", "طرف ۱"],
       ["slot2", "طرف ۲"],
     ] as const) {
       const s = matchForm[key];
       if (s.type === "player" && !s.player_id) {
-        setMsg(`برای ${label} بازیکن را انتخاب کنید.`);
+        noteError(`برای ${label} بازیکن را انتخاب کنید.`);
         return;
       }
       if (s.type === "source" && !s.match_no) {
-        setMsg(`برای ${label} شماره بازی و برنده/بازنده را مشخص کنید.`);
+        noteError(`برای ${label} شماره بازی و برنده/بازنده را مشخص کنید.`);
         return;
       }
     }
@@ -372,11 +389,11 @@ export function GroupEliminationWizard({
     const time = matchForm.time || defaultScheduleTime || "";
     const tableId = matchForm.tableId || "";
     try {
-      await apiFetch<{ match: any }>(`/admin/tournaments/${tournamentId}/group-matches`, {
+      const res = await apiFetch<{ match: any }>(`/admin/tournaments/${tournamentId}/group-matches`, {
         method: "POST",
         body: JSON.stringify({
           group_code: activeGroup,
-          position: Number(matchForm.position),
+          position: pos,
           slot1: toApiSlot(matchForm.slot1),
           slot2: toApiSlot(matchForm.slot2),
           table_id: tableId ? Number(tableId) : null,
@@ -386,21 +403,30 @@ export function GroupEliminationWizard({
       });
       if (date) writeScheduleDefault(BILLIARD_LS_DATE, date);
       if (time) writeScheduleDefault(BILLIARD_LS_TIME, time);
+      const savedNo = res.match?.match_no;
+      const savedPos = res.match?.position ?? pos + 1;
       setMatchForm((f) => ({
         ...f,
-        position: String(Number(f.position) + 1),
+        position: String(Number(savedPos) + 1),
         slot1: emptySlot(f.slot1.type),
         slot2: emptySlot(f.slot2.type),
-        tableId: tableId,
+        tableId,
         date,
         time,
       }));
-      setMsg("بازی گروهی ذخیره شد.");
-      await onReload();
+      const ok = savedNo ? `بازی ${savedNo} ثبت شد.` : "بازی گروهی ثبت شد.";
+      setFormNote({ kind: "ok", text: ok });
+      setMsg(ok);
     } catch (err) {
-      setMsg((err as ApiError).message || "خطا");
+      noteError((err as ApiError).message || "خطا در ثبت بازی");
+      return;
     } finally {
       setBusy(null);
+    }
+    try {
+      await onReload();
+    } catch (err) {
+      noteError((err as ApiError).message || "بازی ثبت شد ولی لیست تازه نشد. صفحه را دوباره باز کنید.");
     }
   }
 
@@ -749,9 +775,9 @@ export function GroupEliminationWizard({
                   </option>
                 ))}
               </select>
-              <div className="billiard-date-picker min-w-0">
+              <div className="billiard-date-picker min-w-[8.5rem]">
                 <DatePicker
-                  value={fromGregorianYmd(matchForm.date || null)}
+                  value={formDateValue}
                   calendar={persian}
                   locale={persian_fa}
                   calendarPosition="bottom-right"
@@ -759,12 +785,13 @@ export function GroupEliminationWizard({
                   placeholder="تاریخ"
                   editable={false}
                   portal
-                  zIndex={80}
+                  zIndex={400}
                   containerStyle={{ width: "100%" }}
                   inputClass="input input-sm"
                   onChange={(d) => {
-                    const obj = d && !Array.isArray(d) ? (d as DateObject) : null;
-                    setMatchForm((f) => ({ ...f, date: toGregorianYmd(obj) }));
+                    const ymd = toGregorianYmd(d as DateObject | DateObject[] | null);
+                    setMatchForm((f) => ({ ...f, date: ymd }));
+                    if (!ymd && d) setFormNote({ kind: "err", text: "تاریخ انتخاب نشد. دوباره انتخاب کنید." });
                   }}
                 />
               </div>
@@ -784,13 +811,21 @@ export function GroupEliminationWizard({
                 <BilliardButton
                   type="button"
                   loading={busy === "group-match"}
+                  disabled={busy !== null && busy !== "group-match"}
                   sx={{ minHeight: 34, py: "4px", px: 1.5, fontSize: 12, width: "100%" }}
-                  onClick={saveGroupMatch}
+                  onClick={() => {
+                    void saveGroupMatch();
+                  }}
                 >
                   ثبت
                 </BilliardButton>
               </div>
             </div>
+            {formNote && (
+              <p className={`text-sm ${formNote.kind === "err" ? "text-rose-300" : "text-cyan-300"}`}>
+                {formNote.text}
+              </p>
+            )}
           </div>
         </div>
 

@@ -43,10 +43,15 @@ export async function apiFetch<T = unknown>(
   }
 
   if (!res.ok) {
-    const err: ApiError = {
-      message: data?.message || "خطا در ارتباط با سرور",
-      status: res.status,
-    };
+    let message = data?.message || "خطا در ارتباط با سرور";
+    const errors = data?.errors;
+    if (errors && typeof errors === "object") {
+      const first = Object.values(errors as Record<string, unknown>)
+        .flat()
+        .find((x) => typeof x === "string") as string | undefined;
+      if (first) message = first;
+    }
+    const err: ApiError = { message, status: res.status };
     throw err;
   }
 

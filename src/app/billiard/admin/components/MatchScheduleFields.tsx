@@ -53,9 +53,26 @@ export function timeForUi(time?: string | null): string {
   return t;
 }
 
-export function toGregorianYmd(d: DateObject | null): string {
-  if (!d) return "";
-  return d.convert(gregorian).format("YYYY-MM-DD");
+/** بدون دست‌کاری آبجکت خودِ تقویم (convert آن را عوض می‌کند و مقدار پاک می‌شود) */
+export function toGregorianYmd(d: DateObject | DateObject[] | null | undefined): string {
+  const obj = Array.isArray(d) ? d[0] : d;
+  if (!obj || obj.year == null || obj.day == null) return "";
+  try {
+    const month =
+      typeof obj.month === "object" && obj.month && "number" in obj.month
+        ? Number(obj.month.number)
+        : Number(obj.month);
+    const copy = new DateObject({
+      calendar: obj.calendar || persian,
+      locale: obj.locale || persian_fa,
+      year: Number(obj.year),
+      month,
+      day: Number(obj.day),
+    });
+    return copy.convert(gregorian).format("YYYY-MM-DD");
+  } catch {
+    return "";
+  }
 }
 
 export function fromGregorianYmd(ymd?: string | null): DateObject | null {
@@ -143,7 +160,7 @@ export function MatchScheduleFields({
           placeholder="تاریخ"
           editable={false}
           portal
-          zIndex={80}
+          zIndex={400}
           containerStyle={{ width: "100%" }}
           inputClass="input input-sm"
           onChange={(d) => {
