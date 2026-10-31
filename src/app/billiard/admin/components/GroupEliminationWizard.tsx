@@ -119,7 +119,7 @@ export function GroupEliminationWizard({
   );
 
   const [groupCount, setGroupCount] = useState(() => String(tournament?.group_count || 2));
-  const [activeGroup, setActiveGroup] = useState("A");
+  const [activeGroup, setActiveGroup] = useState("1");
   const [selectedInGroup, setSelectedInGroup] = useState<number[]>([]);
   const [playerSearch, setPlayerSearch] = useState("");
   const [knockoutSize, setKnockoutSize] = useState("8");
@@ -165,7 +165,7 @@ export function GroupEliminationWizard({
   }, [settled, activeGroup]);
 
   const groupCodes = useMemo(
-    () => Array.from({ length: Math.max(1, Number(groupCount) || 1) }, (_, i) => String.fromCharCode(65 + i)),
+    () => Array.from({ length: Math.max(1, Number(groupCount) || 1) }, (_, i) => String(i + 1)),
     [groupCount],
   );
 
@@ -241,7 +241,7 @@ export function GroupEliminationWizard({
         method: "PUT",
         body: JSON.stringify({ group_count: Number(groupCount) }),
       });
-      setActiveGroup("A");
+      setActiveGroup("1");
       setMsg(`تعداد گروه‌ها: ${groupCount}`);
       await onReload();
     } catch (err) {

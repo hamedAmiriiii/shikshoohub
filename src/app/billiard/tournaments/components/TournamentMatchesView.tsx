@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { statusLabel } from "@/app/lib/billiard/api";
 import { useAuth } from "@/app/lib/billiard/auth";
 
 type PlayerMini = {
@@ -117,20 +116,19 @@ function MatchFaceOff({ m, myId }: { m: MatchRow; myId?: number | null }) {
   const mine1 = !!myId && m.player1_id === myId;
   const mine2 = !!myId && m.player2_id === myId;
   const done = m.status === "finished" || m.status === "walkover";
-  const dateLabel = formatJalaliDate(m.scheduled_on);
-  const timeLabel = m.scheduled_at || "";
 
   return (
     <div className="space-y-2">
-      <div className="text-center font-sans text-[12px] leading-5 text-slate-300">
-        <div>{[dateLabel, timeLabel].filter(Boolean).join("  ") || "زمان ندارد"}</div>
-        {m.table?.name && <div className="text-[11px] text-slate-500">{m.table.name}</div>}
-        {done && (
-          <div className="text-sm text-cyan-300">
-            {m.score1 ?? "-"} – {m.score2 ?? "-"}
-          </div>
-        )}
-      </div>
+      {(m.table?.name || done) && (
+        <div className="text-center text-[12px] leading-5 text-slate-300">
+          {m.table?.name && <div className="text-[11px] text-slate-500">{m.table.name}</div>}
+          {done && (
+            <div className="text-sm text-cyan-300">
+              {m.score1 ?? "-"} – {m.score2 ?? "-"}
+            </div>
+          )}
+        </div>
+      )}
       <div className="flex items-start gap-2">
         <PlayerSide player={m.player1} label={name1} mine={mine1} align="start" />
         <PlayerSide player={m.player2} label={name2} mine={mine2} align="end" />
@@ -147,6 +145,9 @@ function MatchCard({
   myId?: number | null;
 }) {
   const mine = isMine(m, myId);
+  const when = [formatJalaliDate(m.scheduled_on), (m.scheduled_at || "").slice(0, 5)]
+    .filter(Boolean)
+    .join(" ");
   return (
     <div
       className={`rounded-xl border px-2.5 py-2 text-sm transition ${
@@ -171,7 +172,9 @@ function MatchCard({
             </span>
           )}
         </div>
-        <span className="text-[10px] text-slate-500">{statusLabel[m.status || ""] || m.status}</span>
+        {when && (
+          <span className="text-[13px] font-bold leading-5 text-slate-100">{when}</span>
+        )}
       </div>
       <MatchFaceOff m={m} myId={myId} />
     </div>
@@ -194,12 +197,19 @@ function GroupCards({
   const codes = useMemo(() => {
     const fromCount =
       groupCount && groupCount > 0
-        ? Array.from({ length: groupCount }, (_, i) => String.fromCharCode(65 + i))
+        ? Array.from({ length: groupCount }, (_, i) => String(i + 1))
         : [];
-    const fromPlayers = [...new Set(players.map((p) => p.group_code).filter(Boolean) as string[])].sort();
+    const fromPlayers = [...new Set(players.map((p) => p.group_code).filter(Boolean) as string[])].sort(
+      (a, b) => Number(a) - Number(b) || a.localeCompare(b),
+    );
     const merged = fromCount.length ? fromCount : fromPlayers;
-    return merged.length ? merged : [];
-  }, [players, groupCount]);
+    if (!merged.length || !myId) return merged;
+    const mine = merged.filter((code) =>
+      players.some((p) => p.player_id === myId && (p.group_code || "") === code),
+    );
+    if (!mine.length) return merged;
+    return [...mine, ...merged.filter((code) => !mine.includes(code))];
+  }, [players, groupCount, myId]);
 
   if (!codes.length) {
     return <p className="text-sm text-slate-500">هنوز گروهی تعریف نشده است.</p>;
@@ -320,7 +330,15 @@ function scheduleStageTitle(m: MatchRow) {
   return m.round_label || `حذفی · دور ${m.round ?? ""}`;
 }
 
-function ScheduleList({ matches, myId }: { matches: MatchRow[]; myId?: number | null }) {
+function ScheduleList({
+  matches,
+  myId,
+  myGroup,
+}: {
+  matches: MatchRow[];
+  myId?: number | null;
+  myGroup?: string | null;
+}) {
   const stages = useMemo(() => {
     const byTime = (a: MatchRow, b: MatchRow) => {
       const da = `${a.scheduled_on || "9999"} ${a.scheduled_at || ""}`;
@@ -334,10 +352,19 @@ function ScheduleList({ matches, myId }: { matches: MatchRow[]; myId?: number | 
       cur.items.push(m);
       map.set(key, cur);
     }
+    const rank = (key: string) => {
+      if (myGroup && key === `group:${myGroup}`) return 0;
+      if (key.startsWith("group:")) return 1;
+      return 2;
+    };
     return [...map.entries()]
-      .sort((a, b) => a[0].localeCompare(b[0]))
+      .sort((a, b) => {
+        const byMine = rank(a[0]) - rank(b[0]);
+        if (byMine !== 0) return byMine;
+        return a[0].localeCompare(b[0], undefined, { numeric: true });
+      })
       .map(([key, stage]) => ({ key, ...stage, items: stage.items.slice().sort(byTime) }));
-  }, [matches]);
+  }, [matches, myGroup]);
 
   if (!stages.length) return <p className="text-sm text-slate-500">برنامه‌ای ثبت نشده است.</p>;
 
@@ -411,10 +438,30 @@ export function TournamentMatchesView({
   const isGroupFormat = format === "group_then_elimination";
   const [groupFilter, setGroupFilter] = useState<string | null>(null);
 
+  const myGroup = useMemo(() => {
+    if (!myId) return null;
+    const fromReg = players.find((p) => p.player_id === myId)?.group_code;
+    if (fromReg) return fromReg;
+    return (
+      matches.find(
+        (m) => (m.phase || "") === "group" && (m.player1_id === myId || m.player2_id === myId),
+      )?.group_code || null
+    );
+  }, [myId, players, matches]);
+
   const groupMatches = useMemo(
     () => matches.filter((m) => (m.phase || "") === "group"),
     [matches],
   );
+  const orderedGroupMatches = useMemo(() => {
+    if (!myGroup) return groupMatches;
+    return [...groupMatches].sort((a, b) => {
+      const aMine = (a.group_code || "") === myGroup ? 0 : 1;
+      const bMine = (b.group_code || "") === myGroup ? 0 : 1;
+      if (aMine !== bMine) return aMine - bMine;
+      return (a.match_no || 0) - (b.match_no || 0);
+    });
+  }, [groupMatches, myGroup]);
   const knockoutMatches = useMemo(
     () => matches.filter((m) => (m.phase || "knockout") === "knockout"),
     [matches],
@@ -428,7 +475,7 @@ export function TournamentMatchesView({
   }
 
   if (mode === "schedule") {
-    return <ScheduleList matches={matches} myId={myId} />;
+    return <ScheduleList matches={matches} myId={myId} myGroup={myGroup} />;
   }
 
   if (mode === "results") {
@@ -448,15 +495,15 @@ export function TournamentMatchesView({
             selected={groupFilter}
             onSelect={(code) => setGroupFilter((cur) => (cur === code ? null : code))}
           />
-          {groupMatches.length > 0 && (
+          {orderedGroupMatches.length > 0 && (
             <div className="space-y-2 pt-2">
               <h3 className="text-sm text-slate-400">
                 {groupFilter ? `بازی‌های گروه ${groupFilter}` : "بازی‌های گروهی"}
               </h3>
               <div className="grid gap-2 sm:grid-cols-2">
                 {(groupFilter
-                  ? groupMatches.filter((m) => (m.group_code || "") === groupFilter)
-                  : groupMatches
+                  ? orderedGroupMatches.filter((m) => (m.group_code || "") === groupFilter)
+                  : orderedGroupMatches
                 ).map((m) => (
                   <MatchCard key={m.id} m={m} myId={myId} />
                 ))}
