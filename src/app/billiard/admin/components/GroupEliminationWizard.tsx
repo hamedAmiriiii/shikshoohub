@@ -336,20 +336,21 @@ export function GroupEliminationWizard({
     }));
   }
 
-  /** هر طرف: نوع (بازیکن/بازی) + در حالت بازی: شماره بازی و برنده/بازنده */
+  /** هر طرف: کلیک روی «بازیکن/بازی» و «برنده/بازنده» مقدار را عوض می‌کند */
   function renderSideSelect(key: "slot1" | "slot2", label: string) {
     const s = matchForm[key];
+    const chip =
+      "rounded-lg border border-white/15 bg-white/5 px-2 py-1.5 text-center text-xs text-slate-100 hover:border-cyan-400/40 hover:bg-cyan-500/10";
     return (
       <div className="grid min-w-0 grid-cols-[5.5rem_1fr] gap-1 sm:grid-cols-[5.5rem_minmax(0,1fr)_auto]">
-        <select
-          className="input input-sm"
-          value={s.type}
+        <button
+          type="button"
+          className={chip}
           title={label}
-          onChange={(e) => setSlotType(key, e.target.value as "player" | "source")}
+          onClick={() => setSlotType(key, s.type === "player" ? "source" : "player")}
         >
-          <option value="player">بازیکن</option>
-          <option value="source">بازی</option>
-        </select>
+          {s.type === "player" ? "بازیکن" : "بازی"}
+        </button>
 
         {s.type === "player" ? (
           <select
@@ -385,20 +386,18 @@ export function GroupEliminationWizard({
                   </option>
                 ))}
             </select>
-            <select
-              className="input input-sm col-span-2 sm:col-span-1"
-              value={s.outcome}
-              title="برنده یا بازنده"
-              onChange={(e) =>
+            <button
+              type="button"
+              className={`${chip} col-span-2 sm:col-span-1`}
+              onClick={() =>
                 setMatchForm((f) => ({
                   ...f,
-                  [key]: { ...f[key], outcome: e.target.value as "winner" | "loser" },
+                  [key]: { ...f[key], outcome: f[key].outcome === "loser" ? "winner" : "loser" },
                 }))
               }
             >
-              <option value="winner">برنده</option>
-              <option value="loser">بازنده</option>
-            </select>
+              {s.outcome === "loser" ? "بازنده" : "برنده"}
+            </button>
           </>
         )}
       </div>
