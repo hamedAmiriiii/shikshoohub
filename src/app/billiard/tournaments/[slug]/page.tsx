@@ -33,6 +33,7 @@ export default async function TournamentPage({
     ? [
         { id: "players", label: "بازیکنان" },
         { id: "bracket", label: "جدول" },
+        ...(t.format === "group_then_elimination" ? [{ id: "knockout", label: "جدول حذفی" }] : []),
         { id: "schedule", label: "برنامه" },
         { id: "results", label: "نتایج" },
       ]
@@ -119,6 +120,10 @@ export default async function TournamentPage({
           players={data.players || []}
           matches={data.bracket || []}
         />
+      )}
+
+      {published && tab === "knockout" && (
+        <TournamentMatchesView mode="knockout" format={t.format} matches={data.bracket || []} />
       )}
 
       {published && tab === "schedule" && (

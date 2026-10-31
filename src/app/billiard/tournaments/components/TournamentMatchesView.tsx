@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/app/lib/billiard/auth";
 import { numericGroupCode } from "@/app/lib/billiard/groupCode";
+import { formatMatchDate, indexMatches, matchSideText } from "@/app/lib/billiard/matchDisplay";
 
 type PlayerMini = {
   id?: number;
@@ -42,7 +43,7 @@ type RegRow = {
 };
 
 type Props = {
-  mode: "bracket" | "schedule" | "results" | "players";
+  mode: "bracket" | "knockout" | "schedule" | "results" | "players";
   format?: string;
   groupCount?: number | null;
   players?: RegRow[];
@@ -65,25 +66,6 @@ function Avatar({ player, size = 36 }: { player?: PlayerMini; size?: number }) {
       }}
     />
   );
-}
-
-function sideName(player?: PlayerMini, source?: string) {
-  return player?.full_name || source || "—";
-}
-
-function formatJalaliDate(ymd?: string | null) {
-  if (!ymd) return "";
-  const d = new Date(`${ymd}T12:00:00`);
-  if (Number.isNaN(d.getTime())) return ymd;
-  try {
-    return new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(d);
-  } catch {
-    return ymd;
-  }
 }
 
 function PlayerSide({
@@ -111,9 +93,17 @@ function PlayerSide({
   );
 }
 
-function MatchFaceOff({ m, myId }: { m: MatchRow; myId?: number | null }) {
-  const name1 = sideName(m.player1, m.player1_source?.label);
-  const name2 = sideName(m.player2, m.player2_source?.label);
+function MatchFaceOff({
+  m,
+  myId,
+  catalog,
+}: {
+  m: MatchRow;
+  myId?: number | null;
+  catalog: Map<number, MatchRow>;
+}) {
+  const name1 = matchSideText(m, 1, catalog);
+  const name2 = matchSideText(m, 2, catalog);
   const mine1 = !!myId && m.player1_id === myId;
   const mine2 = !!myId && m.player2_id === myId;
   const done = m.status === "finished" || m.status === "walkover";
@@ -141,12 +131,14 @@ function MatchFaceOff({ m, myId }: { m: MatchRow; myId?: number | null }) {
 function MatchCard({
   m,
   myId,
+  catalog,
 }: {
   m: MatchRow;
   myId?: number | null;
+  catalog: Map<number, MatchRow>;
 }) {
   const mine = isMine(m, myId);
-  const when = [formatJalaliDate(m.scheduled_on), (m.scheduled_at || "").slice(0, 5)]
+  const when = [formatMatchDate(m.scheduled_on), (m.scheduled_at || "").slice(0, 5)]
     .filter(Boolean)
     .join(" ");
   return (
@@ -183,7 +175,7 @@ function MatchCard({
           <span className="text-[13px] font-bold leading-5 text-slate-100">{when}</span>
         )}
       </div>
-      <MatchFaceOff m={m} myId={myId} />
+      <MatchFaceOff m={m} myId={myId} catalog={catalog} />
     </div>
   );
 }
@@ -281,7 +273,15 @@ function GroupCards({
   );
 }
 
-function KnockoutTree({ matches, myId }: { matches: MatchRow[]; myId?: number | null }) {
+function KnockoutTree({
+  matches,
+  myId,
+  catalog,
+}: {
+  matches: MatchRow[];
+  myId?: number | null;
+  catalog: Map<number, MatchRow>;
+}) {
   const byRound = useMemo(() => {
     const map = new Map<number, MatchRow[]>();
     for (const m of matches) {
@@ -315,7 +315,7 @@ function KnockoutTree({ matches, myId }: { matches: MatchRow[]; myId?: number | 
               style={{ minHeight: Math.max(list.length, 1) * 110 }}
             >
               {list.map((m) => (
-                <MatchCard key={m.id} m={m} myId={myId} />
+                <MatchCard key={m.id} m={m} myId={myId} catalog={catalog} />
               ))}
             </div>
           </div>
@@ -344,10 +344,12 @@ function ScheduleList({
   matches,
   myId,
   myGroup,
+  catalog,
 }: {
   matches: MatchRow[];
   myId?: number | null;
   myGroup?: string | null;
+  catalog: Map<number, MatchRow>;
 }) {
   const stages = useMemo(() => {
     const byTime = (a: MatchRow, b: MatchRow) => {
@@ -385,7 +387,7 @@ function ScheduleList({
           <h2 className="border-b border-white/10 pb-2 font-display text-lg text-slate-100">{stage.title}</h2>
           <div className="grid gap-2 sm:grid-cols-2">
             {stage.items.map((m) => (
-              <MatchCard key={m.id} m={m} myId={myId} />
+              <MatchCard key={m.id} m={m} myId={myId} catalog={catalog} />
             ))}
           </div>
         </section>
@@ -394,12 +396,20 @@ function ScheduleList({
   );
 }
 
-function ResultsList({ matches, myId }: { matches: MatchRow[]; myId?: number | null }) {
+function ResultsList({
+  matches,
+  myId,
+  catalog,
+}: {
+  matches: MatchRow[];
+  myId?: number | null;
+  catalog: Map<number, MatchRow>;
+}) {
   if (!matches.length) return <p className="text-sm text-slate-500">نتیجه‌ای نیست.</p>;
   return (
     <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
       {matches.map((m) => (
-        <MatchCard key={m.id} m={m} myId={myId}  />
+        <MatchCard key={m.id} m={m} myId={myId} catalog={catalog} />
       ))}
     </div>
   );
@@ -447,6 +457,7 @@ export function TournamentMatchesView({
 }: Props) {
   const { user } = useAuth();
   const myId = user?.id ?? null;
+  const catalog = useMemo(() => indexMatches(matches), [matches]);
   const isGroupFormat = format === "group_then_elimination";
   const [groupFilter, setGroupFilter] = useState<string | null>(null);
 
@@ -489,11 +500,16 @@ export function TournamentMatchesView({
   }
 
   if (mode === "schedule") {
-    return <ScheduleList matches={matches} myId={myId} myGroup={myGroup} />;
+    return <ScheduleList matches={matches} myId={myId} myGroup={myGroup} catalog={catalog} />;
   }
 
   if (mode === "results") {
-    return <ResultsList matches={matches} myId={myId} />;
+    return <ResultsList matches={matches} myId={myId} catalog={catalog} />;
+  }
+
+  if (mode === "knockout") {
+    const list = knockoutMatches.length ? knockoutMatches : isGroupFormat ? [] : matches;
+    return <KnockoutTree matches={list} myId={myId} catalog={catalog} />;
   }
 
   // bracket
@@ -519,7 +535,7 @@ export function TournamentMatchesView({
                   ? orderedGroupMatches.filter((m) => numericGroupCode(m.group_code) === groupFilter)
                   : orderedGroupMatches
                 ).map((m) => (
-                  <MatchCard key={m.id} m={m} myId={myId} />
+                  <MatchCard key={m.id} m={m} myId={myId} catalog={catalog} />
                 ))}
               </div>
             </div>
@@ -527,19 +543,16 @@ export function TournamentMatchesView({
         </section>
       )}
 
-      <section className="space-y-3">
-        <h2 className="font-display text-xl text-slate-100">جدول حذفی</h2>
-        <KnockoutTree
-          matches={
-            isGroupFormat
-              ? knockoutMatches
-              : knockoutMatches.length
-                ? knockoutMatches
-                : matches
-          }
-          myId={myId}
-        />
-      </section>
+      {!isGroupFormat && (
+        <section className="space-y-3">
+          <h2 className="font-display text-xl text-slate-100">جدول حذفی</h2>
+          <KnockoutTree
+            matches={knockoutMatches.length ? knockoutMatches : matches}
+            myId={myId}
+            catalog={catalog}
+          />
+        </section>
+      )}
     </div>
   );
 }

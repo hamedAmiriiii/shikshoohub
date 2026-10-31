@@ -12,6 +12,12 @@ import {
 } from "@/app/lib/billiard/api";
 import { useAuth } from "@/app/lib/billiard/auth";
 import { BilliardButton } from "@/app/billiard/components/BilliardButton";
+import {
+  formatMatchWhen,
+  indexMatches,
+  matchSideText,
+  type MatchLike,
+} from "@/app/lib/billiard/matchDisplay";
 
 export default function MeClient() {
   const { user, loading, refresh } = useAuth();
@@ -28,6 +34,7 @@ export default function MeClient() {
   });
   const [regs, setRegs] = useState<any[]>([]);
   const [matches, setMatches] = useState<any[]>([]);
+  const [catalog, setCatalog] = useState<Map<number, MatchLike>>(() => new Map());
   const [msg, setMsg] = useState(sp.get("paid") === "1" ? "پرداخت با موفقیت انجام شد." : "");
   const [saving, setSaving] = useState(false);
   const [payingId, setPayingId] = useState<number | null>(null);
@@ -47,7 +54,32 @@ export default function MeClient() {
       photo_base64: "",
     });
     apiFetch<{ data: any[] }>("/me/registrations").then((d) => setRegs(d.data || [])).catch(() => {});
-    apiFetch<{ data: any[] }>("/me/matches").then((d) => setMatches(d.data || [])).catch(() => {});
+    let cancelled = false;
+    apiFetch<{ data: any[] }>("/me/matches")
+      .then(async (d) => {
+        const rows = d.data || [];
+        if (cancelled) return;
+        setMatches(rows);
+        const map = indexMatches(rows);
+        const slugs = [...new Set(rows.map((m) => m.tournament?.slug).filter(Boolean))] as string[];
+        await Promise.all(
+          slugs.map(async (slug) => {
+            try {
+              const t = await apiFetch<{ bracket?: MatchLike[] }>(`/tournaments/${slug}`, { auth: false });
+              for (const row of t.bracket || []) {
+                if (row?.id) map.set(row.id, row);
+              }
+            } catch {
+              /* اگر جدول عمومی نباشد، همان برچسب بازی قبلی نشان داده می‌شود */
+            }
+          }),
+        );
+        if (!cancelled) setCatalog(new Map(map));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   async function save(e: React.FormEvent) {
@@ -208,11 +240,10 @@ export default function MeClient() {
                 {m.tournament?.name} · {m.round_label}
               </div>
               <div>
-                {m.player1?.full_name} vs {m.player2?.full_name}
+                {matchSideText(m, 1, catalog)} <span className="text-slate-500">vs</span>{" "}
+                {matchSideText(m, 2, catalog)}
               </div>
-              <div className="text-xs text-slate-500">
-                {[m.scheduled_on, m.scheduled_at, m.table?.name].filter(Boolean).join(" · ")}
-              </div>
+              <div className="text-xs text-slate-500">{formatMatchWhen(m)}</div>
             </div>
           ))}
           {!matches.length && <p className="py-4 text-sm text-slate-500">بازی‌ای نیست.</p>}

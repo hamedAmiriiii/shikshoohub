@@ -4,11 +4,18 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch, statusLabel } from "@/app/lib/billiard/api";
 import { useAuth } from "@/app/lib/billiard/auth";
+import {
+  formatMatchWhen,
+  indexMatches,
+  matchSideText,
+  type MatchLike,
+} from "@/app/lib/billiard/matchDisplay";
 
 export default function MyMatchesPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [matches, setMatches] = useState<any[]>([]);
+  const [catalog, setCatalog] = useState<Map<number, MatchLike>>(() => new Map());
 
   useEffect(() => {
     if (!loading && !user) router.push("/billiard/login");
@@ -16,7 +23,32 @@ export default function MyMatchesPage() {
 
   useEffect(() => {
     if (!user) return;
-    apiFetch<{ data: any[] }>("/me/matches").then((d) => setMatches(d.data || [])).catch(() => {});
+    let cancelled = false;
+    apiFetch<{ data: any[] }>("/me/matches")
+      .then(async (d) => {
+        const rows = d.data || [];
+        if (cancelled) return;
+        setMatches(rows);
+        const map = indexMatches(rows);
+        const slugs = [...new Set(rows.map((m) => m.tournament?.slug).filter(Boolean))] as string[];
+        await Promise.all(
+          slugs.map(async (slug) => {
+            try {
+              const t = await apiFetch<{ bracket?: MatchLike[] }>(`/tournaments/${slug}`, { auth: false });
+              for (const row of t.bracket || []) {
+                if (row?.id) map.set(row.id, row);
+              }
+            } catch {
+              /* برچسب ذخیره‌شده روی خود بازی کافی است */
+            }
+          }),
+        );
+        if (!cancelled) setCatalog(new Map(map));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   if (loading || !user) return <p className="text-slate-400">در حال بارگذاری...</p>;
@@ -33,11 +65,10 @@ export default function MyMatchesPage() {
                 {m.tournament?.name} · {m.round_label}
               </div>
               <div className="text-slate-100">
-                {m.player1?.full_name} vs {m.player2?.full_name}
+                {matchSideText(m, 1, catalog)} <span className="text-slate-500">vs</span>{" "}
+                {matchSideText(m, 2, catalog)}
               </div>
-              <div className="text-xs text-slate-500">
-                {[m.scheduled_on, m.scheduled_at, m.table?.name].filter(Boolean).join(" · ")}
-              </div>
+              <div className="text-xs text-slate-500">{formatMatchWhen(m)}</div>
             </div>
             <div className="text-left">
               <div className="font-display text-cyan-300">
