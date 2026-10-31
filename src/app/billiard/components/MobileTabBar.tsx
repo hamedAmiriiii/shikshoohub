@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { billiardHref } from "@/app/lib/billiardHosts";
 import { useAuth } from "@/app/lib/billiard/auth";
+import { useClerkOnly } from "@/app/billiard/components/ClerkGate";
 
 const tabs = [
   { href: "/", label: "خانه", icon: "⌂" },
@@ -16,8 +17,9 @@ const tabs = [
 export function MobileTabBar() {
   const pathname = usePathname() || "";
   const { user } = useAuth();
+  const { clerkOnly } = useClerkOnly();
 
-  if (pathname.startsWith("/billiard/admin")) return null;
+  if (clerkOnly || pathname.startsWith("/billiard/admin") || pathname.startsWith("/admin")) return null;
 
   return (
     <nav className="billiard-tabbar fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-[#0b0f1a]/92 text-white backdrop-blur-xl md:hidden">

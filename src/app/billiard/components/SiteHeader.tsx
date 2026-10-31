@@ -6,6 +6,23 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/app/lib/billiard/auth";
 import { billiardHref } from "@/app/lib/billiardHosts";
 import { BilliardButton } from "@/app/billiard/components/BilliardButton";
+import { useBilliardTheme } from "@/app/billiard/components/BilliardTheme";
+import { useClerkOnly } from "@/app/billiard/components/ClerkGate";
+
+function ThemeChoice({ className }: { className: string }) {
+  const { mode, setMode } = useBilliardTheme();
+  const day = mode === "day";
+  return (
+    <button
+      type="button"
+      aria-pressed={day}
+      onClick={() => setMode(day ? "night" : "day")}
+      className={className}
+    >
+      {day ? "حالت شب" : "حالت روز"}
+    </button>
+  );
+}
 
 const links = [
   { href: "/", label: "خانه" },
@@ -20,7 +37,9 @@ const links = [
 export function SiteHeader() {
   const pathname = usePathname();
   const { user, isStaff, logout } = useAuth();
+  const { clerkOnly } = useClerkOnly();
   const [open, setOpen] = useState(false);
+  const navLinks = clerkOnly ? [{ href: "/results-desk", label: "ثبت نتایج" }] : links;
   const brand = process.env.NEXT_PUBLIC_BILLIARD_BRAND_NAME || "هیأت بیلیارد شهرستان کرمان";
 
   useEffect(() => {
@@ -45,7 +64,7 @@ export function SiteHeader() {
             {brand}
           </Link>
           <nav className="hidden items-center gap-1 lg:flex">
-            {links.map((l) => {
+            {navLinks.map((l) => {
               const href = billiardHref(l.href);
               const active = pathname === href || (l.href !== "/" && pathname?.startsWith(href));
               return (
@@ -62,6 +81,7 @@ export function SiteHeader() {
                 </Link>
               );
             })}
+            <ThemeChoice className="rounded-xl px-2.5 py-1.5 text-sm text-slate-300 transition hover:bg-white/5 hover:text-cyan-300" />
           </nav>
           <div className="flex items-center gap-2">
             <div className="hidden items-center gap-2 md:flex">
@@ -118,7 +138,7 @@ export function SiteHeader() {
             </div>
             <div className="flex-1 overflow-y-auto px-3 py-3">
               <div className="grid gap-1">
-                {links.map((l) => {
+                {navLinks.map((l) => {
                   const href = billiardHref(l.href);
                   const active = pathname === href || (l.href !== "/" && pathname?.startsWith(href));
                   return (
@@ -138,7 +158,8 @@ export function SiteHeader() {
               </div>
             </div>
             <div className="space-y-2 border-t border-white/10 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-              {isStaff && (
+              <ThemeChoice className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-right text-base text-slate-200" />
+              {isStaff && !clerkOnly && (
                 <BilliardButton href={billiardHref("/admin")} fullWidth>
                   پنل مدیریت
                 </BilliardButton>

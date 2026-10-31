@@ -235,3 +235,88 @@
     padding: 1rem;
   }
 }
+
+/* حالت روز */
+.billiard-app.theme-day {
+  color: #0f172a;
+  color-scheme: light;
+  background:
+    radial-gradient(ellipse 70% 45% at 100% -10%, rgba(14, 165, 233, 0.16), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 0% 10%, rgba(167, 139, 250, 0.14), transparent 50%),
+    linear-gradient(180deg, #f8fafc 0%, #eef3f9 100%);
+}
+.billiard-app.theme-day h1,
+.billiard-app.theme-day h2,
+.billiard-app.theme-day h3,
+.billiard-app.theme-day .text-slate-100,
+.billiard-app.theme-day .text-slate-200 {
+  color: #0f172a;
+}
+.billiard-app.theme-day .from-white.bg-clip-text {
+  background-image: linear-gradient(to left, #0f172a, #334155, #475569);
+}
+.billiard-app.theme-day .text-slate-300 {
+  color: #1e293b;
+}
+.billiard-app.theme-day .text-slate-400,
+.billiard-app.theme-day .text-slate-500,
+.billiard-app.theme-day .text-slate-600 {
+  color: #64748b;
+}
+.billiard-app.theme-day .text-cyan-200,
+.billiard-app.theme-day .text-cyan-300 {
+  color: #0e7490;
+}
+.billiard-app.theme-day .text-fuchsia-300,
+.billiard-app.theme-day .text-amber-100,
+.billiard-app.theme-day .text-amber-200 {
+  color: #9d174d;
+}
+.billiard-app.theme-day header,
+.billiard-app.theme-day footer,
+.billiard-app.theme-day .billiard-tabbar {
+  background-color: rgba(255, 255, 255, 0.94);
+  color: #0f172a;
+  border-color: rgba(15, 23, 42, 0.08);
+}
+.billiard-app.theme-day .billiard-tabbar {
+  box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.08);
+}
+.billiard-app.theme-day .card-soft {
+  background: #fff;
+  border-color: rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+}
+.billiard-app.theme-day .input {
+  background: #fff;
+  color: #0f172a;
+  border-color: rgba(15, 23, 42, 0.14);
+}
+.billiard-app.theme-day .input option {
+  background: #fff;
+  color: #0f172a;
+}
+.billiard-app.theme-day .btn-secondary {
+  background: #fff;
+  color: #0f172a;
+  border-color: rgba(15, 23, 42, 0.14);
+}
+.billiard-app.theme-day .bg-white\/5,
+.billiard-app.theme-day .bg-white\/10,
+.billiard-app.theme-day .bg-white\/\[0\.02\],
+.billiard-app.theme-day .bg-white\/\[0\.03\],
+.billiard-app.theme-day .bg-white\/\[0\.04\] {
+  background-color: rgba(15, 23, 42, 0.04);
+}
+.billiard-app.theme-day .border-white\/10,
+.billiard-app.theme-day .border-white\/15,
+.billiard-app.theme-day .divide-white\/10 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(15, 23, 42, 0.1);
+}
+.billiard-app.theme-day .bg-\[\#0b0f1a\],
+.billiard-app.theme-day .bg-\[\#0b0f1a\]\/80,
+.billiard-app.theme-day .bg-\[\#0b0f1a\]\/92,
+.billiard-app.theme-day .bg-\[\#121826\],
+.billiard-app.theme-day .bg-\[\#090d19\]\/80 {
+  background-color: #ffffff;
+}

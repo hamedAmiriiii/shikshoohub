@@ -45,7 +45,13 @@ export default function LoginPage() {
         auth: false,
       });
       loginWithToken(data.token, data.user);
-      router.push(data.user.profile_complete ? "/billiard/me" : "/billiard/me?edit=1");
+      const clerkOnly =
+        data.user.role !== "admin" &&
+        data.user.role !== "operator" &&
+        (data.user.results_tournaments?.length || 0) > 0;
+      router.push(
+        clerkOnly ? "/billiard/results-desk" : data.user.profile_complete ? "/billiard/me" : "/billiard/me?edit=1",
+      );
     } catch (err) {
       setMsg((err as ApiError).message || "خطا");
       setLoading(false);

@@ -21,6 +21,7 @@ export type BilliardSessionUser = {
   profile_complete?: boolean;
   city?: string | null;
   club?: string | null;
+  results_tournaments?: { id: number; name: string }[];
 };
 
 type AuthCtx = {

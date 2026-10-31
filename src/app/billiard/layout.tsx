@@ -4,6 +4,8 @@ import { AuthProvider } from "@/app/lib/billiard/auth";
 import { SiteHeader } from "@/app/billiard/components/SiteHeader";
 import { SiteFooter } from "@/app/billiard/components/SiteFooter";
 import { MobileTabBar } from "@/app/billiard/components/MobileTabBar";
+import { BilliardThemeProvider } from "@/app/billiard/components/BilliardTheme";
+import { ClerkGate, HideForClerk } from "@/app/billiard/components/ClerkGate";
 import { NOINDEX_ROBOTS } from "@/app/lib/seo";
 
 export const dynamic = "force-dynamic";
@@ -25,17 +27,20 @@ export const viewport: Viewport = {
 
 export default function BilliardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="billiard-app" dir="rtl">
+    <BilliardThemeProvider>
       <AuthProvider>
+        <ClerkGate />
         <SiteHeader />
         <main className="mx-auto min-h-[70vh] w-full max-w-6xl px-4 py-5 pb-28 sm:py-8 md:pb-10">
           {children}
         </main>
-        <div className="hidden md:block">
-          <SiteFooter />
-        </div>
+        <HideForClerk>
+          <div className="hidden md:block">
+            <SiteFooter />
+          </div>
+        </HideForClerk>
         <MobileTabBar />
       </AuthProvider>
-    </div>
+    </BilliardThemeProvider>
   );
 }

@@ -25,6 +25,7 @@ type TournamentForm = {
   venue: string;
   format: string;
   description: string;
+  results_clerk_phone: string;
   starts_on: string;
   registration_deadline_date: string;
   registration_deadline_time: string;
@@ -41,6 +42,7 @@ const emptyForm = (): TournamentForm => ({
   venue: "",
   format: "single_elimination",
   description: "",
+  results_clerk_phone: "",
   starts_on: "",
   registration_deadline_date: "",
   registration_deadline_time: "",
@@ -156,6 +158,7 @@ export default function AdminTournamentsPage() {
       venue: t.venue || "",
       format: t.format || "single_elimination",
       description: t.description || "",
+      results_clerk_phone: t.results_clerk_phone || "",
       starts_on: t.starts_on || "",
       registration_deadline_date: deadline.date,
       registration_deadline_time: deadline.time,
@@ -188,6 +191,7 @@ export default function AdminTournamentsPage() {
         venue: form.venue.trim() || null,
         format: form.format,
         description: form.description.trim() || null,
+        results_clerk_phone: form.results_clerk_phone.trim() || null,
         starts_on: form.starts_on || null,
         registration_deadline: registrationDeadline,
       };
@@ -324,6 +328,19 @@ export default function AdminTournamentsPage() {
           <option value="group_then_elimination">گروهی سپس حذفی</option>
         </select>
         <div className="md:col-span-2">
+          <label className="label">موبایل مسئول ثبت نتایج</label>
+          <input
+            className="input"
+            inputMode="tel"
+            placeholder="09xxxxxxxxx"
+            value={form.results_clerk_phone}
+            onChange={(e) => setForm({ ...form, results_clerk_phone: e.target.value })}
+          />
+          <p className="mt-1 text-xs text-slate-500">
+            این شماره بعد از ورود فقط صفحهٔ ثبت نتیجهٔ همین مسابقه را می‌بیند.
+          </p>
+        </div>
+        <div className="md:col-span-2">
           <label className="label">توضیحات (قبل از انتشار برای عموم دیده می‌شود)</label>
           <textarea
             className="input min-h-28"
@@ -432,6 +449,7 @@ export default function AdminTournamentsPage() {
                   {t.discipline?.name} · {statusLabel[t.status]} · {formatToman(t.fee_toman || 0)}
                   {" · "}
                   {t.is_published ? "منتشر شده" : "فقط توضیحات و ثبت‌نام"}
+                  {t.results_clerk_phone ? ` · مسئول نتایج ${t.results_clerk_phone}` : ""}
                 </div>
               </div>
             </div>
