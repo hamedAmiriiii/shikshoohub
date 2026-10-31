@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { apiFetch, type ApiError } from "@/app/lib/billiard/api";
 import { BilliardButton } from "@/app/billiard/components/BilliardButton";
 import {
@@ -105,6 +105,7 @@ export function GroupEliminationWizard({
   const [playerSearch, setPlayerSearch] = useState("");
   const [knockoutSize, setKnockoutSize] = useState("8");
   const [matchForm, setMatchForm] = useState({
+    matchNo: "",
     position: "1",
     slot1: emptySlot("player"),
     slot2: emptySlot("player"),
@@ -112,6 +113,7 @@ export function GroupEliminationWizard({
     date: "",
     time: "",
   });
+  const skipMemberSync = useRef(false);
   const [formNote, setFormNote] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const [koDrafts, setKoDrafts] = useState<
     Record<number, { slot1: string; slot2: string; tableId: string; date: string; time: string }>
@@ -133,6 +135,11 @@ export function GroupEliminationWizard({
   }, [tournament?.group_count]);
 
   useEffect(() => {
+    if (skipMemberSync.current) {
+      skipMemberSync.current = false;
+      setSelectedInGroup([]);
+      return;
+    }
     const ids = settled.filter((r) => (r.group_code || "") === activeGroup).map((r) => Number(r.player_id));
     setSelectedInGroup(ids);
   }, [settled, activeGroup]);
@@ -225,8 +232,14 @@ export function GroupEliminationWizard({
   }
 
   function openGroupEditor(code: string) {
-    setActiveGroup(code);
     setPlayerSearch("");
+    if (code === activeGroup) {
+      skipMemberSync.current = false;
+      const ids = settled.filter((r) => (r.group_code || "") === code).map((r) => Number(r.player_id));
+      setSelectedInGroup(ids);
+      return;
+    }
+    setActiveGroup(code);
   }
 
   function toggleInGroup(pid: number) {
@@ -276,7 +289,13 @@ export function GroupEliminationWizard({
         body: JSON.stringify({ group_code: activeGroup, player_ids: selectedInGroup }),
       });
       setMsg(`اعضای گروه ${activeGroup} ذخیره شد.`);
-      await onReload();
+      skipMemberSync.current = true;
+      setSelectedInGroup([]);
+      try {
+        await onReload();
+      } catch {
+        skipMemberSync.current = false;
+      }
     } catch (err) {
       setMsg((err as ApiError).message || "خطا");
     } finally {
@@ -382,6 +401,15 @@ export function GroupEliminationWizard({
       noteError("ترتیب بازی را درست وارد کنید.");
       return;
     }
+    const rawNo = toAsciiDigits(matchForm.matchNo).trim();
+    let matchNo: number | null = null;
+    if (rawNo) {
+      matchNo = Number(rawNo);
+      if (!Number.isInteger(matchNo) || matchNo < 1) {
+        noteError("شماره بازی باید یک عدد درست باشد.");
+        return;
+      }
+    }
     for (const [key, label] of [
       ["slot1", "طرف ۱"],
       ["slot2", "طرف ۲"],
@@ -406,6 +434,7 @@ export function GroupEliminationWizard({
         body: JSON.stringify({
           group_code: activeGroup,
           position: pos,
+          ...(matchNo ? { match_no: matchNo } : {}),
           slot1: toApiSlot(matchForm.slot1),
           slot2: toApiSlot(matchForm.slot2),
           table_id: tableId ? Number(tableId) : null,
@@ -419,6 +448,7 @@ export function GroupEliminationWizard({
       const savedPos = res.match?.position ?? pos + 1;
       setMatchForm((f) => ({
         ...f,
+        matchNo: "",
         position: String(Number(savedPos) + 1),
         slot1: emptySlot(f.slot1.type),
         slot2: emptySlot(f.slot2.type),
@@ -894,7 +924,7 @@ export function GroupEliminationWizard({
         <div className="card-soft space-y-2 !p-3 sm:!p-4">
           <h2 className="font-display text-xl text-slate-100">۳) بازی‌های گروه {activeGroup}</h2>
           <p className="text-sm text-slate-400">
-            برای هر طرف: بازیکن یا بازی — اگر بازی، شماره بازی + برنده/بازنده را انتخاب کنید.
+            برای هر طرف: بازیکن یا بازی — اگر بازی، شماره بازی + برنده/بازنده را انتخاب کنید. شماره بازی را می‌توانید دستی بزنید؛ خالی باشد شماره بعدی ثبت می‌شود.
           </p>
 
           <div className="w-full min-w-0 space-y-2 rounded-xl border border-cyan-400/20 bg-cyan-500/[0.04] p-2.5">
@@ -909,7 +939,15 @@ export function GroupEliminationWizard({
               </div>
             </div>
 
-            <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-[4.5rem_1fr_7.5rem_6rem_auto]">
+            <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-[4.5rem_4.5rem_1fr_7.5rem_6rem_auto]">
+              <input
+                className="input input-sm"
+                title="شماره بازی — خالی بماند شماره بعدی خودکار می‌آید"
+                placeholder="شماره"
+                inputMode="numeric"
+                value={matchForm.matchNo}
+                onChange={(e) => setMatchForm((f) => ({ ...f, matchNo: e.target.value }))}
+              />
               <input
                 className="input input-sm"
                 title="ترتیب در گروه"
@@ -961,7 +999,7 @@ export function GroupEliminationWizard({
                   </option>
                 ))}
               </select>
-              <div className="col-span-2 sm:col-span-4 lg:col-span-1">
+              <div className="col-span-2 sm:col-span-2 lg:col-span-1">
                 <BilliardButton
                   type="button"
                   loading={busy === "group-match"}
