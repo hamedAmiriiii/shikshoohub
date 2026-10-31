@@ -377,12 +377,13 @@ export function GroupEliminationWizard({
               }
             >
               <option value="">شماره بازی</option>
-              {allMatchesForSource.map((m) => (
-                <option key={m.id} value={m.match_no ?? m.id}>
-                  بازی {m.match_no ?? m.id}
-                  {m.group_code ? ` · گ${m.group_code}` : ""}
-                </option>
-              ))}
+              {groupMatches
+                .filter((m) => (m.group_code || "") === activeGroup)
+                .map((m) => (
+                  <option key={m.id} value={m.match_no ?? m.id}>
+                    بازی {m.match_no ?? m.id}
+                  </option>
+                ))}
             </select>
             <select
               className="input input-sm col-span-2 sm:col-span-1"
@@ -1121,15 +1122,6 @@ export function GroupEliminationWizard({
             <p className="px-1 text-sm text-slate-500">هنوز بازی‌ای در این گروه نیست.</p>
           )}
         </div>
-
-        {groupMatches.filter((m) => (m.group_code || "") !== activeGroup).length > 0 && (
-          <div className="w-full space-y-1.5 border-t border-white/10 pt-3">
-            <div className="px-1 text-xs text-slate-500">سایر گروه‌ها</div>
-            {groupMatches
-              .filter((m) => (m.group_code || "") !== activeGroup)
-              .map(renderGroupMatchRow)}
-          </div>
-        )}
       </section>
 
       {/* ۴. جدول حذفی — فقط بعد از بازی‌های گروهی و با دکمه ایجاد */}
