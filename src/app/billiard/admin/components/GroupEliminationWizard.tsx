@@ -49,6 +49,25 @@ function slotText(m: any, side: 1 | 2) {
   return "خالی";
 }
 
+function slotFromMatch(m: any, side: 1 | 2): SlotDraft {
+  const src = side === 1 ? m.player1_source : m.player2_source;
+  const pid = side === 1 ? m.player1_id : m.player2_id;
+  if (src?.match_no) {
+    return {
+      type: "source",
+      player_id: "",
+      match_no: String(src.match_no),
+      outcome: src.outcome === "loser" ? "loser" : "winner",
+    };
+  }
+  return {
+    type: "player",
+    player_id: pid ? String(pid) : "",
+    match_no: "",
+    outcome: "winner",
+  };
+}
+
 type Props = {
   tournamentId: string;
   tournament: any;
@@ -115,6 +134,7 @@ export function GroupEliminationWizard({
   });
   const skipMemberSync = useRef(false);
   const [formNote, setFormNote] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const [editingMatchId, setEditingMatchId] = useState<number | null>(null);
   const [koDrafts, setKoDrafts] = useState<
     Record<number, { slot1: string; slot2: string; tableId: string; date: string; time: string }>
   >({});
@@ -432,6 +452,7 @@ export function GroupEliminationWizard({
       const res = await apiFetch<{ match: any }>(`/admin/tournaments/${tournamentId}/group-matches`, {
         method: "POST",
         body: JSON.stringify({
+          ...(editingMatchId ? { match_id: editingMatchId } : {}),
           group_code: activeGroup,
           position: pos,
           ...(matchNo ? { match_no: matchNo } : {}),
@@ -446,17 +467,25 @@ export function GroupEliminationWizard({
       if (time) writeScheduleDefault(BILLIARD_LS_TIME, time);
       const savedNo = res.match?.match_no;
       const savedPos = res.match?.position ?? pos + 1;
+      const wasEdit = editingMatchId != null;
+      setEditingMatchId(null);
       setMatchForm((f) => ({
         ...f,
         matchNo: "",
-        position: String(Number(savedPos) + 1),
+        position: wasEdit ? f.position : String(Number(savedPos) + 1),
         slot1: emptySlot(f.slot1.type),
         slot2: emptySlot(f.slot2.type),
         tableId,
         date,
         time,
       }));
-      const ok = savedNo ? `بازی ${savedNo} ثبت شد.` : "بازی گروهی ثبت شد.";
+      const ok = savedNo
+        ? wasEdit
+          ? `بازی ${savedNo} ویرایش شد.`
+          : `بازی ${savedNo} ثبت شد.`
+        : wasEdit
+          ? "بازی ویرایش شد."
+          : "بازی گروهی ثبت شد.";
       setFormNote({ kind: "ok", text: ok });
       setMsg(ok);
     } catch (err) {
@@ -472,11 +501,39 @@ export function GroupEliminationWizard({
     }
   }
 
+  function beginEditMatch(m: any) {
+    if (m.group_code) setActiveGroup(String(m.group_code));
+    setEditingMatchId(m.id);
+    setFormNote(null);
+    setMatchForm({
+      matchNo: m.match_no != null ? String(m.match_no) : "",
+      position: String(m.position || 1),
+      slot1: slotFromMatch(m, 1),
+      slot2: slotFromMatch(m, 2),
+      tableId: m.table_id ? String(m.table_id) : "",
+      date: m.scheduled_on || "",
+      time: timeForUi(m.scheduled_at) || "",
+    });
+    document.getElementById("group-match-form")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function cancelEditMatch() {
+    setEditingMatchId(null);
+    setFormNote(null);
+    setMatchForm((f) => ({
+      ...f,
+      matchNo: "",
+      slot1: emptySlot("player"),
+      slot2: emptySlot("player"),
+    }));
+  }
+
   async function deleteGroupMatch(matchId: number) {
     if (!confirm("این بازی حذف شود؟")) return;
     setBusy(`del-${matchId}`);
     try {
       await apiFetch(`/admin/matches/${matchId}`, { method: "DELETE" });
+      if (editingMatchId === matchId) cancelEditMatch();
       await onReload();
     } catch (err) {
       setMsg((err as ApiError).message || "خطا");
@@ -492,7 +549,9 @@ export function GroupEliminationWizard({
     return (
       <div
         key={m.id}
-        className="grid w-full min-w-0 grid-cols-1 gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-2.5 sm:grid-cols-[auto_1fr_auto] sm:items-center"
+        className={`grid w-full min-w-0 grid-cols-1 gap-2 rounded-xl border p-2.5 sm:grid-cols-[auto_1fr_auto] sm:items-center ${
+          editingMatchId === m.id ? "border-amber-400/50 bg-amber-500/10" : "border-white/10 bg-white/[0.03]"
+        }`}
       >
         <div className="flex min-w-0 items-center gap-2">
           <span className="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md bg-fuchsia-500/20 px-1.5 text-xs font-bold text-fuchsia-300">
@@ -589,12 +648,30 @@ export function GroupEliminationWizard({
             </>
           )}
           {!done && (
+            <>
+              <button
+                type="button"
+                className="text-[10px] text-cyan-200 hover:underline"
+                onClick={() => beginEditMatch(m)}
+              >
+                ویرایش
+              </button>
+              <button
+                type="button"
+                className="text-[10px] text-rose-300 hover:underline"
+                onClick={() => deleteGroupMatch(m.id)}
+              >
+                حذف
+              </button>
+            </>
+          )}
+          {done && (
             <button
               type="button"
-              className="text-[10px] text-rose-300 hover:underline"
-              onClick={() => deleteGroupMatch(m.id)}
+              className="text-[10px] text-cyan-200 hover:underline"
+              onClick={() => beginEditMatch(m)}
             >
-              حذف
+              ویرایش
             </button>
           )}
         </div>
@@ -927,7 +1004,22 @@ export function GroupEliminationWizard({
             برای هر طرف: بازیکن یا بازی — اگر بازی، شماره بازی + برنده/بازنده را انتخاب کنید. شماره بازی را می‌توانید دستی بزنید؛ خالی باشد شماره بعدی ثبت می‌شود.
           </p>
 
-          <div className="w-full min-w-0 space-y-2 rounded-xl border border-cyan-400/20 bg-cyan-500/[0.04] p-2.5">
+          <div
+            id="group-match-form"
+            className={`w-full min-w-0 space-y-2 rounded-xl border p-2.5 ${
+              editingMatchId
+                ? "border-amber-400/40 bg-amber-500/[0.06]"
+                : "border-cyan-400/20 bg-cyan-500/[0.04]"
+            }`}
+          >
+            {editingMatchId && (
+              <div className="flex items-center justify-between gap-2 text-xs text-amber-200">
+                <span>ویرایش بازی {matchForm.matchNo || editingMatchId}</span>
+                <button type="button" className="text-slate-400 hover:underline" onClick={cancelEditMatch}>
+                  انصراف
+                </button>
+              </div>
+            )}
             <div className="grid w-full min-w-0 gap-2 lg:grid-cols-2">
               <div className="min-w-0 space-y-1">
                 <div className="text-[10px] text-slate-500">طرف ۱</div>
@@ -1009,7 +1101,7 @@ export function GroupEliminationWizard({
                     void saveGroupMatch();
                   }}
                 >
-                  ثبت
+                  {editingMatchId ? "ذخیره" : "ثبت"}
                 </BilliardButton>
               </div>
             </div>
