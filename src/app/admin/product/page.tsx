@@ -42,6 +42,36 @@ const PRODUCT_SORT_OPTIONS = [
     { value: "discount_asc", label: "کمترین تخفیف" },
 ] as const;
 
+/** قیمت خرید/فروش تومان است؛ اعشار ذخیره‌شده مثل 100000000.00 نباید در ورودی دیده شود. */
+function integerMoneyInput(value: string | number | null | undefined): string {
+  if (value == null || String(value).trim() === "") return "";
+  const n = parseFloat(
+    String(value).replace(/,/g, "").replace(/٬/g, "").replace(/\s/g, ""),
+  );
+  if (!Number.isFinite(n)) return "";
+  return String(Math.round(n));
+}
+
+/** موجودی تعدادی در دیتابیس decimal است (مثلاً 3.000) ولی باید به‌صورت عدد صحیح وارد شود. */
+function pieceQuantityInput(value: string | number | null | undefined): string {
+  if (value == null || String(value).trim() === "") return "";
+  const raw = String(value).trim().replace(/,/g, "").replace(/٬/g, "").replace(/\s/g, "");
+  const n = parseFloat(raw);
+  if (!Number.isFinite(n)) return raw;
+  if (Math.abs(n - Math.round(n)) < 0.0001) return String(Math.round(n));
+  return raw;
+}
+
+function normalizeNumericText(value: string): string {
+  return value
+    .replace(/,/g, "")
+    .replace(/٬/g, "")
+    .replace(/٫/g, ".")
+    .replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)))
+    .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)))
+    .replace(/\s/g, "");
+}
+
 export default function ListData() {
     const queryClient = useQueryClient();
     const [dataFilter, setDataFilter] = useState([]);
@@ -707,10 +737,14 @@ export default function ListData() {
           : "50",
       );
       setBarcode(product.barcode || "");
-      setPurchase_price(product.purchase_price?.toString() || "");
+      setPurchase_price(integerMoneyInput(product.purchase_price));
       setPurchaseDate(parseAccessEndToDateObject(product.purchased_on || null));
-      setSale_price(product.sale_price?.toString() || "");
-      setQuantity(product.quantity?.toString() || "");
+      setSale_price(integerMoneyInput(product.sale_price));
+      setQuantity(
+        isMeasuredProduct(product)
+          ? product.quantity?.toString() || ""
+          : pieceQuantityInput(product.quantity),
+      );
       setProfitPercentage(
         profitPercentFromPrices(product.purchase_price, product.sale_price) ?? 45,
       );
@@ -758,15 +792,18 @@ export default function ListData() {
         return;
       }
 
-      // Clean amounts: remove separators
-      const cleanPurchasePrice = purchase_price.replace(/,/g, '').replace(/٬/g, '').replace(/\s/g, '');
-      const cleanSalePrice = sale_price.replace(/,/g, '').replace(/٬/g, '').replace(/\s/g, '');
-      const cleanQuantity = quantity.replace(/,/g, '').replace(/٬/g, '').replace(/\s/g, '');
+      // Clean amounts: remove separators. قیمت‌ها تومان صحیح‌اند.
+      const cleanPurchasePrice = normalizeNumericText(purchase_price);
+      const cleanSalePrice = normalizeNumericText(sale_price);
+      const cleanQuantity = normalizeNumericText(quantity);
 
-      const purchasePriceNum = parseFloat(cleanPurchasePrice);
-      const salePriceNum = parseFloat(cleanSalePrice);
+      const purchasePriceNum = Math.round(parseFloat(cleanPurchasePrice));
+      const salePriceNum = Math.round(parseFloat(cleanSalePrice));
       const pieceStock = !isMeasuredProduct(editingProduct);
-      const quantityNum = pieceStock ? parseInt(cleanQuantity, 10) : parseFloat(cleanQuantity);
+      const parsedQuantity = parseFloat(cleanQuantity);
+      const quantityNum = pieceStock ? Math.round(parsedQuantity) : parsedQuantity;
+      const pieceQuantityIsWhole =
+        /^\d+(\.0+)?$/.test(cleanQuantity) && Math.abs(parsedQuantity - quantityNum) < 0.0001;
 
       if (isNaN(purchasePriceNum) || purchasePriceNum < 0) {
         toast.error("قیمت خرید معتبر نیست");
@@ -776,7 +813,7 @@ export default function ListData() {
         toast.error("قیمت فروش معتبر نیست");
         return;
       }
-      if (isNaN(quantityNum) || quantityNum < 0 || (pieceStock && !/^\d+$/.test(cleanQuantity))) {
+      if (isNaN(parsedQuantity) || parsedQuantity < 0 || (pieceStock && !pieceQuantityIsWhole)) {
         toast.error(pieceStock ? "موجودی محصولات تعدادی باید عدد صحیح باشد" : "موجودی معتبر نیست");
         return;
       }

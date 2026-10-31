@@ -61,7 +61,9 @@ const TextInput: React.FC<TextInput> = ({ name, defaultValue, onChange, label, v
   const formatLive = (val: string) => {
     const [intPart, fracPart] = val.split(".");
     const intFormatted = intPart ? new Intl.NumberFormat("fa-IR").format(Number(intPart)) : "";
-    if (fracPart === undefined) return intFormatted;
+    // اعشارِ فقط‌صفر (مثل 100000000.00 که از دیتابیس می‌آید) نشان داده نشود.
+    // یک صفر تنها («100.0») می‌ماند تا وسط تایپِ اعشار، ممیز پاک نشود.
+    if (fracPart === undefined || /^0{2,}$/.test(fracPart)) return intFormatted;
     const fracFormatted = fracPart.replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]);
     return `${intFormatted || "۰"}٫${fracFormatted}`;
   };
