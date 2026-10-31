@@ -59,6 +59,10 @@ type Props = {
   defaultScheduleTime: string;
   onSchedule: (matchId: number, tableId: string, date: string, time: string) => Promise<void>;
   onResult: (matchId: number) => void;
+  onClearResult: (matchId: number) => void;
+  onBeginEditResult: (m: { id: number; score1?: number | null; score2?: number | null }) => void;
+  editingResultId: number | null;
+  setEditingResultId: (id: number | null) => void;
   scores: Record<number, { s1: string; s2: string }>;
   setScores: (fn: any) => void;
   busy: string | null;
@@ -78,6 +82,10 @@ export function GroupEliminationWizard({
   defaultScheduleTime,
   onSchedule,
   onResult,
+  onClearResult,
+  onBeginEditResult,
+  editingResultId,
+  setEditingResultId,
   scores,
   setScores,
   busy,
@@ -479,13 +487,13 @@ export function GroupEliminationWizard({
             tables={tables}
             defaultDate={defaultScheduleDate}
             defaultTime={defaultScheduleTime}
-            disabled={done}
+            disabled={false}
             onChange={({ tableId, date, time }) => onSchedule(m.id, tableId, date, time)}
           />
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
-          {canResult && (
+          {(canResult || editingResultId === m.id) && (
             <>
               <input
                 className="input input-sm w-12"
@@ -515,14 +523,40 @@ export function GroupEliminationWizard({
                 sx={{ minHeight: 34, py: "4px", px: 1.25, fontSize: 12 }}
                 onClick={() => onResult(m.id)}
               >
-                نتیجه
+                {editingResultId === m.id ? "ذخیره" : "نتیجه"}
               </BilliardButton>
+              {editingResultId === m.id && (
+                <button
+                  type="button"
+                  className="text-[10px] text-slate-400 hover:underline"
+                  onClick={() => setEditingResultId(null)}
+                >
+                  انصراف
+                </button>
+              )}
             </>
           )}
-          {done && (
-            <span className="text-xs font-display text-cyan-300">
-              {m.score1} – {m.score2}
-            </span>
+          {done && editingResultId !== m.id && (
+            <>
+              <span className="text-xs font-display text-cyan-300">
+                {m.score1} – {m.score2}
+              </span>
+              <button
+                type="button"
+                className="text-[10px] text-cyan-200 hover:underline"
+                onClick={() => onBeginEditResult(m)}
+              >
+                ویرایش
+              </button>
+              <button
+                type="button"
+                className="text-[10px] text-rose-300 hover:underline"
+                disabled={busy === `clear-result-${m.id}`}
+                onClick={() => onClearResult(m.id)}
+              >
+                حذف نتیجه
+              </button>
+            </>
           )}
           {!done && (
             <button
@@ -682,6 +716,75 @@ export function GroupEliminationWizard({
           disabled={saving}
           onChange={({ tableId, date, time }) => patchKo(m, { tableId, date, time })}
         />
+        {(m.status === "finished" || m.status === "walkover" || (m.player1_id && m.player2_id)) && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {(editingResultId === m.id || (m.player1_id && m.player2_id && m.status !== "finished" && m.status !== "walkover")) && (
+              <>
+                <input
+                  className="input input-sm w-12"
+                  placeholder="۱"
+                  value={scores[m.id]?.s1 ?? ""}
+                  onChange={(e) =>
+                    setScores((prev: Record<number, { s1: string; s2: string }>) => ({
+                      ...prev,
+                      [m.id]: { s1: e.target.value, s2: prev[m.id]?.s2 || "" },
+                    }))
+                  }
+                />
+                <input
+                  className="input input-sm w-12"
+                  placeholder="۲"
+                  value={scores[m.id]?.s2 ?? ""}
+                  onChange={(e) =>
+                    setScores((prev: Record<number, { s1: string; s2: string }>) => ({
+                      ...prev,
+                      [m.id]: { s1: prev[m.id]?.s1 || "", s2: e.target.value },
+                    }))
+                  }
+                />
+                <BilliardButton
+                  type="button"
+                  loading={busy === `result-${m.id}`}
+                  sx={{ minHeight: 32, py: "2px", px: 1.25, fontSize: 12 }}
+                  onClick={() => onResult(m.id)}
+                >
+                  {editingResultId === m.id ? "ذخیره" : "نتیجه"}
+                </BilliardButton>
+                {editingResultId === m.id && (
+                  <button
+                    type="button"
+                    className="text-[10px] text-slate-400 hover:underline"
+                    onClick={() => setEditingResultId(null)}
+                  >
+                    انصراف
+                  </button>
+                )}
+              </>
+            )}
+            {(m.status === "finished" || m.status === "walkover") && editingResultId !== m.id && (
+              <>
+                <span className="text-xs font-display text-cyan-300">
+                  {m.score1} – {m.score2}
+                </span>
+                <button
+                  type="button"
+                  className="text-[10px] text-cyan-200 hover:underline"
+                  onClick={() => onBeginEditResult(m)}
+                >
+                  ویرایش
+                </button>
+                <button
+                  type="button"
+                  className="text-[10px] text-rose-300 hover:underline"
+                  disabled={busy === `clear-result-${m.id}`}
+                  onClick={() => onClearResult(m.id)}
+                >
+                  حذف نتیجه
+                </button>
+              </>
+            )}
+          </div>
+        )}
         <div className="flex justify-end pt-1">
           <BilliardButton
             type="button"

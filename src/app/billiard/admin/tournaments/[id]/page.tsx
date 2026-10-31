@@ -50,6 +50,7 @@ export default function AdminTournamentDetailPage() {
   const [tableName, setTableName] = useState("میز 1");
   const [msg, setMsg] = useState("");
   const [scores, setScores] = useState<Record<number, { s1: string; s2: string }>>({});
+  const [editingResultId, setEditingResultId] = useState<number | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [playersLoading, setPlayersLoading] = useState(false);
   const [bracketSize, setBracketSize] = useState("8");
@@ -276,12 +277,43 @@ export default function AdminTournamentDetailPage() {
         body: JSON.stringify({ score1: Number(s.s1), score2: Number(s.s2) }),
       });
       setMsg("نتیجه ثبت شد.");
+      setEditingResultId(null);
+      await load();
+      return true;
+    } catch (err) {
+      setMsg((err as ApiError).message || "خطا");
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function clearResult(matchId: number) {
+    if (!confirm("نتیجه این بازی حذف شود؟")) return;
+    setBusy(`clear-result-${matchId}`);
+    try {
+      await apiFetch(`/admin/matches/${matchId}/result`, { method: "DELETE" });
+      setScores((prev) => {
+        const next = { ...prev };
+        delete next[matchId];
+        return next;
+      });
+      setEditingResultId(null);
+      setMsg("نتیجه حذف شد.");
       await load();
     } catch (err) {
       setMsg((err as ApiError).message || "خطا");
     } finally {
       setBusy(null);
     }
+  }
+
+  function beginEditResult(m: { id: number; score1?: number | null; score2?: number | null }) {
+    setScores((prev) => ({
+      ...prev,
+      [m.id]: { s1: String(m.score1 ?? ""), s2: String(m.score2 ?? "") },
+    }));
+    setEditingResultId(m.id);
   }
 
   async function setStatus(status: string) {
@@ -479,11 +511,11 @@ export default function AdminTournamentDetailPage() {
           tables={tables}
           defaultDate={defaultScheduleDate}
           defaultTime={defaultScheduleTime}
-          disabled={done}
+          disabled={false}
           onChange={({ tableId, date, time }) => saveSchedule(m.id, tableId, date, time)}
         />
 
-        {m.player1_id && m.player2_id && !done && (
+        {((m.player1_id && m.player2_id && !done) || editingResultId === m.id) && (
           <div className="flex flex-wrap items-center gap-1.5">
             <input
               className="input input-sm w-14"
@@ -507,13 +539,39 @@ export default function AdminTournamentDetailPage() {
               sx={{ minHeight: 34, py: "4px", px: 1.25, fontSize: 12 }}
               onClick={() => saveResult(m.id)}
             >
-              نتیجه
+              {editingResultId === m.id ? "ذخیره" : "نتیجه"}
             </BilliardButton>
+            {editingResultId === m.id && (
+              <button
+                type="button"
+                className="text-[10px] text-slate-400 hover:underline"
+                onClick={() => setEditingResultId(null)}
+              >
+                انصراف
+              </button>
+            )}
           </div>
         )}
-        {done && (
-          <div className="text-xs font-display text-cyan-300">
-            {m.score1} – {m.score2}
+        {done && editingResultId !== m.id && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-display text-cyan-300">
+              {m.score1} – {m.score2}
+            </span>
+            <button
+              type="button"
+              className="text-[10px] text-cyan-200 hover:underline"
+              onClick={() => beginEditResult(m)}
+            >
+              ویرایش
+            </button>
+            <button
+              type="button"
+              className="text-[10px] text-rose-300 hover:underline"
+              disabled={busy === `clear-result-${m.id}`}
+              onClick={() => clearResult(m.id)}
+            >
+              حذف نتیجه
+            </button>
           </div>
         )}
       </div>
@@ -827,6 +885,10 @@ export default function AdminTournamentDetailPage() {
           defaultScheduleTime={defaultScheduleTime}
           onSchedule={saveSchedule}
           onResult={saveResult}
+          onClearResult={clearResult}
+          onBeginEditResult={beginEditResult}
+          editingResultId={editingResultId}
+          setEditingResultId={setEditingResultId}
           scores={scores}
           setScores={setScores}
           busy={busy}
