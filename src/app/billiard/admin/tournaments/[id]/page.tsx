@@ -57,10 +57,19 @@ export default function AdminTournamentDetailPage() {
   const [picking, setPicking] = useState<{ matchId: number; slot: 1 | 2 } | null>(null);
   const [defaultScheduleDate, setDefaultScheduleDate] = useState("");
   const [defaultScheduleTime, setDefaultScheduleTime] = useState("");
+  const [regsOpen, setRegsOpen] = useState(false);
   useEffect(() => {
     setDefaultScheduleDate(readScheduleDefault(BILLIARD_LS_DATE));
     setDefaultScheduleTime(readScheduleDefault(BILLIARD_LS_TIME));
   }, []);
+  useEffect(() => {
+    if (!msg) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setMsg("");
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [msg]);
 
   async function loadPlayers(q = "") {
     setPlayersLoading(true);
@@ -589,7 +598,32 @@ export default function AdminTournamentDetailPage() {
           {isGroupFormat ? "گروهی سپس حذفی" : "حذفی"}
         </p>
       </div>
-      {msg && <p className="text-sm text-cyan-300 whitespace-pre-wrap">{msg}</p>}
+      {msg && (
+        <div
+          className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setMsg("")}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="card-soft w-full max-w-sm space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p
+              className={`whitespace-pre-wrap text-sm leading-6 ${
+                msg.includes("خطا") ? "text-rose-200" : "text-slate-100"
+              }`}
+            >
+              {msg}
+            </p>
+            <div className="flex justify-end">
+              <BilliardButton type="button" onClick={() => setMsg("")}>
+                باشه
+              </BilliardButton>
+            </div>
+          </div>
+        </div>
+      )}
 
       {picking && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center">
@@ -687,14 +721,23 @@ export default function AdminTournamentDetailPage() {
       </section>
 
       <section className="card-soft space-y-4">
-        <div>
+        <button
+          type="button"
+          onClick={() => setRegsOpen((open) => !open)}
+          className="flex w-full items-center justify-between gap-3 text-right"
+        >
           <h2 className="font-display text-xl text-slate-100">
             ثبت‌نام‌ها ({settledRegs.length} قطعی / {regs.length} کل)
           </h2>
-          <p className="mt-1 text-sm text-slate-400">
-            یک یا چند بازیکن را تیک بزنید و دسته‌جمعی به مسابقه اضافه کنید.
-          </p>
-        </div>
+          <span className="shrink-0 rounded-lg border border-white/15 px-2.5 py-1 text-xs text-slate-300">
+            {regsOpen ? "بستن" : "باز کردن"}
+          </span>
+        </button>
+        {regsOpen && (
+        <>
+        <p className="text-sm text-slate-400">
+          یک یا چند بازیکن را تیک بزنید و دسته‌جمعی به مسابقه اضافه کنید.
+        </p>
 
         <div>
           <label className="label">جستجوی بازیکن {playersLoading ? "(در حال جستجو...)" : ""}</label>
@@ -848,6 +891,8 @@ export default function AdminTournamentDetailPage() {
           })}
           {!regs.length && <p className="py-3 text-slate-500">هنوز ثبت‌نامی نیست.</p>}
         </div>
+        </>
+        )}
       </section>
 
       {!isGroupFormat && (
