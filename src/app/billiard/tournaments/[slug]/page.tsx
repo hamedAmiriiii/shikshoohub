@@ -28,15 +28,15 @@ export default async function TournamentPage({
   if (!data) notFound();
 
   const t = data.tournament;
-  const tabs = [
-    // { id: "intro", label: "معرفی" },
-    { id: "players", label: "بازیکنان" },
-    { id: "bracket", label: "جدول" },
-    { id: "schedule", label: "برنامه" },
-    { id: "results", label: "نتایج" },
-    // { id: "rules", label: "قوانین" },
-    // { id: "stats", label: "آمار" },
-  ];
+  const published = t.is_published !== false;
+  const tabs = published
+    ? [
+        { id: "players", label: "بازیکنان" },
+        { id: "bracket", label: "جدول" },
+        { id: "schedule", label: "برنامه" },
+        { id: "results", label: "نتایج" },
+      ]
+    : [];
 
   return (
     <div className="space-y-6">
@@ -74,6 +74,17 @@ export default async function TournamentPage({
         </div>
       </div>
 
+      <div className="card-soft whitespace-pre-wrap text-sm leading-7 text-slate-300">
+        {t.description || "توضیحی برای این مسابقه ثبت نشده است."}
+      </div>
+
+      {!published && (
+        <p className="text-sm text-slate-400">
+          بازیکنان، گروه‌بندی و ساعت بازی‌ها بعد از انتشار جدول نمایش داده می‌شود. تا آن موقع فقط توضیحات و ثبت‌نام در دسترس است.
+        </p>
+      )}
+
+      {published && (
       <div className="flex flex-wrap gap-2">
         {tabs.map((tb) => (
           <Link
@@ -89,14 +100,9 @@ export default async function TournamentPage({
           </Link>
         ))}
       </div>
+      )}
 
-      {/* {tab === "intro" && (
-        <div className="card-soft prose prose-sm max-w-none whitespace-pre-wrap text-slate-300">
-          {t.description || "توضیحی ثبت نشده است."}
-        </div>
-      )} */}
-
-      {tab === "players" && (
+      {published && tab === "players" && (
         <TournamentMatchesView
           mode="players"
           format={t.format}
@@ -105,7 +111,7 @@ export default async function TournamentPage({
         />
       )}
 
-      {tab === "bracket" && (
+      {published && tab === "bracket" && (
         <TournamentMatchesView
           mode="bracket"
           format={t.format}
@@ -115,11 +121,11 @@ export default async function TournamentPage({
         />
       )}
 
-      {tab === "schedule" && (
+      {published && tab === "schedule" && (
         <TournamentMatchesView mode="schedule" matches={data.schedule || []} format={t.format} />
       )}
 
-      {tab === "results" && (
+      {published && tab === "results" && (
         <TournamentMatchesView mode="results" matches={data.results || []} format={t.format} />
       )}
     </div>

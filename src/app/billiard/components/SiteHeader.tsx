@@ -11,8 +11,6 @@ const links = [
   { href: "/", label: "خانه" },
   { href: "/tournaments", label: "مسابقات" },
   { href: "/register", label: "ثبت‌نام" },
-  { href: "/schedule", label: "برنامه" },
-  { href: "/results", label: "نتایج" },
   { href: "/ranking", label: "رنکینگ" },
   { href: "/players", label: "بازیکنان" },
   { href: "/archive", label: "آرشیو" },

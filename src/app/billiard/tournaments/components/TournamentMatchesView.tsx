@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/app/lib/billiard/auth";
+import { numericGroupCode } from "@/app/lib/billiard/groupCode";
 
 type PlayerMini = {
   id?: number;
@@ -161,10 +162,16 @@ function MatchCard({
           <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-md bg-fuchsia-500/20 px-1.5 text-[11px] font-bold text-fuchsia-300">
             {m.match_no ?? m.id}
           </span>
-          {m.group_code && (
+          {numericGroupCode(m.group_code) && (
             <span className="rounded bg-cyan-500/15 px-1.5 py-0.5 text-[10px] text-cyan-200">
-              گروه {m.group_code}
+              گروه {numericGroupCode(m.group_code)}
             </span>
+          )}
+          {m.round_label?.includes("نفر اول") && (
+            <span className="rounded bg-amber-400/15 px-1.5 py-0.5 text-[10px] text-amber-200">نفر اول</span>
+          )}
+          {m.round_label?.includes("نفر دوم") && (
+            <span className="rounded bg-amber-400/15 px-1.5 py-0.5 text-[10px] text-amber-200">نفر دوم</span>
           )}
           {mine && (
             <span className="rounded bg-amber-400/20 px-1.5 py-0.5 text-[10px] font-medium text-amber-200">
@@ -199,13 +206,15 @@ function GroupCards({
       groupCount && groupCount > 0
         ? Array.from({ length: groupCount }, (_, i) => String(i + 1))
         : [];
-    const fromPlayers = [...new Set(players.map((p) => p.group_code).filter(Boolean) as string[])].sort(
-      (a, b) => Number(a) - Number(b) || a.localeCompare(b),
-    );
-    const merged = fromCount.length ? fromCount : fromPlayers;
+    const fromPlayers = [
+      ...new Set(players.map((p) => numericGroupCode(p.group_code)).filter(Boolean)),
+    ].sort((a, b) => Number(a) - Number(b) || a.localeCompare(b));
+    const merged = fromCount.length
+      ? [...fromCount, ...fromPlayers.filter((code) => !fromCount.includes(code))]
+      : fromPlayers;
     if (!merged.length || !myId) return merged;
     const mine = merged.filter((code) =>
-      players.some((p) => p.player_id === myId && (p.group_code || "") === code),
+      players.some((p) => p.player_id === myId && numericGroupCode(p.group_code) === code),
     );
     if (!mine.length) return merged;
     return [...mine, ...merged.filter((code) => !mine.includes(code))];
@@ -218,7 +227,7 @@ function GroupCards({
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {codes.map((code) => {
-        const members = players.filter((p) => (p.group_code || "") === code);
+        const members = players.filter((p) => numericGroupCode(p.group_code) === code);
         const hasMe = myId ? members.some((m) => m.player_id === myId) : false;
         return (
           <div
@@ -318,14 +327,15 @@ function KnockoutTree({ matches, myId }: { matches: MatchRow[]; myId?: number | 
 
 function scheduleStageKey(m: MatchRow) {
   if ((m.phase || "") === "group") {
-    return `group:${m.group_code || ""}`;
+    return `group:${numericGroupCode(m.group_code)}`;
   }
   return `ko:${String(m.round ?? 0).padStart(3, "0")}`;
 }
 
 function scheduleStageTitle(m: MatchRow) {
   if ((m.phase || "") === "group") {
-    return m.group_code ? `مرحله گروهی · گروه ${m.group_code}` : "مرحله گروهی";
+    const code = numericGroupCode(m.group_code);
+    return code ? `مرحله گروهی · گروه ${code}` : "مرحله گروهی";
   }
   return m.round_label || `حذفی · دور ${m.round ?? ""}`;
 }
@@ -416,7 +426,9 @@ function FlatPlayers({ players, myId }: { players: RegRow[]; myId?: number | nul
                 {me ? " · شما" : ""}
               </div>
               <div className="text-xs text-slate-500">
-                {r.group_code ? `گروه ${r.group_code}` : r.player?.city || r.player?.club}
+                {numericGroupCode(r.group_code)
+                  ? `گروه ${numericGroupCode(r.group_code)}`
+                  : r.player?.city || r.player?.club}
               </div>
             </div>
           </Link>
@@ -440,12 +452,14 @@ export function TournamentMatchesView({
 
   const myGroup = useMemo(() => {
     if (!myId) return null;
-    const fromReg = players.find((p) => p.player_id === myId)?.group_code;
+    const fromReg = numericGroupCode(players.find((p) => p.player_id === myId)?.group_code);
     if (fromReg) return fromReg;
     return (
-      matches.find(
-        (m) => (m.phase || "") === "group" && (m.player1_id === myId || m.player2_id === myId),
-      )?.group_code || null
+      numericGroupCode(
+        matches.find(
+          (m) => (m.phase || "") === "group" && (m.player1_id === myId || m.player2_id === myId),
+        )?.group_code,
+      ) || null
     );
   }, [myId, players, matches]);
 
@@ -456,8 +470,8 @@ export function TournamentMatchesView({
   const orderedGroupMatches = useMemo(() => {
     if (!myGroup) return groupMatches;
     return [...groupMatches].sort((a, b) => {
-      const aMine = (a.group_code || "") === myGroup ? 0 : 1;
-      const bMine = (b.group_code || "") === myGroup ? 0 : 1;
+      const aMine = numericGroupCode(a.group_code) === myGroup ? 0 : 1;
+      const bMine = numericGroupCode(b.group_code) === myGroup ? 0 : 1;
       if (aMine !== bMine) return aMine - bMine;
       return (a.match_no || 0) - (b.match_no || 0);
     });
@@ -502,7 +516,7 @@ export function TournamentMatchesView({
               </h3>
               <div className="grid gap-2 sm:grid-cols-2">
                 {(groupFilter
-                  ? orderedGroupMatches.filter((m) => (m.group_code || "") === groupFilter)
+                  ? orderedGroupMatches.filter((m) => numericGroupCode(m.group_code) === groupFilter)
                   : orderedGroupMatches
                 ).map((m) => (
                   <MatchCard key={m.id} m={m} myId={myId} />

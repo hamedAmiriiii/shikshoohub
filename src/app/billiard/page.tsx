@@ -66,28 +66,11 @@ export default async function HomePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { href: "/billiard/tournaments?status=live", title: "زنده", desc: "مسابقات در حال برگزاری", color: "from-cyan-500 to-blue-500" },
-              { href: "/billiard/ranking", title: "رنکینگ", desc: "جدول امتیاز بازیکنان", color: "from-violet-500 to-fuchsia-500" },
-              { href: "/billiard/schedule", title: "برنامه", desc: "زمان‌بندی بازی‌ها", color: "from-fuchsia-500 to-pink-500" },
-              { href: "/billiard/results", title: "نتایج", desc: "آخرین اسکورها", color: "from-emerald-500 to-teal-500" },
-            ].map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 transition hover:border-cyan-400/40 hover:bg-white/[0.07]"
-              >
-                <div
-                  className={`mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${item.color} text-xs font-bold text-white`}
-                >
-                  {item.title[0]}
-                </div>
-                <div className="text-sm font-semibold text-slate-100">{item.title}</div>
-                <div className="mt-1 text-xs leading-5 text-slate-500">{item.desc}</div>
-              </Link>
-            ))}
-          </div>
+          <img
+            src="/pic/billiard.png"
+            alt="هیأت بیلیارد شهرستان کرمان"
+            className="h-auto w-full rounded-2xl border border-white/10"
+          />
         </div>
       </section>
 

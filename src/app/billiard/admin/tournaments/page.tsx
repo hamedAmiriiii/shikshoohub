@@ -24,6 +24,7 @@ type TournamentForm = {
   status: string;
   venue: string;
   format: string;
+  description: string;
   starts_on: string;
   registration_deadline_date: string;
   registration_deadline_time: string;
@@ -39,6 +40,7 @@ const emptyForm = (): TournamentForm => ({
   status: "registration_open",
   venue: "",
   format: "single_elimination",
+  description: "",
   starts_on: "",
   registration_deadline_date: "",
   registration_deadline_time: "",
@@ -92,6 +94,7 @@ export default function AdminTournamentsPage() {
   const [removePoster, setRemovePoster] = useState(false);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
+  const [publishingId, setPublishingId] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const deadlineTimeOptions = useMemo(() => {
@@ -152,6 +155,7 @@ export default function AdminTournamentsPage() {
       status: t.status || "registration_open",
       venue: t.venue || "",
       format: t.format || "single_elimination",
+      description: t.description || "",
       starts_on: t.starts_on || "",
       registration_deadline_date: deadline.date,
       registration_deadline_time: deadline.time,
@@ -183,6 +187,7 @@ export default function AdminTournamentsPage() {
         status: form.status,
         venue: form.venue.trim() || null,
         format: form.format,
+        description: form.description.trim() || null,
         starts_on: form.starts_on || null,
         registration_deadline: registrationDeadline,
       };
@@ -208,6 +213,30 @@ export default function AdminTournamentsPage() {
       setMsg((err as ApiError).message || "خطا");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function togglePublish(t: any) {
+    const next = !t.is_published;
+    if (
+      !next &&
+      !confirm("بازیکنان، گروه‌بندی و ساعت بازی‌ها از دید عموم برداشته شود؟ توضیحات و ثبت‌نام می‌ماند.")
+    ) {
+      return;
+    }
+    setPublishingId(t.id);
+    setMsg("");
+    try {
+      const res = await apiFetch<{ message?: string }>(`/admin/tournaments/${t.id}/publish`, {
+        method: "POST",
+        body: JSON.stringify({ published: next }),
+      });
+      setMsg(res.message || (next ? "منتشر شد." : "از دید عموم برداشته شد."));
+      await load();
+    } catch (err) {
+      setMsg((err as ApiError).message || "خطا در انتشار");
+    } finally {
+      setPublishingId(null);
     }
   }
 
@@ -294,6 +323,15 @@ export default function AdminTournamentsPage() {
           <option value="single_elimination">حذفی</option>
           <option value="group_then_elimination">گروهی سپس حذفی</option>
         </select>
+        <div className="md:col-span-2">
+          <label className="label">توضیحات (قبل از انتشار برای عموم دیده می‌شود)</label>
+          <textarea
+            className="input min-h-28"
+            placeholder="معرفی مسابقه، محل، شرایط ثبت‌نام..."
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+          />
+        </div>
 
         <JalaliDateField
           label="تاریخ شروع"
@@ -392,10 +430,20 @@ export default function AdminTournamentsPage() {
                 <div className="font-medium text-slate-100">{t.name}</div>
                 <div className="text-xs text-slate-500">
                   {t.discipline?.name} · {statusLabel[t.status]} · {formatToman(t.fee_toman || 0)}
+                  {" · "}
+                  {t.is_published ? "منتشر شده" : "فقط توضیحات و ثبت‌نام"}
                 </div>
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
+              <BilliardButton
+                type="button"
+                variant={t.is_published ? "secondary" : "primary"}
+                loading={publishingId === t.id}
+                onClick={() => togglePublish(t)}
+              >
+                {t.is_published ? "لغو انتشار" : "انتشار"}
+              </BilliardButton>
               <BilliardButton type="button" variant="secondary" onClick={() => startEdit(t)}>
                 ویرایش
               </BilliardButton>

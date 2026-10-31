@@ -19,6 +19,9 @@ import DatePicker from "react-multi-date-picker";
 import DateObject from "react-date-object";
 import persian from "react-date-object/calendars/persian";
 import persian_fa from "react-date-object/locales/persian_fa";
+import { GroupDoubleElimProposal } from "@/app/billiard/admin/components/GroupDoubleElimProposal";
+import type { DeMatch } from "@/app/billiard/admin/lib/groupDoubleElimination";
+import { numericGroupCode } from "@/app/lib/billiard/groupCode";
 
 type SlotDraft = {
   type: "player" | "source";
@@ -39,6 +42,13 @@ function toApiSlot(s: SlotDraft) {
     return { type: "source", match_no: Number(s.match_no), outcome: s.outcome };
   }
   return { type: "player", player_id: s.player_id ? Number(s.player_id) : null };
+}
+
+function toDeApiSlot(slot: DeMatch["slot1"]) {
+  if (slot.type === "source") {
+    return { type: "source", match_index: slot.matchIndex, outcome: slot.outcome };
+  }
+  return { type: "player", player_id: slot.playerId };
 }
 
 function slotText(m: any, side: 1 | 2) {
@@ -135,6 +145,7 @@ export function GroupEliminationWizard({
   const skipMemberSync = useRef(false);
   const [formNote, setFormNote] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const [editingMatchId, setEditingMatchId] = useState<number | null>(null);
+  const [deOpen, setDeOpen] = useState(false);
   const [koDrafts, setKoDrafts] = useState<
     Record<number, { slot1: string; slot2: string; tableId: string; date: string; time: string }>
   >({});
@@ -160,7 +171,7 @@ export function GroupEliminationWizard({
       setSelectedInGroup([]);
       return;
     }
-    const ids = settled.filter((r) => (r.group_code || "") === activeGroup).map((r) => Number(r.player_id));
+    const ids = settled.filter((r) => numericGroupCode(r.group_code) === activeGroup).map((r) => Number(r.player_id));
     setSelectedInGroup(ids);
   }, [settled, activeGroup]);
 
@@ -187,8 +198,21 @@ export function GroupEliminationWizard({
   );
 
   const playersInGroup = useMemo(
-    () => settled.filter((r) => (r.group_code || "") === activeGroup),
+    () => settled.filter((r) => numericGroupCode(r.group_code) === activeGroup),
     [settled, activeGroup],
+  );
+  const orderedGroupPlayers = useMemo(
+    () =>
+      [...playersInGroup].sort((a, b) => {
+        const byName = (a.player?.full_name || "").localeCompare(b.player?.full_name || "", "fa");
+        if (byName !== 0) return byName;
+        return Number(a.player_id) - Number(b.player_id);
+      }),
+    [playersInGroup],
+  );
+  const activeGroupMatchList = useMemo(
+    () => groupMatches.filter((m) => numericGroupCode(m.group_code) === activeGroup),
+    [groupMatches, activeGroup],
   );
   const unassigned = useMemo(
     () => settled.filter((r) => !r.group_code),
@@ -211,7 +235,7 @@ export function GroupEliminationWizard({
     const locked: typeof settled = [];
     for (const r of filteredSettled) {
       const pid = Number(r.player_id);
-      const inOther = !!(r.group_code && r.group_code !== activeGroup);
+      const inOther = !!(r.group_code && numericGroupCode(r.group_code) !== activeGroup);
       const selected = selectedInGroup.includes(pid);
       if (inOther || selected) locked.push(r);
       else available.push(r);
@@ -252,10 +276,11 @@ export function GroupEliminationWizard({
   }
 
   function openGroupEditor(code: string) {
+    setDeOpen(false);
     setPlayerSearch("");
     if (code === activeGroup) {
       skipMemberSync.current = false;
-      const ids = settled.filter((r) => (r.group_code || "") === code).map((r) => Number(r.player_id));
+      const ids = settled.filter((r) => numericGroupCode(r.group_code) === code).map((r) => Number(r.player_id));
       setSelectedInGroup(ids);
       return;
     }
@@ -268,7 +293,7 @@ export function GroupEliminationWizard({
 
   function renderPlayerRow(r: any, locked: boolean) {
     const pid = Number(r.player_id);
-    const inOther = !!(r.group_code && r.group_code !== activeGroup);
+    const inOther = !!(r.group_code && numericGroupCode(r.group_code) !== activeGroup);
     const checked = selectedInGroup.includes(pid);
     return (
       <label
@@ -292,7 +317,9 @@ export function GroupEliminationWizard({
             <span className="mr-2 text-xs text-slate-500">{r.player.phone}</span>
           ) : null}
         </span>
-        {inOther && <span className="shrink-0 text-[10px] text-slate-500">گروه {r.group_code}</span>}
+        {inOther && (
+          <span className="shrink-0 text-[10px] text-slate-500">گروه {numericGroupCode(r.group_code)}</span>
+        )}
         {!inOther && checked && locked && (
           <span className="shrink-0 text-[10px] text-slate-500">گروه {activeGroup}</span>
         )}
@@ -379,7 +406,7 @@ export function GroupEliminationWizard({
             >
               <option value="">شماره بازی</option>
               {groupMatches
-                .filter((m) => (m.group_code || "") === activeGroup)
+                .filter((m) => numericGroupCode(m.group_code) === activeGroup)
                 .map((m) => (
                   <option key={m.id} value={m.match_no ?? m.id}>
                     بازی {m.match_no ?? m.id}
@@ -407,6 +434,33 @@ export function GroupEliminationWizard({
   function noteError(text: string) {
     setFormNote({ kind: "err", text });
     setMsg(text);
+  }
+
+  async function saveDoubleElimination(matches: DeMatch[], rows: { date: string; time: string }[]) {
+    setMsg("");
+    setBusy("group-de");
+    try {
+      await apiFetch(`/admin/tournaments/${tournamentId}/group-double-elimination`, {
+        method: "POST",
+        body: JSON.stringify({
+          group_code: activeGroup,
+          matches: matches.map((match, index) => ({
+            place: match.place,
+            scheduled_on: toAsciiDigits(rows[index]?.date || ""),
+            scheduled_at: timeForApi(rows[index]?.time || ""),
+            slot1: toDeApiSlot(match.slot1),
+            slot2: toDeApiSlot(match.slot2),
+          })),
+        }),
+      });
+      setDeOpen(false);
+      setMsg(`بازی‌های دوحذفی گروه ${activeGroup} ثبت شد.`);
+      await onReload();
+    } catch (err) {
+      setMsg((err as ApiError).message || "خطا در ثبت بازی‌های پیشنهادی");
+    } finally {
+      setBusy(null);
+    }
   }
 
   async function saveGroupMatch() {
@@ -502,7 +556,7 @@ export function GroupEliminationWizard({
   }
 
   function beginEditMatch(m: any) {
-    if (m.group_code) setActiveGroup(String(m.group_code));
+    if (m.group_code) setActiveGroup(numericGroupCode(m.group_code));
     setEditingMatchId(m.id);
     setFormNote(null);
     setMatchForm({
@@ -557,6 +611,12 @@ export function GroupEliminationWizard({
           <span className="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md bg-fuchsia-500/20 px-1.5 text-xs font-bold text-fuchsia-300">
             {no}
           </span>
+          {typeof m.round_label === "string" && m.round_label.includes("نفر اول") && (
+            <span className="shrink-0 text-[10px] text-amber-200">نفر اول</span>
+          )}
+          {typeof m.round_label === "string" && m.round_label.includes("نفر دوم") && (
+            <span className="shrink-0 text-[10px] text-amber-200">نفر دوم</span>
+          )}
           <div className="min-w-0 text-xs text-slate-200">
             <div className="truncate" title={slotText(m, 1)}>
               {slotText(m, 1)}
@@ -943,7 +1003,8 @@ export function GroupEliminationWizard({
         <h2 className="font-display text-xl text-slate-100">۲) بازیکنان هر گروه</h2>
         <div className="flex flex-wrap gap-2">
           {groupCodes.map((c) => {
-            const count = settled.filter((r) => (r.group_code || "") === c).length;
+            const count = settled.filter((r) => numericGroupCode(r.group_code) === c).length;
+            const matchCount = groupMatches.filter((m) => numericGroupCode(m.group_code) === c).length;
             return (
               <button
                 key={c}
@@ -956,7 +1017,9 @@ export function GroupEliminationWizard({
                 }`}
               >
                 گروه {c}
-                <span className="mr-2 text-xs text-slate-500">({count})</span>
+                <span className="mr-2 text-xs text-slate-500">
+                  ({count} بازیکن{matchCount ? ` · ${matchCount} بازی` : ""})
+                </span>
               </button>
             );
           })}
@@ -1003,6 +1066,47 @@ export function GroupEliminationWizard({
           <p className="text-sm text-slate-400">
             برای هر طرف: بازیکن یا بازی — اگر بازی، شماره بازی + برنده/بازنده را انتخاب کنید. شماره بازی را می‌توانید دستی بزنید؛ خالی باشد شماره بعدی ثبت می‌شود.
           </p>
+          {activeGroupMatchList.length > 0 && (
+            <p className="text-sm text-cyan-200">{activeGroupMatchList.length} بازی در این گروه ثبت شده.</p>
+          )}
+          <div className="w-full space-y-1.5">
+            {activeGroupMatchList.map(renderGroupMatchRow)}
+            {!activeGroupMatchList.length && (
+              <p className="px-1 text-sm text-slate-500">هنوز بازی‌ای در این گروه نیست.</p>
+            )}
+          </div>
+          {!deOpen && (
+            <div className="flex flex-wrap items-center gap-2">
+              <BilliardButton
+                type="button"
+                disabled={orderedGroupPlayers.length < 2 || activeGroupMatchList.length > 0 || busy !== null}
+                onClick={() => setDeOpen(true)}
+              >
+                چیدن بازی‌های پیشنهادی دوحذفی
+              </BilliardButton>
+              {orderedGroupPlayers.length < 2 && (
+                <span className="text-xs text-slate-500">حداقل دو بازیکن در گروه لازم است.</span>
+              )}
+              {activeGroupMatchList.length > 0 && (
+                <span className="text-xs text-slate-500">این گروه بازی دارد؛ پیشنهاد فقط برای گروه خالی است.</span>
+              )}
+            </div>
+          )}
+          {deOpen && (
+            <GroupDoubleElimProposal
+              key={`${activeGroup}:${orderedGroupPlayers.map((player) => player.player_id).join("-")}`}
+              groupCode={activeGroup}
+              players={orderedGroupPlayers.map((player) => ({
+                id: Number(player.player_id),
+                name: player.player?.full_name || "بازیکن",
+              }))}
+              defaultDate={defaultScheduleDate}
+              defaultTime={defaultScheduleTime}
+              busy={busy === "group-de"}
+              onClose={() => setDeOpen(false)}
+              onConfirm={saveDoubleElimination}
+            />
+          )}
 
           <div
             id="group-match-form"
@@ -1113,14 +1217,6 @@ export function GroupEliminationWizard({
           </div>
         </div>
 
-        <div className="w-full space-y-1.5">
-          {groupMatches
-            .filter((m) => (m.group_code || "") === activeGroup)
-            .map(renderGroupMatchRow)}
-          {!groupMatches.filter((m) => (m.group_code || "") === activeGroup).length && (
-            <p className="px-1 text-sm text-slate-500">هنوز بازی‌ای در این گروه نیست.</p>
-          )}
-        </div>
       </section>
 
       {/* ۴. جدول حذفی — فقط بعد از بازی‌های گروهی و با دکمه ایجاد */}
