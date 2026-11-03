@@ -57,7 +57,12 @@ import { DocumentPaymentChips, documentNeedsSettle } from "@/app/admin/DocumentP
 import DocumentPaymentSettleDialog from "@/app/admin/DocumentPaymentSettleDialog";
 import ShopAccountSelect from "@/app/admin/ShopAccountSelect";
 import { CHEQUE_DATE_PICKER_Z, chequeDatePickerBoxSx } from "@/app/admin/cheques/ChequeFormSheet";
-import { dateObjectToPayload, parseAmount, todayJalaliDateObject } from "@/app/lib/cheques";
+import {
+  dateObjectToPayload,
+  parseAmount,
+  parseJalaliDateString,
+  todayJalaliDateObject,
+} from "@/app/lib/cheques";
 import BottomSheet from "@/app/coponent/BottomSheet";
 import { adminButtonStartIconSx } from "@/app/admin/theme/adminTheme";
 import {
@@ -330,6 +335,7 @@ export default function ExpensesPage() {
   const [accountingAccountId, setAccountingAccountId] = useState<number | null>(null);
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
+  const [expenseDate, setExpenseDate] = useState<DateObject | null>(() => todayJalaliDateObject());
   const [userName, setUserName] = useState("");
   const [paymentForm, setPaymentForm] = useState<DocumentPaymentFormState>(emptyDocumentPaymentForm);
   const [vatForm, setVatForm] = useState<PurchaseVatFormState>(emptyPurchaseVatForm);
@@ -472,6 +478,7 @@ export default function ExpensesPage() {
     setAccountingAccountId(null);
     setTitle("");
     setAmount("");
+    setExpenseDate(todayJalaliDateObject());
     setPaymentForm(emptyDocumentPaymentForm());
     setVatForm(emptyPurchaseVatForm());
     setBeneficiaryId("");
@@ -487,6 +494,7 @@ export default function ExpensesPage() {
 
   const openCreate = () => {
     resetForm();
+    setExpenseDate(todayJalaliDateObject());
     setOpenForm(true);
   };
 
@@ -508,6 +516,11 @@ export default function ExpensesPage() {
     setAccountingAccountId(linkedId != null ? Number(linkedId) : null);
     setTitle(expense.title || "");
     setAmount(formatNumber(expenseAmount(expense)));
+    setExpenseDate(
+      parseJalaliDateString(expense.date) ||
+        parseJalaliDateString(expense.created_at) ||
+        todayJalaliDateObject(),
+    );
     setUserName(expense.user_name || "");
     setPaymentForm({
       ...formFromDocumentPayment(expense),
@@ -560,12 +573,16 @@ export default function ExpensesPage() {
       toast.error("حساب درخت هزینه را انتخاب کنید");
       return;
     }
+    const date = dateObjectToPayload(expenseDate) ?? dateObjectToPayload(todayJalaliDateObject());
     const payload: Record<string, unknown> = {
       title: title.trim(),
       amount: amountNum,
       type: "جاری",
       user_name: userName.trim() || undefined,
     };
+    if (date) {
+      payload.date = date;
+    }
     if (accountingEnabled) {
       payload.accounting_account_id = Number(accountingAccountId);
     }
@@ -1025,7 +1042,48 @@ export default function ExpensesPage() {
           </DialogTitle>
           <DialogContent>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, mt: 0.5 }}>
-              <TextField size="small" label="عنوان" value={title} onChange={(e) => setTitle(e.target.value)} fullWidth sx={fieldSx} />
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+                  gap: 1.5,
+                  alignItems: "start",
+                }}
+              >
+                <TextField size="small" label="عنوان" value={title} onChange={(e) => setTitle(e.target.value)} fullWidth sx={fieldSx} />
+                <Box
+                  sx={{
+                    ...chequeDatePickerBoxSx,
+                    "& .rmdp-input": {
+                      ...chequeDatePickerBoxSx["& .rmdp-input"],
+                      textAlign: "right",
+                      direction: "rtl",
+                    },
+                  }}
+                >
+                  <DatePicker
+                    value={expenseDate}
+                    onChange={(d) =>
+                      setExpenseDate(d && !Array.isArray(d) ? (d as DateObject) : null)
+                    }
+                    calendar={persian}
+                    locale={persian_fa}
+                    calendarPosition="bottom-right"
+                    zIndex={CHEQUE_DATE_PICKER_Z}
+                    portal
+                    placeholder="تاریخ"
+                    className="rmdp-mobile"
+                    containerStyle={{ width: "100%" }}
+                    style={{
+                      width: "100%",
+                      height: 40,
+                      borderRadius: 8,
+                      textAlign: "right",
+                      direction: "rtl",
+                    }}
+                  />
+                </Box>
+              </Box>
               {readShopFeatures().accounting_enabled ? (
                 <Autocomplete
                   options={(() => {
