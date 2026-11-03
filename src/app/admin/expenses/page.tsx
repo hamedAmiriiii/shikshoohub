@@ -335,7 +335,7 @@ export default function ExpensesPage() {
   const [accountingAccountId, setAccountingAccountId] = useState<number | null>(null);
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
-  const [expenseDate, setExpenseDate] = useState<DateObject | null>(() => todayJalaliDateObject());
+  const [formExpenseDate, setFormExpenseDate] = useState<DateObject | null>(() => todayJalaliDateObject());
   const [userName, setUserName] = useState("");
   const [paymentForm, setPaymentForm] = useState<DocumentPaymentFormState>(emptyDocumentPaymentForm);
   const [vatForm, setVatForm] = useState<PurchaseVatFormState>(emptyPurchaseVatForm);
@@ -478,7 +478,7 @@ export default function ExpensesPage() {
     setAccountingAccountId(null);
     setTitle("");
     setAmount("");
-    setExpenseDate(todayJalaliDateObject());
+    setFormExpenseDate(todayJalaliDateObject());
     setPaymentForm(emptyDocumentPaymentForm());
     setVatForm(emptyPurchaseVatForm());
     setBeneficiaryId("");
@@ -494,7 +494,7 @@ export default function ExpensesPage() {
 
   const openCreate = () => {
     resetForm();
-    setExpenseDate(todayJalaliDateObject());
+    setFormExpenseDate(todayJalaliDateObject());
     setOpenForm(true);
   };
 
@@ -516,7 +516,7 @@ export default function ExpensesPage() {
     setAccountingAccountId(linkedId != null ? Number(linkedId) : null);
     setTitle(expense.title || "");
     setAmount(formatNumber(expenseAmount(expense)));
-    setExpenseDate(
+    setFormExpenseDate(
       parseJalaliDateString(expense.date) ||
         parseJalaliDateString(expense.created_at) ||
         todayJalaliDateObject(),
@@ -573,7 +573,7 @@ export default function ExpensesPage() {
       toast.error("حساب درخت هزینه را انتخاب کنید");
       return;
     }
-    const date = dateObjectToPayload(expenseDate) ?? dateObjectToPayload(todayJalaliDateObject());
+    const date = dateObjectToPayload(formExpenseDate) ?? dateObjectToPayload(todayJalaliDateObject());
     const payload: Record<string, unknown> = {
       title: title.trim(),
       amount: amountNum,
@@ -1062,9 +1062,9 @@ export default function ExpensesPage() {
                   }}
                 >
                   <DatePicker
-                    value={expenseDate}
+                    value={formExpenseDate}
                     onChange={(d) =>
-                      setExpenseDate(d && !Array.isArray(d) ? (d as DateObject) : null)
+                      setFormExpenseDate(d && !Array.isArray(d) ? (d as DateObject) : null)
                     }
                     calendar={persian}
                     locale={persian_fa}

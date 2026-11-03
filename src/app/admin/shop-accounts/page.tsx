@@ -13,6 +13,7 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  MenuItem,
   TextField,
   Typography,
 } from "@mui/material";
@@ -22,6 +23,7 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import HistoryIcon from "@mui/icons-material/History";
+import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import { apiRequestError } from "@/app/lib/apiRequestError/client";
 import tokenCode from "@/app/coponent/tokenCode";
@@ -38,7 +40,9 @@ import {
   type ShopAccountBalanceAdjustmentLog,
 } from "@/app/lib/shopAccounts";
 import { jalaliYmd, todayJalaliYmd } from "@/app/lib/accounting";
+import { formatAmountInput, parseAmountInput } from "@/app/lib/amountInput";
 import { todayJalaliDateObject } from "@/app/lib/cheques";
+import { gregorianApiDateFromDateObject } from "@/app/lib/shopAccess";
 import { AccountingJalaliDateField } from "@/app/admin/accounting/ui";
 import ShopAccountBalanceAdjustLog from "@/app/admin/ShopAccountBalanceAdjustLog";
 import ShopAccountHistoryDialog from "@/app/admin/ShopAccountHistoryDialog";
@@ -92,6 +96,12 @@ export default function ShopAccountsPage() {
   const [logsLoading, setLogsLoading] = useState(false);
   const [adjustLogOpen, setAdjustLogOpen] = useState(false);
   const [historyAccount, setHistoryAccount] = useState<ShopAccount | null>(null);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferFromId, setTransferFromId] = useState<number | "">("");
+  const [transferToId, setTransferToId] = useState<number | "">("");
+  const [transferAmount, setTransferAmount] = useState("");
+  const [transferTitle, setTransferTitle] = useState("");
+  const [transferDate, setTransferDate] = useState<DateObject | null>(() => todayJalaliDateObject());
 
   const loadLogs = useCallback(async () => {
     setLogsLoading(true);
@@ -158,6 +168,66 @@ export default function ShopAccountsPage() {
     setBalanceTargets(next);
     setBalanceDate(todayJalaliDateObject());
     setBalanceOpen(true);
+  };
+
+  const openTransfer = () => {
+    setTransferFromId(accounts[0]?.id ?? "");
+    setTransferToId(accounts[1]?.id ?? accounts[0]?.id ?? "");
+    setTransferAmount("");
+    setTransferTitle("");
+    setTransferDate(todayJalaliDateObject());
+    setTransferOpen(true);
+  };
+
+  const handleTransfer = async () => {
+    if (transferFromId === "" || transferToId === "") {
+      toast.error("حساب مبدأ و مقصد را انتخاب کنید");
+      return;
+    }
+    if (Number(transferFromId) === Number(transferToId)) {
+      toast.error("مبدأ و مقصد باید متفاوت باشند");
+      return;
+    }
+    const amount = parseAmountInput(transferAmount);
+    if (!amount || amount <= 0) {
+      toast.error("مبلغ معتبر نیست");
+      return;
+    }
+    setSaving(true);
+    const token = tokenCode();
+    try {
+      const date = gregorianApiDateFromDateObject(transferDate) || undefined;
+      const res = await apiRequestError(
+        "Post",
+        {},
+        {
+          from_shop_account_id: Number(transferFromId),
+          to_shop_account_id: Number(transferToId),
+          amount,
+          date,
+          title: transferTitle.trim() || undefined,
+        },
+        "/api/shop-account-transfers",
+        true,
+        true,
+        token,
+      );
+      if (res?.hasError) {
+        toast.error(getApiErrorMessage(res, "خطا در انتقال"));
+        return;
+      }
+      toast.success(
+        typeof (res as { message?: string })?.message === "string"
+          ? (res as { message: string }).message
+          : "انتقال ثبت شد",
+      );
+      setTransferOpen(false);
+      await load();
+    } catch {
+      toast.error("خطا در انتقال");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const parseToman = (raw: string): number | null => {
@@ -357,6 +427,19 @@ export default function ShopAccountsPage() {
               }}
             >
               لاگ اصلاح موجودی
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<SwapHorizIcon />}
+              onClick={openTransfer}
+              disabled={loading || accounts.length < 2}
+              sx={{
+                ...adminButtonStartIconSx,
+                color: "var(--admin-text)",
+                borderColor: "var(--admin-border)",
+              }}
+            >
+              انتقال بین حساب‌ها
             </Button>
             <Button
               variant="outlined"
@@ -622,6 +705,96 @@ export default function ShopAccountsPage() {
           account={historyAccount}
           onClose={() => setHistoryAccount(null)}
         />
+
+        <Dialog
+          open={transferOpen}
+          onClose={() => !saving && setTransferOpen(false)}
+          fullWidth
+          maxWidth="xs"
+          PaperProps={{
+            sx: {
+              bgcolor: "var(--admin-surface)",
+              color: "var(--admin-text)",
+              borderRadius: 2,
+              border: "1px solid var(--admin-border)",
+              direction: "rtl",
+            },
+          }}
+        >
+          <DialogTitle sx={{ fontWeight: 700 }}>انتقال بین حساب‌ها</DialogTitle>
+          <DialogContent>
+            <Typography sx={{ fontSize: 13, color: "var(--admin-text-muted)", mb: 2, mt: 0.5 }}>
+              مبلغ از حساب مبدأ کم و به مقصد اضافه می‌شود و سند حسابداری هم ثبت می‌گردد.
+            </Typography>
+            <TextField
+              select
+              fullWidth
+              size="small"
+              label="از حساب"
+              value={transferFromId}
+              onChange={(e) => setTransferFromId(e.target.value === "" ? "" : Number(e.target.value))}
+              sx={{ ...fieldSx, mb: 1.5 }}
+            >
+              {accounts.map((account) => (
+                <MenuItem key={account.id} value={account.id}>
+                  {account.name} — {formatNumber(account.balance)} تومان
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              fullWidth
+              size="small"
+              label="به حساب"
+              value={transferToId}
+              onChange={(e) => setTransferToId(e.target.value === "" ? "" : Number(e.target.value))}
+              sx={{ ...fieldSx, mb: 1.5 }}
+            >
+              {accounts.map((account) => (
+                <MenuItem key={account.id} value={account.id} disabled={account.id === transferFromId}>
+                  {account.name} — {formatNumber(account.balance)} تومان
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              fullWidth
+              size="small"
+              label="مبلغ"
+              value={transferAmount}
+              onChange={(e) => setTransferAmount(formatAmountInput(e.target.value))}
+              inputMode="numeric"
+              sx={{ ...fieldSx, mb: 1.5 }}
+            />
+            <TextField
+              fullWidth
+              size="small"
+              label="عنوان (اختیاری)"
+              value={transferTitle}
+              onChange={(e) => setTransferTitle(e.target.value)}
+              sx={{ ...fieldSx, mb: 1.5 }}
+            />
+            <Box>
+              <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)", mb: 0.5 }}>تاریخ</Typography>
+              <AccountingJalaliDateField value={transferDate} onChange={setTransferDate} placeholder="تاریخ" />
+            </Box>
+          </DialogContent>
+          <DialogActions sx={{ px: 2, pb: 2 }}>
+            <Button onClick={() => setTransferOpen(false)} disabled={saving} sx={{ color: "var(--admin-text-muted)" }}>
+              انصراف
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => void handleTransfer()}
+              disabled={saving}
+              sx={{
+                bgcolor: "var(--admin-accent)",
+                "&:hover": { bgcolor: "var(--admin-accent-hover)" },
+              }}
+            >
+              {saving ? "..." : "ثبت انتقال"}
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         <Dialog open={balanceOpen} onClose={() => setBalanceOpen(false)} fullWidth maxWidth="sm">
           <DialogTitle sx={{ color: "var(--admin-text)" }}>تنظیم مانده واقعی</DialogTitle>
