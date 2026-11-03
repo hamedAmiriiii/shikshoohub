@@ -6,14 +6,19 @@ import {
   formatReceiptNumber,
   formatReceiptTimeOnly,
   getPaymentTypeLabel,
+  normalizeSaleReceiptData,
   resolvePaperWidthMm,
   type ReceiptPrintStation,
   type SaleReceiptData,
   type SaleReceiptPrintSettings,
 } from "@/app/lib/saleReceiptPrint";
 
-function escapeHtml(value: string): string {
-  return value
+function receiptItems(receipt: SaleReceiptData): SaleReceiptData["items"] {
+  return Array.isArray(receipt.items) ? receipt.items : [];
+}
+
+function escapeHtml(value: unknown): string {
+  return String(value ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -161,7 +166,7 @@ function paymentHtml(receipt: SaleReceiptData, settings: SaleReceiptPrintSetting
 
 function classicHallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSettings): string {
   const shopTitle = escapeHtml(settings.shopTitle || receipt.shopName || "فاکتور فروش");
-  const items = receipt.items
+  const items = receiptItems(receipt)
     .map((item) => {
       const qtyPrice = settings.showItemUnitPrice
         ? `${ltr(formatReceiptNumber(item.quantity))} × ${ltr(formatReceiptNumber(item.unitPrice))}`
@@ -198,7 +203,7 @@ function retailHallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSet
   const shopTitle = escapeHtml(settings.shopTitle || receipt.shopName || "فاکتور فروش");
   const cashierLabel = escapeHtml(settings.cashierLabel || "صندوق‌دار");
   const unitCol = settings.showItemUnitPrice;
-  const rows = receipt.items
+  const rows = receiptItems(receipt)
     .map((item) => {
       return `<tr>
         <td style="text-align:right;font-weight:800">${escapeHtml(item.name)}</td>
@@ -236,7 +241,7 @@ function retailHallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSet
       </thead>
       <tbody>${rows}</tbody>
     </table>
-    <div class="block">جمع اقلام: ${ltr(formatReceiptNumber(receipt.items.length))}</div>
+    <div class="block">جمع اقلام: ${ltr(formatReceiptNumber(receiptItems(receipt).length))}</div>
     <div class="block">جمع فاکتور: ${ltr(formatReceiptNumber(receipt.subtotal))}</div>
     ${receipt.discount > 0 ? `<div class="block">سود شما از این خرید: ${ltr(formatReceiptNumber(receipt.discount))}</div>` : ""}
     <div style="background:#000;color:#fff;text-align:center;padding:8px 4px;margin:8px 0">
@@ -252,7 +257,7 @@ function retailHallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSet
 
 function minimalHallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSettings): string {
   const shopTitle = escapeHtml(settings.shopTitle || receipt.shopName || "فاکتور فروش");
-  const items = receipt.items
+  const items = receiptItems(receipt)
     .map((item) => {
       const qtyPrice = settings.showItemUnitPrice
         ? `${ltr(formatReceiptNumber(item.quantity))} × ${ltr(formatReceiptNumber(item.unitPrice))}`
@@ -277,7 +282,7 @@ function minimalHallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSe
 
 function boldHallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSettings): string {
   const shopTitle = escapeHtml(settings.shopTitle || receipt.shopName || "فاکتور فروش");
-  const items = receipt.items
+  const items = receiptItems(receipt)
     .map((item) => {
       const qtyPrice = settings.showItemUnitPrice
         ? `${ltr(formatReceiptNumber(item.quantity))} × ${ltr(formatReceiptNumber(item.unitPrice))}`
@@ -334,7 +339,7 @@ function prepInner(
   title: string,
 ): string {
   const shopTitle = settings.shopTitle || receipt.shopName || "";
-  const items = receipt.items
+  const items = receiptItems(receipt)
     .map((item) => {
       const note = item.note ? `<div class="bold block">یادداشت: ${escapeHtml(item.note)}</div>` : "";
       return `<div class="item"><table class="row"><tr><td class="label name">${escapeHtml(item.name)}</td><td class="value bold">× ${ltr(formatReceiptNumber(item.quantity))}</td></tr></table>${note}</div>`;
@@ -358,10 +363,11 @@ export function buildStationTicketHtml(
   settings: SaleReceiptPrintSettings,
   station: ReceiptPrintStation,
 ): string {
+  const safe = normalizeSaleReceiptData(receipt) ?? { ...receipt, items: receiptItems(receipt) };
   if (station === "hall") {
-    return wrapTicketHtml(hallInner(receipt, settings), settings);
+    return wrapTicketHtml(hallInner(safe, settings), settings);
   }
   const title =
     station === "kitchen" ? settings.kitchenTitle || "آشپزخانه" : settings.extraTitle || "بار";
-  return wrapTicketHtml(prepInner(receipt, settings, title), settings);
+  return wrapTicketHtml(prepInner(safe, settings, title), settings);
 }

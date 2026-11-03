@@ -509,9 +509,77 @@ export function resetSaleReceiptPrintSettings(): SaleReceiptPrintSettings {
   return { ...DEFAULT_SALE_RECEIPT_PRINT_SETTINGS };
 }
 
+/** جلوگیری از کرش رندر/HTML وقتی localStorage ناقص یا خراب است. */
+export function normalizeSaleReceiptData(
+  raw: Partial<SaleReceiptData> | null | undefined,
+): SaleReceiptData | null {
+  if (!raw || typeof raw !== "object") return null;
+
+  const sourceItems = Array.isArray(raw.items)
+    ? raw.items
+    : raw.items && typeof raw.items === "object"
+      ? Object.values(raw.items as Record<string, SaleReceiptItem>)
+      : [];
+
+  const items = sourceItems
+    .filter((item): item is SaleReceiptItem => item != null && typeof item === "object")
+    .map((item) => {
+      const quantity = Number(item.quantity);
+      const unitPrice = Number(item.unitPrice);
+      const lineTotal = Number(item.lineTotal);
+      return {
+        id: item.id,
+        name: item.name == null || item.name === "" ? "کالا" : String(item.name),
+        quantity: Number.isFinite(quantity) ? quantity : 0,
+        unitPrice: Number.isFinite(unitPrice) ? unitPrice : 0,
+        lineTotal: Number.isFinite(lineTotal)
+          ? lineTotal
+          : (Number.isFinite(quantity) ? quantity : 0) * (Number.isFinite(unitPrice) ? unitPrice : 0),
+        note: item.note == null || item.note === "" ? undefined : String(item.note),
+      };
+    });
+
+  const num = (value: unknown, fallback = 0) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+  };
+
+  return {
+    ...raw,
+    createdAt: raw.createdAt ? String(raw.createdAt) : new Date().toISOString(),
+    shopName: raw.shopName == null ? undefined : String(raw.shopName),
+    phone: raw.phone == null ? undefined : String(raw.phone),
+    customerName: raw.customerName == null ? undefined : String(raw.customerName),
+    cashierName: raw.cashierName == null ? undefined : String(raw.cashierName),
+    tableLabel: raw.tableLabel == null ? undefined : String(raw.tableLabel),
+    items,
+    subtotal: num(raw.subtotal),
+    discount: num(raw.discount),
+    creditUsed: num(raw.creditUsed),
+    backPrice: num(raw.backPrice),
+    finalTotal: num(raw.finalTotal),
+    payableNow: num(raw.payableNow, num(raw.finalTotal)),
+    cardAmount: raw.cardAmount == null ? undefined : num(raw.cardAmount),
+    cashAmount: raw.cashAmount == null ? undefined : num(raw.cashAmount),
+    installmentCount: raw.installmentCount == null ? undefined : num(raw.installmentCount),
+    installmentAmount: raw.installmentAmount == null ? undefined : num(raw.installmentAmount),
+    chequeNumber: raw.chequeNumber == null ? undefined : String(raw.chequeNumber),
+    footerNote: raw.footerNote == null ? undefined : String(raw.footerNote),
+    customerNote: raw.customerNote == null ? undefined : String(raw.customerNote),
+    dailyTicketNumber:
+      raw.dailyTicketNumber == null ? undefined : num(raw.dailyTicketNumber) || undefined,
+  };
+}
+
 export function saveSaleReceiptPrintData(data: SaleReceiptData): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(SALE_RECEIPT_PRINT_DATA_KEY, JSON.stringify(data));
+  try {
+    const normalized = normalizeSaleReceiptData(data);
+    if (!normalized) return;
+    localStorage.setItem(SALE_RECEIPT_PRINT_DATA_KEY, JSON.stringify(normalized));
+  } catch (error) {
+    console.warn("saveSaleReceiptPrintData failed", error);
+  }
 }
 
 export function readSaleReceiptPrintData(): SaleReceiptData | null {
@@ -519,7 +587,7 @@ export function readSaleReceiptPrintData(): SaleReceiptData | null {
   try {
     const raw = localStorage.getItem(SALE_RECEIPT_PRINT_DATA_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as SaleReceiptData;
+    return normalizeSaleReceiptData(JSON.parse(raw) as Partial<SaleReceiptData>);
   } catch {
     return null;
   }
@@ -531,7 +599,9 @@ export function clearSaleReceiptPrintData(): void {
 }
 
 export function formatReceiptNumber(num: number): string {
-  return new Intl.NumberFormat("fa-IR").format(num);
+  const n = Number(num);
+  if (!Number.isFinite(n)) return "۰";
+  return new Intl.NumberFormat("fa-IR").format(n);
 }
 
 type JalaliParts = { date: string; time: string };
@@ -616,7 +686,7 @@ async function dispatchReceiptPrintWithSettings(
   data?: SaleReceiptData | null,
 ): Promise<"silent" | "dialog" | "failed"> {
   if (typeof window === "undefined") return "dialog";
-  let receipt = data ?? readSaleReceiptPrintData();
+  let receipt = normalizeSaleReceiptData(data) ?? readSaleReceiptPrintData();
   if (receipt && receipt.dailyTicketNumber == null) {
     const stored = dailyTicketFromRecord(receipt);
     if (stored != null) receipt = { ...receipt, dailyTicketNumber: stored };
@@ -653,17 +723,21 @@ async function dispatchReceiptPrintWithSettings(
   return "dialog";
 }
 
-/** Fully silent print for POS / table orders. Never redirects — unless تک‌پرینتر بدون QZ. */
+/** Fully silent print for POS / table orders. Falls back to browser print page when QZ is unavailable. */
 export async function silentPrintSaleReceiptOrFail(
   data: SaleReceiptData,
   settings?: SaleReceiptPrintSettings,
   options?: { skipFormal?: boolean },
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const resolved = settings ?? readSaleReceiptPrintSettings();
-  saveSaleReceiptPrintData(data);
+  const receipt = normalizeSaleReceiptData(data);
+  if (!receipt) {
+    return { ok: false, message: "اطلاعات فاکتور برای چاپ موجود نیست." };
+  }
+  saveSaleReceiptPrintData(receipt);
 
   if (!options?.skipFormal) {
-    const formalRoute = tryOpenFormalSaleReceipt(data, resolved);
+    const formalRoute = tryOpenFormalSaleReceipt(receipt, resolved);
     if (formalRoute === "opened") return { ok: true };
     if (formalRoute === "missing-id") {
       return { ok: false, message: "شناسه فروش برای چاپ فاکتور رسمی پیدا نشد." };
@@ -671,7 +745,7 @@ export async function silentPrintSaleReceiptOrFail(
   }
 
   if (resolved.singlePrinterNoQz) {
-    openSaleReceiptPrintPage("/admin/print/sale", data);
+    openSaleReceiptPrintPage("/admin/print/sale", receipt);
     return { ok: true };
   }
 
@@ -680,16 +754,21 @@ export async function silentPrintSaleReceiptOrFail(
       "@/app/lib/qzSilentPrint"
     );
     if (!canSilentPrint(resolved)) {
-      return {
-        ok: false,
-        message: "برای چاپ بی‌صدا، پرینتر سالن/آشپزخانه را در تنظیمات چاپ انتخاب کنید.",
-      };
+      // بدون پرینتر QZ: پیش‌نمایش/گفتگوی چاپ مرورگر تا صفحه سیاه/خطای بی‌فایده نماند
+      openSaleReceiptPrintPage("/admin/print/sale", receipt);
+      return { ok: true };
     }
-    await silentPrintReceiptStations(data, resolved);
+    await silentPrintReceiptStations(receipt, resolved);
     return { ok: true };
   } catch (error) {
     const { qzErrorMessage } = await import("@/app/lib/qzSilentPrint");
-    return { ok: false, message: qzErrorMessage(error) };
+    // اگر QZ شکست خورد، حداقل صفحه چاپ باز شود
+    try {
+      openSaleReceiptPrintPage("/admin/print/sale", receipt);
+      return { ok: true };
+    } catch {
+      return { ok: false, message: qzErrorMessage(error) };
+    }
   }
 }
 

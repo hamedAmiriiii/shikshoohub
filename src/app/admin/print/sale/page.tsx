@@ -18,6 +18,7 @@ import {
   getEnabledReceiptPrintStations,
   printReceiptStationsSequentially,
   formatReceiptNumber,
+  normalizeSaleReceiptData,
 } from "@/app/lib/saleReceiptPrint";
 import { ReceiptTicketsBlock } from "@/app/admin/print/sale/SaleReceiptTickets";
 import { StationPrinterSettings } from "@/app/admin/print/sale/StationPrinterSettings";
@@ -45,7 +46,7 @@ function SaleReceiptPrintContent() {
 
   useEffect(() => {
     const nextSettings = listPrintMode ? readListReceiptPrintSettings() : readSaleReceiptPrintSettings();
-    const nextReceipt = readSaleReceiptPrintData();
+    const nextReceipt = normalizeSaleReceiptData(readSaleReceiptPrintData());
     setSettings(nextSettings);
     setReceipt(nextReceipt);
     if (
@@ -224,7 +225,7 @@ function SaleReceiptPrintContent() {
     <>
       <style>{printStyles}</style>
 
-      <Box sx={{ direction: "rtl", bgcolor: "var(--admin-bg-gradient)", minHeight: "100vh", p: 2, color: "var(--admin-text)" }}>
+      <Box sx={{ direction: "rtl", bgcolor: "#e8edf2", minHeight: "100vh", p: 2, color: "#111" }}>
           <Box sx={{ maxWidth: 820, mx: "auto" }}>
             <Box className="no-print" sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 2 }}>
               <Button
@@ -372,7 +373,7 @@ function SaleReceiptPrintContent() {
                       </Box>
                     </Box>
                     <Box component="tbody">
-                      {receipt.items.map((item, index) => (
+                      {(Array.isArray(receipt.items) ? receipt.items : []).map((item, index) => (
                         <Box component="tr" key={`${item.name}-${index}`}>
                           <Box
                             component="td"

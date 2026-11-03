@@ -171,8 +171,17 @@ function FormalInvoiceContent() {
       setPurchase(res.purchase || res.data?.purchase || res);
       const s = res.seller || res.data?.seller;
       const b = res.buyer || res.data?.buyer;
-      setSeller({ ...emptySeller(), ...(s || {}) });
-      setBuyer({ ...emptyBuyer(), ...(b || {}) });
+      const asParty = (base: FormalParty, row: Record<string, unknown> | null | undefined): FormalParty => {
+        const next: FormalParty = { ...base };
+        (Object.keys(base) as (keyof FormalParty)[]).forEach((key) => {
+          const value = row?.[key as string];
+          if (value == null) return;
+          next[key] = String(value);
+        });
+        return next;
+      };
+      setSeller(asParty(emptySeller(), (s || {}) as Record<string, unknown>));
+      setBuyer(asParty(emptyBuyer(), (b || {}) as Record<string, unknown>));
       if (s?.fixed_notes) setNotes(String(s.fixed_notes));
       const paymentType = (res.purchase || res)?.payment_type;
       setSaleMode(paymentType === "debt" || paymentType === "installment" || paymentType === "cheque" ? "credit" : "cash");

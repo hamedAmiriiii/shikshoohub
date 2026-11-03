@@ -1679,10 +1679,15 @@ export default function ShoppingPage() {
       return;
     }
     const settings = readSaleReceiptPrintSettings();
-    void silentPrintSaleReceiptOrFail(lastSaleReceipt, settings).then((result) => {
-      if (result.ok) return;
-      toast.warn(result.message);
-    });
+    void silentPrintSaleReceiptOrFail(lastSaleReceipt, settings)
+      .then((result) => {
+        if (result.ok) return;
+        toast.warn(result.message);
+      })
+      .catch((error) => {
+        console.warn(error);
+        toast.error("خطا در چاپ فاکتور");
+      });
   }, [lastSaleReceipt]);
 
   const resetCartAfterQueuedSale = useCallback(() => {

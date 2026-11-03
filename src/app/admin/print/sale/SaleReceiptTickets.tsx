@@ -11,11 +11,16 @@ import {
   formatReceiptTimeOnly,
   getEnabledReceiptPrintStations,
   getPaymentTypeLabel,
+  normalizeSaleReceiptData,
   resolveStationPaperWidthMm,
   type ReceiptPrintStation,
   type SaleReceiptData,
   type SaleReceiptPrintSettings,
 } from "@/app/lib/saleReceiptPrint";
+
+function safeReceiptItems(receipt: SaleReceiptData): SaleReceiptData["items"] {
+  return Array.isArray(receipt.items) ? receipt.items : [];
+}
 
 function SaleNumberLines({
   receipt,
@@ -206,7 +211,7 @@ function ClassicHallTicket({
 
       <Divider sx={{ my: 1, borderColor: "#000" }} />
 
-      {receipt.items.map((item, index) => (
+      {safeReceiptItems(receipt).map((item, index) => (
         <Box key={`${item.id ?? index}-${index}`} sx={{ mb: itemGap }}>
           <Typography
             sx={{
@@ -341,7 +346,7 @@ function RetailHallTicket({
           </tr>
         </thead>
         <tbody>
-          {receipt.items.map((item, index) => (
+          {safeReceiptItems(receipt).map((item, index) => (
             <tr key={`${item.id ?? index}-${index}`}>
               <td className="name">{item.name}</td>
               <td>{formatReceiptNumber(item.quantity)}</td>
@@ -352,7 +357,9 @@ function RetailHallTicket({
         </tbody>
       </Box>
 
-      <Typography sx={{ fontSize: `${fs}px`, mb: 0.35 }}>جمع اقلام: {formatReceiptNumber(receipt.items.length)}</Typography>
+      <Typography sx={{ fontSize: `${fs}px`, mb: 0.35 }}>
+        جمع اقلام: {formatReceiptNumber(safeReceiptItems(receipt).length)}
+      </Typography>
       <Typography sx={{ fontSize: `${fs}px`, mb: 0.35 }}>
         جمع فاکتور: {formatReceiptNumber(receipt.subtotal)}
       </Typography>
@@ -436,7 +443,7 @@ function MinimalHallTicket({
         {dash}
       </Typography>
 
-      {receipt.items.map((item, index) => (
+      {safeReceiptItems(receipt).map((item, index) => (
         <Box key={`${item.id ?? index}-${index}`} sx={{ mb: itemGap }}>
           <Typography sx={{ fontWeight: 600, fontSize: `${settings.fontSize}px` }}>{item.name}</Typography>
           <Box sx={{ display: "flex", justifyContent: "space-between" }}>
@@ -526,7 +533,7 @@ function BoldHallTicket({
         </Box>
 
         <Box sx={{ borderTop: "3px solid #111", borderBottom: "3px solid #111", py: 1, mb: 1 }}>
-          {receipt.items.map((item, index) => (
+          {safeReceiptItems(receipt).map((item, index) => (
             <Box key={`${item.id ?? index}-${index}`} sx={{ mb: itemGap }}>
               <Typography sx={{ fontWeight: 800, fontSize: `${settings.fontSize + 1}px` }}>{item.name}</Typography>
               <Box sx={{ display: "flex", justifyContent: "space-between" }}>
@@ -642,7 +649,7 @@ function PrepStationTicket({
       ) : null}
       <Divider sx={{ my: 1, borderColor: "#000" }} />
 
-      {receipt.items.map((item, index) => (
+      {safeReceiptItems(receipt).map((item, index) => (
         <Box key={`${station}-${item.id ?? index}-${index}`} sx={{ mb: itemGap }}>
           <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1, alignItems: "flex-start" }}>
             <Typography sx={{ fontWeight: 800, fontSize: `${settings.fontSize + 1}px` }}>{item.name}</Typography>
@@ -680,19 +687,23 @@ export function ReceiptTicketsBlock({
   paperWidthMm?: number;
 }) {
   const stations = getEnabledReceiptPrintStations(settings);
+  const safeReceipt = normalizeSaleReceiptData(receipt) ?? {
+    ...receipt,
+    items: safeReceiptItems(receipt),
+  };
 
   return (
     <>
       {stations.includes("hall") && (
         <HallReceiptTicket
-          receipt={receipt}
+          receipt={safeReceipt}
           settings={applyStationLayout(settings, "hall")}
           paperWidthMm={paperWidthMm ?? resolveStationPaperWidthMm(settings, "hall")}
         />
       )}
       {stations.includes("kitchen") && (
         <PrepStationTicket
-          receipt={receipt}
+          receipt={safeReceipt}
           settings={applyStationLayout(settings, "kitchen")}
           paperWidthMm={resolveStationPaperWidthMm(settings, "kitchen")}
           station="kitchen"
@@ -701,7 +712,7 @@ export function ReceiptTicketsBlock({
       )}
       {stations.includes("extra") && (
         <PrepStationTicket
-          receipt={receipt}
+          receipt={safeReceipt}
           settings={applyStationLayout(settings, "extra")}
           paperWidthMm={resolveStationPaperWidthMm(settings, "extra")}
           station="extra"
