@@ -25,9 +25,9 @@ export default async function TournamentsPage({
   const status = sp.status || "";
 
   const filters = [
-    { href: "/billiard/tournaments", label: "همه", value: "" },
-    { href: "/billiard/tournaments?status=live", label: "زنده", value: "live" },
-    { href: "/billiard/tournaments?status=registration_open", label: "ثبت‌نام باز", value: "registration_open" },
+    { href: "/billiardkerman/tournaments", label: "همه", value: "" },
+    { href: "/billiardkerman/tournaments?status=live", label: "زنده", value: "live" },
+    { href: "/billiardkerman/tournaments?status=registration_open", label: "ثبت‌نام باز", value: "registration_open" },
   ];
 
   return (

@@ -42,7 +42,7 @@ export default function MyRepairRequestsPage() {
           >
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
               <Typography fontWeight={700}>
-                #{row.id} {row.category ? `· ${row.category}` : ""}
+                #{row.id} {[row.category, row.brand].filter(Boolean).map((v) => `· ${v}`).join(" ")}
               </Typography>
               <StatusChip status={row.status} label={row.status_label} />
             </Stack>

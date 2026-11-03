@@ -12,6 +12,7 @@ const links = [
   { href: "/admin/players", label: "بازیکنان" },
   { href: "/admin/tournaments", label: "مسابقات" },
   { href: "/admin/registrations", label: "ثبت‌نام‌ها" },
+  { href: "/admin/national", label: "مسابقات کشوری" },
   { href: "/admin/news", label: "اخبار" },
   { href: "/admin/ranking", label: "رنکینگ" },
 ];

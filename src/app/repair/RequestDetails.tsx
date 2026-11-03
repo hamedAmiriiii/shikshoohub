@@ -69,11 +69,12 @@ export function RequestInfo({
 
   return (
     <Section
-      title={`درخواست #${request.id}${request.category ? ` · ${request.category}` : ""}`}
+      title={`درخواست #${request.id}${[request.category, request.brand].filter(Boolean).map((v) => ` · ${v}`).join("")}`}
       action={<StatusChip status={request.status} label={request.status_label} />}
     >
       <Typography sx={{ whiteSpace: "pre-wrap", mb: 1.5 }}>{request.description}</Typography>
       <Divider sx={{ mb: 1 }} />
+      {request.brand ? <InfoRow label="برند" value={request.brand} /> : null}
       <InfoRow label="آدرس" value={request.address} />
       {point && config && (
         <Stack sx={{ my: 1 }}>

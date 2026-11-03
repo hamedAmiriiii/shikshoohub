@@ -26,6 +26,7 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import MenuIcon from "@mui/icons-material/Menu";
 import DashboardIcon from "@mui/icons-material/DashboardOutlined";
 import CategoryIcon from "@mui/icons-material/CategoryOutlined";
+import BrandingWatermarkIcon from "@mui/icons-material/BrandingWatermarkOutlined";
 import SmsIcon from "@mui/icons-material/SmsOutlined";
 import SettingsIcon from "@mui/icons-material/SettingsOutlined";
 import BuildIcon from "@mui/icons-material/Build";
@@ -61,6 +62,7 @@ const NAV: Record<RepairRole, NavItem[]> = {
     { href: "/repair/admin/requests", label: "درخواست‌ها", icon: <ListAltIcon /> },
     { href: "/repair/admin/technicians", label: "تعمیرکاران", icon: <EngineeringIcon /> },
     { href: "/repair/admin/services", label: "نوع خدمات", icon: <CategoryIcon /> },
+    { href: "/repair/admin/brands", label: "برندها", icon: <BrandingWatermarkIcon /> },
     { href: "/repair/admin/payouts", label: "سهم و تسویه", icon: <PaymentsIcon /> },
     { href: "/repair/admin/sms", label: "پیامک‌ها", icon: <SmsIcon /> },
     { href: "/repair/admin/settings", label: "تنظیمات", icon: <SettingsIcon /> },

@@ -16,7 +16,7 @@ export type Tournament = {
 export function TournamentCard({ t }: { t: Tournament }) {
   return (
     <Link
-      href={`/billiard/tournaments/${t.slug}`}
+      href={`/billiardkerman/tournaments/${t.slug}`}
       className="group block overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur transition hover:-translate-y-0.5 hover:border-cyan-400/35 hover:bg-white/[0.07]"
     >
       <div

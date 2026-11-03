@@ -19,7 +19,7 @@ export function MobileTabBar() {
   const { user } = useAuth();
   const { clerkOnly } = useClerkOnly();
 
-  if (clerkOnly || pathname.startsWith("/billiard/admin") || pathname.startsWith("/admin")) return null;
+  if (clerkOnly || pathname.startsWith("/billiardkerman/admin") || pathname.startsWith("/admin")) return null;
 
   return (
     <nav className="billiard-tabbar fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-[#0b0f1a]/92 text-white backdrop-blur-xl md:hidden">
@@ -29,7 +29,7 @@ export function MobileTabBar() {
             tab.auth && !user ? billiardHref("/login") : billiardHref(tab.href);
           const active =
             tab.href === "/"
-              ? pathname === "/billiard" || pathname === "/billiard/"
+              ? pathname === "/billiardkerman" || pathname === "/billiardkerman/"
               : pathname === billiardHref(tab.href) ||
                 pathname.startsWith(`${billiardHref(tab.href)}/`);
           return (

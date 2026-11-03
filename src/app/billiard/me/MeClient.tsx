@@ -40,7 +40,7 @@ export default function MeClient() {
   const [payingId, setPayingId] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!loading && !user) router.push("/billiard/login");
+    if (!loading && !user) router.push("/billiardkerman/login");
   }, [loading, user, router]);
 
   useEffect(() => {
@@ -120,7 +120,7 @@ export default function MeClient() {
       const site = (process.env.NEXT_PUBLIC_SITE_URL || window.location.origin).replace(/\/$/, "");
       const pay = await apiFetch<{ payment_url: string }>(`/registrations/${registrationId}/pay`, {
         method: "POST",
-        body: JSON.stringify({ return_url: `${site}/billiard/me?paid=1` }),
+        body: JSON.stringify({ return_url: `${site}/billiardkerman/me?paid=1` }),
       });
       window.location.href = pay.payment_url;
     } catch (err) {
@@ -139,8 +139,11 @@ export default function MeClient() {
           <BilliardButton type="button" variant="secondary" onClick={() => setEdit((v) => !v)}>
             {edit ? "بستن ویرایش" : "ویرایش پروفایل"}
           </BilliardButton>
-          <BilliardButton href="/billiard/me/matches" variant="secondary">
+          <BilliardButton href="/billiardkerman/me/matches" variant="secondary">
             بازی‌های من
+          </BilliardButton>
+          <BilliardButton href="/billiardkerman/national-entry">
+            درخواست شرکت در مسابقات کشوری
           </BilliardButton>
         </div>
       </div>
@@ -203,7 +206,7 @@ export default function MeClient() {
               <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
                 <div>
                   <Link
-                    href={`/billiard/tournaments/${r.tournament?.slug}`}
+                    href={`/billiardkerman/tournaments/${r.tournament?.slug}`}
                     className="font-medium text-slate-100 hover:text-cyan-300 transition"
                   >
                     {r.tournament?.name}

@@ -12,8 +12,8 @@ function requestHosts(request: NextRequest) {
 /**
  * فقط pathname را برای metadata می‌فرستد.
  * هیچ redirectای از / به /admin نگذار — لندینگ باید روی آدرس اصلی بماند.
- * روی دامنهٔ تعمیرات (مثل omidtamir.ir) همهٔ مسیرها زیر /repair می‌روند.
- * روی billiard.webinoplus.ir همهٔ مسیرها زیر /billiard می‌روند.
+ * روی دامنهٔ تعمیرات (مثل omidtamir.ir) همهٔ مسیرها تحت /repair می‌روند.
+ * روی billiard.webinoplus.ir همهٔ مسیرها تحت /billiardkerman می‌روند.
  */
 /**
  * لینک بازاریاب منوی آنلاین → مستقیم لندینگ منو (با حفظ ?mref=).

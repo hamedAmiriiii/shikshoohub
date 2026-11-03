@@ -35,7 +35,7 @@ export default async function NewsItemPage({ params }: { params: Promise<{ slug:
 
   return (
     <div className="mx-auto max-w-3xl space-y-5 pb-10">
-      <Link href="/billiard/news" className="inline-flex min-h-10 items-center text-sm text-cyan-400 hover:text-cyan-300 transition">
+      <Link href="/billiardkerman/news" className="inline-flex min-h-10 items-center text-sm text-cyan-400 hover:text-cyan-300 transition">
         → بازگشت به اخبار
       </Link>
 

@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { billiardPathFor, isBilliardHostname } from "@/app/lib/billiardHosts";
 
-/** اگر میدلور هاست را ندید، باز هم از دامنهٔ بیلیارد به /billiard برو. */
+/** اگر میدلور هاست را ندید، باز هم از دامنهٔ بیلیارد به /billiardkerman برو. */
 export default function BilliardHostRedirect() {
   const pathname = usePathname() || "/";
 

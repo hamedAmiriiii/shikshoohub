@@ -18,7 +18,7 @@ export default function MyMatchesPage() {
   const [catalog, setCatalog] = useState<Map<number, MatchLike>>(() => new Map());
 
   useEffect(() => {
-    if (!loading && !user) router.push("/billiard/login");
+    if (!loading && !user) router.push("/billiardkerman/login");
   }, [loading, user, router]);
 
   useEffect(() => {

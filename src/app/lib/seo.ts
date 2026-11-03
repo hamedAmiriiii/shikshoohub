@@ -63,6 +63,7 @@ const NOINDEX_PREFIXES = [
   "/oil",
   "/oilservice",
   "/repair",
+  "/billiardkerman",
   "/billiard",
   "/cart",
   "/orders",

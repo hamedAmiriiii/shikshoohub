@@ -30,7 +30,7 @@ export default async function RankingPage({
           return (
             <Link
               key={d.id}
-              href={`/billiard/ranking?discipline_id=${d.id}`}
+              href={`/billiardkerman/ranking?discipline_id=${d.id}`}
               className={`rounded-xl px-3.5 py-1.5 text-sm transition ${
                 active
                   ? "bg-gradient-to-l from-cyan-500 to-violet-600 text-white"
@@ -58,7 +58,7 @@ export default async function RankingPage({
               <tr key={e.player_id} className="border-b border-white/5 text-slate-200">
                 <td className="py-3 text-cyan-400">{e.rank}</td>
                 <td>
-                  <Link href={`/billiard/players/${e.player_id}`} className="hover:text-cyan-300 transition">
+                  <Link href={`/billiardkerman/players/${e.player_id}`} className="hover:text-cyan-300 transition">
                     {e.player?.full_name}
                   </Link>
                 </td>

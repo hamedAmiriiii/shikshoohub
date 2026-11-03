@@ -31,6 +31,8 @@ export type RepairStatus =
 export type RepairRequest = {
   id: number;
   service_id: number | null;
+  brand_id?: number | null;
+  brand?: string | null;
   category: string | null;
   description: string;
   address: string;
@@ -96,10 +98,13 @@ export type RepairMapProviderSetting = "auto" | RepairMapProvider;
 
 export type RepairServiceOption = { id: number; name: string };
 
+export type RepairBrandOption = { id: number; name: string };
+
 export type RepairPublicConfig = {
   brand_name: string;
   support_phone: string;
   services: RepairServiceOption[];
+  brands?: RepairBrandOption[];
   categories: string[];
   online_payment_enabled: boolean;
   card_payment_enabled: boolean;
@@ -154,6 +159,14 @@ export type RepairAdminService = {
   is_active: boolean;
   sort_order: number;
   technicians_count: number;
+  requests_count: number;
+};
+
+export type RepairAdminBrand = {
+  id: number;
+  name: string;
+  is_active: boolean;
+  sort_order: number;
   requests_count: number;
 };
 
@@ -399,6 +412,7 @@ export const repairApi = {
   myRequests: () => repairFetch<{ requests: RepairRequest[] }>("GET", "/requests"),
   createRequest: (body: {
     service_id?: number;
+    brand_id?: number;
     category?: string;
     description: string;
     address: string;
@@ -488,6 +502,12 @@ export const repairApi = {
   adminUpdateService: (id: number, body: { name?: string; is_active?: boolean; sort_order?: number }) =>
     repairFetch<{ message: string }>("PATCH", `/admin/services/${id}`, { body }),
   adminDeleteService: (id: number) => repairFetch<{ message: string }>("DELETE", `/admin/services/${id}`),
+  adminBrands: () => repairFetch<{ brands: RepairAdminBrand[] }>("GET", "/admin/brands"),
+  adminCreateBrand: (body: { name: string; is_active?: boolean; sort_order?: number }) =>
+    repairFetch<{ message: string }>("POST", "/admin/brands", { body }),
+  adminUpdateBrand: (id: number, body: { name?: string; is_active?: boolean; sort_order?: number }) =>
+    repairFetch<{ message: string }>("PATCH", `/admin/brands/${id}`, { body }),
+  adminDeleteBrand: (id: number) => repairFetch<{ message: string }>("DELETE", `/admin/brands/${id}`),
   adminPayouts: (technicianId?: number | string) =>
     repairFetch<{ payouts: RepairPayout[] }>("GET", "/admin/payouts", { params: { technician_id: technicianId } }),
   adminCreatePayout: (body: { technician_id: number; amount: number; paid_on?: string; method?: string; note?: string }) =>

@@ -59,11 +59,11 @@ export default function RegisterClient() {
 
   async function registerFor(slug: string) {
     if (!user) {
-      router.push(`/billiard/login?next=${encodeURIComponent(`/billiard/register?tournament=${slug}`)}`);
+      router.push(`/billiardkerman/login?next=${encodeURIComponent(`/billiardkerman/register?tournament=${slug}`)}`);
       return;
     }
     if (!user.profile_complete) {
-      router.push("/billiard/me?edit=1");
+      router.push("/billiardkerman/me?edit=1");
       return;
     }
     setBusySlug(slug);
@@ -78,13 +78,13 @@ export default function RegisterClient() {
         const site = (process.env.NEXT_PUBLIC_SITE_URL || window.location.origin).replace(/\/$/, "");
         const pay = await apiFetch<{ payment_url: string }>(`/registrations/${r.id}/pay`, {
           method: "POST",
-          body: JSON.stringify({ return_url: `${site}/billiard/me?paid=1` }),
+          body: JSON.stringify({ return_url: `${site}/billiardkerman/me?paid=1` }),
         });
         window.location.href = pay.payment_url;
         return;
       }
       setMsg("ثبت‌نام با موفقیت انجام شد.");
-      router.push("/billiard/me");
+      router.push("/billiardkerman/me");
     } catch (err) {
       setMsg((err as ApiError).message || "خطا در ثبت‌نام");
       setBusySlug(null);
@@ -104,7 +104,7 @@ export default function RegisterClient() {
       {!user && (
         <p className="mb-5 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-slate-400">
           برای ثبت‌نام ابتدا{" "}
-          <Link href="/billiard/login" className="text-cyan-400 hover:text-cyan-300">
+          <Link href="/billiardkerman/login" className="text-cyan-400 hover:text-cyan-300">
             وارد شوید
           </Link>
           .
@@ -191,7 +191,7 @@ export default function RegisterClient() {
                       {expired ? "ثبت‌نام بسته است" : "غیرفعال"}
                     </button>
                   )}
-                  <BilliardButton href={`/billiard/tournaments/${t.slug}`} variant="secondary">
+                  <BilliardButton href={`/billiardkerman/tournaments/${t.slug}`} variant="secondary">
                     جزئیات
                   </BilliardButton>
                 </div>

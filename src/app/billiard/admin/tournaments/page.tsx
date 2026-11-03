@@ -248,14 +248,14 @@ export default function AdminTournamentsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h1 className="font-display text-3xl text-slate-100">مسابقات</h1>
-        <BilliardButton href="/billiard/admin/disciplines" variant="secondary">
+        <BilliardButton href="/billiardkerman/admin/disciplines" variant="secondary">
           مدیریت رشته‌ها
         </BilliardButton>
       </div>
       {!disciplines.length && (
         <p className="rounded-xl border border-fuchsia-500/30 bg-fuchsia-500/10 px-3 py-2.5 text-sm text-fuchsia-200">
           هنوز رشته‌ای تعریف نشده. اول از{" "}
-          <Link href="/billiard/admin/disciplines" className="underline">
+          <Link href="/billiardkerman/admin/disciplines" className="underline">
             بخش رشته‌ها
           </Link>{" "}
           اسنوکر و پاکت را اضافه کنید.
@@ -465,7 +465,7 @@ export default function AdminTournamentsPage() {
               <BilliardButton type="button" variant="secondary" onClick={() => startEdit(t)}>
                 ویرایش
               </BilliardButton>
-              <BilliardButton href={`/billiard/admin/tournaments/${t.id}`} variant="secondary">
+              <BilliardButton href={`/billiardkerman/admin/tournaments/${t.id}`} variant="secondary">
                 مدیریت جدول / نتیجه
               </BilliardButton>
             </div>

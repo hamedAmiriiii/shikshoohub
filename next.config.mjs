@@ -42,6 +42,16 @@ const nextConfig = {
         destination: "/landing/products/yadino",
         permanent: true,
       },
+      {
+        source: "/billiard",
+        destination: "/billiardkerman",
+        permanent: true,
+      },
+      {
+        source: "/billiard/:path*",
+        destination: "/billiardkerman/:path*",
+        permanent: true,
+      },
     ];
   },
   // PWA configuration
@@ -50,6 +60,14 @@ const nextConfig = {
       process.env.NEXT_PUBLIC_BASE_URL || "https://api.webinoo-plus.ir"
     ).replace(/\/$/, "");
     return [
+      {
+        source: "/billiardkerman",
+        destination: "/billiard",
+      },
+      {
+        source: "/billiardkerman/:path*",
+        destination: "/billiard/:path*",
+      },
       {
         source: "/api/oil/public/history/:phone",
         destination: `${api}/api/oil/public/history/:phone`,

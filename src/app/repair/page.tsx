@@ -298,7 +298,7 @@ export default function RepairLandingPage() {
                 <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                   <Typography variant="body2" fontWeight={700}>
                     #{row.id}
-                    {row.category ? ` · ${row.category}` : ""}
+                    {[row.category, row.brand].filter(Boolean).map((v) => ` · ${v}`).join("")}
                   </Typography>
                   <Typography
                     variant="caption"

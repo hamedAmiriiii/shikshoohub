@@ -159,7 +159,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
                 <div className="mb-2 flex flex-wrap justify-between gap-2">
                   <div className="font-medium text-slate-100">
                     {slug ? (
-                      <Link href={`/billiard/tournaments/${slug}`} className="hover:text-cyan-300">
+                      <Link href={`/billiardkerman/tournaments/${slug}`} className="hover:text-cyan-300">
                         {h.tournament?.name}
                       </Link>
                     ) : (

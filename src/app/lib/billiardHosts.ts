@@ -21,19 +21,37 @@ export function isBilliardHostname(raw: string | null | undefined): boolean {
   });
 }
 
+/** مسیر عمومی اپ بیلیارد (آدرس مرورگر). پوشهٔ داخلی Next همچنان app/billiard است. */
+export const BILLIARD_BASE = "/billiardkerman";
+
 /** مسیر معادل داخل اپ بیلیارد؛ null یعنی همین مسیر باید بماند. */
 export function billiardPathFor(pathname: string): string | null {
-  if (pathname === "/billiard" || pathname.startsWith("/billiard/")) return null;
+  if (pathname === BILLIARD_BASE || pathname.startsWith(`${BILLIARD_BASE}/`)) return null;
+  // لینک‌های قدیمی /billiard → /billiardkerman
+  if (pathname === "/billiard" || pathname.startsWith("/billiard/")) {
+    return pathname.replace(/^\/billiard(?=\/|$)/, BILLIARD_BASE);
+  }
   if (pathname === "/api" || pathname.startsWith("/api/")) return null;
   if (pathname === "/pay" || pathname.startsWith("/pay/")) return null;
-  return pathname === "/" ? "/billiard" : `/billiard${pathname}`;
+  return pathname === "/" ? BILLIARD_BASE : `${BILLIARD_BASE}${pathname}`;
 }
 
-export const BILLIARD_BASE = "/billiard";
-
-/** لینک داخلی اپ بیلیارد با پیشوند /billiard */
+/** لینک داخلی اپ بیلیارد با پیشوند /billiardkerman */
 export function billiardHref(path = "/"): string {
   if (!path || path === "/") return BILLIARD_BASE;
-  if (path.startsWith("/billiard/") || path === "/billiard") return path;
+  if (path === BILLIARD_BASE || path.startsWith(`${BILLIARD_BASE}/`)) return path;
+  if (path === "/billiard" || path.startsWith("/billiard/")) {
+    return path.replace(/^\/billiard(?=\/|$)/, BILLIARD_BASE);
+  }
   return `${BILLIARD_BASE}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+export function isBilliardAppPath(pathname: string | null | undefined): boolean {
+  if (!pathname) return false;
+  return (
+    pathname === BILLIARD_BASE ||
+    pathname.startsWith(`${BILLIARD_BASE}/`) ||
+    pathname === "/billiard" ||
+    pathname.startsWith("/billiard/")
+  );
 }

@@ -86,10 +86,10 @@ export default async function HomePage() {
         </div>
       ) : (
         <>
-          <Section title="مسابقات در حال برگزاری" href="/billiard/tournaments?status=live">
+          <Section title="مسابقات در حال برگزاری" href="/billiardkerman/tournaments?status=live">
             <Grid items={data.live || []} />
           </Section>
-          <Section title="مسابقات پیش‌رو" href="/billiard/tournaments">
+          <Section title="مسابقات پیش‌رو" href="/billiardkerman/tournaments">
             <Grid items={data.upcoming || []} />
           </Section>
           <section>
@@ -116,7 +116,7 @@ export default async function HomePage() {
           <section>
             <div className="mb-4 flex items-end justify-between">
               <h2 className="font-display text-2xl text-slate-100">رنکینگ برتر</h2>
-              <Link href="/billiard/ranking" className="text-sm text-cyan-400 hover:text-cyan-300 transition">
+              <Link href="/billiardkerman/ranking" className="text-sm text-cyan-400 hover:text-cyan-300 transition">
                 مشاهده کامل
               </Link>
             </div>
@@ -139,12 +139,12 @@ export default async function HomePage() {
               ))}
             </div>
           </section>
-          <Section title="اطلاعیه‌ها" href="/billiard/news">
+          <Section title="اطلاعیه‌ها" href="/billiardkerman/news">
             <div className="grid gap-2 sm:grid-cols-2">
               {(data.news || []).map((n: any) => (
                 <Link
                   key={n.id}
-                  href={`/billiard/news/${n.slug}`}
+                  href={`/billiardkerman/news/${n.slug}`}
                   className="group block overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] p-2.5 transition hover:border-cyan-400/30"
                 >
                   <NewsCover url={n.cover_url} alt={n.title} />
@@ -156,7 +156,7 @@ export default async function HomePage() {
               ))}
             </div>
           </Section>
-          <Section title="مسابقات اخیر" href="/billiard/archive">
+          <Section title="مسابقات اخیر" href="/billiardkerman/archive">
             <Grid items={data.recent || []} />
           </Section>
         </>

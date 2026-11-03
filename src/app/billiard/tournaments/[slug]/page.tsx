@@ -66,7 +66,7 @@ export default async function TournamentPage({
           </div>
           {(t.status === "registration_open" || t.status === "pre_registration") && (
             <Link
-              href={`/billiard/register?tournament=${t.slug}`}
+              href={`/billiardkerman/register?tournament=${t.slug}`}
               className="mt-6 inline-flex rounded-xl bg-gradient-to-l from-violet-600 via-fuchsia-600 to-pink-600 px-5 py-2.5 text-sm font-semibold text-white shadow-xl shadow-fuchsia-900/40 transition hover:opacity-90"
             >
               ثبت‌نام در این مسابقه
@@ -90,7 +90,7 @@ export default async function TournamentPage({
         {tabs.map((tb) => (
           <Link
             key={tb.id}
-            href={`/billiard/tournaments/${slug}?tab=${tb.id}`}
+            href={`/billiardkerman/tournaments/${slug}?tab=${tb.id}`}
             className={`rounded-xl px-3.5 py-1.5 text-sm transition ${
               tab === tb.id
                 ? "bg-gradient-to-l from-cyan-500 to-violet-600 text-white"

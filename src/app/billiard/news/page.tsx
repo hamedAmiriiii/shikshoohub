@@ -43,7 +43,7 @@ export default async function NewsPage() {
           {items.map((n: any) => (
             <Link
               key={n.id}
-              href={`/billiard/news/${n.slug}`}
+              href={`/billiardkerman/news/${n.slug}`}
               className="group block overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] p-2.5 transition hover:border-cyan-400/30"
             >
               <NewsCover url={n.cover_url} alt={n.title} />

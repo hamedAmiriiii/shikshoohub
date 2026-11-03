@@ -72,7 +72,7 @@ export function ScheduleClient({ matches }: { matches: MatchRow[] }) {
             </div>
             {m.tournament?.slug && (
               <Link
-                href={`/billiard/tournaments/${m.tournament.slug}?tab=schedule`}
+                href={`/billiardkerman/tournaments/${m.tournament.slug}?tab=schedule`}
                 className="mb-2 block truncate text-xs text-slate-400 hover:text-cyan-300"
               >
                 {m.tournament.name}

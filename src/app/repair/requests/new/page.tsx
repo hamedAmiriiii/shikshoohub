@@ -16,6 +16,7 @@ export default function NewRepairRequestPage() {
   const { config } = useRepairAuth();
   const [form, setForm] = useState({
     service_id: "",
+    brand_id: "",
     description: "",
     address: "",
     contact_name: "",
@@ -26,6 +27,7 @@ export default function NewRepairRequestPage() {
   const [busy, setBusy] = useState(false);
   const locationMode = config?.location_mode || "off";
   const realServices = (config?.services || []).filter((s) => s.id > 0);
+  const brandOptions = (config?.brands || []).filter((b) => b.id > 0);
   const useServiceIds = realServices.length > 0;
   const serviceOptions = useServiceIds
     ? realServices.map((s) => ({ value: String(s.id), label: s.name }))
@@ -60,6 +62,10 @@ export default function NewRepairRequestPage() {
       toast.error("نوع خدمت را انتخاب کنید.");
       return;
     }
+    if (brandOptions.length > 0 && !form.brand_id) {
+      toast.error("برند دستگاه را انتخاب کنید.");
+      return;
+    }
     if (form.description.trim().length < 5) {
       toast.error("مشکل را کمی کامل‌تر توضیح دهید.");
       return;
@@ -84,6 +90,7 @@ export default function NewRepairRequestPage() {
     const withLocation = locationMode !== "off" && location;
     const res = await repairApi.createRequest({
       service_id: useServiceIds && form.service_id ? Number(form.service_id) : undefined,
+      brand_id: form.brand_id ? Number(form.brand_id) : undefined,
       category: !useServiceIds && form.service_id ? form.service_id : undefined,
       description: form.description.trim(),
       address: form.address.trim(),
@@ -114,6 +121,15 @@ export default function NewRepairRequestPage() {
               {serviceOptions.map((s) => (
                 <MenuItem key={s.value} value={s.value}>
                   {s.label}
+                </MenuItem>
+              ))}
+            </TextField>
+          )}
+          {brandOptions.length > 0 && (
+            <TextField select label="برند دستگاه" value={form.brand_id} onChange={set("brand_id")} fullWidth required>
+              {brandOptions.map((b) => (
+                <MenuItem key={b.id} value={String(b.id)}>
+                  {b.name}
                 </MenuItem>
               ))}
             </TextField>

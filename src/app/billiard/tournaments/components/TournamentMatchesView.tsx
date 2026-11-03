@@ -246,7 +246,7 @@ function GroupCards({
                 return (
                   <Link
                     key={r.id}
-                    href={`/billiard/players/${r.player_id}`}
+                    href={`/billiardkerman/players/${r.player_id}`}
                     className={`flex items-center gap-2.5 rounded-xl px-2 py-1.5 transition hover:bg-white/5 ${
                       me ? "bg-amber-400/10 ring-1 ring-amber-400/30" : ""
                     }`}
@@ -424,7 +424,7 @@ function FlatPlayers({ players, myId }: { players: RegRow[]; myId?: number | nul
         return (
           <Link
             key={r.id}
-            href={`/billiard/players/${r.player_id}`}
+            href={`/billiardkerman/players/${r.player_id}`}
             className={`card-soft flex items-center gap-3 transition hover:border-cyan-400/30 ${
               me ? "border-amber-400/50 bg-amber-500/10" : ""
             }`}

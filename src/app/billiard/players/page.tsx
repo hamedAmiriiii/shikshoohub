@@ -36,7 +36,7 @@ export default async function PlayersPage({
         {(data.data || []).map((p: any) => (
           <Link
             key={p.id}
-            href={`/billiard/players/${p.id}`}
+            href={`/billiardkerman/players/${p.id}`}
             className="card-soft flex items-center gap-3 transition hover:border-cyan-400/30"
           >
             <div

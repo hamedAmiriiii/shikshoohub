@@ -22,7 +22,12 @@ function isRepairPath(pathname: string | null) {
 }
 
 function isBilliardPath(pathname: string | null) {
-  return pathname === "/billiard" || Boolean(pathname?.startsWith("/billiard/"));
+  return (
+    pathname === "/billiardkerman" ||
+    Boolean(pathname?.startsWith("/billiardkerman/")) ||
+    pathname === "/billiard" ||
+    Boolean(pathname?.startsWith("/billiard/"))
+  );
 }
 
 function isMarketerPanelPath(pathname: string | null) {

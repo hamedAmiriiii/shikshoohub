@@ -50,7 +50,7 @@ export default function LoginPage() {
         data.user.role !== "operator" &&
         (data.user.results_tournaments?.length || 0) > 0;
       router.push(
-        clerkOnly ? "/billiard/results-desk" : data.user.profile_complete ? "/billiard/me" : "/billiard/me?edit=1",
+        clerkOnly ? "/billiardkerman/results-desk" : data.user.profile_complete ? "/billiardkerman/me" : "/billiardkerman/me?edit=1",
       );
     } catch (err) {
       setMsg((err as ApiError).message || "خطا");
