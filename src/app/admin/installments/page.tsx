@@ -165,40 +165,47 @@ export default function InstallmentsPage() {
     const desktopColumns = [
         {
             label: "شماره قسط",
-            field: (item: any) => `قسط ${item.installment_number}`
+            field: (item: any) => `قسط ${item.installment_number}`,
+            width: "96px",
         },
         {
             label: "وضعیت",
-            field: (item: any) => item.is_paid ? "پرداخت شده" : "پرداخت نشده"
+            field: (item: any) => item.is_paid ? "پرداخت شده" : "پرداخت نشده",
+            width: "110px",
         },
         {
             label: "مبلغ",
             field: (item: any) => {
                 const numValue = typeof item.amount === 'string' ? parseFloat(item.amount.replace(/,/g, '')) : item.amount;
                 return new Intl.NumberFormat('fa-IR').format(numValue) + " تومان";
-            }
+            },
+            width: "130px",
         },
         {
             label: "تاریخ سررسید",
-            field: (item: any) => item.due_date_jalali || "-"
+            field: (item: any) => item.due_date_jalali || "-",
+            width: "120px",
         },
         {
             label: "تاریخ پرداخت",
-            field: (item: any) => item.paid_at_jalali || "-"
+            field: (item: any) => item.paid_at_jalali || "-",
+            width: "120px",
         },
         {
             label: "شماره تلفن",
-            field: (item: any) => item.purchase?.phone || "-"
+            field: (item: any) => item.purchase?.phone || "-",
+            width: "120px",
         },
         {
             label: "شماره خرید",
-            field: (item: any) => item.purchase?.id ? `#${item.purchase.id}` : "-"
-        }
+            field: (item: any) => item.purchase?.id ? `#${item.purchase.id}` : "-",
+            width: "96px",
+        },
     ];
 
     return (
         <Suspense fallback={<div>در حال بارگذاری...</div>}>
-            <Box sx={{ width: { xs:"100%", md:"130%" , }, direction: "rtl", padding: "16px", paddingBottom: "100px", minHeight: "100vh", background: "var(--admin-bg-gradient)" }}>
+            <Box sx={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", direction: "rtl", padding: "16px", paddingBottom: "100px", minHeight: "100vh", background: "var(--admin-bg-gradient)" }}>
                 <List
                     key={`${filterMode}`}
                     disableFilter={true}
@@ -210,6 +217,8 @@ export default function InstallmentsPage() {
                     showTotal={true}
                     enablePagination={true}
                     desktopColumns={desktopColumns}
+                    compactDesktop
+                    actionsColumnWidth="88px"
                     onPayInstallmentItem={handleOpenPayInstallmentDialog}
                     hidePrintAction
                     customActions={

@@ -346,6 +346,7 @@ const List: React.FC<Props> = ({
   const compactCellPad = compactDesktop ? "3px 6px" : "16px 24px";
   const compactFont = compactDesktop ? "11px" : "16px";
 
+  // جدول RTL است؛ ستون عملیات آخرین ستون DOM و از نظر بصری سمت چپ است → sticky left
   const actionsHeaderCellSx = {
     fontWeight: "600",
     backgroundColor: "var(--admin-surface-alt)",
@@ -356,9 +357,9 @@ const List: React.FC<Props> = ({
     width: compactActionWidth,
     whiteSpace: "nowrap" as const,
     position: "sticky" as const,
-    right: 0,
+    left: 0,
     zIndex: 2,
-    boxShadow: "-4px 0 8px -4px rgba(0,0,0,0.12)",
+    boxShadow: "4px 0 8px -4px rgba(0,0,0,0.12)",
   };
 
   const actionsBodyCellSx = {
@@ -368,10 +369,10 @@ const List: React.FC<Props> = ({
     minWidth: compactActionWidth,
     width: compactActionWidth,
     position: "sticky" as const,
-    right: 0,
+    left: 0,
     zIndex: 1,
     backgroundColor: "var(--admin-surface)",
-    boxShadow: "-4px 0 8px -4px rgba(0,0,0,0.12)",
+    boxShadow: "4px 0 8px -4px rgba(0,0,0,0.12)",
     ".MuiTableRow-root:nth-of-type(even) &": {
       backgroundColor: "var(--admin-surface-alt)",
     },
