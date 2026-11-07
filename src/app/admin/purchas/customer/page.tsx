@@ -34,7 +34,7 @@ export default function CustomerLedgerLookupPage() {
           <PersonSearchIcon sx={{ color: "var(--admin-accent)", fontSize: 28 }} />
           <Box>
             <Typography sx={{ fontSize: 18, fontWeight: 700, color: "var(--admin-text)" }}>
-              سابقه مشتری
+              صورتحساب مشتری
             </Typography>
             <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)" }}>
               مشتری را پیدا کنید و گردش فروش، فاکتور و هزینه را ببینید

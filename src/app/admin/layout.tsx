@@ -113,7 +113,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/partners': 'شرکا',
     '/admin/petty-cash': 'تنخواه',
     '/admin/purchase-debts': 'بدهکاران (نسیه)',
-    '/admin/purchas/customer': 'سابقه مشتری',
+    '/admin/purchas/customer': 'صورتحساب مشتری',
     '/admin/payroll': 'حقوق',
     '/admin/payroll/employees': 'کارمندها',
     '/admin/auditors': 'حسابرس‌ها',
@@ -122,7 +122,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
   };
   
   if (pathname.startsWith("/admin/beneficiaries")) return "ذینفعان خرید";
-  if (pathname.startsWith("/admin/purchas/customer/")) return "سابقه مشتری";
+  if (pathname.startsWith("/admin/purchas/customer/")) return "صورتحساب مشتری";
   if (pathname.startsWith("/admin/accounting/vouchers/new")) return "سند دستی / اصلاحی";
   if (pathname.startsWith("/admin/accounting/vouchers/")) return "جزئیات سند";
   return titleMap[pathname];

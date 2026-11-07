@@ -86,19 +86,31 @@ export default function DocumentVatFields({
       <ToggleButtonGroup
         exclusive
         size="small"
+        dir="ltr"
         value={value.mode}
         disabled={disabled}
         onChange={setMode}
-        sx={{ flexShrink: 0 }}
+        sx={{
+          flexShrink: 0,
+          direction: "ltr",
+          "& .MuiToggleButtonGroup-grouped": {
+            borderRadius: "8px !important",
+            border: "1px solid var(--admin-border) !important",
+            marginLeft: "0 !important",
+            "&:not(:first-of-type)": {
+              marginInlineStart: "4px",
+            },
+          },
+        }}
       >
-        <ToggleButton value="none" sx={toggleSx}>
-          بدون
+        <ToggleButton value="amount" sx={toggleSx}>
+          مبلغ
         </ToggleButton>
         <ToggleButton value="percent" sx={toggleSx}>
           درصدی
         </ToggleButton>
-        <ToggleButton value="amount" sx={toggleSx}>
-          مبلغ
+        <ToggleButton value="none" sx={toggleSx}>
+          بدون
         </ToggleButton>
       </ToggleButtonGroup>
 

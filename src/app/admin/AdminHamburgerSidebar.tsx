@@ -112,7 +112,7 @@ function isPathActive(pathname: string | null, href: string): boolean {
         !pathname.startsWith("/admin/product/create"))
     );
   }
-  // فروش‌ها نباید صفحهٔ سابقه مشتری را فعال کند
+  // فروش‌ها نباید صفحهٔ صورتحساب مشتری را فعال کند
   if (href === "/admin/purchas") {
     return (
       pathname === "/admin/purchas" ||
@@ -251,7 +251,7 @@ export default function AdminHamburgerSidebar({
       },
       {
         id: "customer-ledger",
-        label: "سابقه مشتری",
+        label: "صورتحساب مشتری",
         href: "/admin/purchas/customer",
         icon: <HistoryIcon />,
         permission: ["debts", "pos"],

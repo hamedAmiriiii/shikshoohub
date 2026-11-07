@@ -306,6 +306,8 @@ export default function ShoppingPage() {
   const [editStockBonus, setEditStockBonus] = useState<Record<string, number>>({});
   const [editHasReturns, setEditHasReturns] = useState(false);
   const [editReuseCredit, setEditReuseCredit] = useState(false);
+  /** مبلغ قابل‌پرداخت فاکتور قبلی هنگام شروع ویرایش (سبد − تخفیف − اعتبار) */
+  const [editOriginalPayable, setEditOriginalPayable] = useState<number | null>(null);
   const editLoadedRef = useRef<string | null>(null);
 
   type SettlementMode = "split" | "card_all" | "cash_all";
@@ -357,6 +359,11 @@ export default function ShoppingPage() {
     () => Math.max(0, total - useCreditAmount - discounttype - backPrice),
     [total, useCreditAmount, discounttype, backPrice],
   );
+
+  const editPayableDelta = useMemo(() => {
+    if (editingPurchaseId == null || editOriginalPayable == null) return null;
+    return salePayableAmount - editOriginalPayable;
+  }, [editingPurchaseId, editOriginalPayable, salePayableAmount]);
 
   const matchingCheques = useMemo(
     () => filterChequesForSale(availableCheques, salePayableAmount),
@@ -1378,6 +1385,7 @@ export default function ShoppingPage() {
     setEditStockBonus({});
     setEditHasReturns(false);
     setEditReuseCredit(false);
+    setEditOriginalPayable(null);
     clearOrRemoveActiveCart({ clearScanned: true });
     router.replace("/admin/purchas");
   }, [clearOrRemoveActiveCart, router]);
@@ -1666,6 +1674,7 @@ export default function ShoppingPage() {
         setEditStockBonus({});
         setEditHasReturns(false);
         setEditReuseCredit(false);
+        setEditOriginalPayable(null);
         router.replace("/admin");
       }
       setIsSubmitting(false);
@@ -2333,6 +2342,7 @@ export default function ShoppingPage() {
         setEditStockBonus({});
         setEditHasReturns(false);
         setEditReuseCredit(false);
+        setEditOriginalPayable(null);
       }
       return;
     }
@@ -2379,6 +2389,9 @@ export default function ShoppingPage() {
       setEditStockBonus(state.editStockBonus);
       setEditHasReturns(state.editHasReturns);
       setEditReuseCredit(state.editReuseCredit);
+      setEditOriginalPayable(
+        Math.max(0, Number(state.total || 0) - Number(state.discounttype || 0) - Number(state.useCreditAmount || 0)),
+      );
       editLoadedRef.current = raw;
     };
     void load();
@@ -2953,15 +2966,50 @@ export default function ShoppingPage() {
               backgroundColor: "var(--admin-warning-banner-bg)",
               border: "1px solid var(--admin-warning-banner-border)",
               color: "var(--admin-warning-banner-text)",
-              padding: { xs: "8px 12px", md: "10px 16px" },
+              padding: { xs: "10px 12px", md: "12px 16px" },
               borderRadius: "12px",
               marginBottom: { xs: "12px", md: "16px" },
-              fontSize: { xs: "12px", md: "14px" },
-              fontWeight: 600,
             }}
           >
-            ویرایش فاکتور #{editingPurchaseId}
-            {editHasReturns ? " و برگشت‌های قبلی این فاکتور هم برگردانده می‌شود." : "."}
+            <Typography sx={{ fontSize: { xs: 12, md: 14 }, fontWeight: 700, mb: editPayableDelta != null ? 1 : 0 }}>
+              ویرایش فاکتور #{editingPurchaseId}
+              {editHasReturns ? " — برگشت‌های قبلی این فاکتور هم برگردانده می‌شود." : ""}
+            </Typography>
+            {editPayableDelta != null && editOriginalPayable != null ? (
+              <Box
+                sx={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: { xs: 1, md: 2 },
+                  alignItems: "center",
+                }}
+              >
+                <Typography sx={{ fontSize: { xs: 12, md: 13 }, fontWeight: 600 }}>
+                  مبلغ قبلی: {formatNumber(editOriginalPayable)} تومان
+                </Typography>
+                <Typography sx={{ fontSize: { xs: 12, md: 13 }, fontWeight: 600 }}>
+                  مبلغ جدید: {formatNumber(salePayableAmount)} تومان
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: { xs: 13, md: 14 },
+                    fontWeight: 800,
+                    color:
+                      editPayableDelta > 0
+                        ? "var(--admin-success, #15803d)"
+                        : editPayableDelta < 0
+                          ? "var(--admin-error, #b91c1c)"
+                          : "inherit",
+                  }}
+                >
+                  {editPayableDelta > 0
+                    ? `باید از مشتری بگیرید: ${formatNumber(editPayableDelta)} تومان`
+                    : editPayableDelta < 0
+                      ? `باید به مشتری بدهید: ${formatNumber(Math.abs(editPayableDelta))} تومان`
+                      : "مبلغ قابل‌پرداخت تغییری نکرده است"}
+                </Typography>
+              </Box>
+            ) : null}
           </Box>
         ) : null}
 

@@ -8,6 +8,7 @@ import {
   Button,
   Card,
   CardContent,
+  Checkbox,
   Chip,
   CircularProgress,
   Collapse,
@@ -15,6 +16,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
   Grid,
   IconButton,
   Table,
@@ -132,7 +134,8 @@ export default function PurchaseDebtsPage() {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [invoiceDetails, setInvoiceDetails] = useState<Record<number, PurchaseDebtInvoice>>({});
   const [detailsLoading, setDetailsLoading] = useState<number | null>(null);
-  const [settleInvoice, setSettleInvoice] = useState<PurchaseDebtInvoice | null>(null);
+  const [settleInvoices, setSettleInvoices] = useState<PurchaseDebtInvoice[]>([]);
+  const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<number[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteInvoice, setDeleteInvoice] = useState<PurchaseDebtInvoice | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -221,6 +224,7 @@ export default function PurchaseDebtsPage() {
 
   useEffect(() => {
     if (selectedPhone) {
+      setSelectedInvoiceIds([]);
       loadInvoices(selectedPhone, invoiceStatus);
     }
   }, [selectedPhone, invoiceStatus, loadInvoices]);
@@ -231,6 +235,45 @@ export default function PurchaseDebtsPage() {
     setInvoiceStatus("pending");
     setExpandedId(null);
     setInvoiceDetails({});
+    setSelectedInvoiceIds([]);
+  };
+
+  const pendingInvoices = invoices.filter((invoice) => isDebtInvoicePending(invoice));
+  const selectedPendingInvoices = pendingInvoices.filter((invoice) =>
+    selectedInvoiceIds.includes(getDebtInvoiceId(invoice)),
+  );
+  const selectedRemainingTotal = selectedPendingInvoices.reduce(
+    (sum, invoice) => sum + getDebtInvoiceAmount(invoice),
+    0,
+  );
+  const allPendingSelected =
+    pendingInvoices.length > 0 && selectedPendingInvoices.length === pendingInvoices.length;
+
+  const toggleInvoiceSelected = (invoice: PurchaseDebtInvoice) => {
+    const id = getDebtInvoiceId(invoice);
+    setSelectedInvoiceIds((prev) =>
+      prev.includes(id) ? prev.filter((value) => value !== id) : [...prev, id],
+    );
+  };
+
+  const toggleSelectAllPending = () => {
+    if (allPendingSelected) {
+      setSelectedInvoiceIds([]);
+      return;
+    }
+    setSelectedInvoiceIds(pendingInvoices.map((invoice) => getDebtInvoiceId(invoice)));
+  };
+
+  const openSettle = (rows: PurchaseDebtInvoice[]) => {
+    if (rows.length === 0) return;
+    setSettleInvoices(
+      rows.map((invoice) => ({
+        ...invoice,
+        phone: invoice.phone || selectedPhone || undefined,
+        name: selectedName || invoice.name,
+        customer_name: selectedName || invoice.customer_name,
+      })),
+    );
   };
 
   const handleToggleDetails = async (invoice: PurchaseDebtInvoice) => {
@@ -409,7 +452,7 @@ export default function PurchaseDebtsPage() {
           </IconButton>
         </DialogTitle>
         <DialogContent>
-          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2 }}>
+          <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1, mb: 2 }}>
             {STATUS_FILTERS.map((filter) => (
               <Chip
                 key={filter.value}
@@ -424,6 +467,24 @@ export default function PurchaseDebtsPage() {
                 }}
               />
             ))}
+            {pendingInvoices.length > 0 && (
+              <FormControlLabel
+                sx={{ ml: "auto", mr: 0 }}
+                control={
+                  <Checkbox
+                    size="small"
+                    checked={allPendingSelected}
+                    indeterminate={selectedPendingInvoices.length > 0 && !allPendingSelected}
+                    onChange={toggleSelectAllPending}
+                  />
+                }
+                label={
+                  <Typography sx={{ fontSize: 13, color: "var(--admin-text)" }}>
+                    انتخاب همه تسویه‌نشده
+                  </Typography>
+                }
+              />
+            )}
           </Box>
 
           {invoicesLoading ? (
@@ -435,7 +496,7 @@ export default function PurchaseDebtsPage() {
               فاکتوری یافت نشد
             </Typography>
           ) : (
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1, pb: selectedPendingInvoices.length > 0 ? 8 : 0 }}>
               {invoices.map((invoice) => {
                 const id = getDebtInvoiceId(invoice);
                 const isExpanded = expandedId === id;
@@ -446,23 +507,41 @@ export default function PurchaseDebtsPage() {
                 const originalAmount = getDebtInvoiceOriginalAmount(invoice);
                 const paidAmount = getDebtInvoicePaidAmount(invoice);
                 const partial = pending && paidAmount > 0;
+                const selected = selectedInvoiceIds.includes(id);
 
                 return (
-                  <Card key={id} sx={{ border: "1px solid var(--admin-border)", borderRadius: "10px" }}>
+                  <Card
+                    key={id}
+                    sx={{
+                      border: selected ? "1px solid var(--admin-accent)" : "1px solid var(--admin-border)",
+                      borderRadius: "10px",
+                      bgcolor: selected ? "color-mix(in srgb, var(--admin-accent) 8%, transparent)" : undefined,
+                    }}
+                  >
                     <CardContent sx={{ py: 1.25, "&:last-child": { pb: 1.25 } }}>
                       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
-                        <Box>
-                          <Typography sx={{ fontWeight: 600, color: "var(--admin-text)", fontSize: "14px" }}>
-                            فاکتور #{id} — مانده {formatNumber(remaining)} تومان
-                          </Typography>
-                          <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "12px" }}>
-                            {formatDate(invoice.created_at)}
-                            {originalAmount > remaining || paidAmount > 0
-                              ? ` — اصل ${formatNumber(originalAmount)} / پرداخت‌شده ${formatNumber(paidAmount)}`
-                              : ""}
-                          </Typography>
+                        <Box sx={{ display: "flex", alignItems: "flex-start", gap: 0.5, minWidth: 0 }}>
+                          {pending && (
+                            <Checkbox
+                              size="small"
+                              checked={selected}
+                              onChange={() => toggleInvoiceSelected(invoice)}
+                              sx={{ mt: -0.5 }}
+                            />
+                          )}
+                          <Box>
+                            <Typography sx={{ fontWeight: 600, color: "var(--admin-text)", fontSize: "14px" }}>
+                              فاکتور #{id} — مانده {formatNumber(remaining)} تومان
+                            </Typography>
+                            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: "12px" }}>
+                              {formatDate(invoice.created_at)}
+                              {originalAmount > remaining || paidAmount > 0
+                                ? ` — اصل ${formatNumber(originalAmount)} / پرداخت‌شده ${formatNumber(paidAmount)}`
+                                : ""}
+                            </Typography>
+                          </Box>
                         </Box>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>
                           <Chip
                             size="small"
                             label={formatDebtStatus(invoice)}
@@ -472,12 +551,7 @@ export default function PurchaseDebtsPage() {
                             <Button
                               size="small"
                               variant="contained"
-                              onClick={() => setSettleInvoice({
-                                ...invoice,
-                                phone: invoice.phone || selectedPhone || undefined,
-                                name: selectedName || invoice.name,
-                                customer_name: selectedName || invoice.customer_name,
-                              })}
+                              onClick={() => openSettle([invoice])}
                               sx={{ bgcolor: "var(--admin-accent)", "&:hover": { bgcolor: "var(--admin-accent-hover)" } }}
                             >
                               {partial ? "پرداخت" : "تسویه"}
@@ -542,6 +616,49 @@ export default function PurchaseDebtsPage() {
               })}
             </Box>
           )}
+
+          {selectedPendingInvoices.length > 0 && (
+            <Paper
+              elevation={6}
+              sx={{
+                position: "sticky",
+                bottom: 0,
+                mt: 2,
+                p: 1.5,
+                borderRadius: 2,
+                border: "1px solid var(--admin-border)",
+                bgcolor: "var(--admin-surface)",
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 1.5,
+                zIndex: 2,
+              }}
+            >
+              <Box>
+                <Typography sx={{ fontWeight: 700, color: "var(--admin-text)", fontSize: 14 }}>
+                  {formatNumber(selectedPendingInvoices.length)} فاکتور انتخاب‌شده
+                </Typography>
+                <Typography sx={{ color: "var(--admin-accent)", fontWeight: 800, fontSize: 16 }}>
+                  جمع: {formatNumber(selectedRemainingTotal)} تومان
+                </Typography>
+              </Box>
+              <Box sx={{ display: "flex", gap: 1 }}>
+                <Button size="small" onClick={() => setSelectedInvoiceIds([])}>
+                  لغو انتخاب
+                </Button>
+                <Button
+                  size="small"
+                  variant="contained"
+                  onClick={() => openSettle(selectedPendingInvoices)}
+                  sx={{ bgcolor: "var(--admin-accent)", "&:hover": { bgcolor: "var(--admin-accent-hover)" } }}
+                >
+                  تسویه انتخاب‌شده‌ها
+                </Button>
+              </Box>
+            </Paper>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -575,10 +692,13 @@ export default function PurchaseDebtsPage() {
       </Dialog>
 
       <PurchaseDebtSettleDialog
-        open={Boolean(settleInvoice)}
-        invoice={settleInvoice}
-        onClose={() => setSettleInvoice(null)}
-        onSuccess={handleSettled}
+        open={settleInvoices.length > 0}
+        invoices={settleInvoices}
+        onClose={() => setSettleInvoices([])}
+        onSuccess={() => {
+          setSelectedInvoiceIds([]);
+          handleSettled();
+        }}
       />
 
       <ToastContainer position="bottom-right" rtl autoClose={3000} style={{ marginBottom: "76px" }} />
