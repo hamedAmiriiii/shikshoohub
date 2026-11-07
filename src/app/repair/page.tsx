@@ -78,6 +78,9 @@ const HERO_BADGES = [
   { icon: PaymentsIcon, label: "پرداخت بعد از کار" },
 ];
 
+const ENAMAD_HTML =
+  "<a referrerpolicy='origin' target='_blank' href='https://trustseal.enamad.ir/?id=8568066&Code=tuddj2iYHAxtTFBzvoXhNoAu6vTO1paH'><img referrerpolicy='origin' src='https://trustseal.enamad.ir/logo.aspx?id=8568066&Code=tuddj2iYHAxtTFBzvoXhNoAu6vTO1paH' alt='' style='cursor:pointer' code='tuddj2iYHAxtTFBzvoXhNoAu6vTO1paH'></a>";
+
 export default function RepairLandingPage() {
   const { user, config } = useRepairAuth();
   const [openRequests, setOpenRequests] = useState<RepairRequest[]>([]);
@@ -501,6 +504,38 @@ export default function RepairLandingPage() {
           </Button>
         </Paper>
       )}
+
+      <Paper
+        variant="outlined"
+        sx={{
+          p: 2,
+          borderRadius: 3,
+          display: "flex",
+          flexDirection: { xs: "column", sm: "row" },
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 2,
+        }}
+      >
+        <Box>
+          <Typography fontWeight={800} sx={{ mb: 0.5 }}>
+            نماد اعتماد الکترونیکی
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            برای مشاهدهٔ جزئیات مجوز و اعتبار کسب‌وکار روی نماد کلیک کنید.
+          </Typography>
+        </Box>
+        <Box
+          sx={{
+            bgcolor: "#fff",
+            borderRadius: 2,
+            p: 1,
+            lineHeight: 0,
+            "& img": { width: 80, height: "auto", display: "block" },
+          }}
+          dangerouslySetInnerHTML={{ __html: ENAMAD_HTML }}
+        />
+      </Paper>
     </Stack>
   );
 }
