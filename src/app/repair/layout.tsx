@@ -19,6 +19,9 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "امید تعمیر",
   },
+  other: {
+    enamad: "54253148",
+  },
 };
 
 export const viewport: Viewport = {
