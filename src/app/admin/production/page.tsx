@@ -121,6 +121,8 @@ import InvoiceLinkFields, {
   validateInvoiceLink,
   type InvoiceLinkState,
 } from "@/app/admin/production/InvoiceLinkFields";
+import BulkRawMaterialInvoiceDialog from "@/app/admin/production/BulkRawMaterialInvoiceDialog";
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 
 const fieldSx = {
   "& .MuiOutlinedInput-root": {
@@ -299,6 +301,7 @@ export default function ProductionCostingPage() {
   const [expandedMaterialId, setExpandedMaterialId] = useState<number | null>(null);
 
   const [materialDialogOpen, setMaterialDialogOpen] = useState(false);
+  const [bulkInvoiceOpen, setBulkInvoiceOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<RawMaterial | null>(null);
   const [materialName, setMaterialName] = useState("");
   const [materialUnit, setMaterialUnit] = useState<"kg" | "liter" | "piece">("kg");
@@ -1141,7 +1144,25 @@ export default function ProductionCostingPage() {
     <Box sx={{ ...adminPageSx, px: { xs: 2, md: 3 }, pt: { xs: 1.5, md: 3 }, pb: { xs: 12, md: 5 } }}>
       <ToastContainer position="top-center" rtl />
 
-      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 1.5, flexWrap: "wrap", mb: 1.25 }}>
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 1, flexWrap: "wrap", mb: 1.25 }}>
+        {tab === "materials" && canMaterials && materials.length > 0 ? (
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<ReceiptLongIcon sx={{ fontSize: 16 }} />}
+            onClick={() => setBulkInvoiceOpen(true)}
+            sx={{
+              ...adminButtonStartIconSx,
+              color: "var(--admin-accent)",
+              borderColor: "var(--admin-accent)",
+              fontSize: 12,
+              minHeight: 28,
+              py: 0.25,
+            }}
+          >
+            فاکتور جمعی
+          </Button>
+        ) : null}
         {tab !== "stock" && tab !== "waste" && (
           <Button
             size="small"
@@ -3050,6 +3071,16 @@ export default function ProductionCostingPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <BulkRawMaterialInvoiceDialog
+        open={bulkInvoiceOpen}
+        materials={materials}
+        onClose={() => setBulkInvoiceOpen(false)}
+        onSuccess={() => {
+          setBulkInvoiceOpen(false);
+          void loadAll();
+        }}
+      />
     </Box>
   );
 }

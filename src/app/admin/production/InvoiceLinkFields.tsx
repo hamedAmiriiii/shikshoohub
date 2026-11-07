@@ -238,9 +238,11 @@ type Props = {
   value: InvoiceLinkState;
   onChange: (next: InvoiceLinkState) => void;
   lotTotal?: number;
+  /** فقط فاکتور جدید — بدون تیک/وصل به فاکتور قبلی (برای خرید جمعی) */
+  createOnly?: boolean;
 };
 
-export default function InvoiceLinkFields({ value, onChange, lotTotal = 0 }: Props) {
+export default function InvoiceLinkFields({ value, onChange, lotTotal = 0, createOnly = false }: Props) {
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
   const [pickedInvoice, setPickedInvoice] = useState<InvoiceRecord | null>(null);
   const [items, setItems] = useState<InvoiceItem[]>([]);
@@ -318,6 +320,9 @@ export default function InvoiceLinkFields({ value, onChange, lotTotal = 0 }: Pro
     searchTimer.current = setTimeout(() => loadInvoices(query), 280);
   };
 
+  const showCreateFields = createOnly || value.createInvoice;
+  const showNewInvoiceFields = createOnly || value.mode === "new";
+
   return (
     <Box
       sx={{
@@ -327,74 +332,78 @@ export default function InvoiceLinkFields({ value, onChange, lotTotal = 0 }: Pro
         direction: "rtl",
       }}
     >
-      <FormControlLabel
-        control={
-          <Checkbox
-            size="small"
-            checked={value.createInvoice}
-            onChange={(e) =>
-              patch({
-                createInvoice: e.target.checked,
-                mode: "new",
-                invoiceId: "",
-                invoiceItemId: "",
-                invoiceDate: todayJalaliDateObject(),
-                invoiceDescription: "",
-                payment: emptyDocumentPaymentForm(),
-                beneficiaryId: "",
-                beneficiaryOption: null,
-              })
-            }
-            sx={{
-              py: 0,
-              color: "var(--admin-text-muted)",
-              "&.Mui-checked": { color: "var(--admin-accent)" },
-            }}
-          />
-        }
-        label="ایجاد فاکتور"
-        sx={{ ...compactLabelSx, gridColumn: "1 / -1" }}
-      />
+      {!createOnly ? (
+        <FormControlLabel
+          control={
+            <Checkbox
+              size="small"
+              checked={value.createInvoice}
+              onChange={(e) =>
+                patch({
+                  createInvoice: e.target.checked,
+                  mode: "new",
+                  invoiceId: "",
+                  invoiceItemId: "",
+                  invoiceDate: todayJalaliDateObject(),
+                  invoiceDescription: "",
+                  payment: emptyDocumentPaymentForm(),
+                  beneficiaryId: "",
+                  beneficiaryOption: null,
+                })
+              }
+              sx={{
+                py: 0,
+                color: "var(--admin-text-muted)",
+                "&.Mui-checked": { color: "var(--admin-accent)" },
+              }}
+            />
+          }
+          label="ایجاد فاکتور"
+          sx={{ ...compactLabelSx, gridColumn: "1 / -1" }}
+        />
+      ) : null}
 
-      {value.createInvoice && (
+      {showCreateFields && (
         <>
-          <RadioGroup
-            row
-            value={value.mode}
-            onChange={(e) =>
-              patch({
-                mode: e.target.value as InvoiceLinkMode,
-                invoiceId: "",
-                invoiceItemId: "",
-              })
-            }
-            sx={{ gridColumn: "1 / -1", gap: 0.5 }}
-          >
-            <FormControlLabel
-              value="new"
-              control={
-                <Radio
-                  size="small"
-                  sx={{ py: 0, color: "var(--admin-accent)", "&.Mui-checked": { color: "var(--admin-accent)" } }}
-                />
+          {!createOnly ? (
+            <RadioGroup
+              row
+              value={value.mode}
+              onChange={(e) =>
+                patch({
+                  mode: e.target.value as InvoiceLinkMode,
+                  invoiceId: "",
+                  invoiceItemId: "",
+                })
               }
-              label="فاکتور جدید"
-              sx={compactLabelSx}
-            />
-            <FormControlLabel
-              value="item"
-              control={
-                <Radio
-                  size="small"
-                  sx={{ py: 0, color: "var(--admin-accent)", "&.Mui-checked": { color: "var(--admin-accent)" } }}
-                />
-              }
-              label="وصل به فاکتور"
-              sx={compactLabelSx}
-            />
-          </RadioGroup>
+              sx={{ gridColumn: "1 / -1", gap: 0.5 }}
+            >
+              <FormControlLabel
+                value="new"
+                control={
+                  <Radio
+                    size="small"
+                    sx={{ py: 0, color: "var(--admin-accent)", "&.Mui-checked": { color: "var(--admin-accent)" } }}
+                  />
+                }
+                label="فاکتور جدید"
+                sx={compactLabelSx}
+              />
+              <FormControlLabel
+                value="item"
+                control={
+                  <Radio
+                    size="small"
+                    sx={{ py: 0, color: "var(--admin-accent)", "&.Mui-checked": { color: "var(--admin-accent)" } }}
+                  />
+                }
+                label="وصل به فاکتور"
+                sx={compactLabelSx}
+              />
+            </RadioGroup>
+          ) : null}
 
-          {value.mode === "new" && (
+          {showNewInvoiceFields && (
             <>
               <TextField
                 size="small"
@@ -465,7 +474,7 @@ export default function InvoiceLinkFields({ value, onChange, lotTotal = 0 }: Pro
             </>
           )}
 
-          {(value.mode === "whole" || value.mode === "item") && (
+          {!createOnly && (value.mode === "whole" || value.mode === "item") && (
             <Autocomplete
               size="small"
               options={invoiceOptions}
@@ -526,7 +535,7 @@ export default function InvoiceLinkFields({ value, onChange, lotTotal = 0 }: Pro
             />
           )}
 
-          {value.mode === "item" && value.invoiceId !== "" && (
+          {!createOnly && value.mode === "item" && value.invoiceId !== "" && (
             <TextField
               select
               size="small"
