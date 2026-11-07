@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Box,
   Button,
@@ -27,7 +27,9 @@ import {
   type BeneficiaryDetail,
   type BeneficiaryDoc,
 } from "@/app/lib/beneficiaries";
+import { canSettleDocumentPayment, documentCreditRemaining } from "@/app/lib/documentPayments";
 import { adminButtonStartIconSx, adminPageSx } from "@/app/admin/theme/adminTheme";
+import BeneficiaryBulkDebtPayDialog from "../BeneficiaryBulkDebtPayDialog";
 
 const cellSx = {
   color: "var(--admin-text)",
@@ -94,6 +96,21 @@ export default function BeneficiaryDetailPage() {
   const id = Number(params?.id);
   const [detail, setDetail] = useState<BeneficiaryDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [bulkPayOpen, setBulkPayOpen] = useState(false);
+
+  const reload = useCallback(() => {
+    if (!Number.isFinite(id) || id <= 0) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    void fetchBeneficiary(id)
+      .then((row) => {
+        setDetail(row);
+        if (!row) toast.error("ذینفع پیدا نشد");
+      })
+      .finally(() => setLoading(false));
+  }, [id]);
 
   useEffect(() => {
     if (!Number.isFinite(id) || id <= 0) {
@@ -114,6 +131,15 @@ export default function BeneficiaryDetailPage() {
       cancelled = true;
     };
   }, [id]);
+
+  const unpaidInvoices = useMemo(
+    () => (detail?.invoices || []).filter((row) => canSettleDocumentPayment(row)),
+    [detail?.invoices],
+  );
+  const unpaidInvoiceTotal = useMemo(
+    () => unpaidInvoices.reduce((sum, row) => sum + documentCreditRemaining(row), 0),
+    [unpaidInvoices],
+  );
 
   return (
     <Box sx={{ ...adminPageSx, pt: { xs: 1.25, md: 2 }, pb: { xs: "100px", md: 4 } }}>
@@ -166,6 +192,22 @@ export default function BeneficiaryDetailPage() {
             </Box>
 
             <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 2 }}>
+              {unpaidInvoices.length > 0 ? (
+                <Button
+                  size="small"
+                  variant="contained"
+                  onClick={() => setBulkPayOpen(true)}
+                  sx={{
+                    ...adminButtonStartIconSx,
+                    bgcolor: "var(--admin-accent)",
+                    color: "var(--admin-on-accent)",
+                    fontSize: 12,
+                    "&:hover": { bgcolor: "var(--admin-accent-hover)" },
+                  }}
+                >
+                  پرداخت بدهی جمعی
+                </Button>
+              ) : null}
               <Button
                 size="small"
                 variant="outlined"
@@ -205,6 +247,16 @@ export default function BeneficiaryDetailPage() {
             <DocsTable rows={detail.expenses || []} />
           </>
         )}
+        <BeneficiaryBulkDebtPayDialog
+          open={bulkPayOpen}
+          invoices={unpaidInvoices}
+          unpaidTotal={unpaidInvoiceTotal}
+          onClose={() => setBulkPayOpen(false)}
+          onSuccess={() => {
+            setBulkPayOpen(false);
+            reload();
+          }}
+        />
         <ToastContainer autoClose={3000} position="bottom-right" />
       </Container>
     </Box>
