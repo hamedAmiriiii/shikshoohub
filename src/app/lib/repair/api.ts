@@ -205,6 +205,8 @@ export type RepairSettings = {
   bank_name: string;
   online_payment_enabled: string;
   card_payment_enabled: string;
+  /** مرچنت کد زرین‌پال اختصاصی omidtamir */
+  zarinpal_merchant_id?: string;
   default_labor_share_percent: string;
   location_mode: RepairLocationMode;
   map_provider?: RepairMapProviderSetting;

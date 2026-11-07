@@ -148,6 +148,16 @@ export default function PendingPurchasesPage() {
     return cart.reduce((sum, row: any) => sum + Number(row?.sale_price || 0) * Number(row?.quantity || 0), 0);
   };
 
+  const getCartLines = (item: OutboxItem) => {
+    const cart = item.meta.cart;
+    if (!Array.isArray(cart)) return [];
+    return cart.map((row: any) => ({
+      name: String(row?.name || row?.title || "بدون نام"),
+      barcode: String(row?.barcode || "—"),
+      quantity: Number(row?.quantity) || 0,
+    }));
+  };
+
   const pendingSalesTotal = useMemo(
     () => items.reduce((sum, item) => sum + calculateTotal(item), 0),
     [items],
@@ -223,6 +233,7 @@ export default function PendingPurchasesPage() {
                 <TableRow sx={{ backgroundColor: "var(--admin-surface-alt)" }}>
                   <TableCell align="right">تاریخ</TableCell>
                   <TableCell align="right">تلفن</TableCell>
+                  <TableCell align="right">کالاها</TableCell>
                   <TableCell align="right">مبلغ</TableCell>
                   <TableCell align="right">وضعیت</TableCell>
                   <TableCell align="right">عملیات</TableCell>
@@ -232,10 +243,38 @@ export default function PendingPurchasesPage() {
                 {items.map((item) => {
                   const legacy = outboxItemToLegacyPending(item);
                   const chip = statusLabel[item.status] ?? statusLabel.pending;
+                  const cartLines = getCartLines(item);
                   return (
                     <TableRow key={item.id}>
                       <TableCell align="right">{formatDate(item.createdAt)}</TableCell>
                       <TableCell align="right">{legacy.phone || "—"}</TableCell>
+                      <TableCell align="right" sx={{ minWidth: 220, maxWidth: 360 }}>
+                        {cartLines.length > 0 ? (
+                          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
+                            {cartLines.map((line, index) => (
+                              <Box
+                                key={`${item.id}-${line.barcode}-${index}`}
+                                sx={{
+                                  py: 0.5,
+                                  borderBottom:
+                                    index < cartLines.length - 1
+                                      ? "1px solid var(--admin-border)"
+                                      : "none",
+                                }}
+                              >
+                                <Typography sx={{ fontSize: 13, fontWeight: 600, color: "var(--admin-text)" }}>
+                                  {line.name}
+                                </Typography>
+                                <Typography sx={{ fontSize: 12, color: "var(--admin-text-secondary)" }}>
+                                  بارکد: {line.barcode} · تعداد: {formatNumber(line.quantity)}
+                                </Typography>
+                              </Box>
+                            ))}
+                          </Box>
+                        ) : (
+                          <Typography sx={{ fontSize: 13, color: "var(--admin-text-muted)" }}>—</Typography>
+                        )}
+                      </TableCell>
                       <TableCell align="right" sx={{ color: "var(--admin-accent)", fontWeight: 600 }}>
                         {formatNumber(calculateTotal(item))} تومان
                       </TableCell>

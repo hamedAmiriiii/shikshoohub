@@ -108,6 +108,15 @@ export default function RepairSettingsPage() {
             }
             label="پرداخت آنلاین (درگاه)"
           />
+          <TextField
+            label="مرچنت کد زرین‌پال"
+            value={settings.zarinpal_merchant_id || ""}
+            onChange={set("zarinpal_merchant_id")}
+            fullWidth
+            size="small"
+            helperText="کد ۳۶ کاراکتری درگاه خودتان در پنل زرین‌پال. برای omidtamir حتماً دامنه omidtamir.ir را در پنل زرین‌پال ثبت کنید."
+            slotProps={{ htmlInput: { dir: "ltr", spellCheck: false } }}
+          />
           <FormControlLabel
             control={
               <Switch
