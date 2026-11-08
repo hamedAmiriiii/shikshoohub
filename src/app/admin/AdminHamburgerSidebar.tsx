@@ -29,7 +29,6 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import CategoryIcon from "@mui/icons-material/Category";
 import ShoppingBagIcon from "@mui/icons-material/ShoppingBag";
 import TableRestaurantIcon from "@mui/icons-material/TableRestaurant";
-import { getAppBuildLabel } from "@/app/lib/appBuildVersion";
 import RoomServiceIcon from "@mui/icons-material/RoomService";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
@@ -1087,25 +1086,6 @@ export default function AdminHamburgerSidebar({
       </Box>
       ) : null}
 
-      <Typography
-        component="div"
-        title="شماره بیلد فرانت — بعد از هر دیپلوی باید افزایش یابد"
-        sx={{
-          flexShrink: 0,
-          px: 1.25,
-          py: 0.75,
-          borderTop: "1px solid var(--admin-border)",
-          fontSize: 11,
-          fontWeight: 600,
-          letterSpacing: 0.3,
-          color: "var(--admin-text-muted)",
-          textAlign: "center",
-          userSelect: "all",
-          fontFamily: "Tahoma, IRANSans, sans-serif",
-        }}
-      >
-        {getAppBuildLabel()}
-      </Typography>
     </Box>
   );
 }
