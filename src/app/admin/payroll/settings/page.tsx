@@ -38,6 +38,11 @@ export default function PayrollSettingsPage() {
   const [settings, setSettings] = useState<PayrollSettings>({
     salary_hourly_wage: 0,
     salary_monthly_work_hours: 0,
+    payroll_tax_percent: 0,
+    payroll_insurance_employee_percent: 0,
+    payroll_insurance_employer_percent: 0,
+    payroll_tax_fixed: 0,
+    payroll_insurance_fixed: 0,
   });
 
   const loadSettings = useCallback(async () => {
@@ -69,6 +74,11 @@ export default function PayrollSettingsPage() {
     const body = {
       salary_hourly_wage: Number(settings.salary_hourly_wage) || 0,
       salary_monthly_work_hours: Number(settings.salary_monthly_work_hours) || 0,
+      payroll_tax_percent: Number(settings.payroll_tax_percent) || 0,
+      payroll_insurance_employee_percent: Number(settings.payroll_insurance_employee_percent) || 0,
+      payroll_insurance_employer_percent: Number(settings.payroll_insurance_employer_percent) || 0,
+      payroll_tax_fixed: Number(settings.payroll_tax_fixed) || 0,
+      payroll_insurance_fixed: Number(settings.payroll_insurance_fixed) || 0,
     };
     try {
       let res = await FetchWithJwtClient(
@@ -116,7 +126,7 @@ export default function PayrollSettingsPage() {
           ) : (
             <>
               <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 13, mb: 2 }}>
-                این مقادیر فقط پیش‌فرض فرم ثبت کارمند جدید هستند. حقوق هر فرد از پایه حقوق و ساعات همان کارمند محاسبه می‌شود.
+                پیش‌فرض فرم کارمند جدید و درصد مالیات/بیمه فروشگاه. مالیات و بیمه هنگام محاسبه فیش روی ناخالص اعمال می‌شوند و قابل ویرایش دستی هستند.
               </Typography>
               <Grid container spacing={1.5}>
                 <Grid item xs={12} sm={6}>
@@ -150,6 +160,92 @@ export default function PayrollSettingsPage() {
                       }))
                     }
                     sx={fieldSx}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="درصد مالیات حقوق"
+                    type="number"
+                    value={settings.payroll_tax_percent ?? 0}
+                    onChange={(e) =>
+                      setSettings((prev) => ({
+                        ...prev,
+                        payroll_tax_percent: Number(e.target.value) || 0,
+                      }))
+                    }
+                    sx={fieldSx}
+                    inputProps={{ min: 0, max: 100, step: 0.1 }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="مالیات ثابت ماهانه (تومان)"
+                    type="text"
+                    inputMode="numeric"
+                    value={settings.payroll_tax_fixed ? formatAmountNumber(settings.payroll_tax_fixed) : ""}
+                    onChange={(e) =>
+                      setSettings((prev) => ({
+                        ...prev,
+                        payroll_tax_fixed: parseAmountInput(e.target.value),
+                      }))
+                    }
+                    sx={fieldSx}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="درصد بیمه سهم کارمند"
+                    type="number"
+                    value={settings.payroll_insurance_employee_percent ?? 0}
+                    onChange={(e) =>
+                      setSettings((prev) => ({
+                        ...prev,
+                        payroll_insurance_employee_percent: Number(e.target.value) || 0,
+                      }))
+                    }
+                    sx={fieldSx}
+                    inputProps={{ min: 0, max: 100, step: 0.1 }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="بیمه ثابت ماهانه کارمند (تومان)"
+                    type="text"
+                    inputMode="numeric"
+                    value={settings.payroll_insurance_fixed ? formatAmountNumber(settings.payroll_insurance_fixed) : ""}
+                    onChange={(e) =>
+                      setSettings((prev) => ({
+                        ...prev,
+                        payroll_insurance_fixed: parseAmountInput(e.target.value),
+                      }))
+                    }
+                    sx={fieldSx}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="درصد بیمه کارفرما (نمایشی)"
+                    type="number"
+                    value={settings.payroll_insurance_employer_percent ?? 0}
+                    onChange={(e) =>
+                      setSettings((prev) => ({
+                        ...prev,
+                        payroll_insurance_employer_percent: Number(e.target.value) || 0,
+                      }))
+                    }
+                    sx={fieldSx}
+                    inputProps={{ min: 0, max: 100, step: 0.1 }}
+                    helperText="فقط برای یادداشت فروشگاه؛ از حقوق کسر نمی‌شود"
                   />
                 </Grid>
               </Grid>

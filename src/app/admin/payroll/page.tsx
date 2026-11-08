@@ -36,6 +36,8 @@ import PeopleIcon from "@mui/icons-material/People";
 import SettingsIcon from "@mui/icons-material/Settings";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import PrintIcon from "@mui/icons-material/Print";
+import ListAltIcon from "@mui/icons-material/ListAlt";
+import CalculateIcon from "@mui/icons-material/Calculate";
 import ShopAccountSelect from "@/app/admin/ShopAccountSelect";
 import { useRouter } from "next/navigation";
 import DateObject from "react-date-object";
@@ -48,15 +50,18 @@ import { adminButtonStartIconSx, adminPageSx } from "@/app/admin/theme/adminThem
 import JalaliMonthPickerField from "./JalaliMonthPickerField";
 import PayrollConfirmDialog from "./PayrollConfirmDialog";
 import PayrollPayslipDialog from "./PayrollPayslipDialog";
+import PayrollItemsDialog from "./PayrollItemsDialog";
 import {
   PAYMENT_TYPE_OPTIONS,
   PERSIAN_MONTHS,
+  allowsZeroWorkInput,
   buildAdvanceBody,
   buildPayrollBody,
   buildPayrollPayslip,
   buildJalaliYearOptions,
   buildPayrollUrl,
   createJalaliDateObject,
+  employeeSalaryType,
   estimateSalaryFromEmployee,
   extractList,
   formatJalaliYearMonth,
@@ -82,6 +87,9 @@ import {
   paymentTypeLabel,
   payrollStatusColor,
   payrollStatusLabel,
+  requiresDaysWorked,
+  requiresHoursWorked,
+  salaryTypeLabel,
   type Employee,
   type Payroll,
   type PayrollPayment,
@@ -146,6 +154,7 @@ export default function PayrollPage() {
   const [advanceNote, setAdvanceNote] = useState("");
   const [advanceShopAccountId, setAdvanceShopAccountId] = useState<number | "">("");
   const [payslip, setPayslip] = useState<PayrollPayslip | null>(null);
+  const [itemsPayroll, setItemsPayroll] = useState<Payroll | null>(null);
 
   const employeeMap = useMemo(() => {
     const map = new Map<number, Employee>();
@@ -158,7 +167,10 @@ export default function PayrollPage() {
     return employeeMap.get(Number(payrollEmployeeId));
   }, [employeeMap, payrollEmployeeId]);
 
-  const selectedIsDaily = isDailySalaryEmployee(selectedEmployee);
+  const selectedSalaryType = employeeSalaryType(selectedEmployee);
+  const selectedIsDaily = requiresDaysWorked(selectedSalaryType);
+  const selectedNeedsHours = requiresHoursWorked(selectedSalaryType);
+  const selectedAllowsZero = allowsZeroWorkInput(selectedSalaryType);
 
   const estimatedSalary = useMemo(() => {
     if (!selectedEmployee) return 0;
@@ -171,16 +183,28 @@ export default function PayrollPage() {
       );
     }
     const hours = Number(hoursWorked) || 0;
-    if (hours <= 0) return 0;
-    return estimateSalaryFromEmployee(selectedEmployee, hours);
-  }, [daysWorked, hoursWorked, overtimeHours, selectedEmployee, selectedIsDaily]);
+    if (hours <= 0 && !selectedAllowsZero) return 0;
+    return estimateSalaryFromEmployee(
+      selectedEmployee,
+      hours,
+      0,
+      Number(overtimeHours) || 0,
+    );
+  }, [
+    daysWorked,
+    hoursWorked,
+    overtimeHours,
+    selectedAllowsZero,
+    selectedEmployee,
+    selectedIsDaily,
+  ]);
 
   const estimatedOvertime = useMemo(() => {
-    if (selectedIsDaily) return Number(overtimeHours) || 0;
+    if (selectedIsDaily || selectedSalaryType === "hourly") return Number(overtimeHours) || 0;
     const hours = Number(hoursWorked) || 0;
     const baseHours = Number(selectedEmployee?.base_work_hours) || 0;
     return Math.max(0, hours - baseHours);
-  }, [hoursWorked, overtimeHours, selectedEmployee, selectedIsDaily]);
+  }, [hoursWorked, overtimeHours, selectedEmployee, selectedIsDaily, selectedSalaryType]);
 
   const matchesSearch = useCallback(
     (employee?: Employee | null, fallbackName?: string) => {
@@ -315,9 +339,13 @@ export default function PayrollPage() {
   const openPayslip = async (item: Payroll) => {
     const employee = item.employee || employeeMap.get(getPayrollEmployeeId(item));
     let withPayments = item;
-    if (getPayrollPayments(item).length === 0) {
-      const token = tokenCode();
-      if (token) {
+    const token = tokenCode();
+    if (token) {
+      const showRes = await FetchWithJwtClient("GET", `/api/employee-payrolls/${item.id}`, token);
+      if (!showRes?.hasError) {
+        const full = showRes as Payroll & { data?: Payroll };
+        withPayments = (full.data && typeof full.data === "object" ? full.data : full) as Payroll;
+      } else if (getPayrollPayments(item).length === 0) {
         const res = await FetchWithJwtClient(
           "GET",
           `/api/employee-payrolls/${item.id}/payments`,
@@ -331,6 +359,40 @@ export default function PayrollPage() {
     setPayslip(buildPayrollPayslip(withPayments, employee));
   };
 
+  const bulkCalculate = async () => {
+    if (filterYear === "all" || filterMonth === "all") {
+      toast.error("برای محاسبه گروهی، سال و ماه فیلتر را مشخص کنید");
+      return;
+    }
+    setSaving(true);
+    try {
+      const token = tokenCode();
+      const res = await FetchWithJwtClient(
+        "POST",
+        "/api/employee-payrolls/bulk-calculate",
+        token,
+        {},
+        {
+          body: JSON.stringify({
+            payroll_year: filterYear,
+            payroll_month: filterMonth,
+          }),
+        },
+      );
+      if (res?.hasError) {
+        toast.error(getApiErrorMessage(res, "خطا در محاسبه گروهی"));
+        return;
+      }
+      const created = Number((res as { created?: number }).created) || 0;
+      const updated = Number((res as { updated?: number }).updated) || 0;
+      const skipped = Number((res as { skipped?: number }).skipped) || 0;
+      toast.success(`محاسبه گروهی: ${created} جدید، ${updated} به‌روز، ${skipped} رد شد`);
+      await loadPayrolls(filterYear, filterMonth);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const savePayroll = async () => {
     if (!payrollEmployeeId) {
       toast.error("کارمند را انتخاب کنید");
@@ -342,7 +404,23 @@ export default function PayrollPage() {
       return;
     }
     const employee = employeeMap.get(Number(payrollEmployeeId));
-    if (!employee?.base_salary) {
+    const type = employeeSalaryType(employee);
+    if (type === "hourly") {
+      if (!employee?.hourly_wage) {
+        toast.error("برای این کارمند نرخ ساعتی ثبت نشده است");
+        return;
+      }
+    } else if (type === "fixed") {
+      if (!employee?.fixed_monthly_amount && !employee?.base_salary) {
+        toast.error("برای این کارمند مبلغ مقطعی ثبت نشده است");
+        return;
+      }
+    } else if (type === "commission") {
+      if (!employee?.commission_percent) {
+        toast.error("برای این کارمند درصد پورسانت ثبت نشده است");
+        return;
+      }
+    } else if (!employee?.base_salary) {
       toast.error(
         isDailySalaryEmployee(employee)
           ? "برای این کارمند دستمزد روزانه ثبت نشده است"
@@ -351,7 +429,8 @@ export default function PayrollPage() {
       return;
     }
 
-    const daily = isDailySalaryEmployee(employee);
+    const daily = requiresDaysWorked(type);
+    const needsHours = requiresHoursWorked(type);
     const hours = Number(hoursWorked);
     const days = Number(daysWorked);
     const ot = Number(overtimeHours) || 0;
@@ -360,7 +439,7 @@ export default function PayrollPage() {
         toast.error("تعداد روز کارکرد معتبر نیست");
         return;
       }
-    } else if (!hours || hours <= 0) {
+    } else if (needsHours && (!hours || hours <= 0) && !allowsZeroWorkInput(type)) {
       toast.error("ساعت کارکرد معتبر نیست");
       return;
     }
@@ -372,7 +451,7 @@ export default function PayrollPage() {
         payrollEmployeeId,
         jalali.year,
         jalali.month,
-        daily ? { days, overtimeHours: ot } : { hours },
+        daily ? { days, overtimeHours: ot } : { hours: hours || 0, overtimeHours: ot },
       );
       const res = editingPayroll
         ? await FetchWithJwtClient(
@@ -683,6 +762,20 @@ export default function PayrollPage() {
           <Button
             size="small"
             variant="outlined"
+            startIcon={<CalculateIcon />}
+            onClick={() => void bulkCalculate()}
+            disabled={saving || filterYear === "all" || filterMonth === "all"}
+            sx={{
+              ...adminButtonStartIconSx,
+              borderColor: "var(--admin-border)",
+              color: "var(--admin-text-secondary)",
+            }}
+          >
+            محاسبه گروهی ماه
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
             startIcon={<PeopleIcon />}
             onClick={() => router.push("/admin/payroll/employees")}
             sx={{
@@ -918,6 +1011,14 @@ export default function PayrollPage() {
                             ) : null}
                             <IconButton
                               size="small"
+                              title="ردیف‌های فیش"
+                              onClick={() => setItemsPayroll(p)}
+                              disabled={saving}
+                            >
+                              <ListAltIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton
+                              size="small"
                               title="فیش حقوقی"
                               onClick={() => void openPayslip(p)}
                             >
@@ -982,24 +1083,35 @@ export default function PayrollPage() {
             </TextField>
             {selectedEmployee ? (
               <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>
+                نوع: {salaryTypeLabel(selectedSalaryType)}
                 {selectedIsDaily ? (
                   <>
-                    دستمزد روزانه {formatNumber(Number(selectedEmployee.base_salary || 0))} تومان
+                    {" — "}دستمزد روزانه {formatNumber(Number(selectedEmployee.base_salary || 0))} تومان
                     {selectedEmployee.hourly_wage
                       ? ` — اضافه‌کار ${formatNumber(Number(selectedEmployee.hourly_wage))} تومان/ساعت`
                       : ""}
                   </>
+                ) : selectedSalaryType === "hourly" ? (
+                  <> — نرخ {formatNumber(Number(selectedEmployee.hourly_wage || 0))} تومان/ساعت</>
+                ) : selectedSalaryType === "fixed" ? (
+                  <>
+                    {" — "}مبلغ{" "}
+                    {formatNumber(
+                      Number(selectedEmployee.fixed_monthly_amount || selectedEmployee.base_salary || 0),
+                    )}{" "}
+                    تومان
+                  </>
+                ) : selectedSalaryType === "commission" || selectedSalaryType === "mixed" ? (
+                  <>
+                    {selectedSalaryType === "mixed"
+                      ? ` — پایه ${formatNumber(Number(selectedEmployee.base_salary || 0))}`
+                      : ""}
+                    {` — پورسانت ${formatNumber(Number(selectedEmployee.commission_percent || 0))}٪`}
+                  </>
                 ) : (
                   <>
-                    پایه {formatNumber(Number(selectedEmployee.base_salary || 0))} تومان برای{" "}
+                    {" — "}پایه {formatNumber(Number(selectedEmployee.base_salary || 0))} تومان برای{" "}
                     {formatNumber(Number(selectedEmployee.base_work_hours || 0))} ساعت
-                    {Number(selectedEmployee.base_salary) > 0 && Number(selectedEmployee.base_work_hours) > 0
-                      ? ` — هر ساعت ${formatNumber(
-                          Math.round(
-                            Number(selectedEmployee.base_salary) / Number(selectedEmployee.base_work_hours),
-                          ),
-                        )} تومان`
-                      : ""}
                     {selectedEmployee.hourly_wage
                       ? ` — اضافه‌کار ${formatNumber(Number(selectedEmployee.hourly_wage))} تومان`
                       : ""}
@@ -1033,15 +1145,32 @@ export default function PayrollPage() {
                   inputProps={{ min: 0, step: 0.5 }}
                 />
               </>
+            ) : selectedNeedsHours ? (
+              <>
+                <TextField
+                  size="small"
+                  type="number"
+                  label="ساعت کارکرد"
+                  value={hoursWorked}
+                  onChange={(e) => setHoursWorked(e.target.value)}
+                  sx={fieldSx}
+                />
+                {selectedSalaryType === "hourly" ? (
+                  <TextField
+                    size="small"
+                    type="number"
+                    label="ساعت اضافه‌کار (اختیاری)"
+                    value={overtimeHours}
+                    onChange={(e) => setOvertimeHours(e.target.value)}
+                    sx={fieldSx}
+                    inputProps={{ min: 0, step: 0.5 }}
+                  />
+                ) : null}
+              </>
             ) : (
-              <TextField
-                size="small"
-                type="number"
-                label="ساعت کارکرد"
-                value={hoursWorked}
-                onChange={(e) => setHoursWorked(e.target.value)}
-                sx={fieldSx}
-              />
+              <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)" }}>
+                برای این نوع حقوق، ورود ساعت/روز الزامی نیست؛ با ثبت فیش مبلغ پایه محاسبه می‌شود.
+              </Typography>
             )}
             {estimatedSalary > 0 ? (
               <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: 13 }}>
@@ -1311,6 +1440,14 @@ export default function PayrollPage() {
       />
 
       <PayrollPayslipDialog slip={payslip} onClose={() => setPayslip(null)} />
+      <PayrollItemsDialog
+        payroll={itemsPayroll}
+        onClose={() => setItemsPayroll(null)}
+        onChanged={(updated) => {
+          setItemsPayroll(updated);
+          setPayrolls((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
+        }}
+      />
 
       <ToastContainer position="bottom-right" rtl autoClose={3000} style={{ marginBottom: "76px" }} />
     </Box>

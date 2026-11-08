@@ -40,6 +40,8 @@ import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
 import { adminPageSx } from "@/app/admin/theme/adminTheme";
 import PayrollConfirmDialog from "../PayrollConfirmDialog";
 import {
+  SALARY_TYPE_OPTIONS,
+  employeeSalaryType,
   extractList,
   extractSettings,
   formatInputWithSeparator,
@@ -48,9 +50,12 @@ import {
   normalizePhoneDigits,
   normalizeSearchText,
   parseAmount,
+  salaryTypeLabel,
   type Employee,
   type SalaryType,
 } from "@/app/lib/payroll";
+import EmployeePayrollExtrasDialog from "../EmployeePayrollExtrasDialog";
+import TuneIcon from "@mui/icons-material/Tune";
 import {
   fetchShopPermissionsCatalog,
   normalizePermissionKeys,
@@ -99,7 +104,10 @@ export default function PayrollEmployeesPage() {
   const [baseWorkHours, setBaseWorkHours] = useState("");
   const [hourlyWage, setHourlyWage] = useState("");
   const [salaryType, setSalaryType] = useState<SalaryType>("monthly");
+  const [commissionPercent, setCommissionPercent] = useState("");
+  const [fixedMonthlyAmount, setFixedMonthlyAmount] = useState("");
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
+  const [extrasEmployee, setExtrasEmployee] = useState<Employee | null>(null);
   const [defaultHours, setDefaultHours] = useState("");
   const [defaultHourly, setDefaultHourly] = useState("");
 
@@ -160,6 +168,8 @@ export default function PayrollEmployeesPage() {
     setBaseSalary("");
     setBaseWorkHours(defaultHours ? formatNumber(parseAmount(defaultHours)) : "");
     setHourlyWage(defaultHourly ? formatNumber(parseAmount(defaultHourly)) : "");
+    setCommissionPercent("");
+    setFixedMonthlyAmount("");
     setDialogOpen(true);
   };
 
@@ -169,10 +179,18 @@ export default function PayrollEmployeesPage() {
     setEmployeePhone(employee.phone || employee.username || "");
     setEmployeePassword("");
     setSelectedPermissions(employeePermissionKeys(employee));
-    setSalaryType(isDailySalaryEmployee(employee) ? "daily" : "monthly");
+    setSalaryType(employeeSalaryType(employee));
     setBaseSalary(employee.base_salary != null ? formatNumber(Number(employee.base_salary)) : "");
     setBaseWorkHours(employee.base_work_hours != null ? formatNumber(Number(employee.base_work_hours)) : "");
     setHourlyWage(employee.hourly_wage != null ? formatNumber(Number(employee.hourly_wage)) : "");
+    setCommissionPercent(
+      employee.commission_percent != null ? String(employee.commission_percent) : "",
+    );
+    setFixedMonthlyAmount(
+      employee.fixed_monthly_amount != null
+        ? formatNumber(Number(employee.fixed_monthly_amount))
+        : "",
+    );
     setDialogOpen(true);
   };
 
@@ -205,17 +223,45 @@ export default function PayrollEmployeesPage() {
     const salary = parseAmount(baseSalary);
     const hours = parseAmount(baseWorkHours);
     const wage = parseAmount(hourlyWage);
-    if (salary <= 0) {
-      toast.error(salaryType === "daily" ? "دستمزد روزانه را وارد کنید" : "پایه حقوق را وارد کنید");
-      return;
-    }
-    if (salaryType === "monthly" && hours <= 0) {
-      toast.error("ساعات کارکرد برای دریافت پایه حقوق را وارد کنید");
-      return;
-    }
-    if (wage <= 0) {
-      toast.error("دستمزد ساعتی اضافه‌کار را وارد کنید");
-      return;
+    const commission = Number(commissionPercent) || 0;
+    const fixedAmount = parseAmount(fixedMonthlyAmount);
+    if (salaryType === "hourly") {
+      if (wage <= 0) {
+        toast.error("نرخ ساعتی را وارد کنید");
+        return;
+      }
+    } else if (salaryType === "commission") {
+      if (commission <= 0) {
+        toast.error("درصد پورسانت را وارد کنید");
+        return;
+      }
+    } else if (salaryType === "fixed") {
+      if (fixedAmount <= 0 && salary <= 0) {
+        toast.error("مبلغ مقطعی ماه را وارد کنید");
+        return;
+      }
+    } else if (salaryType === "mixed") {
+      if (salary <= 0 || hours <= 0) {
+        toast.error("پایه حقوق و ساعات پایه را وارد کنید");
+        return;
+      }
+      if (commission <= 0) {
+        toast.error("درصد پورسانت را وارد کنید");
+        return;
+      }
+    } else {
+      if (salary <= 0) {
+        toast.error(salaryType === "daily" ? "دستمزد روزانه را وارد کنید" : "پایه حقوق را وارد کنید");
+        return;
+      }
+      if (salaryType === "monthly" && hours <= 0) {
+        toast.error("ساعات کارکرد برای دریافت پایه حقوق را وارد کنید");
+        return;
+      }
+      if (wage <= 0) {
+        toast.error("دستمزد ساعتی اضافه‌کار را وارد کنید");
+        return;
+      }
     }
     setSaving(true);
     try {
@@ -224,9 +270,11 @@ export default function PayrollEmployeesPage() {
         name: employeeName.trim(),
         phone: phone || null,
         salary_type: salaryType,
-        base_salary: salary,
-        base_work_hours: salaryType === "daily" ? 0 : hours,
+        base_salary: salaryType === "fixed" ? fixedAmount || salary : salary,
+        base_work_hours: salaryType === "daily" || salaryType === "hourly" || salaryType === "commission" || salaryType === "fixed" ? 0 : hours,
         hourly_wage: wage,
+        commission_percent: commission,
+        fixed_monthly_amount: salaryType === "fixed" ? fixedAmount || salary : fixedAmount,
       };
       if (owner) {
         body.permissions = selectedPermissions;
@@ -376,7 +424,7 @@ export default function PayrollEmployeesPage() {
                             ? "بدون دسترسی ورود"
                             : keys.map((key) => permissionTitle(key)).join("، ")}
                         </TableCell>
-                        <TableCell align="center">{daily ? "روزانه" : "ماهانه"}</TableCell>
+                        <TableCell align="center">{salaryTypeLabel(employeeSalaryType(e))}</TableCell>
                         <TableCell align="center">
                           {e.base_salary ? `${formatNumber(Number(e.base_salary))} تومان` : "—"}
                         </TableCell>
@@ -391,6 +439,9 @@ export default function PayrollEmployeesPage() {
                           {e.hourly_wage ? `${formatNumber(Number(e.hourly_wage))} تومان` : "—"}
                         </TableCell>
                         <TableCell align="center">
+                          <IconButton size="small" title="قالب / وام / حضور" onClick={() => setExtrasEmployee(e)}>
+                            <TuneIcon fontSize="small" />
+                          </IconButton>
                           <IconButton size="small" onClick={() => openEdit(e)}>
                             <EditIcon fontSize="small" />
                           </IconButton>
@@ -454,21 +505,47 @@ export default function PayrollEmployeesPage() {
               helperText={
                 salaryType === "daily"
                   ? "حقوق = روز کارکرد × دستمزد روزانه + ساعت اضافه‌کار × نرخ ساعتی"
-                  : "حقوق ماهانه بر اساس ساعت کارکرد و پایه حقوق"
+                  : salaryType === "hourly"
+                    ? "فقط ساعت × نرخ ساعتی"
+                    : salaryType === "commission"
+                      ? "درصد از فروش ماه (+ حداقل پایه اختیاری)"
+                      : salaryType === "mixed"
+                        ? "پایه ماهانه + پورسانت فروش"
+                        : salaryType === "fixed"
+                          ? "مبلغ توافقی ماه بدون وابستگی به ساعت"
+                          : "حقوق ماهانه بر اساس ساعت کارکرد و پایه حقوق"
               }
             >
-              <MenuItem value="monthly">ماهانه</MenuItem>
-              <MenuItem value="daily">روزانه (دستمزد روزانه)</MenuItem>
+              {SALARY_TYPE_OPTIONS.map((o) => (
+                <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
+              ))}
             </TextField>
-            <TextField
-              size="small"
-              label={salaryType === "daily" ? "دستمزد هر روز (تومان)" : "پایه حقوق (تومان)"}
-              value={baseSalary}
-              onChange={(e) => setBaseSalary(formatInputWithSeparator(e.target.value))}
-              sx={fieldSx}
-              inputProps={{ inputMode: "numeric", style: { direction: "ltr", textAlign: "right" } }}
-            />
-            {salaryType === "monthly" ? (
+            {salaryType === "fixed" ? (
+              <TextField
+                size="small"
+                label="مبلغ مقطعی ماه (تومان)"
+                value={fixedMonthlyAmount || baseSalary}
+                onChange={(e) => setFixedMonthlyAmount(formatInputWithSeparator(e.target.value))}
+                sx={fieldSx}
+                inputProps={{ inputMode: "numeric", style: { direction: "ltr", textAlign: "right" } }}
+              />
+            ) : salaryType !== "hourly" ? (
+              <TextField
+                size="small"
+                label={
+                  salaryType === "daily"
+                    ? "دستمزد هر روز (تومان)"
+                    : salaryType === "commission"
+                      ? "حداقل پایه (اختیاری)"
+                      : "پایه حقوق (تومان)"
+                }
+                value={baseSalary}
+                onChange={(e) => setBaseSalary(formatInputWithSeparator(e.target.value))}
+                sx={fieldSx}
+                inputProps={{ inputMode: "numeric", style: { direction: "ltr", textAlign: "right" } }}
+              />
+            ) : null}
+            {salaryType === "monthly" || salaryType === "mixed" ? (
               <TextField
                 size="small"
                 label="ساعات کارکرد برای دریافت پایه"
@@ -478,14 +555,27 @@ export default function PayrollEmployeesPage() {
                 inputProps={{ inputMode: "numeric", style: { direction: "ltr", textAlign: "right" } }}
               />
             ) : null}
-            <TextField
-              size="small"
-              label="دستمزد ساعتی اضافه‌کار (تومان)"
-              value={hourlyWage}
-              onChange={(e) => setHourlyWage(formatInputWithSeparator(e.target.value))}
-              sx={fieldSx}
-              inputProps={{ inputMode: "numeric", style: { direction: "ltr", textAlign: "right" } }}
-            />
+            {salaryType === "commission" || salaryType === "mixed" ? (
+              <TextField
+                size="small"
+                type="number"
+                label="درصد پورسانت فروش"
+                value={commissionPercent}
+                onChange={(e) => setCommissionPercent(e.target.value)}
+                sx={fieldSx}
+                inputProps={{ min: 0, max: 100, step: 0.1 }}
+              />
+            ) : null}
+            {salaryType !== "commission" && salaryType !== "fixed" ? (
+              <TextField
+                size="small"
+                label={salaryType === "hourly" ? "نرخ ساعتی (تومان)" : "دستمزد ساعتی اضافه‌کار (تومان)"}
+                value={hourlyWage}
+                onChange={(e) => setHourlyWage(formatInputWithSeparator(e.target.value))}
+                sx={fieldSx}
+                inputProps={{ inputMode: "numeric", style: { direction: "ltr", textAlign: "right" } }}
+              />
+            ) : null}
             {owner ? (
               <Box>
                 <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 0.75 }}>
@@ -568,6 +658,11 @@ export default function PayrollEmployeesPage() {
         loading={saving}
         onConfirm={confirmDeleteEmployee}
         onCancel={() => setEmployeeToDelete(null)}
+      />
+
+      <EmployeePayrollExtrasDialog
+        employee={extrasEmployee}
+        onClose={() => setExtrasEmployee(null)}
       />
 
       <ToastContainer position="bottom-right" rtl autoClose={3000} style={{ marginBottom: "76px" }} />

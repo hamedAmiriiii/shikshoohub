@@ -14,6 +14,7 @@ import PrintIcon from "@mui/icons-material/Print";
 import {
   formatNumber,
   formatPayrollHours,
+  salaryTypeLabel,
   type PayrollPayslip,
 } from "@/app/lib/payroll";
 import { adminButtonStartIconSx } from "@/app/admin/theme/adminTheme";
@@ -49,54 +50,99 @@ function Row({
   );
 }
 
-function buildPrintHtml(slip: PayrollPayslip): string {
+function baseRows(slip: PayrollPayslip): Array<[string, string]> {
   const money = (n: number) => `${formatNumber(n)} تومان`;
   const hours = (n: number) => `${formatPayrollHours(n)} ساعت`;
   const days = (n: number) => `${formatPayrollHours(n)} روز`;
-  const rows =
-    slip.salaryType === "daily"
-      ? [
-          ["نوع حقوق", "روزانه"],
-          ["دستمزد روزانه", money(slip.dailyWage)],
-          ["روز کارکرد", slip.hasHours ? days(slip.daysWorked) : "ثبت نشده"],
-          [
-            "اضافه‌کار",
-            slip.overtimeHours > 0
-              ? `${hours(slip.overtimeHours)} — ${money(slip.overtimePay)}`
-              : "۰",
-          ],
-          ["حقوق روزها", money(slip.regularPay)],
-          ["جمع حقوق", money(slip.salary)],
-          ["مساعده", money(slip.advances)],
-          ["پرداخت حقوق", money(slip.salaryPayments)],
-          ["سایر پرداخت", money(slip.otherPayments)],
-          ["جمع پرداخت‌شده", money(slip.totalPaid)],
-          ["مانده", money(slip.remaining)],
-        ]
-      : [
-          ["نوع حقوق", "ماهانه"],
-          ["ساعت موظف", hours(slip.baseHours)],
-          ["ساعت کارکرد", slip.hasHours ? hours(slip.hoursWorked) : "ثبت نشده"],
-          [
-            "اضافه‌کار",
-            slip.overtimeHours > 0
-              ? `${hours(slip.overtimeHours)} — ${money(slip.overtimePay)}`
-              : "۰",
-          ],
-          [
-            "کسر کار / مرخصی",
-            slip.shortageHours > 0
-              ? `${hours(slip.shortageHours)} — ${money(slip.shortageAmount)}`
-              : "۰",
-          ],
-          ["حقوق کارکرد", money(slip.regularPay)],
-          ["جمع حقوق", money(slip.salary)],
-          ["مساعده", money(slip.advances)],
-          ["پرداخت حقوق", money(slip.salaryPayments)],
-          ["سایر پرداخت", money(slip.otherPayments)],
-          ["جمع پرداخت‌شده", money(slip.totalPaid)],
-          ["مانده", money(slip.remaining)],
-        ];
+  const typeLabel = salaryTypeLabel(slip.salaryType);
+
+  if (slip.salaryType === "daily") {
+    return [
+      ["نوع حقوق", typeLabel],
+      ["دستمزد روزانه", money(slip.dailyWage)],
+      ["روز کارکرد", slip.hasHours ? days(slip.daysWorked) : "ثبت نشده"],
+      [
+        "اضافه‌کار",
+        slip.overtimeHours > 0
+          ? `${hours(slip.overtimeHours)} — ${money(slip.overtimePay)}`
+          : "۰",
+      ],
+      ["حقوق روزها", money(slip.regularPay)],
+    ];
+  }
+
+  if (slip.salaryType === "hourly") {
+    return [
+      ["نوع حقوق", typeLabel],
+      ["نرخ ساعتی", money(slip.overtimeHourly)],
+      ["ساعت کارکرد", slip.hasHours ? hours(slip.hoursWorked) : "ثبت نشده"],
+      ["حقوق ساعتی", money(slip.regularPay)],
+    ];
+  }
+
+  if (slip.salaryType === "fixed") {
+    return [
+      ["نوع حقوق", typeLabel],
+      ["مبلغ توافقی ماه", money(slip.baseEarned || slip.regularPay)],
+    ];
+  }
+
+  if (slip.salaryType === "commission" || slip.salaryType === "mixed") {
+    const rows: Array<[string, string]> = [
+      ["نوع حقوق", typeLabel],
+    ];
+    if (slip.salaryType === "mixed") {
+      rows.push(
+        ["ساعت موظف", hours(slip.baseHours)],
+        ["ساعت کارکرد", slip.hasHours ? hours(slip.hoursWorked) : "ثبت نشده"],
+        ["حقوق کارکرد", money(slip.regularPay)],
+      );
+    }
+    rows.push(
+      ["فروش ماه", money(slip.commissionSales)],
+      ["پورسانت", money(slip.commissionAmount)],
+    );
+    return rows;
+  }
+
+  return [
+    ["نوع حقوق", typeLabel],
+    ["ساعت موظف", hours(slip.baseHours)],
+    ["ساعت کارکرد", slip.hasHours ? hours(slip.hoursWorked) : "ثبت نشده"],
+    [
+      "اضافه‌کار",
+      slip.overtimeHours > 0
+        ? `${hours(slip.overtimeHours)} — ${money(slip.overtimePay)}`
+        : "۰",
+    ],
+    [
+      "کسر کار / مرخصی",
+      slip.shortageHours > 0
+        ? `${hours(slip.shortageHours)} — ${money(slip.shortageAmount)}`
+        : "۰",
+    ],
+    ["حقوق کارکرد", money(slip.regularPay)],
+  ];
+}
+
+function buildPrintHtml(slip: PayrollPayslip): string {
+  const money = (n: number) => `${formatNumber(n)} تومان`;
+  const rows = [
+    ...baseRows(slip),
+    ["پایه محاسبه", money(slip.baseEarned || slip.regularPay + slip.overtimePay)],
+    ...slip.items.map(
+      (item) =>
+        [`${item.typeLabel}: ${item.title}`, money(item.signedAmount)] as [string, string],
+    ),
+    ["جمع پاداش/مزایا", money(slip.itemsAddition)],
+    ["جمع کسورات/مالیات/بیمه", money(slip.itemsDeduction)],
+    ["خالص قابل پرداخت", money(slip.salary)],
+    ["مساعده", money(slip.advances)],
+    ["پرداخت حقوق", money(slip.salaryPayments)],
+    ["سایر پرداخت", money(slip.otherPayments)],
+    ["جمع پرداخت‌شده", money(slip.totalPaid)],
+    ["مانده", money(slip.remaining)],
+  ];
   const paymentRows = slip.payments
     .map(
       (p) =>
@@ -175,54 +221,29 @@ export default function PayrollPayslipDialog({ slip, onClose }: Props) {
           <Row label="تلفن" value={slip.employeePhone} />
           <Row label="وضعیت" value={slip.statusLabel} />
           <Divider sx={{ my: 1, borderColor: "var(--admin-border)" }} />
-          {slip.salaryType === "daily" ? (
-            <>
-              <Row label="نوع حقوق" value="روزانه" />
-              <Row label="دستمزد روزانه" value={`${formatNumber(slip.dailyWage)} تومان`} />
-              <Row
-                label="روز کارکرد"
-                value={slip.hasHours ? `${formatPayrollHours(slip.daysWorked)} روز` : "ثبت نشده"}
-              />
-              <Row
-                label="اضافه‌کار"
-                value={
-                  slip.overtimeHours > 0
-                    ? `${formatPayrollHours(slip.overtimeHours)} ساعت — ${formatNumber(slip.overtimePay)} تومان`
-                    : "۰"
-                }
-              />
-              <Divider sx={{ my: 1, borderColor: "var(--admin-border)" }} />
-              <Row label="حقوق روزها" value={`${formatNumber(slip.regularPay)} تومان`} />
-            </>
-          ) : (
-            <>
-              <Row label="نوع حقوق" value="ماهانه" />
-              <Row label="ساعت موظف" value={`${formatPayrollHours(slip.baseHours)} ساعت`} />
-              <Row
-                label="ساعت کارکرد"
-                value={slip.hasHours ? `${formatPayrollHours(slip.hoursWorked)} ساعت` : "ثبت نشده"}
-              />
-              <Row
-                label="اضافه‌کار"
-                value={
-                  slip.overtimeHours > 0
-                    ? `${formatPayrollHours(slip.overtimeHours)} ساعت — ${formatNumber(slip.overtimePay)} تومان`
-                    : "۰"
-                }
-              />
-              <Row
-                label="کسر کار / مرخصی"
-                value={
-                  slip.shortageHours > 0
-                    ? `${formatPayrollHours(slip.shortageHours)} ساعت — ${formatNumber(slip.shortageAmount)} تومان`
-                    : "۰"
-                }
-              />
-              <Divider sx={{ my: 1, borderColor: "var(--admin-border)" }} />
-              <Row label="حقوق کارکرد" value={`${formatNumber(slip.regularPay)} تومان`} />
-            </>
-          )}
-          <Row label="جمع حقوق" value={`${formatNumber(slip.salary)} تومان`} />
+          {baseRows(slip).map(([label, value]) => (
+            <Row key={label} label={label} value={value} />
+          ))}
+          <Divider sx={{ my: 1, borderColor: "var(--admin-border)" }} />
+          <Row
+            label="پایه محاسبه"
+            value={`${formatNumber(slip.baseEarned || slip.regularPay + slip.overtimePay)} تومان`}
+          />
+          {slip.items.map((item, idx) => (
+            <Row
+              key={`${item.title}-${idx}`}
+              label={`${item.typeLabel}: ${item.title}`}
+              value={`${formatNumber(item.signedAmount)} تومان`}
+              muted
+            />
+          ))}
+          {slip.itemsAddition > 0 ? (
+            <Row label="جمع پاداش/مزایا" value={`${formatNumber(slip.itemsAddition)} تومان`} />
+          ) : null}
+          {slip.itemsDeduction > 0 ? (
+            <Row label="جمع کسورات/مالیات/بیمه" value={`${formatNumber(slip.itemsDeduction)} تومان`} />
+          ) : null}
+          <Row label="خالص قابل پرداخت" value={`${formatNumber(slip.salary)} تومان`} />
           <Row label="مساعده" value={`${formatNumber(slip.advances)} تومان`} muted />
           <Row label="پرداخت حقوق" value={`${formatNumber(slip.salaryPayments)} تومان`} muted />
           <Row label="سایر پرداخت" value={`${formatNumber(slip.otherPayments)} تومان`} muted />

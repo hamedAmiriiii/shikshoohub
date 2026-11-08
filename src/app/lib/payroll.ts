@@ -2,7 +2,52 @@ import DateObject from "react-date-object";
 import persian from "react-date-object/calendars/persian";
 import persian_fa from "react-date-object/locales/persian_fa";
 
-export type SalaryType = "monthly" | "daily";
+export type SalaryType =
+  | "monthly"
+  | "daily"
+  | "hourly"
+  | "commission"
+  | "mixed"
+  | "fixed"
+  | string;
+
+export const SALARY_TYPE_OPTIONS: Array<{ value: SalaryType; label: string }> = [
+  { value: "monthly", label: "ماهانه" },
+  { value: "daily", label: "روزانه" },
+  { value: "hourly", label: "ساعتی" },
+  { value: "commission", label: "پورسانت فروش" },
+  { value: "mixed", label: "ترکیبی (پایه + پورسانت)" },
+  { value: "fixed", label: "مقطعی / توافقی" },
+];
+
+export type PayrollItemType = "bonus" | "allowance" | "deduction" | "tax" | "insurance" | string;
+
+export type PayrollItem = {
+  id: number;
+  item_type: PayrollItemType;
+  title: string;
+  amount: number | string;
+  is_auto?: boolean;
+  note?: string | null;
+  sort_order?: number;
+};
+
+export const PAYROLL_ITEM_TYPE_OPTIONS: Array<{ value: PayrollItemType; label: string }> = [
+  { value: "bonus", label: "پاداش" },
+  { value: "allowance", label: "مزایا / بن" },
+  { value: "deduction", label: "کسر" },
+  { value: "tax", label: "مالیات" },
+  { value: "insurance", label: "بیمه" },
+];
+
+export const PAYROLL_ITEM_PRESETS: Array<{ type: PayrollItemType; title: string }> = [
+  { type: "bonus", title: "پاداش" },
+  { type: "allowance", title: "بن / حق خواربار" },
+  { type: "allowance", title: "حق اولاد" },
+  { type: "deduction", title: "جریمه / غیبت مازاد" },
+  { type: "tax", title: "مالیات حقوق" },
+  { type: "insurance", title: "بیمه سهم کارمند" },
+];
 
 export type Employee = {
   id: number;
@@ -13,6 +58,8 @@ export type Employee = {
   base_salary?: number;
   base_work_hours?: number;
   hourly_wage?: number;
+  commission_percent?: number;
+  fixed_monthly_amount?: number;
   permissions?: string[] | Array<{ key?: string; name?: string; permission?: string }>;
   shop_permissions?: string[] | Array<{ key?: string; name?: string; permission?: string }>;
 };
@@ -24,6 +71,11 @@ export type PayrollSalaryBreakdown = {
   overtime_amount?: number;
   days_worked?: number;
   salary_type?: SalaryType | string;
+  base_earned_amount?: number;
+  commission_sales_amount?: number;
+  commission_amount?: number;
+  items_addition_total?: number;
+  items_deduction_total?: number;
 };
 
 export type PayrollStatus = "pending" | "partial" | "paid" | string;
@@ -56,7 +108,13 @@ export type Payroll = {
   overtime_hours?: number;
   overtime_amount?: number;
   salary_amount?: number | string;
+  base_earned_amount?: number | string;
+  items_addition_total?: number | string;
+  items_deduction_total?: number | string;
+  commission_sales_amount?: number | string;
+  commission_amount?: number | string;
   salary_breakdown?: PayrollSalaryBreakdown;
+  items?: PayrollItem[];
   total_paid?: number | string;
   remaining?: number | string;
   payments?: PayrollPayment[];
@@ -67,6 +125,11 @@ export type Payroll = {
 export type PayrollSettings = {
   salary_hourly_wage: number;
   salary_monthly_work_hours: number;
+  payroll_tax_percent?: number;
+  payroll_insurance_employee_percent?: number;
+  payroll_insurance_employer_percent?: number;
+  payroll_tax_fixed?: number;
+  payroll_insurance_fixed?: number;
 };
 
 export const PAYMENT_TYPE_OPTIONS = [
@@ -176,7 +239,30 @@ export function extractSettings(res: unknown): PayrollSettings {
   return {
     salary_hourly_wage: Number(src?.salary_hourly_wage) || 0,
     salary_monthly_work_hours: Number(src?.salary_monthly_work_hours) || 0,
+    payroll_tax_percent: Number(src?.payroll_tax_percent) || 0,
+    payroll_insurance_employee_percent: Number(src?.payroll_insurance_employee_percent) || 0,
+    payroll_insurance_employer_percent: Number(src?.payroll_insurance_employer_percent) || 0,
+    payroll_tax_fixed: Number(src?.payroll_tax_fixed) || 0,
+    payroll_insurance_fixed: Number(src?.payroll_insurance_fixed) || 0,
   };
+}
+
+export function salaryTypeLabel(type?: SalaryType | string | null): string {
+  const found = SALARY_TYPE_OPTIONS.find((o) => o.value === type);
+  return found?.label || String(type || "ماهانه");
+}
+
+export function payrollItemTypeLabel(type?: PayrollItemType | string | null): string {
+  const found = PAYROLL_ITEM_TYPE_OPTIONS.find((o) => o.value === type);
+  return found?.label || String(type || "—");
+}
+
+export function isAdditionItemType(type?: string | null): boolean {
+  return type === "bonus" || type === "allowance";
+}
+
+export function getPayrollItems(p: Payroll): PayrollItem[] {
+  return Array.isArray(p.items) ? p.items : [];
 }
 
 export function getPayrollEmployeeId(p: Payroll): number {
@@ -257,6 +343,22 @@ export function isDailySalaryEmployee(employee?: Employee | null): boolean {
   return (employee?.salary_type || "monthly") === "daily";
 }
 
+export function employeeSalaryType(employee?: Employee | null): SalaryType {
+  return (employee?.salary_type || "monthly") as SalaryType;
+}
+
+export function requiresHoursWorked(type?: SalaryType | string | null): boolean {
+  return type === "monthly" || type === "hourly" || type === "mixed";
+}
+
+export function requiresDaysWorked(type?: SalaryType | string | null): boolean {
+  return type === "daily";
+}
+
+export function allowsZeroWorkInput(type?: SalaryType | string | null): boolean {
+  return type === "fixed" || type === "commission";
+}
+
 export function getPayrollSalaryType(
   payroll?: Payroll | null,
   employee?: Employee | null,
@@ -267,7 +369,7 @@ export function getPayrollSalaryType(
     employee?.salary_type ||
     payroll?.employee?.salary_type ||
     "monthly";
-  return raw === "daily" ? "daily" : "monthly";
+  return String(raw || "monthly") as SalaryType;
 }
 
 export function estimateSalaryFromEmployee(
@@ -277,15 +379,31 @@ export function estimateSalaryFromEmployee(
   overtimeHours = 0,
 ): number {
   if (!employee) return 0;
+  const type = employeeSalaryType(employee);
 
-  if (isDailySalaryEmployee(employee)) {
+  if (type === "daily") {
     if (daysWorked <= 0 && overtimeHours <= 0) return 0;
     const dailyWage = Number(employee.base_salary) || 0;
     const overtimeHourly = Number(employee.hourly_wage) || 0;
     return Math.round(dailyWage * daysWorked + overtimeHourly * overtimeHours);
   }
 
-  if (hoursWorked <= 0) return 0;
+  if (type === "hourly") {
+    const rate = Number(employee.hourly_wage) || 0;
+    return Math.round(rate * (hoursWorked || 0) + rate * (overtimeHours || 0));
+  }
+
+  if (type === "fixed") {
+    return Math.round(
+      Number(employee.fixed_monthly_amount) || Number(employee.base_salary) || 0,
+    );
+  }
+
+  if (type === "commission") {
+    return Math.round(Number(employee.base_salary) || 0);
+  }
+
+  if (hoursWorked <= 0 && type !== "mixed") return 0;
   const baseSalary = Number(employee.base_salary) || 0;
   const baseHours = Number(employee.base_work_hours) || 0;
   const overtimeHourly = Number(employee.hourly_wage) || 0;
@@ -298,7 +416,7 @@ export function estimateSalaryFromEmployee(
   }
 
   if (overtimeHourly > 0) return Math.round(hoursWorked * overtimeHourly);
-  return 0;
+  return Math.round(baseSalary);
 }
 
 export function buildPayrollBody(
@@ -318,6 +436,9 @@ export function buildPayrollBody(
     body.hours_worked = 0;
   } else {
     body.hours_worked = Number(input.hours) || 0;
+    if (input.overtimeHours != null && input.overtimeHours > 0) {
+      body.overtime_hours = Number(input.overtimeHours) || 0;
+    }
   }
   return body;
 }
@@ -365,6 +486,17 @@ export type PayrollPayslip = {
   regularPay: number;
   overtimePay: number;
   shortageAmount: number;
+  baseEarned: number;
+  commissionSales: number;
+  commissionAmount: number;
+  items: Array<{
+    typeLabel: string;
+    title: string;
+    amount: number;
+    signedAmount: number;
+  }>;
+  itemsAddition: number;
+  itemsDeduction: number;
   salary: number;
   advances: number;
   salaryPayments: number;
@@ -450,9 +582,40 @@ export function buildPayrollPayslip(
   const regularPay =
     salaryType === "daily"
       ? Math.round(baseSalary * daysWorked)
-      : Math.round(hourlyRate * regularHours);
+      : salaryType === "hourly"
+        ? Math.round(overtimeHourly * regularHours)
+        : salaryType === "fixed"
+          ? Math.round(Number(emp?.fixed_monthly_amount) || baseSalary)
+          : Math.round(hourlyRate * regularHours);
   const shortageAmount = Math.round(hourlyRate * shortageHours);
   const salary = getPayrollSalary(payroll);
+  const baseEarned =
+    Number(breakdown?.base_earned_amount) ||
+    parseAmount(payroll.base_earned_amount) ||
+    Math.max(
+      0,
+      salary -
+        (Number(breakdown?.items_addition_total) || parseAmount(payroll.items_addition_total)) +
+        (Number(breakdown?.items_deduction_total) || parseAmount(payroll.items_deduction_total)),
+    );
+  const items = getPayrollItems(payroll).map((item) => {
+    const amount = parseAmount(item.amount);
+    const signed = isAdditionItemType(item.item_type) ? amount : -amount;
+    return {
+      typeLabel: payrollItemTypeLabel(item.item_type),
+      title: item.title,
+      amount,
+      signedAmount: signed,
+    };
+  });
+  const itemsAddition =
+    Number(breakdown?.items_addition_total) ||
+    parseAmount(payroll.items_addition_total) ||
+    items.filter((i) => i.signedAmount > 0).reduce((s, i) => s + i.amount, 0);
+  const itemsDeduction =
+    Number(breakdown?.items_deduction_total) ||
+    parseAmount(payroll.items_deduction_total) ||
+    items.filter((i) => i.signedAmount < 0).reduce((s, i) => s + i.amount, 0);
   const payments = getPayrollPayments(payroll).map((payment) => ({
     typeLabel: paymentTypeLabel(payment.payment_type),
     amount: parseAmount(payment.amount),
@@ -488,6 +651,14 @@ export function buildPayrollPayslip(
     regularPay,
     overtimePay,
     shortageAmount,
+    baseEarned,
+    commissionSales:
+      Number(breakdown?.commission_sales_amount) || parseAmount(payroll.commission_sales_amount),
+    commissionAmount:
+      Number(breakdown?.commission_amount) || parseAmount(payroll.commission_amount),
+    items,
+    itemsAddition,
+    itemsDeduction,
     salary,
     advances,
     salaryPayments,
