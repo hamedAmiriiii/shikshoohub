@@ -6,7 +6,7 @@ import BottomNavigation from '@mui/material/BottomNavigation';
 import BottomNavigationAction from '@mui/material/BottomNavigationAction';
 import HomeIcon from '@mui/icons-material/Home';
 import AssignmentIcon from '@mui/icons-material/Assignment';
-import { Grid } from '@mui/material';
+import { Grid, Typography } from '@mui/material';
 import BottomSheet from '@/app/coponent/BottomSheet';
 import ListData from './List';
 import ListPurches from './ListPurches';
