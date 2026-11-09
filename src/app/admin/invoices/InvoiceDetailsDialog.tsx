@@ -187,17 +187,29 @@ function lineBaseOf(row: DraftItem): number {
   return parseAmountInput(row.unitPrice) * parseQuantityInput(row.quantity);
 }
 
-function lineVatOf(row: DraftItem): number {
-  const base = lineBaseOf(row);
+function vatPerUnitOf(row: DraftItem): number {
+  const unit = parseAmountInput(row.unitPrice);
   if (row.vatMode === "percent") {
     const percent = parseAmountInput(row.vatInput);
-    if (percent <= 0) return 0;
-    return Math.round((base * percent) / 100);
+    if (percent <= 0 || unit <= 0) return 0;
+    return Math.round((unit * percent) / 100);
   }
   if (row.vatMode === "amount") {
     return Math.max(0, Math.round(parseAmountInput(row.vatInput)));
   }
   return 0;
+}
+
+function lineVatOf(row: DraftItem): number {
+  const qty = parseQuantityInput(row.quantity);
+  if (qty <= 0) return 0;
+  if (row.vatMode === "percent") {
+    const base = lineBaseOf(row);
+    const percent = parseAmountInput(row.vatInput);
+    if (percent <= 0) return 0;
+    return Math.round((base * percent) / 100);
+  }
+  return Math.round(vatPerUnitOf(row) * qty);
 }
 
 function lineGrossOf(row: DraftItem): number {
@@ -272,7 +284,7 @@ function draftsFromInvoice(invoice: InvoiceRecord): DraftItem[] {
           ? String(item.vat_percent)
           : ""
         : vatMode === "amount" && toNumber(item.vat_amount) > 0
-          ? formatAmountNumber(toNumber(item.vat_amount))
+          ? formatAmountNumber(quantity > 0 ? toNumber(item.vat_amount) / quantity : toNumber(item.vat_amount))
           : "";
     return {
       key: String(item.id ?? newDraftKey()),
@@ -888,7 +900,7 @@ export default function InvoiceDetailsDialog({
                   </TableHead>
                   <TableBody>
                     {drafts.map((row, index) => {
-                      const lineTotal = lineBaseOf(row);
+                      const lineTotal = lineGrossOf(row);
                       const lineVat = lineVatOf(row);
                       const landed = landedUnitOf(row, discountShares[row.key] || 0);
                       const share = discountShares[row.key] || 0;
@@ -1008,7 +1020,7 @@ export default function InvoiceDetailsDialog({
                               {row.vatMode !== "none" ? (
                                 <TextField
                                   size="small"
-                                  placeholder={row.vatMode === "percent" ? "درصد" : "مبلغ"}
+                                  placeholder={row.vatMode === "percent" ? "درصد" : "هر واحد"}
                                   value={row.vatInput}
                                   onChange={(e) =>
                                     updateDraft(row.key, {
@@ -1025,7 +1037,7 @@ export default function InvoiceDetailsDialog({
                             </Box>
                             {lineVat > 0 ? (
                               <Typography sx={{ fontSize: 10.5, color: "var(--admin-text-muted)", mt: 0.35 }}>
-                                {formatAmountNumber(lineVat)} تومان
+                                هر واحد {formatAmountNumber(vatPerUnitOf(row))} · جمع {formatAmountNumber(lineVat)}
                               </Typography>
                             ) : null}
                           </StyledTableCell>
