@@ -431,6 +431,13 @@ export default function AdminHamburgerSidebar({
         permission: "manufacturers",
       },
       { id: "invoices", label: "فاکتورها", href: "/admin/invoices", icon: <ReceiptIcon />, permission: "invoices" },
+      {
+        id: "consumables",
+        label: "انبار مواد مصرفی",
+        href: "/admin/consumables",
+        icon: <Inventory2Icon />,
+        permission: "products",
+      },
       { id: "categories", label: "دسته‌بندی", href: "/admin/categories", icon: <CategoryIcon />, permission: "categories" },
       {
         id: "bulk-discount",

@@ -2,14 +2,17 @@
 
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import {
+  Autocomplete,
   Box,
   Button,
   CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
+  FormControlLabel,
   IconButton,
   Paper,
+  Switch,
   Table,
   TableBody,
   TableCell,
@@ -50,6 +53,9 @@ export type InvoiceItem = {
   unit_price?: number | string | null;
   quantity?: number | string | null;
   total?: number | string | null;
+  vat_mode?: string | null;
+  vat_percent?: number | string | null;
+  vat_amount?: number | string | null;
 };
 
 export type InvoiceRecord = DocumentPaymentFields & {
@@ -68,7 +74,18 @@ export type InvoiceRecord = DocumentPaymentFields & {
   items_count?: number;
   image_url?: string | null;
   has_items?: boolean;
+  has_consumable_lots?: boolean;
+  discount_amount?: number | string | null;
   amount_source?: "items" | "manual" | string;
+};
+
+type VatMode = "none" | "percent" | "amount";
+
+type ConsumableOption = {
+  id: number;
+  name: string;
+  stock?: number;
+  next_unit_cost?: number | null;
 };
 
 /** فاکتور آیتم‌دار: مبلغ فقط از مجموع آیتم‌هاست و فیلد مبلغ کلی نباید فرستاده شود */
@@ -93,6 +110,9 @@ type DraftItem = {
   quantity: string;
   barcode: string;
   purchasePrice: string;
+  salePrice: string;
+  vatMode: VatMode;
+  vatInput: string;
   registered?: RegisteredProduct | null;
 };
 
@@ -144,7 +164,69 @@ function newDraftKey() {
 }
 
 function emptyDraft(): DraftItem {
-  return { key: newDraftKey(), title: "", unitPrice: "", quantity: "", barcode: "", purchasePrice: "" };
+  return {
+    key: newDraftKey(),
+    title: "",
+    unitPrice: "",
+    quantity: "",
+    barcode: "",
+    purchasePrice: "",
+    salePrice: "",
+    vatMode: "none",
+    vatInput: "",
+  };
+}
+
+function asVatMode(value: unknown): VatMode {
+  const mode = String(value || "none").toLowerCase();
+  if (mode === "percent" || mode === "amount") return mode;
+  return "none";
+}
+
+function lineBaseOf(row: DraftItem): number {
+  return parseAmountInput(row.unitPrice) * parseQuantityInput(row.quantity);
+}
+
+function lineVatOf(row: DraftItem): number {
+  const base = lineBaseOf(row);
+  if (row.vatMode === "percent") {
+    const percent = parseAmountInput(row.vatInput);
+    if (percent <= 0) return 0;
+    return Math.round((base * percent) / 100);
+  }
+  if (row.vatMode === "amount") {
+    return Math.max(0, Math.round(parseAmountInput(row.vatInput)));
+  }
+  return 0;
+}
+
+function lineGrossOf(row: DraftItem): number {
+  return lineBaseOf(row) + lineVatOf(row);
+}
+
+function discountSharesOf(rows: DraftItem[], discount: number): Record<string, number> {
+  const shares: Record<string, number> = {};
+  const active = rows.filter((row) => lineGrossOf(row) > 0);
+  const sum = active.reduce((total, row) => total + lineGrossOf(row), 0);
+  if (discount <= 0 || sum <= 0) return shares;
+  let allocated = 0;
+  active.forEach((row, index) => {
+    if (index === active.length - 1) {
+      shares[row.key] = Math.round((discount - allocated) * 100) / 100;
+      return;
+    }
+    const share = Math.round(((discount * lineGrossOf(row)) / sum) * 100) / 100;
+    shares[row.key] = share;
+    allocated += share;
+  });
+  return shares;
+}
+
+function landedUnitOf(row: DraftItem, share: number): number {
+  const qty = parseQuantityInput(row.quantity);
+  if (qty <= 0) return 0;
+  const net = Math.max(0, lineGrossOf(row) - share);
+  return Math.round(net / qty);
 }
 
 function parseQuantityInput(value: string): number {
@@ -183,6 +265,15 @@ function draftsFromInvoice(invoice: InvoiceRecord): DraftItem[] {
   return items.map((item) => {
     const unitPrice = toNumber(item.unit_price);
     const quantity = toNumber(item.quantity);
+    const vatMode = asVatMode(item.vat_mode);
+    const vatInput =
+      vatMode === "percent"
+        ? item.vat_percent != null
+          ? String(item.vat_percent)
+          : ""
+        : vatMode === "amount" && toNumber(item.vat_amount) > 0
+          ? formatAmountNumber(toNumber(item.vat_amount))
+          : "";
     return {
       key: String(item.id ?? newDraftKey()),
       title: String(item.title ?? ""),
@@ -190,6 +281,9 @@ function draftsFromInvoice(invoice: InvoiceRecord): DraftItem[] {
       quantity: quantity > 0 ? String(quantity) : "",
       barcode: "",
       purchasePrice: unitPrice > 0 ? formatAmountNumber(unitPrice) : "",
+      salePrice: "",
+      vatMode,
+      vatInput,
     };
   });
 }
@@ -237,6 +331,11 @@ export default function InvoiceDetailsDialog({
   const [record, setRecord] = useState<InvoiceRecord | null>(null);
   const [settleOpen, setSettleOpen] = useState(false);
   const [productEntryEnabled, setProductEntryEnabled] = useState(false);
+  const [consumableMode, setConsumableMode] = useState(false);
+  const [discountInput, setDiscountInput] = useState("");
+  const [consumableOptions, setConsumableOptions] = useState<ConsumableOption[]>([]);
+  const [consumableSearchLoading, setConsumableSearchLoading] = useState(false);
+  const consumableSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [afterMismatch, setAfterMismatch] = useState<"save" | "register">("save");
   const titleInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const focusKeyRef = useRef<string | null>(null);
@@ -271,6 +370,8 @@ export default function InvoiceDetailsDialog({
       setOriginalHadItems(loadedItems.length > 0);
       setInvoiceAmount(toNumber(full.amount));
       setRecord(full);
+      setConsumableMode(Boolean(full.has_consumable_lots));
+      setDiscountInput(toNumber(full.discount_amount) > 0 ? formatAmountNumber(toNumber(full.discount_amount)) : "");
       setConfirmMismatchOpen(false);
       setLoading(false);
     };
@@ -293,13 +394,17 @@ export default function InvoiceDetailsDialog({
   }, [drafts]);
 
   const itemsTotal = useMemo(
-    () =>
-      drafts.reduce((sum, row) => {
-        const unitPrice = parseAmountInput(row.unitPrice);
-        const quantity = parseQuantityInput(row.quantity);
-        return sum + unitPrice * quantity;
-      }, 0),
+    () => drafts.reduce((sum, row) => sum + lineBaseOf(row), 0),
     [drafts]
+  );
+
+  const vatTotal = useMemo(() => drafts.reduce((sum, row) => sum + lineVatOf(row), 0), [drafts]);
+
+  const discountAmount = useMemo(() => Math.max(0, Math.round(parseAmountInput(discountInput))), [discountInput]);
+
+  const discountShares = useMemo(
+    () => discountSharesOf(drafts, discountAmount),
+    [drafts, discountAmount]
   );
 
   const amountMismatch = useMemo(() => {
@@ -328,25 +433,95 @@ export default function InvoiceDetailsDialog({
     addRow(true);
   };
 
+  const searchConsumables = (query: string) => {
+    if (consumableSearchTimer.current) clearTimeout(consumableSearchTimer.current);
+    consumableSearchTimer.current = setTimeout(async () => {
+      const token = tokenCode();
+      if (!token) return;
+      setConsumableSearchLoading(true);
+      try {
+        const q = query.trim();
+        const res = await FetchWithJwtClient(
+          "GET",
+          `/api/consumable-materials?search=${encodeURIComponent(q)}&limit=20`,
+          token
+        );
+        if (!res || res.hasError) {
+          setConsumableOptions([]);
+          return;
+        }
+        const rows = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
+        setConsumableOptions(
+          rows
+            .map((row: any) => ({
+              id: Number(row.id),
+              name: String(row.name || ""),
+              stock: row.stock != null ? Number(row.stock) : undefined,
+              next_unit_cost: row.next_unit_cost != null ? Number(row.next_unit_cost) : null,
+            }))
+            .filter((row: ConsumableOption) => row.id && row.name)
+        );
+      } finally {
+        setConsumableSearchLoading(false);
+      }
+    }, 280);
+  };
+
   const collectItems = () => {
     const items = drafts
-      .map((row) => ({
-        title: row.title.trim(),
-        unit_price: parseAmountInput(row.unitPrice),
-        quantity: parseQuantityInput(row.quantity),
-      }))
+      .map((row) => {
+        const unitPrice = parseAmountInput(row.unitPrice);
+        const quantity = parseQuantityInput(row.quantity);
+        const base = Math.round(unitPrice * quantity);
+        const vatAmount = lineVatOf(row);
+        return {
+          title: row.title.trim(),
+          unit_price: unitPrice,
+          quantity,
+          vat_mode: row.vatMode,
+          vat_percent: row.vatMode === "percent" ? parseAmountInput(row.vatInput) : null,
+          vat_amount: vatAmount,
+          _base: base,
+        };
+      })
       .filter((row) => row.title || row.unit_price > 0 || row.quantity > 0);
 
     for (const row of items) {
       if (!row.title || row.unit_price <= 0 || row.quantity <= 0) {
-        toast.error("هر ردیف باید عنوان، فی و تعداد معتبر داشته باشد");
+        toast.error(
+          consumableMode
+            ? "هر ردیف باید نام کالا، فی و تعداد معتبر داشته باشد"
+            : "هر ردیف باید عنوان، فی و تعداد معتبر داشته باشد"
+        );
+        return null;
+      }
+      if (consumableMode && !Number.isInteger(row.quantity)) {
+        toast.error(`تعداد «${row.title}» باید عدد صحیح باشد`);
+        return null;
+      }
+      if (row.vat_mode === "percent" && (row.vat_percent == null || row.vat_percent < 0 || row.vat_percent > 100)) {
+        toast.error(`درصد ارزش افزوده «${row.title}» نامعتبر است`);
         return null;
       }
     }
-    return items;
+    const gross = items.reduce((sum, row) => sum + row._base + row.vat_amount, 0);
+    if (discountAmount > gross) {
+      toast.error("تخفیف از جمع کالاها و ارزش افزوده بیشتر است");
+      return null;
+    }
+    return items.map(({ _base, ...row }) => row);
   };
 
-  const saveItems = async (items: { title: string; unit_price: number; quantity: number }[]) => {
+  const saveItems = async (
+    items: {
+      title: string;
+      unit_price: number;
+      quantity: number;
+      vat_mode: VatMode;
+      vat_percent: number | null;
+      vat_amount: number;
+    }[]
+  ) => {
     if (!invoice) return;
     const token = tokenCode();
     if (!token) {
@@ -361,6 +536,14 @@ export default function InvoiceDetailsDialog({
       if (items.length > 0 || originalHadItems) {
         payload.items = items;
       }
+      if (consumableMode) {
+        if (items.length === 0) {
+          toast.error("برای ثبت مواد مصرفی حداقل یک ردیف لازم است");
+          return;
+        }
+        payload.sync_consumables = true;
+      }
+      payload.discount_amount = discountAmount;
 
       const hasPayload = Object.keys(payload).length > 0;
 
@@ -373,7 +556,7 @@ export default function InvoiceDetailsDialog({
         return;
       }
 
-      toast.success("جزئیات فاکتور ذخیره شد");
+      toast.success(consumableMode ? "فاکتور و خرید مواد مصرفی ذخیره شد" : "جزئیات فاکتور ذخیره شد");
       setConfirmMismatchOpen(false);
       onSaved();
       onClose();
@@ -405,21 +588,26 @@ export default function InvoiceDetailsDialog({
     const pending = rows.filter((row) => row.title.trim() && !row.registered);
     for (const row of pending) {
       const barcode = row.barcode.trim();
-      const purchasePrice = parseAmountInput(row.purchasePrice) || parseAmountInput(row.unitPrice);
       const quantity = parseQuantityInput(row.quantity);
+      const purchasePrice = landedUnitOf(row, discountShares[row.key] || 0);
+      const salePrice = parseAmountInput(row.salePrice);
       if (!barcode) {
         toast.error(`بارکد «${row.title.trim()}» را وارد کنید`);
         return false;
       }
       if (purchasePrice <= 0 || quantity <= 0) {
-        toast.error(`قیمت خرید و تعداد «${row.title.trim()}» باید معتبر باشد`);
+        toast.error(`فی و تعداد «${row.title.trim()}» باید معتبر باشد`);
+        return false;
+      }
+      if (salePrice <= 0) {
+        toast.error(`قیمت فروش «${row.title.trim()}» را وارد کنید`);
         return false;
       }
       const res = await FetchWithJwtClient("POST", "/api/product", {
         name: row.title.trim(),
         barcode,
         purchase_price: purchasePrice,
-        sale_price: purchasePrice,
+        sale_price: salePrice,
         quantity,
       });
       if (!res || res.hasError) {
@@ -473,7 +661,7 @@ export default function InvoiceDetailsDialog({
     <Dialog
       open={open}
       onClose={saving || confirmMismatchOpen ? undefined : onClose}
-      maxWidth={productEntryEnabled ? "lg" : "md"}
+      maxWidth="lg"
       fullWidth
       PaperProps={{
         sx: {
@@ -602,33 +790,76 @@ export default function InvoiceDetailsDialog({
                   py: 1,
                   bgcolor: "var(--admin-surface-alt)",
                   borderBottom: "1px solid var(--admin-border)",
+                  flexWrap: "wrap",
                 }}
               >
-                <Box>
+                <Box sx={{ minWidth: 0, flex: 1 }}>
                   <Typography sx={{ color: "var(--admin-text)", fontWeight: 800, fontSize: 13 }}>
                     اقلام کالا / خدمات
                   </Typography>
                   <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, mt: 0.15 }}>
-                    Enter در هر فیلد = افزودن ردیف جدید
+                    {consumableMode
+                      ? "نام کالا سرچ می‌شود. ارزش افزوده هر ردیف جداست و تخفیف بین همه سرشکن می‌شود."
+                      : "Enter در هر فیلد = ردیف جدید. ارزش افزوده هر کالا جداست و تخفیف روی قیمت خرید همه سرشکن می‌شود."}
                   </Typography>
                 </Box>
-                <Button
-                  size="small"
-                  variant="contained"
-                  startIcon={<AddIcon sx={{ fontSize: 16 }} />}
-                  onClick={() => addRow(true)}
-                  sx={{
-                    ...adminButtonStartIconSx,
-                    backgroundColor: "var(--admin-accent)",
-                    fontSize: 12,
-                    minHeight: 30,
-                    py: 0.35,
-                    borderRadius: 1.5,
-                    "&:hover": { backgroundColor: "var(--admin-accent-hover)" },
-                  }}
-                >
-                  افزودن ردیف
-                </Button>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={consumableMode}
+                        onChange={(_, checked) => setConsumableMode(checked)}
+                        sx={{
+                          "& .MuiSwitch-switchBase.Mui-checked": { color: "var(--admin-accent)" },
+                          "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                            backgroundColor: "var(--admin-accent)",
+                          },
+                        }}
+                      />
+                    }
+                    label="مواد مصرفی"
+                    sx={{
+                      m: 0,
+                      mr: 0.5,
+                      "& .MuiFormControlLabel-label": {
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: "var(--admin-text)",
+                        whiteSpace: "nowrap",
+                      },
+                    }}
+                  />
+                  <TextField
+                    size="small"
+                    label="تخفیف"
+                    value={discountInput}
+                    onChange={(e) => setDiscountInput(formatAmountInput(e.target.value))}
+                    sx={{
+                      ...fieldSx,
+                      width: 120,
+                      "& .MuiInputLabel-root": { color: "var(--admin-text-muted)", fontSize: 12 },
+                    }}
+                    inputProps={{ inputMode: "numeric", style: { textAlign: "center" } }}
+                  />
+                  <Button
+                    size="small"
+                    variant="contained"
+                    startIcon={<AddIcon sx={{ fontSize: 16 }} />}
+                    onClick={() => addRow(true)}
+                    sx={{
+                      ...adminButtonStartIconSx,
+                      backgroundColor: "var(--admin-accent)",
+                      fontSize: 12,
+                      minHeight: 30,
+                      py: 0.35,
+                      borderRadius: 1.5,
+                      "&:hover": { backgroundColor: "var(--admin-accent-hover)" },
+                    }}
+                  >
+                    افزودن ردیف
+                  </Button>
+                </Box>
               </Box>
 
               <TableContainer component={Paper} elevation={0} sx={{ boxShadow: "none", bgcolor: "transparent" }}>
@@ -636,37 +867,111 @@ export default function InvoiceDetailsDialog({
                   <TableHead>
                     <TableRow>
                       <StyledTableCell align="center">ردیف</StyledTableCell>
-                      <StyledTableCell align="center">شرح کالا / خدمات</StyledTableCell>
+                      <StyledTableCell align="center">
+                        {consumableMode ? "نام کالا" : "شرح کالا / خدمات"}
+                      </StyledTableCell>
                       <StyledTableCell align="center">فی</StyledTableCell>
+                      <StyledTableCell align="center">ارزش افزوده</StyledTableCell>
                       <StyledTableCell align="center">تعداد</StyledTableCell>
-                      {productEntryEnabled ? <StyledTableCell align="center">بارکد</StyledTableCell> : null}
-                      {productEntryEnabled ? <StyledTableCell align="center">قیمت خرید</StyledTableCell> : null}
+                      {productEntryEnabled && !consumableMode ? (
+                        <StyledTableCell align="center">بارکد</StyledTableCell>
+                      ) : null}
+                      {productEntryEnabled && !consumableMode ? (
+                        <StyledTableCell align="center">قیمت فروش</StyledTableCell>
+                      ) : null}
+                      <StyledTableCell align="center">
+                        {consumableMode ? "قیمت تمام‌شده" : "قیمت خرید"}
+                      </StyledTableCell>
                       <StyledTableCell align="center">مبلغ کل</StyledTableCell>
                       <StyledTableCell align="center">حذف</StyledTableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {drafts.map((row, index) => {
-                      const lineTotal =
-                        parseAmountInput(row.unitPrice) * parseQuantityInput(row.quantity);
+                      const lineTotal = lineBaseOf(row);
+                      const lineVat = lineVatOf(row);
+                      const landed = landedUnitOf(row, discountShares[row.key] || 0);
+                      const share = discountShares[row.key] || 0;
                       return (
                         <StyledTableRow key={row.key}>
                           <StyledTableCell align="center" sx={{ width: 48, fontWeight: 700 }}>
                             {formatAmountNumber(index + 1)}
                           </StyledTableCell>
                           <StyledTableCell align="center" sx={{ minWidth: 160 }}>
-                            <TextField
-                              size="small"
-                              placeholder="شرح"
-                              value={row.title}
-                              onChange={(e) => updateDraft(row.key, { title: e.target.value })}
-                              onKeyDown={handleFieldEnter}
-                              inputRef={(el) => {
-                                titleInputRefs.current[row.key] = el;
-                              }}
-                              fullWidth
-                              sx={fieldSx}
-                            />
+                            {consumableMode ? (
+                              <Autocomplete
+                                freeSolo
+                                options={consumableOptions}
+                                loading={consumableSearchLoading}
+                                filterOptions={(x) => x}
+                                isOptionEqualToValue={(option, value) =>
+                                  typeof value === "string"
+                                    ? option.name === value
+                                    : option.id === value.id
+                                }
+                                getOptionLabel={(option) =>
+                                  typeof option === "string" ? option : option.name
+                                }
+                                inputValue={row.title}
+                                value={row.title}
+                                onInputChange={(_, value, reason) => {
+                                  updateDraft(row.key, { title: value });
+                                  if (reason === "input" || reason === "clear") {
+                                    searchConsumables(value);
+                                  }
+                                }}
+                                onChange={(_, value) => {
+                                  if (typeof value === "string") {
+                                    updateDraft(row.key, { title: value });
+                                    return;
+                                  }
+                                  if (value) {
+                                    updateDraft(row.key, { title: value.name });
+                                  }
+                                }}
+                                onOpen={() => {
+                                  if (consumableOptions.length === 0) searchConsumables(row.title);
+                                }}
+                                renderOption={(props, option) => (
+                                  <li {...props} key={option.id}>
+                                    <Box sx={{ display: "flex", flexDirection: "column", py: 0.25 }}>
+                                      <Typography sx={{ fontSize: 13, fontWeight: 700 }}>{option.name}</Typography>
+                                      <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)" }}>
+                                        موجودی {formatAmountNumber(option.stock ?? 0)}
+                                        {option.next_unit_cost != null
+                                          ? ` · فی بعدی ${formatAmountNumber(option.next_unit_cost)}`
+                                          : ""}
+                                      </Typography>
+                                    </Box>
+                                  </li>
+                                )}
+                                renderInput={(params) => (
+                                  <TextField
+                                    {...params}
+                                    size="small"
+                                    placeholder="نام کالا"
+                                    onKeyDown={handleFieldEnter}
+                                    inputRef={(el) => {
+                                      titleInputRefs.current[row.key] = el;
+                                    }}
+                                    sx={fieldSx}
+                                  />
+                                )}
+                              />
+                            ) : (
+                              <TextField
+                                size="small"
+                                placeholder="شرح"
+                                value={row.title}
+                                onChange={(e) => updateDraft(row.key, { title: e.target.value })}
+                                onKeyDown={handleFieldEnter}
+                                inputRef={(el) => {
+                                  titleInputRefs.current[row.key] = el;
+                                }}
+                                fullWidth
+                                sx={fieldSx}
+                              />
+                            )}
                           </StyledTableCell>
                           <StyledTableCell align="center" sx={{ width: 120 }}>
                             <TextField
@@ -675,13 +980,7 @@ export default function InvoiceDetailsDialog({
                               type="text"
                               inputMode="numeric"
                               value={row.unitPrice}
-                              onChange={(e) => {
-                                const unitPrice = formatAmountInput(e.target.value);
-                                updateDraft(row.key, {
-                                  unitPrice,
-                                  ...(row.purchasePrice ? {} : { purchasePrice: unitPrice }),
-                                });
-                              }}
+                              onChange={(e) => updateDraft(row.key, { unitPrice: formatAmountInput(e.target.value) })}
                               onKeyDown={handleFieldEnter}
                               fullWidth
                               sx={{
@@ -689,6 +988,46 @@ export default function InvoiceDetailsDialog({
                                 "& .MuiInputBase-input": { ...fieldSx["& .MuiInputBase-input"], textAlign: "center" },
                               }}
                             />
+                          </StyledTableCell>
+                          <StyledTableCell align="center" sx={{ minWidth: 168 }}>
+                            <Box sx={{ display: "flex", gap: 0.5, alignItems: "center" }}>
+                              <TextField
+                                select
+                                size="small"
+                                value={row.vatMode}
+                                onChange={(e) =>
+                                  updateDraft(row.key, { vatMode: e.target.value as VatMode, vatInput: "" })
+                                }
+                                SelectProps={{ native: true }}
+                                sx={{ ...fieldSx, width: 74, flexShrink: 0 }}
+                              >
+                                <option value="none">بدون</option>
+                                <option value="percent">٪</option>
+                                <option value="amount">مبلغ</option>
+                              </TextField>
+                              {row.vatMode !== "none" ? (
+                                <TextField
+                                  size="small"
+                                  placeholder={row.vatMode === "percent" ? "درصد" : "مبلغ"}
+                                  value={row.vatInput}
+                                  onChange={(e) =>
+                                    updateDraft(row.key, {
+                                      vatInput:
+                                        row.vatMode === "amount"
+                                          ? formatAmountInput(e.target.value)
+                                          : e.target.value.replace(/[^\d.]/g, ""),
+                                    })
+                                  }
+                                  onKeyDown={handleFieldEnter}
+                                  sx={{ ...fieldSx, flex: 1, minWidth: 72 }}
+                                />
+                              ) : null}
+                            </Box>
+                            {lineVat > 0 ? (
+                              <Typography sx={{ fontSize: 10.5, color: "var(--admin-text-muted)", mt: 0.35 }}>
+                                {formatAmountNumber(lineVat)} تومان
+                              </Typography>
+                            ) : null}
                           </StyledTableCell>
                           <StyledTableCell align="center" sx={{ width: 88 }}>
                             <TextField
@@ -706,7 +1045,7 @@ export default function InvoiceDetailsDialog({
                               }}
                             />
                           </StyledTableCell>
-                          {productEntryEnabled ? (
+                          {productEntryEnabled && !consumableMode ? (
                             <StyledTableCell align="center" sx={{ width: 120 }}>
                               <TextField
                                 size="small"
@@ -725,16 +1064,16 @@ export default function InvoiceDetailsDialog({
                               ) : null}
                             </StyledTableCell>
                           ) : null}
-                          {productEntryEnabled ? (
+                          {productEntryEnabled && !consumableMode ? (
                             <StyledTableCell align="center" sx={{ width: 120 }}>
                               <TextField
                                 size="small"
-                                placeholder="قیمت خرید"
+                                placeholder="قیمت فروش"
                                 type="text"
                                 inputMode="numeric"
-                                value={row.purchasePrice}
+                                value={row.salePrice}
                                 onChange={(e) =>
-                                  updateDraft(row.key, { purchasePrice: formatAmountInput(e.target.value) })
+                                  updateDraft(row.key, { salePrice: formatAmountInput(e.target.value) })
                                 }
                                 onKeyDown={handleFieldEnter}
                                 fullWidth
@@ -745,6 +1084,16 @@ export default function InvoiceDetailsDialog({
                               />
                             </StyledTableCell>
                           ) : null}
+                          <StyledTableCell align="center" sx={{ whiteSpace: "nowrap", minWidth: 110 }}>
+                            <Typography sx={{ color: "var(--admin-text)", fontWeight: 800, fontSize: 13 }}>
+                              {formatAmountNumber(landed) || "۰"}
+                            </Typography>
+                            {share > 0 ? (
+                              <Typography sx={{ fontSize: 10.5, color: "var(--admin-text-muted)", mt: 0.25 }}>
+                                سهم تخفیف {formatAmountNumber(share)}
+                              </Typography>
+                            ) : null}
+                          </StyledTableCell>
                           <StyledTableCell align="center" sx={{ whiteSpace: "nowrap", minWidth: 100 }}>
                             <Typography sx={{ color: "var(--admin-accent)", fontWeight: 800, fontSize: 13 }}>
                               {formatAmountNumber(lineTotal) || "۰"}
@@ -824,6 +1173,18 @@ export default function InvoiceDetailsDialog({
                       {formatAmountNumber(itemsTotal) || "۰"}
                     </Typography>
                   </Box>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}>
+                    <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>ارزش افزوده</Typography>
+                    <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: 13 }}>
+                      {formatAmountNumber(vatTotal) || "۰"}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}>
+                    <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>تخفیف</Typography>
+                    <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: 13 }}>
+                      {formatAmountNumber(discountAmount) || "۰"}
+                    </Typography>
+                  </Box>
                 </Box>
               </Box>
             </Box>
@@ -834,7 +1195,7 @@ export default function InvoiceDetailsDialog({
         <Button onClick={onClose} disabled={saving} sx={{ color: "var(--admin-text-muted)" }}>
           انصراف
         </Button>
-        {productEntryEnabled ? (
+        {productEntryEnabled && !consumableMode ? (
           <Button
             onClick={() => void handleRegisterAndSave()}
             variant="contained"
@@ -858,7 +1219,7 @@ export default function InvoiceDetailsDialog({
             "&:hover": { backgroundColor: "var(--admin-accent-hover)" },
           }}
         >
-          {saving ? "در حال ذخیره..." : "ذخیره فاکتور"}
+          {saving ? "در حال ذخیره..." : consumableMode ? "ذخیره و ثبت در انبار" : "ذخیره فاکتور"}
         </Button>
       </DialogActions>
     </Dialog>

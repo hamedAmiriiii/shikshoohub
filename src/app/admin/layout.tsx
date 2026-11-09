@@ -71,6 +71,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/shop-services': 'خدمات اتاق',
     '/admin/best-selling': 'محصولات پرفروش',
     '/admin/invoices': 'فاکتورها',
+    '/admin/consumables': 'انبار مواد مصرفی',
     '/admin/manufacturers': 'تولیدکنندگان',
     '/admin/manufacturers/report': 'گزارش فروش تولیدکنندگان',
     '/admin/shop-sms-logs': 'پیامک‌های فروشگاه',

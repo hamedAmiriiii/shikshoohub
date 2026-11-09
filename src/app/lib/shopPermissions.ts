@@ -115,6 +115,7 @@ const ROUTE_PERMISSIONS: { prefix: string; keys: ShopPermissionKey[] }[] = [
   { prefix: "/admin/installments", keys: ["installments"] },
   { prefix: "/admin/referral", keys: ["referral"] },
   { prefix: "/admin/inventory", keys: ["products"] },
+  { prefix: "/admin/consumables", keys: ["products"] },
   { prefix: "/admin/best-selling", keys: ["products"] },
   { prefix: "/admin/bulk-discount", keys: ["products"] },
   { prefix: "/admin/proformas", keys: ["pos"] },
