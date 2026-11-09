@@ -78,6 +78,19 @@ const HERO_BADGES = [
   { icon: PaymentsIcon, label: "پرداخت بعد از کار" },
 ];
 
+/** تعرفه خدمات برای نمایش در صفحه اصلی (الزام شاپرک / درگاه) */
+const PRICED_SERVICES: Array<{
+  name: string;
+  price: number;
+  icon: SvgIconComponent;
+  tone: { bg: string; fg: string };
+}> = [
+  { name: "مراجعه حضوری", price: 800_000, icon: EngineeringIcon, tone: TONES[0] },
+  { name: "سرویس کولر", price: 2_000_000, icon: AcUnitIcon, tone: TONES[2] },
+  { name: "سرویس پکیج", price: 2_300_000, icon: WhatshotIcon, tone: TONES[3] },
+  { name: "سرویس آبگرمکن", price: 14_000_000, icon: WhatshotIcon, tone: TONES[5] },
+];
+
 const ENAMAD_HTML =
   "<a referrerpolicy='origin' target='_blank' href='https://trustseal.enamad.ir/?id=8568066&Code=tuddj2iYHAxtTFBzvoXhNoAu6vTO1paH'><img referrerpolicy='origin' src='https://trustseal.enamad.ir/logo.aspx?id=8568066&Code=tuddj2iYHAxtTFBzvoXhNoAu6vTO1paH' alt='' style='cursor:pointer' code='tuddj2iYHAxtTFBzvoXhNoAu6vTO1paH'></a>";
 
@@ -269,6 +282,71 @@ export default function RepairLandingPage() {
       </Paper>
 
       <RepairInstallBanner app="customer" />
+
+      <Box>
+        <Typography variant="h6" fontWeight={800} sx={{ mb: 0.5 }}>
+          خدمات و تعرفه‌ها
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, lineHeight: 1.8 }}>
+          قیمت‌ها به تومان است. پس از انتخاب خدمت می‌توانید درخواست ثبت کنید و هزینه را از درگاه بانکی پرداخت کنید.
+        </Typography>
+        <Grid container spacing={1.5}>
+          {PRICED_SERVICES.map((service) => {
+            const Icon = service.icon;
+            return (
+              <Grid key={service.name} size={{ xs: 12, sm: 6 }}>
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 2,
+                    borderRadius: 3,
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 1.25,
+                  }}
+                >
+                  <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Box
+                      sx={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 2.5,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        bgcolor: service.tone.bg,
+                        color: service.tone.fg,
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Icon />
+                    </Box>
+                    <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                      <Typography fontWeight={800}>{service.name}</Typography>
+                      <Typography
+                        component="div"
+                        sx={{ mt: 0.35, fontWeight: 900, fontSize: 18, color: "primary.main", direction: "ltr", textAlign: "right" }}
+                      >
+                        {formatToman(service.price)}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                  <Button
+                    component={Link}
+                    href={`/repair/requests/new?serviceName=${encodeURIComponent(service.name)}&amount=${service.price}`}
+                    variant="contained"
+                    startIcon={<PaymentsIcon />}
+                    sx={{ borderRadius: 2.5, fontWeight: 800, mt: "auto" }}
+                  >
+                    پرداخت آنلاین
+                  </Button>
+                </Paper>
+              </Grid>
+            );
+          })}
+        </Grid>
+      </Box>
 
       {openRequests.length > 0 && (
         <Section

@@ -45,10 +45,33 @@ export default function NewRepairRequestPage() {
 
   useEffect(() => {
     if (!config) return;
-    const preset = new URLSearchParams(window.location.search).get("service");
-    if (!preset) return;
-    const known = useServiceIds ? realServices.some((s) => String(s.id) === preset) : config.categories.includes(preset);
-    if (known) setForm((f) => (f.service_id ? f : { ...f, service_id: preset }));
+    const params = new URLSearchParams(window.location.search);
+    const preset = params.get("service");
+    const serviceName = (params.get("serviceName") || "").trim();
+    const amount = Number(params.get("amount") || 0);
+
+    if (preset) {
+      const known = useServiceIds
+        ? realServices.some((s) => String(s.id) === preset)
+        : config.categories.includes(preset);
+      if (known) setForm((f) => (f.service_id ? f : { ...f, service_id: preset }));
+    } else if (serviceName) {
+      const byName = useServiceIds
+        ? realServices.find((s) => s.name === serviceName)
+        : config.categories.find((name) => name === serviceName);
+      if (byName) {
+        const value = useServiceIds ? String((byName as { id: number }).id) : String(byName);
+        setForm((f) => (f.service_id ? f : { ...f, service_id: value }));
+      }
+    }
+
+    if (serviceName || amount > 0) {
+      const priceLine = amount > 0 ? `مبلغ تعرفه: ${amount.toLocaleString("fa-IR")} تومان` : "";
+      const seed = [serviceName && `خدمت: ${serviceName}`, priceLine, "درخواست پرداخت آنلاین از صفحه اصلی."]
+        .filter(Boolean)
+        .join("\n");
+      setForm((f) => (f.description ? f : { ...f, description: seed }));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config]);
 
