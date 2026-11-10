@@ -40,8 +40,104 @@ const cellSx = {
 } as const;
 
 function docAmount(doc: BeneficiaryDoc): number {
-  const value = typeof doc.amount === "string" ? parseFloat(doc.amount) : Number(doc.amount);
-  return Number.isFinite(value) ? value : 0;
+  if (doc.payable_amount != null && doc.payable_amount !== "") {
+    const payable = Number(doc.payable_amount);
+    if (Number.isFinite(payable)) return Math.max(0, Math.round(payable));
+  }
+  const base = typeof doc.amount === "string" ? parseFloat(doc.amount) : Number(doc.amount);
+  const vat = Number(doc.vat_amount) || 0;
+  const discount = Number(doc.discount_amount) || 0;
+  const value = (Number.isFinite(base) ? base : 0) + vat - discount;
+  return Math.max(0, Math.round(value));
+}
+
+function escapeHtml(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function printRows(rows: BeneficiaryDoc[]): string {
+  if (rows.length === 0) {
+    return `<tr><td colspan="4" style="text-align:center">موردی ثبت نشده است</td></tr>`;
+  }
+  return rows
+    .map(
+      (row, index) => `<tr>
+        <td>${index + 1}</td>
+        <td>${escapeHtml(row.title || "—")}</td>
+        <td>${escapeHtml(formatBeneficiaryAmount(docAmount(row)))}</td>
+        <td>${escapeHtml(docDate(row))}</td>
+      </tr>`,
+    )
+    .join("");
+}
+
+function printBeneficiary(detail: BeneficiaryDetail) {
+  const invoices = detail.invoices || [];
+  const expenses = detail.expenses || [];
+  const invoiceTotal = invoices.reduce((sum, row) => sum + docAmount(row), 0);
+  const expenseTotal = expenses.reduce((sum, row) => sum + docAmount(row), 0);
+  const html = `<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <title>${escapeHtml(formatBeneficiaryLabel(detail))}</title>
+  <style>
+    body { font-family: Tahoma, Arial, sans-serif; color: #111; padding: 16px; }
+    h1 { font-size: 18px; margin: 0 0 4px; }
+    h2 { font-size: 14px; margin: 18px 0 8px; }
+    .meta { font-size: 12px; color: #555; margin-bottom: 14px; }
+    .stats { display: flex; gap: 18px; font-size: 13px; margin-bottom: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: center; }
+    th { background: #f3f5f8; }
+    tfoot td { font-weight: 800; }
+    @media print { body { padding: 0; } }
+  </style>
+</head>
+<body>
+  <h1>${escapeHtml(formatBeneficiaryLabel(detail))}</h1>
+  <div class="meta">گردش ذینفع</div>
+  <div class="stats">
+    <span>کل خرید: <b>${escapeHtml(formatBeneficiaryAmount(detail.purchased_total))}</b></span>
+    <span>پرداخت‌شده: <b>${escapeHtml(formatBeneficiaryAmount(detail.paid_total))}</b></span>
+    <span>بدهی: <b>${escapeHtml(formatBeneficiaryAmount(detail.unpaid_total))}</b></span>
+  </div>
+  <h2>فاکتورها</h2>
+  <table>
+    <thead><tr><th>ردیف</th><th>عنوان</th><th>مبلغ</th><th>تاریخ</th></tr></thead>
+    <tbody>${printRows(invoices)}</tbody>
+    <tfoot><tr><td colspan="2">جمع فاکتورها</td><td>${escapeHtml(formatBeneficiaryAmount(invoiceTotal))}</td><td></td></tr></tfoot>
+  </table>
+  <h2>هزینه‌ها</h2>
+  <table>
+    <thead><tr><th>ردیف</th><th>عنوان</th><th>مبلغ</th><th>تاریخ</th></tr></thead>
+    <tbody>${printRows(expenses)}</tbody>
+    <tfoot><tr><td colspan="2">جمع هزینه‌ها</td><td>${escapeHtml(formatBeneficiaryAmount(expenseTotal))}</td><td></td></tr></tfoot>
+  </table>
+</body>
+</html>`;
+
+  const iframe = document.createElement("iframe");
+  iframe.setAttribute("aria-hidden", "true");
+  iframe.style.cssText =
+    "position:fixed;left:0;top:0;width:800px;height:600px;border:0;opacity:0;pointer-events:none;z-index:-1";
+  const cleanup = () => window.setTimeout(() => iframe.remove(), 400);
+  iframe.onload = () => {
+    const frameWindow = iframe.contentWindow;
+    if (!frameWindow) {
+      iframe.remove();
+      return;
+    }
+    frameWindow.addEventListener("afterprint", cleanup, { once: true });
+    frameWindow.focus();
+    frameWindow.print();
+  };
+  document.body.appendChild(iframe);
+  iframe.srcdoc = html;
 }
 
 function docDate(doc: BeneficiaryDoc): string {
@@ -208,6 +304,19 @@ export default function BeneficiaryDetailPage() {
                   پرداخت بدهی جمعی
                 </Button>
               ) : null}
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => printBeneficiary(detail)}
+                sx={{
+                  ...adminButtonStartIconSx,
+                  color: "var(--admin-text)",
+                  borderColor: "var(--admin-border)",
+                  fontSize: 12,
+                }}
+              >
+                پرینت
+              </Button>
               <Button
                 size="small"
                 variant="outlined"

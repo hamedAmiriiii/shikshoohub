@@ -24,8 +24,12 @@ export type BeneficiaryDoc = {
   created_at?: string | null;
   type?: string | null;
   payment_method?: string | null;
+  payment_method_label?: string | null;
   payment_status?: string | null;
   payment_breakdown?: import("@/app/lib/documentPayments").DocumentPaymentBreakdown | null;
+  vat_amount?: number | string | null;
+  discount_amount?: number | string | null;
+  payable_amount?: number | string | null;
 };
 
 export type BeneficiaryDetail = Beneficiary & {

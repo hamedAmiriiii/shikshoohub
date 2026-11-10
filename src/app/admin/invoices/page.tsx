@@ -53,6 +53,7 @@ import { beneficiaryFromRecord, beneficiaryPayload, formatBeneficiaryLabel, type
 import {
   buildDocumentPaymentPayload,
   documentCreditRemaining,
+  documentPaymentLabel,
   emptyDocumentPaymentForm,
   formFromDocumentPayment,
   type DocumentPaymentFormState,
@@ -123,6 +124,81 @@ function parseAmountInput(value: string): number {
     .replace(/\s/g, "");
   const num = parseFloat(cleaned);
   return Number.isFinite(num) ? num : NaN;
+}
+
+function escapeHtml(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function printInvoiceList(input: { title: string; total: number; rows: Invoice[] }) {
+  const body = input.rows
+    .map((invoice) => {
+      const beneficiary = formatBeneficiaryLabel(beneficiaryFromRecord(invoice)) || "—";
+      return `<tr>
+        <td>${escapeHtml(formatNumber(invoice.id))}</td>
+        <td>${escapeHtml(invoice.title || "—")}</td>
+        <td>${escapeHtml(formatNumber(invoicePayable(invoice)))}</td>
+        <td>${escapeHtml(documentPaymentLabel(invoice))}</td>
+        <td>${escapeHtml(invoice.description || "—")}</td>
+        <td>${escapeHtml(invoice.date || "—")}</td>
+        <td>${escapeHtml(beneficiary)}</td>
+        <td>${escapeHtml(invoice.user_name || "—")}</td>
+      </tr>`;
+    })
+    .join("");
+  const html = `<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <title>${escapeHtml(input.title)}</title>
+  <style>
+    body { font-family: Tahoma, Arial, sans-serif; color: #111; padding: 16px; }
+    h1 { font-size: 18px; margin: 0 0 4px; }
+    .meta { font-size: 12px; color: #555; margin-bottom: 14px; }
+    table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    th, td { border: 1px solid #ccc; padding: 5px 6px; text-align: center; }
+    th { background: #f3f5f8; }
+    tfoot td { font-weight: 800; }
+    @media print { body { padding: 0; } }
+  </style>
+</head>
+<body>
+  <h1>${escapeHtml(input.title)}</h1>
+  <div class="meta">${escapeHtml(formatNumber(input.rows.length))} مورد · جمع ${escapeHtml(formatNumber(input.total))} تومان</div>
+  <table>
+    <thead>
+      <tr>
+        <th>شماره</th><th>عنوان</th><th>مبلغ</th><th>پرداخت</th><th>توضیحات</th><th>تاریخ</th><th>ذینفع</th><th>کاربر</th>
+      </tr>
+    </thead>
+    <tbody>${body || `<tr><td colspan="8">فاکتوری نیست</td></tr>`}</tbody>
+    <tfoot>
+      <tr><td colspan="2">جمع</td><td>${escapeHtml(formatNumber(input.total))}</td><td colspan="5"></td></tr>
+    </tfoot>
+  </table>
+</body>
+</html>`;
+  const iframe = document.createElement("iframe");
+  iframe.setAttribute("aria-hidden", "true");
+  iframe.style.cssText =
+    "position:fixed;left:0;top:0;width:800px;height:600px;border:0;opacity:0;pointer-events:none;z-index:-1";
+  const cleanup = () => window.setTimeout(() => iframe.remove(), 400);
+  iframe.onload = () => {
+    const frameWindow = iframe.contentWindow;
+    if (!frameWindow) {
+      iframe.remove();
+      return;
+    }
+    frameWindow.addEventListener("afterprint", cleanup, { once: true });
+    frameWindow.focus();
+    frameWindow.print();
+  };
+  document.body.appendChild(iframe);
+  iframe.srcdoc = html;
 }
 
 function invoicePayable(invoice?: Invoice | null): number {
@@ -220,6 +296,7 @@ export default function InvoicesPage() {
   const [dateRange, setDateRange] = useState<any>([]);
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [printing, setPrinting] = useState(false);
   const [filterBeneficiaryId, setFilterBeneficiaryId] = useState<number | "">("");
   const [filterBeneficiaryOption, setFilterBeneficiaryOption] = useState<Beneficiary | null>(null);
 
@@ -291,12 +368,12 @@ export default function InvoicesPage() {
     }
   };
 
-  const buildUrl = () => {
+  const buildUrl = (page = currentPage, pageSize = perPage) => {
     let url = "/api/invoices";
     const params: string[] = [];
 
-    params.push(`per_page=${perPage}`);
-    params.push(`page=${currentPage}`);
+    params.push(`per_page=${pageSize}`);
+    params.push(`page=${page}`);
 
     // Add time filter
     if (filterMode === 'range' && dateRange.length === 2) {
@@ -642,6 +719,45 @@ export default function InvoicesPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handlePrint = async () => {
+    const token = tokenCode();
+    if (!token) {
+      toast.error("لطفاً وارد شوید");
+      return;
+    }
+    setPrinting(true);
+    try {
+      const rows: Invoice[] = [];
+      let page = 1;
+      let lastPage = 1;
+      do {
+        const res = await FetchWithJwtClient("GET", buildUrl(page, 100), token);
+        if (!res || res.hasError) {
+          toast.error(getApiErrorMessage(res, "خطا در آماده‌سازی پرینت"));
+          return;
+        }
+        const data = Array.isArray(res.data) ? res.data : Array.isArray(res) ? res : [];
+        rows.push(...(data as Invoice[]));
+        lastPage = Number(res.last_page) || 1;
+        page += 1;
+      } while (page <= lastPage && page <= 30);
+
+      const beneficiaryName = filterBeneficiaryOption
+        ? formatBeneficiaryLabel(filterBeneficiaryOption)
+        : formatBeneficiaryLabel(beneficiaryFromRecord(rows[0]));
+      printInvoiceList({
+        title: beneficiaryName ? `فاکتورهای ${beneficiaryName}` : "لیست فاکتورها",
+        total: rows.reduce((sum, row) => sum + invoicePayable(row), 0),
+        rows,
+      });
+    } catch (error) {
+      console.error("Error printing invoices:", error);
+      toast.error("خطا در پرینت فاکتورها");
+    } finally {
+      setPrinting(false);
+    }
+  };
+
   const hasActiveFilters = () => {
     return filterMode !== null || dateRange.length > 0 || filterBeneficiaryId !== "";
   };
@@ -704,6 +820,23 @@ export default function InvoicesPage() {
               ثبت فاکتور
             </Button>
             
+            <Button
+              variant="outlined"
+              size="small"
+              disabled={printing || loading}
+              onClick={() => void handlePrint()}
+              sx={{
+                color: "var(--admin-text)",
+                borderColor: "var(--admin-border)",
+                borderRadius: "8px",
+                fontSize: 12,
+                py: 0.5,
+                px: 1.25,
+              }}
+            >
+              {printing ? "..." : "پرینت"}
+            </Button>
+
             <IconButton
               size="small"
               onClick={() => setOpenFilterSheet(true)}
