@@ -84,7 +84,11 @@ export type InvoiceRecord = DocumentPaymentFields & {
   image_url?: string | null;
   has_items?: boolean;
   has_consumable_lots?: boolean;
+  vat_mode?: string | null;
+  vat_percent?: number | string | null;
+  vat_amount?: number | string | null;
   discount_amount?: number | string | null;
+  payable_amount?: number | string | null;
   amount_source?: "items" | "manual" | string;
 };
 
@@ -1200,12 +1204,12 @@ export default function InvoiceDetailsDialog({
                 <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 0.75 }}>
                   {(
                     [
-                      ["جمع اقلام", itemsTotal, true],
-                      ["ارزش افزوده", vatTotal, false],
-                      ["تخفیف", discountAmount, false],
-                      ["قابل پرداخت", payableAmount, true],
+                      ["جمع اقلام", itemsTotal, "accent"],
+                      ["ارزش افزوده", vatTotal, "plain"],
+                      ["تخفیف", discountAmount, "plain"],
+                      ["قابل پرداخت", payableAmount, "payable"],
                     ] as const
-                  ).map(([label, value, strong]) => (
+                  ).map(([label, value, tone]) => (
                     <Box
                       key={label}
                       sx={{
@@ -1215,17 +1219,23 @@ export default function InvoiceDetailsDialog({
                         px: 0.85,
                         py: 0.35,
                         borderRadius: 1.25,
-                        border: "1px solid var(--admin-border)",
-                        bgcolor: "var(--admin-surface)",
+                        border: tone === "payable" ? "1px solid rgba(212, 160, 23, 0.55)" : "1px solid var(--admin-border)",
+                        bgcolor: tone === "payable" ? "rgba(212, 160, 23, 0.12)" : "var(--admin-surface)",
                       }}
                     >
-                      <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, whiteSpace: "nowrap" }}>
+                      <Typography
+                        sx={{
+                          color: tone === "payable" ? "#c49212" : "var(--admin-text-muted)",
+                          fontSize: 11,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
                         {label}
                       </Typography>
                       <Typography
                         sx={{
-                          color: strong ? "var(--admin-accent)" : "var(--admin-text)",
-                          fontWeight: strong ? 800 : 700,
+                          color: tone === "payable" ? "#e0ac1c" : tone === "accent" ? "var(--admin-accent)" : "var(--admin-text)",
+                          fontWeight: tone === "plain" ? 700 : 800,
                           fontSize: 13,
                           whiteSpace: "nowrap",
                         }}

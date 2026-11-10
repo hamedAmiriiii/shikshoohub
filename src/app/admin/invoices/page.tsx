@@ -125,6 +125,16 @@ function parseAmountInput(value: string): number {
   return Number.isFinite(num) ? num : NaN;
 }
 
+function invoicePayable(invoice?: Invoice | null): number {
+  if (!invoice) return 0;
+  const payable = Number(invoice.payable_amount);
+  if (Number.isFinite(payable)) return Math.max(0, Math.round(payable));
+  const base = Number(invoice.amount) || 0;
+  const vat = Number(invoice.vat_amount) || 0;
+  const discount = Number(invoice.discount_amount) || 0;
+  return Math.max(0, Math.round(base + vat - discount));
+}
+
 function formatAmountInput(value: string): string {
   const digitsOnly = String(value ?? "").replace(/[^\d۰-۹٠-٩]/g, "");
   if (!digitsOnly) return "";
@@ -364,7 +374,7 @@ export default function InvoicesPage() {
           setTotalAmount(res.total_amount);
         } else {
           const pageTotal = res.data.reduce(
-            (sum: number, invoice: Invoice) => sum + (invoice.amount || 0),
+            (sum: number, invoice: Invoice) => sum + invoicePayable(invoice),
             0
           );
           setTotalAmount(pageTotal);
@@ -374,7 +384,7 @@ export default function InvoicesPage() {
         setInvoices(data);
         setTotalPages(1);
         setTotalCount(data.length);
-        const total = data.reduce((sum: number, invoice: Invoice) => sum + (invoice.amount || 0), 0);
+        const total = data.reduce((sum: number, invoice: Invoice) => sum + invoicePayable(invoice), 0);
         setTotalAmount(total);
         if (!Array.isArray(res) && res.total_amount !== undefined) {
           setTotalAmount(res.total_amount);
@@ -830,7 +840,7 @@ export default function InvoicesPage() {
                     </StyledTableCell>
                     <StyledTableCell align="center">
                       <Typography sx={{ color: 'var(--admin-accent)', fontWeight: '700' }}>
-                        {formatNumber(invoice.amount)} تومان
+                        {formatNumber(invoicePayable(invoice))} تومان
                       </Typography>
                     </StyledTableCell>
                     <StyledTableCell align="center">
@@ -1211,7 +1221,7 @@ export default function InvoicesPage() {
               />
               {invoiceUsesItemAmount(editingInvoice) ? (
                 <Typography sx={{ color: 'var(--admin-text-muted)', fontSize: 13 }}>
-                  مبلغ این فاکتور از جمع ردیف‌هاست ({formatNumber(editingInvoice?.amount || 0)} تومان) و جداگانه ویرایش نمی‌شود.
+                  مبلغ این فاکتور از جمع ردیف‌ها با ارزش افزوده و تخفیف است ({formatNumber(invoicePayable(editingInvoice))} تومان) و جداگانه ویرایش نمی‌شود.
                 </Typography>
               ) : (
               <>
