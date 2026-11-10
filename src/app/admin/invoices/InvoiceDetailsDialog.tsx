@@ -69,6 +69,8 @@ export type InvoiceItem = {
 
 export type InvoiceRecord = DocumentPaymentFields & {
   id: number;
+  /** شماره فاکتور داخل همان فروشگاه؛ از ۱ */
+  number?: number | string | null;
   amount: number;
   title: string;
   description?: string;
@@ -102,6 +104,13 @@ type ConsumableOption = {
 };
 
 /** فاکتور آیتم‌دار: مبلغ فقط از مجموع آیتم‌هاست و فیلد مبلغ کلی نباید فرستاده شود */
+export function invoiceShopNumber(invoice?: { number?: number | string | null; id?: number | null } | null): number | null {
+  const shopNumber = Number(invoice?.number);
+  if (Number.isFinite(shopNumber) && shopNumber > 0) return shopNumber;
+  const id = Number(invoice?.id);
+  return Number.isFinite(id) && id > 0 ? id : null;
+}
+
 export function invoiceUsesItemAmount(invoice?: InvoiceRecord | null): boolean {
   if (!invoice) return false;
   if (invoice.amount_source === "items" || invoice.has_items === true) return true;
@@ -789,7 +798,11 @@ export default function InvoiceDetailsDialog({
             <HeaderMetaItem label="حساب پرداخت" value={shopAccountName || "—"} />
             <HeaderMetaItem
               label="شماره فاکتور"
-              value={display?.id != null ? formatAmountNumber(display.id) : "—"}
+              value={
+                invoiceShopNumber(display)
+                  ? formatAmountNumber(invoiceShopNumber(display) as number)
+                  : "—"
+              }
             />
             <HeaderMetaItem label="عنوان سند" value={display?.title || createDraft?.title || "—"} />
           </Box>

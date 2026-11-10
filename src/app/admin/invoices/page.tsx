@@ -47,7 +47,7 @@ import DocumentPaymentFields from '@/app/admin/DocumentPaymentFields';
 import DocumentVatFields from '@/app/admin/DocumentVatFields';
 import { DocumentPaymentChips, documentNeedsSettle } from '@/app/admin/DocumentPaymentBadge';
 import DocumentPaymentSettleDialog from '@/app/admin/DocumentPaymentSettleDialog';
-import InvoiceDetailsDialog, { invoiceUsesItemAmount, type InvoiceCreateDraft, type InvoiceRecord } from '@/app/admin/invoices/InvoiceDetailsDialog';
+import InvoiceDetailsDialog, { invoiceShopNumber, invoiceUsesItemAmount, type InvoiceCreateDraft, type InvoiceRecord } from '@/app/admin/invoices/InvoiceDetailsDialog';
 import InvoiceImageDialog, { getInvoiceImageUrl } from '@/app/admin/invoices/InvoiceImageDialog';
 import { beneficiaryFromRecord, beneficiaryPayload, formatBeneficiaryLabel, type Beneficiary } from '@/app/lib/beneficiaries';
 import {
@@ -139,7 +139,7 @@ function printInvoiceList(input: { title: string; total: number; rows: Invoice[]
     .map((invoice) => {
       const beneficiary = formatBeneficiaryLabel(beneficiaryFromRecord(invoice)) || "—";
       return `<tr>
-        <td>${escapeHtml(formatNumber(invoice.id))}</td>
+        <td>${escapeHtml(formatNumber(invoiceShopNumber(invoice) || 0))}</td>
         <td>${escapeHtml(invoice.title || "—")}</td>
         <td>${escapeHtml(formatNumber(invoicePayable(invoice)))}</td>
         <td>${escapeHtml(documentPaymentLabel(invoice))}</td>
@@ -963,7 +963,7 @@ export default function InvoicesPage() {
                   <StyledTableRow key={invoice.id}>
                     <StyledTableCell align="center">
                       <Typography sx={{ color: 'var(--admin-text)', fontWeight: '700', fontVariantNumeric: 'tabular-nums' }}>
-                        {formatNumber(invoice.id)}
+                        {formatNumber(invoiceShopNumber(invoice) || 0)}
                       </Typography>
                     </StyledTableCell>
                     <StyledTableCell align="center">

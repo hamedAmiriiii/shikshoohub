@@ -218,7 +218,8 @@ const compactLabelSx = {
 
 function invoiceOptionLabel(invoice: InvoiceRecord) {
   const title = invoice.title?.trim() || "بدون عنوان";
-  return invoice.date ? `#${invoice.id} — ${title} — ${invoice.date}` : `#${invoice.id} — ${title}`;
+  const number = Number(invoice.number) > 0 ? invoice.number : invoice.id;
+  return invoice.date ? `#${number} — ${title} — ${invoice.date}` : `#${number} — ${title}`;
 }
 
 function invoicesUrl(query: string) {
