@@ -603,10 +603,6 @@ export default function InvoiceDetailsDialog({
       const quantity = parseQuantityInput(row.quantity);
       const purchasePrice = landedUnitOf(row, discountShares[row.key] || 0);
       const salePrice = parseAmountInput(row.salePrice);
-      if (!barcode) {
-        toast.error(`بارکد «${row.title.trim()}» را وارد کنید`);
-        return false;
-      }
       if (purchasePrice <= 0 || quantity <= 0) {
         toast.error(`فی و تعداد «${row.title.trim()}» باید معتبر باشد`);
         return false;
@@ -615,13 +611,14 @@ export default function InvoiceDetailsDialog({
         toast.error(`قیمت فروش «${row.title.trim()}» را وارد کنید`);
         return false;
       }
-      const res = await FetchWithJwtClient("POST", "/api/product", {
+      const productPayload: Record<string, string | number> = {
         name: row.title.trim(),
-        barcode,
         purchase_price: purchasePrice,
         sale_price: salePrice,
         quantity,
-      });
+      };
+      if (barcode) productPayload.barcode = barcode;
+      const res = await FetchWithJwtClient("POST", "/api/product", productPayload);
       if (!res || res.hasError) {
         toast.error(getApiErrorMessage(res, `ثبت کالای «${row.title.trim()}» انجام نشد`));
         return false;
@@ -1061,7 +1058,7 @@ export default function InvoiceDetailsDialog({
                             <StyledTableCell align="center" sx={{ width: 120 }}>
                               <TextField
                                 size="small"
-                                placeholder="بارکد"
+                                placeholder="بارکد (اختیاری)"
                                 value={row.barcode}
                                 onChange={(e) => updateDraft(row.key, { barcode: e.target.value })}
                                 onKeyDown={handleFieldEnter}
