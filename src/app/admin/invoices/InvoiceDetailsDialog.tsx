@@ -38,10 +38,18 @@ import {
 } from "@/app/lib/amountInput";
 import { adminButtonStartIconSx } from "@/app/admin/theme/adminTheme";
 import PayrollConfirmDialog from "@/app/admin/payroll/PayrollConfirmDialog";
-import { beneficiaryFromRecord, formatBeneficiaryLabel } from "@/app/lib/beneficiaries";
+import { beneficiaryFromRecord, beneficiaryPayload, formatBeneficiaryLabel } from "@/app/lib/beneficiaries";
+import DocumentPaymentFields from "@/app/admin/DocumentPaymentFields";
+import {
+  buildDocumentPaymentPayload,
+  documentCreditRemaining,
+  emptyDocumentPaymentForm,
+  formFromDocumentPayment,
+  type DocumentPaymentFields,
+  type DocumentPaymentFormState,
+} from "@/app/lib/documentPayments";
 import { DocumentPaymentBreakdownView, documentNeedsSettle } from "@/app/admin/DocumentPaymentBadge";
 import DocumentPaymentSettleDialog from "@/app/admin/DocumentPaymentSettleDialog";
-import { documentCreditRemaining, type DocumentPaymentFields } from "@/app/lib/documentPayments";
 import {
   ADMIN_POS_SETTINGS_CHANGED_EVENT,
   readAdminPosSettings,
@@ -56,6 +64,7 @@ export type InvoiceItem = {
   vat_mode?: string | null;
   vat_percent?: number | string | null;
   vat_amount?: number | string | null;
+  discount_amount?: number | string | null;
 };
 
 export type InvoiceRecord = DocumentPaymentFields & {
@@ -113,6 +122,7 @@ type DraftItem = {
   salePrice: string;
   vatMode: VatMode;
   vatInput: string;
+  discount: string;
   registered?: RegisteredProduct | null;
 };
 
@@ -174,6 +184,7 @@ function emptyDraft(): DraftItem {
     salePrice: "",
     vatMode: "none",
     vatInput: "",
+    discount: "",
   };
 }
 
@@ -216,29 +227,15 @@ function lineGrossOf(row: DraftItem): number {
   return lineBaseOf(row) + lineVatOf(row);
 }
 
-function discountSharesOf(rows: DraftItem[], discount: number): Record<string, number> {
-  const shares: Record<string, number> = {};
-  const active = rows.filter((row) => lineGrossOf(row) > 0);
-  const sum = active.reduce((total, row) => total + lineGrossOf(row), 0);
-  if (discount <= 0 || sum <= 0) return shares;
-  let allocated = 0;
-  active.forEach((row, index) => {
-    if (index === active.length - 1) {
-      shares[row.key] = Math.round((discount - allocated) * 100) / 100;
-      return;
-    }
-    const share = Math.round(((discount * lineGrossOf(row)) / sum) * 100) / 100;
-    shares[row.key] = share;
-    allocated += share;
-  });
-  return shares;
+function lineDiscountOf(row: DraftItem): number {
+  const discount = Math.max(0, Math.round(parseAmountInput(row.discount)));
+  return Math.min(discount, lineGrossOf(row));
 }
 
-function landedUnitOf(row: DraftItem, share: number): number {
+function landedUnitOf(row: DraftItem): number {
   const qty = parseQuantityInput(row.quantity);
   if (qty <= 0) return 0;
-  const net = Math.max(0, lineGrossOf(row) - share);
-  return Math.round(net / qty);
+  return Math.round(Math.max(0, lineGrossOf(row) - lineDiscountOf(row)) / qty);
 }
 
 function parseQuantityInput(value: string): number {
@@ -296,6 +293,7 @@ function draftsFromInvoice(invoice: InvoiceRecord): DraftItem[] {
       salePrice: "",
       vatMode,
       vatInput,
+      discount: toNumber(item.discount_amount) > 0 ? formatAmountNumber(toNumber(item.discount_amount)) : "",
     };
   });
 }
@@ -321,9 +319,19 @@ function HeaderMetaItem({ label, value }: { label: string; value: string }) {
   );
 }
 
+export type InvoiceCreateDraft = {
+  title: string;
+  description?: string;
+  date?: string;
+  invoice_date?: { year: number; month: number; day: number };
+  beneficiary_id?: number | "";
+  beneficiary_label?: string;
+};
+
 type Props = {
   open: boolean;
   invoice: InvoiceRecord | null;
+  createDraft?: InvoiceCreateDraft | null;
   onClose: () => void;
   onSaved: () => void;
 };
@@ -331,6 +339,7 @@ type Props = {
 export default function InvoiceDetailsDialog({
   open,
   invoice,
+  createDraft = null,
   onClose,
   onSaved,
 }: Props) {
@@ -344,7 +353,7 @@ export default function InvoiceDetailsDialog({
   const [settleOpen, setSettleOpen] = useState(false);
   const [productEntryEnabled, setProductEntryEnabled] = useState(false);
   const [consumableMode, setConsumableMode] = useState(false);
-  const [discountInput, setDiscountInput] = useState("");
+  const [paymentForm, setPaymentForm] = useState<DocumentPaymentFormState>(emptyDocumentPaymentForm);
   const [consumableOptions, setConsumableOptions] = useState<ConsumableOption[]>([]);
   const [consumableSearchLoading, setConsumableSearchLoading] = useState(false);
   const consumableSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -360,7 +369,19 @@ export default function InvoiceDetailsDialog({
   }, []);
 
   useEffect(() => {
-    if (!open || !invoice) return;
+    if (!open) return;
+    if (!invoice) {
+      if (!createDraft) return;
+      setDrafts([emptyDraft()]);
+      setOriginalHadItems(false);
+      setInvoiceAmount(0);
+      setRecord(null);
+      setConsumableMode(false);
+      setPaymentForm(emptyDocumentPaymentForm());
+      setConfirmMismatchOpen(false);
+      setLoading(false);
+      return;
+    }
 
     let cancelled = false;
 
@@ -383,7 +404,7 @@ export default function InvoiceDetailsDialog({
       setInvoiceAmount(toNumber(full.amount));
       setRecord(full);
       setConsumableMode(Boolean(full.has_consumable_lots));
-      setDiscountInput(toNumber(full.discount_amount) > 0 ? formatAmountNumber(toNumber(full.discount_amount)) : "");
+      setPaymentForm(formFromDocumentPayment(full));
       setConfirmMismatchOpen(false);
       setLoading(false);
     };
@@ -392,7 +413,7 @@ export default function InvoiceDetailsDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, invoice]);
+  }, [open, invoice, createDraft]);
 
   useEffect(() => {
     const key = focusKeyRef.current;
@@ -412,12 +433,12 @@ export default function InvoiceDetailsDialog({
 
   const vatTotal = useMemo(() => drafts.reduce((sum, row) => sum + lineVatOf(row), 0), [drafts]);
 
-  const discountAmount = useMemo(() => Math.max(0, Math.round(parseAmountInput(discountInput))), [discountInput]);
-
-  const discountShares = useMemo(
-    () => discountSharesOf(drafts, discountAmount),
-    [drafts, discountAmount]
+  const discountAmount = useMemo(
+    () => drafts.reduce((sum, row) => sum + lineDiscountOf(row), 0),
+    [drafts]
   );
+
+  const payableAmount = Math.max(0, itemsTotal + vatTotal - discountAmount);
 
   const amountMismatch = useMemo(() => {
     const filled = drafts.some(
@@ -486,6 +507,7 @@ export default function InvoiceDetailsDialog({
         const quantity = parseQuantityInput(row.quantity);
         const base = Math.round(unitPrice * quantity);
         const vatAmount = lineVatOf(row);
+        const enteredDiscount = Math.max(0, Math.round(parseAmountInput(row.discount)));
         return {
           title: row.title.trim(),
           unit_price: unitPrice,
@@ -493,7 +515,9 @@ export default function InvoiceDetailsDialog({
           vat_mode: row.vatMode,
           vat_percent: row.vatMode === "percent" ? parseAmountInput(row.vatInput) : null,
           vat_amount: vatAmount,
+          discount_amount: enteredDiscount,
           _base: base,
+          _gross: base + vatAmount,
         };
       })
       .filter((row) => row.title || row.unit_price > 0 || row.quantity > 0);
@@ -515,13 +539,12 @@ export default function InvoiceDetailsDialog({
         toast.error(`درصد ارزش افزوده «${row.title}» نامعتبر است`);
         return null;
       }
+      if (row.discount_amount > row._gross) {
+        toast.error(`تخفیف «${row.title}» از مبلغ همان ردیف بیشتر است`);
+        return null;
+      }
     }
-    const gross = items.reduce((sum, row) => sum + row._base + row.vat_amount, 0);
-    if (discountAmount > gross) {
-      toast.error("تخفیف از جمع کالاها و ارزش افزوده بیشتر است");
-      return null;
-    }
-    return items.map(({ _base, ...row }) => row);
+    return items.map(({ _base, _gross, ...row }) => row);
   };
 
   const saveItems = async (
@@ -532,19 +555,30 @@ export default function InvoiceDetailsDialog({
       vat_mode: VatMode;
       vat_percent: number | null;
       vat_amount: number;
+      discount_amount: number;
     }[]
   ) => {
-    if (!invoice) return;
+    if (!invoice && !createDraft) return;
     const token = tokenCode();
     if (!token) {
       toast.error("لطفاً وارد شوید");
+      return;
+    }
+    if (!invoice && items.length === 0) {
+      toast.error("حداقل یک کالا وارد کنید");
+      return;
+    }
+
+    const payment = buildDocumentPaymentPayload(paymentForm, payableAmount);
+    if (payment.error || !payment.payload) {
+      toast.error(payment.error || "نوع پرداخت را مشخص کنید");
       return;
     }
 
     try {
       setSaving(true);
 
-      const payload: Record<string, unknown> = {};
+      const payload: Record<string, unknown> = { ...payment.payload };
       if (items.length > 0 || originalHadItems) {
         payload.items = items;
       }
@@ -555,20 +589,29 @@ export default function InvoiceDetailsDialog({
         }
         payload.sync_consumables = true;
       }
-      payload.discount_amount = discountAmount;
 
-      const hasPayload = Object.keys(payload).length > 0;
-
-      let res: any = { hasError: false };
-      if (hasPayload) {
-        res = await FetchWithJwtClient("PUT", `/api/invoices/${invoice.id}`, payload);
-      }
+      const res = invoice
+        ? await FetchWithJwtClient("PUT", `/api/invoices/${invoice.id}`, payload)
+        : await FetchWithJwtClient("POST", "/api/invoices", {
+            title: createDraft?.title,
+            description: createDraft?.description || undefined,
+            date: createDraft?.date,
+            invoice_date: createDraft?.invoice_date,
+            ...beneficiaryPayload(createDraft?.beneficiary_id),
+            ...payload,
+          });
       if (!res || res.hasError) {
         toast.error(getApiErrorMessage(res, "خطا در ذخیره جزئیات فاکتور"));
         return;
       }
 
-      toast.success(consumableMode ? "فاکتور و خرید مواد مصرفی ذخیره شد" : "جزئیات فاکتور ذخیره شد");
+      toast.success(
+        invoice
+          ? consumableMode
+            ? "فاکتور و خرید مواد مصرفی ذخیره شد"
+            : "جزئیات فاکتور ذخیره شد"
+          : "فاکتور با جزئیات ثبت شد"
+      );
       setConfirmMismatchOpen(false);
       onSaved();
       onClose();
@@ -583,7 +626,7 @@ export default function InvoiceDetailsDialog({
   const handleSave = async () => {
     const items = collectItems();
     if (!items) return;
-    if (items.length > 0 && Math.round(itemsTotal) !== Math.round(invoiceAmount)) {
+    if (invoice && items.length > 0 && Math.round(itemsTotal) !== Math.round(invoiceAmount)) {
       setAfterMismatch("save");
       setConfirmMismatchOpen(true);
       return;
@@ -601,7 +644,7 @@ export default function InvoiceDetailsDialog({
     for (const row of pending) {
       const barcode = row.barcode.trim();
       const quantity = parseQuantityInput(row.quantity);
-      const purchasePrice = landedUnitOf(row, discountShares[row.key] || 0);
+      const purchasePrice = landedUnitOf(row);
       const salePrice = parseAmountInput(row.salePrice);
       if (purchasePrice <= 0 || quantity <= 0) {
         toast.error(`فی و تعداد «${row.title.trim()}» باید معتبر باشد`);
@@ -644,7 +687,7 @@ export default function InvoiceDetailsDialog({
       toast.error("ردیفی برای ثبت کالا نیست");
       return;
     }
-    if (Math.round(itemsTotal) !== Math.round(invoiceAmount)) {
+    if (invoice && Math.round(itemsTotal) !== Math.round(invoiceAmount)) {
       setAfterMismatch("register");
       setConfirmMismatchOpen(true);
       return;
@@ -713,7 +756,7 @@ export default function InvoiceDetailsDialog({
                 فاکتور خرید
               </Typography>
               <Typography sx={{ fontSize: 12.5, color: "var(--admin-text-muted)", mt: 0.2 }}>
-                {display?.title ? display.title : "بدون عنوان"}
+                {display?.title || createDraft?.title || "بدون عنوان"}
                 {display?.id != null ? ` · شماره ${formatAmountNumber(display.id)}` : ""}
               </Typography>
             </Box>
@@ -721,7 +764,7 @@ export default function InvoiceDetailsDialog({
           <Box sx={{ textAlign: "left", flexShrink: 0 }}>
             <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)" }}>تاریخ</Typography>
             <Typography sx={{ fontSize: 13, fontWeight: 800, color: "var(--admin-text)" }}>
-              {display?.date || "—"}
+              {display?.date || createDraft?.date || "—"}
             </Typography>
           </Box>
         </Box>
@@ -735,24 +778,28 @@ export default function InvoiceDetailsDialog({
             borderTop: "1px solid var(--admin-border)",
           }}
         >
-          <HeaderMetaItem label="طرف حساب / ذینفع" value={formatBeneficiaryLabel(beneficiary) || "—"} />
+          <HeaderMetaItem
+            label="طرف حساب / ذینفع"
+            value={formatBeneficiaryLabel(beneficiary) || createDraft?.beneficiary_label || "—"}
+          />
           <HeaderMetaItem label="حساب پرداخت" value={shopAccountName || "—"} />
           <HeaderMetaItem
             label="شماره فاکتور"
             value={display?.id != null ? formatAmountNumber(display.id) : "—"}
           />
-          <HeaderMetaItem label="عنوان سند" value={display?.title || "—"} />
+          <HeaderMetaItem label="عنوان سند" value={display?.title || createDraft?.title || "—"} />
         </Box>
 
-        {display?.description ? (
+        {(display?.description || createDraft?.description) ? (
           <Box sx={{ mt: 1.15, pt: 1.1, borderTop: "1px solid var(--admin-border)" }}>
             <Typography sx={{ fontSize: 10.5, color: "var(--admin-text-muted)", mb: 0.25 }}>توضیحات</Typography>
             <Typography sx={{ fontSize: 12.5, color: "var(--admin-text)", lineHeight: 1.7 }}>
-              {display.description}
+              {display?.description || createDraft?.description}
             </Typography>
           </Box>
         ) : null}
 
+        {display ? (
         <Box sx={{ mt: 1.15, pt: 1.1, borderTop: "1px solid var(--admin-border)" }}>
           <DocumentPaymentBreakdownView doc={display} />
           {documentNeedsSettle(display) ? (
@@ -771,6 +818,7 @@ export default function InvoiceDetailsDialog({
             </Button>
           ) : null}
         </Box>
+        ) : null}
       </Box>
 
       <DialogContent sx={{ px: 2.25, py: 2 }}>
@@ -808,8 +856,8 @@ export default function InvoiceDetailsDialog({
                   </Typography>
                   <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, mt: 0.15 }}>
                     {consumableMode
-                      ? "نام کالا سرچ می‌شود. ارزش افزوده هر ردیف جداست و تخفیف بین همه سرشکن می‌شود."
-                      : "Enter در هر فیلد = ردیف جدید. ارزش افزوده هر کالا جداست و تخفیف روی قیمت خرید همه سرشکن می‌شود."}
+                      ? "نام کالا سرچ می‌شود. ارزش افزوده و تخفیف هر ردیف جداست."
+                      : "Enter در هر فیلد = ردیف جدید. ارزش افزوده و تخفیف هر کالا جداست."}
                   </Typography>
                 </Box>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>
@@ -838,18 +886,6 @@ export default function InvoiceDetailsDialog({
                         whiteSpace: "nowrap",
                       },
                     }}
-                  />
-                  <TextField
-                    size="small"
-                    label="تخفیف"
-                    value={discountInput}
-                    onChange={(e) => setDiscountInput(formatAmountInput(e.target.value))}
-                    sx={{
-                      ...fieldSx,
-                      width: 120,
-                      "& .MuiInputLabel-root": { color: "var(--admin-text-muted)", fontSize: 12 },
-                    }}
-                    inputProps={{ inputMode: "numeric", style: { textAlign: "center" } }}
                   />
                   <Button
                     size="small"
@@ -882,6 +918,7 @@ export default function InvoiceDetailsDialog({
                       <StyledTableCell align="center">فی</StyledTableCell>
                       <StyledTableCell align="center">ارزش افزوده</StyledTableCell>
                       <StyledTableCell align="center">تعداد</StyledTableCell>
+                      <StyledTableCell align="center">تخفیف</StyledTableCell>
                       {productEntryEnabled && !consumableMode ? (
                         <StyledTableCell align="center">بارکد</StyledTableCell>
                       ) : null}
@@ -897,10 +934,10 @@ export default function InvoiceDetailsDialog({
                   </TableHead>
                   <TableBody>
                     {drafts.map((row, index) => {
-                      const lineTotal = lineGrossOf(row);
+                      const lineTotal = Math.max(0, lineGrossOf(row) - lineDiscountOf(row));
                       const lineVat = lineVatOf(row);
-                      const landed = landedUnitOf(row, discountShares[row.key] || 0);
-                      const share = discountShares[row.key] || 0;
+                      const landed = landedUnitOf(row);
+                      const share = lineDiscountOf(row);
                       return (
                         <StyledTableRow key={row.key}>
                           <StyledTableCell align="center" sx={{ width: 48, fontWeight: 700 }}>
@@ -1054,6 +1091,21 @@ export default function InvoiceDetailsDialog({
                               }}
                             />
                           </StyledTableCell>
+                          <StyledTableCell align="center" sx={{ width: 110 }}>
+                            <TextField
+                              size="small"
+                              placeholder="تخفیف"
+                              value={row.discount}
+                              onChange={(e) => updateDraft(row.key, { discount: formatAmountInput(e.target.value) })}
+                              onKeyDown={handleFieldEnter}
+                              fullWidth
+                              sx={{
+                                ...fieldSx,
+                                "& .MuiInputBase-input": { ...fieldSx["& .MuiInputBase-input"], textAlign: "center" },
+                              }}
+                              inputProps={{ inputMode: "numeric" }}
+                            />
+                          </StyledTableCell>
                           {productEntryEnabled && !consumableMode ? (
                             <StyledTableCell align="center" sx={{ width: 120 }}>
                               <TextField
@@ -1099,7 +1151,7 @@ export default function InvoiceDetailsDialog({
                             </Typography>
                             {share > 0 ? (
                               <Typography sx={{ fontSize: 10.5, color: "var(--admin-text-muted)", mt: 0.25 }}>
-                                سهم تخفیف {formatAmountNumber(share)}
+                                بعد از تخفیف {formatAmountNumber(share)}
                               </Typography>
                             ) : null}
                           </StyledTableCell>
@@ -1164,12 +1216,14 @@ export default function InvoiceDetailsDialog({
                     gap: 0.65,
                   }}
                 >
+                  {invoice ? (
                   <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}>
                     <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>مبلغ ثبت‌شده فاکتور</Typography>
                     <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: 13 }}>
                       {formatAmountNumber(invoiceAmount) || "۰"}
                     </Typography>
                   </Box>
+                  ) : null}
                   <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}>
                     <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>جمع اقلام</Typography>
                     <Typography
@@ -1194,9 +1248,22 @@ export default function InvoiceDetailsDialog({
                       {formatAmountNumber(discountAmount) || "۰"}
                     </Typography>
                   </Box>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}>
+                    <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>قابل پرداخت</Typography>
+                    <Typography sx={{ color: "var(--admin-accent)", fontWeight: 900, fontSize: 15 }}>
+                      {formatAmountNumber(payableAmount) || "۰"}
+                    </Typography>
+                  </Box>
                 </Box>
               </Box>
             </Box>
+
+            <DocumentPaymentFields
+              value={paymentForm}
+              onChange={setPaymentForm}
+              totalAmount={payableAmount}
+              disabled={saving}
+            />
           </Box>
         )}
       </DialogContent>

@@ -47,7 +47,7 @@ import DocumentPaymentFields from '@/app/admin/DocumentPaymentFields';
 import DocumentVatFields from '@/app/admin/DocumentVatFields';
 import { DocumentPaymentChips, documentNeedsSettle } from '@/app/admin/DocumentPaymentBadge';
 import DocumentPaymentSettleDialog from '@/app/admin/DocumentPaymentSettleDialog';
-import InvoiceDetailsDialog, { invoiceUsesItemAmount, type InvoiceRecord } from '@/app/admin/invoices/InvoiceDetailsDialog';
+import InvoiceDetailsDialog, { invoiceUsesItemAmount, type InvoiceCreateDraft, type InvoiceRecord } from '@/app/admin/invoices/InvoiceDetailsDialog';
 import InvoiceImageDialog, { getInvoiceImageUrl } from '@/app/admin/invoices/InvoiceImageDialog';
 import { beneficiaryFromRecord, beneficiaryPayload, formatBeneficiaryLabel, type Beneficiary } from '@/app/lib/beneficiaries';
 import {
@@ -199,6 +199,10 @@ export default function InvoicesPage() {
   const [settleInvoice, setSettleInvoice] = useState<Invoice | null>(null);
   const [beneficiaryId, setBeneficiaryId] = useState<number | "">("");
   const [beneficiaryOption, setBeneficiaryOption] = useState<Beneficiary | null>(null);
+  const [invoiceKind, setInvoiceKind] = useState<"overall" | "detailed">("overall");
+  const [headerDiscount, setHeaderDiscount] = useState("");
+  const [createDetailsOpen, setCreateDetailsOpen] = useState(false);
+  const [createHeader, setCreateHeader] = useState<InvoiceCreateDraft | null>(null);
   const [invoiceDate, setInvoiceDate] = useState<DateObject | null>(() => todayJalaliDateObject());
   
   // Filter states
@@ -387,8 +391,32 @@ export default function InvoicesPage() {
   };
 
   const handleCreateInvoice = async () => {
-    if (!title.trim() || !amount.trim()) {
-      toast.error("لطفاً عنوان و مبلغ را وارد کنید");
+    if (!title.trim()) {
+      toast.error("لطفاً عنوان را وارد کنید");
+      return;
+    }
+
+    const date = dateObjectToPayload(invoiceDate) ?? dateObjectToPayload(todayJalaliDateObject());
+    const dateText = date
+      ? `${date.year}/${String(date.month).padStart(2, "0")}/${String(date.day).padStart(2, "0")}`
+      : undefined;
+
+    if (invoiceKind === "detailed") {
+      setCreateHeader({
+        title: title.trim(),
+        description: description.trim() || undefined,
+        date: dateText,
+        invoice_date: date ?? undefined,
+        beneficiary_id: beneficiaryId,
+        beneficiary_label: beneficiaryOption?.name || "",
+      });
+      setOpenCreateDialog(false);
+      setCreateDetailsOpen(true);
+      return;
+    }
+
+    if (!amount.trim()) {
+      toast.error("لطفاً مبلغ را وارد کنید");
       return;
     }
 
@@ -404,14 +432,20 @@ export default function InvoicesPage() {
         title: title.trim(),
         description: description.trim() || undefined
       };
-      const date = dateObjectToPayload(invoiceDate) ?? dateObjectToPayload(todayJalaliDateObject());
       if (date) {
         data.invoice_date = date;
-        data.date = `${date.year}/${String(date.month).padStart(2, "0")}/${String(date.day).padStart(2, "0")}`;
+        data.date = dateText;
       }
       Object.assign(data, beneficiaryPayload(beneficiaryId));
       Object.assign(data, buildPurchaseVatPayload(amountNum, vatForm, vatEnabled));
-      const payable = purchaseVatPayable(amountNum, vatEnabled ? vatForm : emptyPurchaseVatForm());
+      const gross = purchaseVatPayable(amountNum, vatEnabled ? vatForm : emptyPurchaseVatForm());
+      const discountNum = Math.max(0, Math.round(parseAmountInput(headerDiscount)));
+      if (discountNum > gross) {
+        toast.error("تخفیف از جمع مبلغ و ارزش افزوده بیشتر است");
+        return;
+      }
+      data.discount_amount = discountNum;
+      const payable = Math.max(0, gross - discountNum);
 
       const payment = buildDocumentPaymentPayload(paymentForm, payable);
       if (payment.error) {
@@ -431,14 +465,10 @@ export default function InvoicesPage() {
       if (!res || res.hasError) {
         toast.error(getApiErrorMessage(res, 'خطا در ثبت فاکتور'));
       } else {
-        const created = (res.data ?? res) as Invoice;
         toast.success("فاکتور با موفقیت ثبت شد");
         setOpenCreateDialog(false);
         resetForm();
         fetchInvoices();
-        if (created?.id) {
-          setDetailsInvoice(created);
-        }
       }
     } catch (error) {
       console.error("Error creating invoice:", error);
@@ -467,16 +497,21 @@ export default function InvoicesPage() {
       };
       if (!usesItemAmount) {
         data.amount = amountNum;
+        Object.assign(data, buildPurchaseVatPayload(amountNum, vatForm, vatEnabled));
+        const gross = purchaseVatPayable(amountNum, vatEnabled ? vatForm : emptyPurchaseVatForm());
+        const discountNum = Math.max(0, Math.round(parseAmountInput(headerDiscount)));
+        if (discountNum > gross) {
+          toast.error("تخفیف از جمع مبلغ و ارزش افزوده بیشتر است");
+          return;
+        }
+        data.discount_amount = discountNum;
+        const payment = buildDocumentPaymentPayload(paymentForm, Math.max(0, gross - discountNum));
+        if (payment.error) {
+          toast.error(payment.error);
+          return;
+        }
+        Object.assign(data, payment.payload);
       }
-      const baseAmount = usesItemAmount ? Number(editingInvoice.amount) || 0 : amountNum;
-      Object.assign(data, buildPurchaseVatPayload(baseAmount, vatForm, vatEnabled));
-      const paymentTotal = purchaseVatPayable(baseAmount, vatEnabled ? vatForm : emptyPurchaseVatForm());
-      const payment = buildDocumentPaymentPayload(paymentForm, paymentTotal);
-      if (payment.error) {
-        toast.error(payment.error);
-        return;
-      }
-      Object.assign(data, payment.payload);
 
       const token = tokenCode();
       if (!token) {
@@ -536,6 +571,8 @@ export default function InvoicesPage() {
     setBeneficiaryId("");
     setBeneficiaryOption(null);
     setInvoiceDate(todayJalaliDateObject());
+    setInvoiceKind("overall");
+    setHeaderDiscount("");
   };
 
   const openEditDialogHandler = (invoice: Invoice) => {
@@ -548,6 +585,9 @@ export default function InvoicesPage() {
     const beneficiary = beneficiaryFromRecord(invoice);
     setBeneficiaryId(beneficiary?.id ?? "");
     setBeneficiaryOption(beneficiary);
+    setHeaderDiscount(
+      Number(invoice.discount_amount) > 0 ? formatAmountInput(String(Math.round(Number(invoice.discount_amount)))) : ""
+    );
     setOpenEditDialog(true);
   };
 
@@ -966,6 +1006,25 @@ export default function InvoicesPage() {
                 alignItems: 'start',
               }}
             >
+              <RadioGroup
+                row
+                value={invoiceKind}
+                onChange={(e) => setInvoiceKind(e.target.value as "overall" | "detailed")}
+                sx={{ gridColumn: '1 / -1', justifyContent: 'flex-start' }}
+              >
+                <FormControlLabel
+                  value="overall"
+                  control={<Radio size="small" sx={{ color: 'var(--admin-accent)', '&.Mui-checked': { color: 'var(--admin-accent)' } }} />}
+                  label="فاکتور کلی"
+                  sx={{ '& .MuiFormControlLabel-label': { fontSize: 13, color: 'var(--admin-text)' } }}
+                />
+                <FormControlLabel
+                  value="detailed"
+                  control={<Radio size="small" sx={{ color: 'var(--admin-accent)', '&.Mui-checked': { color: 'var(--admin-accent)' } }} />}
+                  label="فاکتور با جزئیات"
+                  sx={{ '& .MuiFormControlLabel-label': { fontSize: 13, color: 'var(--admin-text)' } }}
+                />
+              </RadioGroup>
               <TextField
                 size="small"
                 label="عنوان"
@@ -1000,6 +1059,7 @@ export default function InvoicesPage() {
                   style={{ width: '100%', height: 40, borderRadius: 8, textAlign: 'right', direction: 'rtl' }}
                 />
               </Box>
+              {invoiceKind === "overall" ? (
               <TextField
                 size="small"
                 label="مبلغ (بدون ارزش افزوده)"
@@ -1010,6 +1070,7 @@ export default function InvoicesPage() {
                 required
                 sx={compactFieldSx}
               />
+              ) : <Box />}
               <BeneficiarySelect
                 value={beneficiaryId}
                 initialOption={beneficiaryOption}
@@ -1019,20 +1080,36 @@ export default function InvoicesPage() {
                 }}
                 helperText=""
               />
-              <DocumentVatFields
-                enabled={vatEnabled}
-                value={vatForm}
-                onChange={setVatForm}
-                baseAmount={parseAmountInput(amount) || 0}
-              />
-              <DocumentPaymentFields
-                value={paymentForm}
-                onChange={setPaymentForm}
-                totalAmount={purchaseVatPayable(
-                  parseAmountInput(amount) || 0,
-                  vatEnabled ? vatForm : emptyPurchaseVatForm(),
-                )}
-              />
+              {invoiceKind === "overall" ? (
+                <>
+                  <TextField
+                    size="small"
+                    label="تخفیف"
+                    type="text"
+                    inputMode="numeric"
+                    value={headerDiscount}
+                    onChange={(e) => setHeaderDiscount(formatAmountInput(e.target.value))}
+                    sx={compactFieldSx}
+                  />
+                  <DocumentVatFields
+                    enabled={vatEnabled}
+                    value={vatForm}
+                    onChange={setVatForm}
+                    baseAmount={parseAmountInput(amount) || 0}
+                  />
+                  <DocumentPaymentFields
+                    value={paymentForm}
+                    onChange={setPaymentForm}
+                    totalAmount={Math.max(
+                      0,
+                      purchaseVatPayable(
+                        parseAmountInput(amount) || 0,
+                        vatEnabled ? vatForm : emptyPurchaseVatForm(),
+                      ) - (parseAmountInput(headerDiscount) || 0),
+                    )}
+                  />
+                </>
+              ) : null}
               <TextField
                 size="small"
                 label="توضیحات"
@@ -1051,7 +1128,9 @@ export default function InvoicesPage() {
                   textAlign: 'right',
                 }}
               >
-                بدون ردیف، همین مبلغ کلی ثبت می‌شود. اگر بعداً ردیف اضافه شود، مبلغ برابر مجموع ردیف‌ها خواهد بود.
+                {invoiceKind === "overall"
+                  ? "مبلغ همین‌جا اصل فاکتور است و تخفیف روی کل فاکتور اعمال می‌شود."
+                  : "مبلغ، تخفیف هر کالا و نوع پرداخت در مرحله جزئیات، بعد از ورود کالاها مشخص می‌شود."}
               </Typography>
             </Box>
           </DialogContent>
@@ -1078,7 +1157,7 @@ export default function InvoicesPage() {
                 },
               }}
             >
-              ثبت
+              {invoiceKind === "detailed" ? "ادامه" : "ثبت"}
             </Button>
           </DialogActions>
         </Dialog>
@@ -1135,6 +1214,7 @@ export default function InvoicesPage() {
                   مبلغ این فاکتور از جمع ردیف‌هاست ({formatNumber(editingInvoice?.amount || 0)} تومان) و جداگانه ویرایش نمی‌شود.
                 </Typography>
               ) : (
+              <>
               <TextField
                 label="مبلغ"
                 type="text"
@@ -1161,6 +1241,24 @@ export default function InvoicesPage() {
                   },
                 }}
               />
+              <TextField
+                label="تخفیف"
+                type="text"
+                inputMode="numeric"
+                value={headerDiscount}
+                onChange={(e) => setHeaderDiscount(formatAmountInput(e.target.value))}
+                fullWidth
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    color: 'var(--admin-text)',
+                    '& fieldset': { borderColor: 'var(--admin-border)' },
+                    '&:hover fieldset': { borderColor: 'var(--admin-accent)' },
+                    '&.Mui-focused fieldset': { borderColor: 'var(--admin-accent)' },
+                  },
+                  '& .MuiInputLabel-root': { color: 'var(--admin-text-muted)' },
+                }}
+              />
+              </>
               )}
               <TextField
                 label="توضیحات"
@@ -1195,26 +1293,31 @@ export default function InvoicesPage() {
                   setBeneficiaryOption(option);
                 }}
               />
+              {invoiceUsesItemAmount(editingInvoice) ? (
+                <Typography sx={{ color: 'var(--admin-text-muted)', fontSize: 13 }}>
+                  تخفیف هر کالا و نوع پرداخت از قسمت جزئیات فاکتور تغییر می‌کند.
+                </Typography>
+              ) : (
+                <>
               <DocumentVatFields
                 enabled={vatEnabled}
                 value={vatForm}
                 onChange={setVatForm}
-                baseAmount={
-                  invoiceUsesItemAmount(editingInvoice)
-                    ? Number(editingInvoice?.amount) || 0
-                    : parseAmountInput(amount) || 0
-                }
+                baseAmount={parseAmountInput(amount) || 0}
               />
               <DocumentPaymentFields
                 value={paymentForm}
                 onChange={setPaymentForm}
-                totalAmount={purchaseVatPayable(
-                  invoiceUsesItemAmount(editingInvoice)
-                    ? Number(editingInvoice?.amount) || 0
-                    : parseAmountInput(amount) || 0,
-                  vatEnabled ? vatForm : emptyPurchaseVatForm(),
+                totalAmount={Math.max(
+                  0,
+                  purchaseVatPayable(
+                    parseAmountInput(amount) || 0,
+                    vatEnabled ? vatForm : emptyPurchaseVatForm(),
+                  ) - (parseAmountInput(headerDiscount) || 0),
                 )}
               />
+                </>
+              )}
             </Box>
           </DialogContent>
           <DialogActions sx={{ padding: '16px 24px' }}>
@@ -1423,9 +1526,18 @@ export default function InvoicesPage() {
         </BottomSheet>
 
         <InvoiceDetailsDialog
-          open={!!detailsInvoice}
+          open={!!detailsInvoice || createDetailsOpen}
           invoice={detailsInvoice}
-          onClose={closeDetails}
+          createDraft={detailsInvoice ? null : createHeader}
+          onClose={() => {
+            if (createDetailsOpen) {
+              setCreateDetailsOpen(false);
+              setCreateHeader(null);
+              resetForm();
+              return;
+            }
+            closeDetails();
+          }}
           onSaved={fetchInvoices}
         />
 
