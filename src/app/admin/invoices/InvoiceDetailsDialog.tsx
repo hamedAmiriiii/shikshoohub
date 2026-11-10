@@ -440,13 +440,7 @@ export default function InvoiceDetailsDialog({
 
   const payableAmount = Math.max(0, itemsTotal + vatTotal - discountAmount);
 
-  const amountMismatch = useMemo(() => {
-    const filled = drafts.some(
-      (row) => row.title.trim() || parseAmountInput(row.unitPrice) > 0 || parseQuantityInput(row.quantity) > 0,
-    );
-    if (!filled) return false;
-    return Math.round(itemsTotal) !== Math.round(invoiceAmount);
-  }, [drafts, itemsTotal, invoiceAmount]);
+  const followsItemAmount = !invoice || invoiceUsesItemAmount(record || invoice);
 
   const updateDraft = (key: string, patch: Partial<DraftItem>) => {
     setDrafts((prev) => prev.map((row) => (row.key === key ? { ...row, ...patch } : row)));
@@ -626,7 +620,12 @@ export default function InvoiceDetailsDialog({
   const handleSave = async () => {
     const items = collectItems();
     if (!items) return;
-    if (invoice && items.length > 0 && Math.round(itemsTotal) !== Math.round(invoiceAmount)) {
+    if (
+      !followsItemAmount &&
+      invoice &&
+      items.length > 0 &&
+      Math.round(itemsTotal) !== Math.round(invoiceAmount)
+    ) {
       setAfterMismatch("save");
       setConfirmMismatchOpen(true);
       return;
@@ -687,7 +686,7 @@ export default function InvoiceDetailsDialog({
       toast.error("ردیفی برای ثبت کالا نیست");
       return;
     }
-    if (invoice && Math.round(itemsTotal) !== Math.round(invoiceAmount)) {
+    if (!followsItemAmount && invoice && Math.round(itemsTotal) !== Math.round(invoiceAmount)) {
       setAfterMismatch("register");
       setConfirmMismatchOpen(true);
       return;
@@ -735,8 +734,8 @@ export default function InvoiceDetailsDialog({
             "linear-gradient(180deg, rgba(120,181,104,0.08), transparent 70%)",
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 1.5, mb: 1.35 }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1.1, minWidth: 0 }}>
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1.5 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.1, minWidth: 0, flexShrink: 0 }}>
             <Box
               sx={{
                 width: 42,
@@ -755,11 +754,40 @@ export default function InvoiceDetailsDialog({
               <Typography sx={{ fontWeight: 900, fontSize: 17, color: "var(--admin-text)", lineHeight: 1.3 }}>
                 فاکتور خرید
               </Typography>
-              <Typography sx={{ fontSize: 12.5, color: "var(--admin-text-muted)", mt: 0.2 }}>
+              <Typography
+                sx={{
+                  fontSize: 12.5,
+                  color: "var(--admin-text-muted)",
+                  mt: 0.2,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
                 {display?.title || createDraft?.title || "بدون عنوان"}
-                {display?.id != null ? ` · شماره ${formatAmountNumber(display.id)}` : ""}
               </Typography>
             </Box>
+          </Box>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(4, minmax(0, 1fr))" },
+              gap: 1,
+              flex: 1,
+              minWidth: 0,
+              px: { md: 1.5 },
+            }}
+          >
+            <HeaderMetaItem
+              label="طرف حساب / ذینفع"
+              value={formatBeneficiaryLabel(beneficiary) || createDraft?.beneficiary_label || "—"}
+            />
+            <HeaderMetaItem label="حساب پرداخت" value={shopAccountName || "—"} />
+            <HeaderMetaItem
+              label="شماره فاکتور"
+              value={display?.id != null ? formatAmountNumber(display.id) : "—"}
+            />
+            <HeaderMetaItem label="عنوان سند" value={display?.title || createDraft?.title || "—"} />
           </Box>
           <Box sx={{ textAlign: "left", flexShrink: 0 }}>
             <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)" }}>تاریخ</Typography>
@@ -767,27 +795,6 @@ export default function InvoiceDetailsDialog({
               {display?.date || createDraft?.date || "—"}
             </Typography>
           </Box>
-        </Box>
-
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(4, 1fr)" },
-            gap: 1.1,
-            pt: 1.15,
-            borderTop: "1px solid var(--admin-border)",
-          }}
-        >
-          <HeaderMetaItem
-            label="طرف حساب / ذینفع"
-            value={formatBeneficiaryLabel(beneficiary) || createDraft?.beneficiary_label || "—"}
-          />
-          <HeaderMetaItem label="حساب پرداخت" value={shopAccountName || "—"} />
-          <HeaderMetaItem
-            label="شماره فاکتور"
-            value={display?.id != null ? formatAmountNumber(display.id) : "—"}
-          />
-          <HeaderMetaItem label="عنوان سند" value={display?.title || createDraft?.title || "—"} />
         </Box>
 
         {(display?.description || createDraft?.description) ? (
@@ -850,16 +857,9 @@ export default function InvoiceDetailsDialog({
                   flexWrap: "wrap",
                 }}
               >
-                <Box sx={{ minWidth: 0, flex: 1 }}>
-                  <Typography sx={{ color: "var(--admin-text)", fontWeight: 800, fontSize: 13 }}>
-                    اقلام کالا / خدمات
-                  </Typography>
-                  <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, mt: 0.15 }}>
-                    {consumableMode
-                      ? "نام کالا سرچ می‌شود. ارزش افزوده و تخفیف هر ردیف جداست."
-                      : "Enter در هر فیلد = ردیف جدید. ارزش افزوده و تخفیف هر کالا جداست."}
-                  </Typography>
-                </Box>
+                <Typography sx={{ color: "var(--admin-text)", fontWeight: 800, fontSize: 13, minWidth: 0, flex: 1 }}>
+                  اقلام کالا / خدمات
+                </Typography>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>
                   <FormControlLabel
                     control={
@@ -935,7 +935,6 @@ export default function InvoiceDetailsDialog({
                   <TableBody>
                     {drafts.map((row, index) => {
                       const lineTotal = Math.max(0, lineGrossOf(row) - lineDiscountOf(row));
-                      const lineVat = lineVatOf(row);
                       const landed = landedUnitOf(row);
                       const share = lineDiscountOf(row);
                       return (
@@ -1069,11 +1068,6 @@ export default function InvoiceDetailsDialog({
                                 />
                               ) : null}
                             </Box>
-                            {lineVat > 0 ? (
-                              <Typography sx={{ fontSize: 10.5, color: "var(--admin-text-muted)", mt: 0.35 }}>
-                                هر واحد {formatAmountNumber(vatPerUnitOf(row))} · جمع {formatAmountNumber(lineVat)}
-                              </Typography>
-                            ) : null}
                           </StyledTableCell>
                           <StyledTableCell align="center" sx={{ width: 88 }}>
                             <TextField
@@ -1184,86 +1178,65 @@ export default function InvoiceDetailsDialog({
 
               <Box
                 sx={{
-                  display: "grid",
-                  gridTemplateColumns: { xs: "1fr", sm: "1fr auto" },
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
                   gap: 1,
-                  px: 1.35,
-                  py: 1.25,
+                  px: 1.15,
+                  py: 0.65,
                   borderTop: "1px solid var(--admin-border)",
                   bgcolor: "var(--admin-surface-alt)",
                 }}
               >
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 0.55, justifyContent: "center" }}>
-                  {amountMismatch ? (
-                    <Typography sx={{ color: "#e6a23c", fontSize: 12, lineHeight: 1.7 }}>
-                      مجموع ردیف‌ها با مبلغ کل فاکتور یکی نیست. با تأیید ذخیره، مبلغ فاکتور به مجموع ردیف‌ها تغییر می‌کند.
-                    </Typography>
-                  ) : (
-                    <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>
-                      مبالغ به تومان
-                    </Typography>
-                  )}
+                <Box sx={{ flex: "1 1 280px", minWidth: 0 }}>
+                  <DocumentPaymentFields
+                    compact
+                    value={paymentForm}
+                    onChange={setPaymentForm}
+                    totalAmount={payableAmount}
+                    disabled={saving}
+                  />
                 </Box>
-                <Box
-                  sx={{
-                    minWidth: { sm: 240 },
-                    p: 1.1,
-                    borderRadius: 1.75,
-                    border: "1px solid var(--admin-border)",
-                    bgcolor: "var(--admin-surface)",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 0.65,
-                  }}
-                >
-                  {invoice ? (
-                  <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}>
-                    <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>مبلغ ثبت‌شده فاکتور</Typography>
-                    <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: 13 }}>
-                      {formatAmountNumber(invoiceAmount) || "۰"}
-                    </Typography>
-                  </Box>
-                  ) : null}
-                  <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}>
-                    <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>جمع اقلام</Typography>
-                    <Typography
+                <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 0.75 }}>
+                  {(
+                    [
+                      ["جمع اقلام", itemsTotal, true],
+                      ["ارزش افزوده", vatTotal, false],
+                      ["تخفیف", discountAmount, false],
+                      ["قابل پرداخت", payableAmount, true],
+                    ] as const
+                  ).map(([label, value, strong]) => (
+                    <Box
+                      key={label}
                       sx={{
-                        color: amountMismatch ? "#e6a23c" : "var(--admin-accent)",
-                        fontWeight: 900,
-                        fontSize: 15,
+                        display: "flex",
+                        alignItems: "baseline",
+                        gap: 0.6,
+                        px: 0.85,
+                        py: 0.35,
+                        borderRadius: 1.25,
+                        border: "1px solid var(--admin-border)",
+                        bgcolor: "var(--admin-surface)",
                       }}
                     >
-                      {formatAmountNumber(itemsTotal) || "۰"}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}>
-                    <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>ارزش افزوده</Typography>
-                    <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: 13 }}>
-                      {formatAmountNumber(vatTotal) || "۰"}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}>
-                    <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>تخفیف</Typography>
-                    <Typography sx={{ color: "var(--admin-text)", fontWeight: 700, fontSize: 13 }}>
-                      {formatAmountNumber(discountAmount) || "۰"}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}>
-                    <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>قابل پرداخت</Typography>
-                    <Typography sx={{ color: "var(--admin-accent)", fontWeight: 900, fontSize: 15 }}>
-                      {formatAmountNumber(payableAmount) || "۰"}
-                    </Typography>
-                  </Box>
+                      <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 11, whiteSpace: "nowrap" }}>
+                        {label}
+                      </Typography>
+                      <Typography
+                        sx={{
+                          color: strong ? "var(--admin-accent)" : "var(--admin-text)",
+                          fontWeight: strong ? 800 : 700,
+                          fontSize: 13,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {formatAmountNumber(value) || "۰"}
+                      </Typography>
+                    </Box>
+                  ))}
                 </Box>
               </Box>
             </Box>
-
-            <DocumentPaymentFields
-              value={paymentForm}
-              onChange={setPaymentForm}
-              totalAmount={payableAmount}
-              disabled={saving}
-            />
           </Box>
         )}
       </DialogContent>

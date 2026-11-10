@@ -167,8 +167,8 @@ export default function DocumentPaymentFields({
   };
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 1, gridColumn: "1 / -1" }}>
-      <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>نوع پرداخت</Typography>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: compact ? 0.35 : 1, gridColumn: "1 / -1" }}>
+      <Typography sx={{ color: "var(--admin-text-muted)", fontSize: compact ? 11 : 12, lineHeight: 1.2 }}>نوع پرداخت</Typography>
       <RadioGroup
         row
         value={value.mode}
