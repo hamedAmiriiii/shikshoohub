@@ -199,6 +199,13 @@ export default function AdminHamburgerSidebar({
         permission: ["invoices", "expenses"],
       },
       {
+        id: "people",
+        label: "اشخاص",
+        href: "/admin/people",
+        icon: <PeopleIcon />,
+        permission: ["invoices", "expenses", "customers", "pos"],
+      },
+      {
         id: "manual-trades",
         label: "ثبت سند",
         href: "/admin/manual-trades",

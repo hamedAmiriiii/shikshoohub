@@ -51,8 +51,12 @@ function docAmount(doc: BeneficiaryDoc): number {
   return Math.max(0, Math.round(value));
 }
 
+function toFaDigits(value: unknown): string {
+  return String(value ?? "").replace(/\d/g, (digit) => "۰۱۲۳۴۵۶۷۸۹"[Number(digit)]);
+}
+
 function escapeHtml(value: unknown): string {
-  return String(value ?? "")
+  return toFaDigits(value)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -66,7 +70,7 @@ function printRows(rows: BeneficiaryDoc[]): string {
   return rows
     .map(
       (row, index) => `<tr>
-        <td>${index + 1}</td>
+        <td>${escapeHtml(index + 1)}</td>
         <td>${escapeHtml(row.title || "—")}</td>
         <td>${escapeHtml(formatBeneficiaryAmount(docAmount(row)))}</td>
         <td>${escapeHtml(docDate(row))}</td>

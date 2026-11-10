@@ -41,6 +41,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
   const titleMap: { [key: string]: string } = {
     '/admin/expenses': 'هزینه‌ها',
     '/admin/beneficiaries': 'ذینفعان خرید',
+    '/admin/people': 'اشخاص',
     '/admin/manual-trades': 'ثبت سند',
     '/admin/cheques': 'چک',
     '/admin/cheque-books': 'دسته چک',
@@ -123,6 +124,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
   };
   
   if (pathname.startsWith("/admin/beneficiaries")) return "ذینفعان خرید";
+  if (pathname.startsWith("/admin/people")) return "اشخاص";
   if (pathname.startsWith("/admin/purchas/customer/")) return "صورتحساب مشتری";
   if (pathname.startsWith("/admin/accounting/vouchers/new")) return "سند دستی / اصلاحی";
   if (pathname.startsWith("/admin/accounting/vouchers/")) return "جزئیات سند";
@@ -149,9 +151,12 @@ const getAdminBackUrl = (pathname: string | null): string => {
   return getFirstAllowedAdminPath();
 };
 
-/** جزئیات سند از دفتر، لیست اسناد یا سند دیگر باز می‌شود؛ بک باید به همان صفحهٔ قبلی برگردد */
+/** صفحه‌هایی که از چند جا باز می‌شوند؛ بک باید به همان صفحهٔ قبلی برگردد */
 const prefersHistoryBack = (pathname: string | null): boolean =>
-  Boolean(pathname?.startsWith("/admin/accounting/vouchers/"));
+  Boolean(
+    pathname?.startsWith("/admin/accounting/vouchers/") ||
+      (pathname && /^\/admin\/beneficiaries\/\d+$/.test(pathname)),
+  );
 
 const shouldShowBack = (pathname: string | null): boolean => {
   if (!pathname) return false;
