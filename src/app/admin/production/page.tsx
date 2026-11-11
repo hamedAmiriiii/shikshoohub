@@ -97,6 +97,7 @@ import {
   recipeLinesFromGood,
   recipeLineKey,
   isNestedRecipeLine,
+  isConsumableRecipeLine,
   isFinalProducedGood,
   applySalePriceRounding,
   salePriceFromProfitPercent,
@@ -235,8 +236,15 @@ type WasteTarget =
   | { kind: "raw_material"; item: RawMaterial }
   | { kind: "produced_good"; item: ProducedGood };
 
+type ConsumableOption = {
+  id: number;
+  name: string;
+  stock?: number;
+};
+
 const emptyLine = (): RecipeLine => ({
   kind: "raw_material",
+  consumable_material_id: "",
   raw_material_id: "",
   ingredient_produced_good_id: "",
   grams_per_kg: 0,
@@ -296,6 +304,7 @@ export default function ProductionCostingPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [materials, setMaterials] = useState<RawMaterial[]>([]);
+  const [consumables, setConsumables] = useState<ConsumableOption[]>([]);
   const [goods, setGoods] = useState<ProducedGood[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedMaterialId, setExpandedMaterialId] = useState<number | null>(null);
@@ -366,9 +375,10 @@ export default function ProductionCostingPage() {
     }
     setLoading(true);
     try {
-      const [materialsRes, goodsRes] = await Promise.all([
+      const [materialsRes, goodsRes, consumablesRes] = await Promise.all([
         FetchWithJwtClient("GET", "/api/raw-materials?with_all_lots=1", token),
         FetchWithJwtClient("GET", "/api/produced-goods", token),
+        FetchWithJwtClient("GET", "/api/consumable-materials", token),
       ]);
       if (materialsRes?.hasError) {
         toast.error(getApiErrorMessage(materialsRes, "خطا در دریافت مواد اولیه"));
@@ -379,6 +389,9 @@ export default function ProductionCostingPage() {
         toast.error(getApiErrorMessage(goodsRes, "خطا در دریافت کالاهای تولیدی"));
       } else {
         setGoods(extractList<ProducedGood>(goodsRes));
+      }
+      if (!consumablesRes?.hasError) {
+        setConsumables(extractList<ConsumableOption>(consumablesRes));
       }
     } finally {
       setLoading(false);
@@ -836,8 +849,8 @@ export default function ProductionCostingPage() {
   };
 
   const openCreateGood = () => {
-    if (!materials.length) {
-      toast.error("اول حداقل یک ماده اولیه ثبت کنید");
+    if (!materials.length && !consumables.length && !goods.length) {
+      toast.error("اول یک ماده اولیه یا کالای انبار مصرفی ثبت کنید");
       setTab("materials");
       return;
     }
@@ -876,30 +889,42 @@ export default function ProductionCostingPage() {
       toast.error("نام کالا را وارد کنید");
       return;
     }
-    const ingredients = recipeLines
-      .filter((line) => {
-        if (!(line.grams_per_kg > 0)) return false;
-        if (isNestedRecipeLine(line)) return Number(line.ingredient_produced_good_id) > 0;
-        return line.raw_material_id !== "" && Number(line.raw_material_id) > 0;
-      })
-      .map((line) => {
-        if (isNestedRecipeLine(line)) {
-          return {
-            ingredient_produced_good_id: Number(line.ingredient_produced_good_id),
-            grams_per_kg: line.grams_per_kg,
-            is_removable: false,
-            is_addable: false,
-          };
-        }
+    const usableLines = recipeLines.filter((line) => {
+      if (!(line.grams_per_kg > 0)) return false;
+      if (isConsumableRecipeLine(line)) return Number(line.consumable_material_id) > 0;
+      if (isNestedRecipeLine(line)) return Number(line.ingredient_produced_good_id) > 0;
+      return line.raw_material_id !== "" && Number(line.raw_material_id) > 0;
+    });
+    if (usableLines.some((line) => isConsumableRecipeLine(line) && !Number.isInteger(line.grams_per_kg))) {
+      toast.error("تعداد کالای انبار مصرفی باید عدد صحیح باشد");
+      return;
+    }
+    const ingredients = usableLines.map((line) => {
+      if (isConsumableRecipeLine(line)) {
         return {
-          raw_material_id: Number(line.raw_material_id),
+          consumable_material_id: Number(line.consumable_material_id),
           grams_per_kg: line.grams_per_kg,
-          is_removable: line.is_removable === true,
-          is_addable: line.is_addable === true,
+          is_removable: false,
+          is_addable: false,
         };
-      });
+      }
+      if (isNestedRecipeLine(line)) {
+        return {
+          ingredient_produced_good_id: Number(line.ingredient_produced_good_id),
+          grams_per_kg: line.grams_per_kg,
+          is_removable: false,
+          is_addable: false,
+        };
+      }
+      return {
+        raw_material_id: Number(line.raw_material_id),
+        grams_per_kg: line.grams_per_kg,
+        is_removable: line.is_removable === true,
+        is_addable: line.is_addable === true,
+      };
+    });
     if (!ingredients.length) {
-      toast.error("حداقل یک ماده یا کالای تولیدی با مقدار وارد کنید");
+      toast.error("حداقل یک ماده، کالای انبار مصرفی یا کالای تولیدی با مقدار وارد کنید");
       return;
     }
     const keys = recipeLines
@@ -907,7 +932,7 @@ export default function ProductionCostingPage() {
       .map((line) => recipeLineKey(line))
       .filter((k) => !k.endsWith(":0") && !k.endsWith(":"));
     if (new Set(keys).size !== keys.length) {
-      toast.error("یک ماده یا کالای تولیدی را دو بار در فرمول نگذارید");
+      toast.error("یک ماده، کالای انبار مصرفی یا کالای تولیدی را دو بار در فرمول نگذارید");
       return;
     }
     if (editingGood) {
@@ -2094,21 +2119,28 @@ export default function ProductionCostingPage() {
           </Box>
          
           {recipeLines.map((line, index) => {
-            const nested = isNestedRecipeLine(line);
+            const consumable = isConsumableRecipeLine(line);
+            const nested = !consumable && isNestedRecipeLine(line);
             const nestedGood = nested
               ? goods.find((g) => g.id === Number(line.ingredient_produced_good_id))
               : undefined;
-            const rawMaterial = !nested
+            const rawMaterial = !nested && !consumable
               ? materials.find((m) => m.id === line.raw_material_id)
               : undefined;
-            const qtyLabel = nested
+            const qtyLabel = consumable
+              ? "عدد"
+              : nested
               ? isPieceMaterial(nestedGood)
                 ? "عدد"
                 : "گرم"
               : isPieceMaterial(rawMaterial)
                 ? "عدد"
                 : "گرم";
-            const selectedValue = nested
+            const selectedValue = consumable
+              ? line.consumable_material_id === ""
+                ? ""
+                : `cm:${line.consumable_material_id}`
+              : nested
               ? line.ingredient_produced_good_id === ""
                 ? ""
                 : `pg:${line.ingredient_produced_good_id}`
@@ -2132,18 +2164,30 @@ export default function ProductionCostingPage() {
               <TextField
                 select
                 size="small"
-                label="ماده / کالای تولیدی"
+                label="ماده / انبار مصرفی / کالای تولیدی"
                 value={selectedValue}
                 onChange={(e) => {
                   const value = e.target.value;
                   const next = [...recipeLines];
-                  if (value.startsWith("pg:")) {
+                  if (value.startsWith("cm:")) {
+                    const id = Number(value.slice(3));
+                    next[index] = {
+                      ...next[index],
+                      kind: "consumable",
+                      raw_material_id: "",
+                      ingredient_produced_good_id: "",
+                      consumable_material_id: id > 0 ? id : "",
+                      is_removable: false,
+                      is_addable: false,
+                    };
+                  } else if (value.startsWith("pg:")) {
                     const id = Number(value.slice(3));
                     next[index] = {
                       ...next[index],
                       kind: "produced_good",
                       raw_material_id: "",
                       ingredient_produced_good_id: id > 0 ? id : "",
+                      consumable_material_id: "",
                       is_removable: false,
                       is_addable: false,
                     };
@@ -2154,6 +2198,7 @@ export default function ProductionCostingPage() {
                       kind: "raw_material",
                       raw_material_id: id > 0 ? id : "",
                       ingredient_produced_good_id: "",
+                      consumable_material_id: "",
                     };
                   } else {
                     next[index] = {
@@ -2161,6 +2206,7 @@ export default function ProductionCostingPage() {
                       kind: "raw_material",
                       raw_material_id: "",
                       ingredient_produced_good_id: "",
+                      consumable_material_id: "",
                     };
                   }
                   setRecipeLines(next);
@@ -2194,6 +2240,17 @@ export default function ProductionCostingPage() {
                       {good.stock_kg != null ? ` · موجودی ${formatKg(good.stock_kg)}` : ""}
                     </MenuItem>
                   ))}
+                {consumables.length > 0 && (
+                  <MenuItem disabled value="__cm_header">
+                    — انبار مصرفی —
+                  </MenuItem>
+                )}
+                {consumables.map((item) => (
+                  <MenuItem key={`cm-${item.id}`} value={`cm:${item.id}`}>
+                    {item.name}
+                    {item.stock != null ? ` · موجودی ${formatKg(item.stock)}` : ""}
+                  </MenuItem>
+                ))}
               </TextField>
               <TextField
                 size="small"
@@ -2215,7 +2272,7 @@ export default function ProductionCostingPage() {
               >
                 <DeleteOutlineIcon sx={{ fontSize: 18 }} />
               </IconButton>
-              {!nested && (
+              {!nested && !consumable && (
               <Box sx={{ gridColumn: "1 / -1", display: "flex", gap: 1.5, flexWrap: "wrap" }}>
                 <FormControlLabel
                   sx={{ m: 0 }}
@@ -2772,20 +2829,26 @@ export default function ProductionCostingPage() {
                       مواد مصرفی
                     </Typography>
                     {ingredients.map((line, idx) => {
+                      const isConsumable =
+                        line.ingredient_kind === "consumable" ||
+                        Number(line.consumable_material_id) > 0;
                       const isNested =
-                        line.ingredient_kind === "produced_good" ||
-                        Number(line.ingredient_produced_good_id) > 0;
+                        !isConsumable &&
+                        (line.ingredient_kind === "produced_good" ||
+                        Number(line.ingredient_produced_good_id) > 0);
                       const unitSource = line.unit_type
                         ? line
                         : isNested
                           ? goods.find((g) => g.id === Number(line.ingredient_produced_good_id))
                           : materials.find((m) => m.id === Number(line.raw_material_id));
-                      const unit = materialUnitLabel(unitSource);
+                      const unit = isConsumable ? "عدد" : materialUnitLabel(unitSource);
                       const short = (line.shortage_kg || 0) > 0;
                       const lots = line.lots || [];
                       const lineCost =
                         line.cost != null ? line.cost : lots.reduce((sum, lot) => sum + (Number(lot.cost) || 0), 0);
-                      const lineKey = isNested
+                      const lineKey = isConsumable
+                        ? `cm:${line.consumable_material_id}-${idx}`
+                        : isNested
                         ? `pg:${line.ingredient_produced_good_id}-${idx}`
                         : `rm:${line.raw_material_id}-${idx}`;
                       return (
@@ -2801,12 +2864,14 @@ export default function ProductionCostingPage() {
                           <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, flexWrap: "wrap" }}>
                             <Typography sx={{ fontSize: 14, fontWeight: 700, color: "var(--admin-text)" }}>
                               {line.name ||
-                                (isNested
+                                (isConsumable
+                                  ? `انبار مصرفی ${line.consumable_material_id}`
+                                  : isNested
                                   ? `کالای تولیدی ${line.ingredient_produced_good_id}`
                                   : `ماده ${line.raw_material_id}`)}
-                              {isNested ? (
+                              {isConsumable || isNested ? (
                                 <Typography component="span" sx={{ fontSize: 11, fontWeight: 500, color: "var(--admin-text-muted)", ml: 0.75 }}>
-                                  (تولیدی)
+                                  {isConsumable ? "(انبار مصرفی)" : "(تولیدی)"}
                                 </Typography>
                               ) : null}
                             </Typography>
@@ -2830,7 +2895,9 @@ export default function ProductionCostingPage() {
                                 const virtual = !lot.lot_id && !lot.source_production_id;
                                 const label = virtual
                                   ? "بدون موجودی (قیمت تخمینی)"
-                                  : lot.source_production_id
+                                  : isConsumable
+                                    ? "انبار مصرفی"
+                                    : lot.source_production_id
                                     ? `تولید #${lot.source_production_id}`
                                     : `لات ${lot.lot_id}`;
                                 return (
@@ -2891,20 +2958,24 @@ export default function ProductionCostingPage() {
                 {formatKg(lastProduction.quantity_kg)} {materialUnitLabel(lastProduction)} {lastProduction.produced_good_name} · هر {materialUnitLabel(lastProduction)} {formatToman(lastProduction.cost_per_kg)} تومان
               </Typography>
               {(lastProduction.consumptions || []).map((row) => {
+                const isConsumable = row.ingredient_kind === "consumable";
                 const isNested =
-                  row.ingredient_kind === "produced_good" ||
-                  Number(row.ingredient_produced_good_id) > 0;
+                  !isConsumable &&
+                  (row.ingredient_kind === "produced_good" ||
+                  Number(row.ingredient_produced_good_id) > 0);
                 const unitSource = isNested
                   ? goods.find((g) => g.id === Number(row.ingredient_produced_good_id))
                   : materials.find((m) => m.id === Number(row.raw_material_id));
-                const sourceLabel = isNested
+                const sourceLabel = isConsumable
+                  ? "از انبار مصرفی"
+                  : isNested
                   ? `از تولید #${row.source_production_id}`
                   : `از لات ${row.raw_material_lot_id}`;
                 return (
                   <Typography key={row.id} sx={{ fontSize: 13, color: "var(--admin-text-muted)" }}>
                     {row.raw_material_name}
-                    {isNested ? " (تولیدی)" : ""}: {formatKg(row.quantity_kg)}{" "}
-                    {materialUnitLabel(unitSource)} {sourceLabel} با قیمت {formatToman(row.price_per_kg)} →{" "}
+                    {isConsumable ? " (انبار مصرفی)" : isNested ? " (تولیدی)" : ""}: {formatKg(row.quantity_kg)}{" "}
+                    {isConsumable ? "عدد" : materialUnitLabel(unitSource)} {sourceLabel} با قیمت {formatToman(row.price_per_kg)} →{" "}
                     {formatToman(row.cost)} تومان
                   </Typography>
                 );

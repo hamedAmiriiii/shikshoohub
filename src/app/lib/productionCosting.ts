@@ -102,7 +102,7 @@ export type IngredientCostLot = {
   estimated?: boolean;
 };
 
-export type IngredientKind = "raw_material" | "produced_good";
+export type IngredientKind = "raw_material" | "produced_good" | "consumable";
 
 export type IngredientCost = {
   unit_type?: RawMaterialUnit | string | null;
@@ -110,6 +110,7 @@ export type IngredientCost = {
   ingredient_kind?: IngredientKind | string | null;
   raw_material_id?: number | null;
   ingredient_produced_good_id?: number | null;
+  consumable_material_id?: number | null;
   name?: string | null;
   grams_per_kg: number;
   is_removable?: boolean;
@@ -190,9 +191,10 @@ export function categoryIdsFromGood(good: ProducedGood): number[] {
 }
 
 export type ProductionConsumption = {
-  id: number;
+  id: number | string;
   ingredient_kind?: IngredientKind | string | null;
   raw_material_id?: number | null;
+  consumable_material_id?: number | null;
   raw_material_name?: string | null;
   ingredient_produced_good_id?: number | null;
   raw_material_lot_id?: number | null;
@@ -216,10 +218,11 @@ export type ProductionRecord = {
 };
 
 export type RecipeLine = {
-  /** ماده اولیه یا کالای تولیدی نیمه‌ساخته */
+  /** ماده اولیه، کالای تولیدی، یا کالای انبار مصرفی */
   kind: IngredientKind;
   raw_material_id: number | "";
   ingredient_produced_good_id: number | "";
+  consumable_material_id: number | "";
   grams_per_kg: number;
   /** مشتری در منوی سه‌بعدی بتواند این ماده را بردارد (فقط ماده اولیه) */
   is_removable?: boolean;
@@ -231,7 +234,18 @@ export function isNestedRecipeLine(line: Pick<RecipeLine, "kind" | "ingredient_p
   return line.kind === "produced_good" || Number(line.ingredient_produced_good_id) > 0;
 }
 
-export function recipeLineKey(line: Pick<RecipeLine, "kind" | "raw_material_id" | "ingredient_produced_good_id">): string {
+export function isConsumableRecipeLine(
+  line: Pick<RecipeLine, "kind" | "consumable_material_id">,
+): boolean {
+  return line.kind === "consumable" || Number(line.consumable_material_id) > 0;
+}
+
+export function recipeLineKey(
+  line: Pick<RecipeLine, "kind" | "raw_material_id" | "ingredient_produced_good_id" | "consumable_material_id">,
+): string {
+  if (isConsumableRecipeLine(line)) {
+    return `cm:${Number(line.consumable_material_id) || 0}`;
+  }
   if (isNestedRecipeLine(line)) {
     return `pg:${Number(line.ingredient_produced_good_id) || 0}`;
   }
@@ -362,19 +376,21 @@ export function asProductionRecord(res: unknown): ProductionRecord | null {
 export function recipeLinesFromGood(good: ProducedGood): RecipeLine[] {
   const lines = good.ingredient_costs || [];
   if (!lines.length) {
-    return [{ kind: "raw_material", raw_material_id: "", ingredient_produced_good_id: "", grams_per_kg: 0 }];
+    return [{ kind: "raw_material", raw_material_id: "", ingredient_produced_good_id: "", consumable_material_id: "", grams_per_kg: 0 }];
   }
   return lines.map((line) => {
+    const consumableId = Number(line.consumable_material_id) || 0;
     const nestedId = Number(line.ingredient_produced_good_id) || 0;
-    const isNested =
-      line.ingredient_kind === "produced_good" || nestedId > 0;
+    const isConsumable = line.ingredient_kind === "consumable" || consumableId > 0;
+    const isNested = !isConsumable && (line.ingredient_kind === "produced_good" || nestedId > 0);
     return {
-      kind: isNested ? "produced_good" : "raw_material",
-      raw_material_id: isNested ? "" : (Number(line.raw_material_id) || ""),
+      kind: isConsumable ? "consumable" : isNested ? "produced_good" : "raw_material",
+      raw_material_id: isConsumable || isNested ? "" : (Number(line.raw_material_id) || ""),
       ingredient_produced_good_id: isNested ? nestedId : "",
+      consumable_material_id: isConsumable ? consumableId : "",
       grams_per_kg: Number(line.grams_per_kg) || 0,
-      is_removable: !isNested && line.is_removable === true,
-      is_addable: !isNested && line.is_addable === true,
+      is_removable: !isNested && !isConsumable && line.is_removable === true,
+      is_addable: !isNested && !isConsumable && line.is_addable === true,
     };
   });
 }
