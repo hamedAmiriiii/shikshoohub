@@ -27,6 +27,7 @@ import {
   materialUnitLabel,
   type RawMaterial,
 } from "@/app/lib/productionCosting";
+import { sanitizeQuantityDraft } from "@/app/lib/productUnits";
 import InvoiceLinkFields, {
   buildInvoiceLinkPayload,
   emptyInvoiceLinkState,
@@ -41,6 +42,13 @@ type LineDraft = {
   qty: string;
   price: string;
 };
+
+/** کیلو/لیتر اعشاری؛ عدد فقط صحیح — بدون formatAmountInput که Math.floor می‌کند */
+function qtyUnitFields(material: RawMaterial | null) {
+  return material && isPieceMaterial(material)
+    ? { unit_type: "piece" as const }
+    : { unit_type: "kg" as const };
+}
 
 type Props = {
   open: boolean;
@@ -232,7 +240,13 @@ export default function BulkRawMaterialInvoiceDialog({
                   size="small"
                   options={materials}
                   value={line.material}
-                  onChange={(_e, next) => updateLine(line.key, { material: next })}
+                  onChange={(_e, next) => {
+                    const unit = qtyUnitFields(next);
+                    updateLine(line.key, {
+                      material: next,
+                      qty: line.qty ? sanitizeQuantityDraft(line.qty, unit) : line.qty,
+                    });
+                  }}
                   getOptionLabel={(option) =>
                     `${option.name}${option.unit_type ? ` (${materialUnitLabel(option)})` : ""}`
                   }
@@ -250,7 +264,11 @@ export default function BulkRawMaterialInvoiceDialog({
                   size="small"
                   label={line.material ? materialQtyFieldLabel(line.material) : "مقدار"}
                   value={line.qty}
-                  onChange={(e) => updateLine(line.key, { qty: formatAmountInput(e.target.value) })}
+                  onChange={(e) =>
+                    updateLine(line.key, {
+                      qty: sanitizeQuantityDraft(e.target.value, qtyUnitFields(line.material)),
+                    })
+                  }
                   inputMode="decimal"
                   sx={fieldSx}
                 />

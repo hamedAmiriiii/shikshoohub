@@ -277,15 +277,23 @@ function landedUnitOf(row: DraftItem): number {
   return Math.round(Math.max(0, lineGrossOf(row) - lineDiscountOf(row)) / qty);
 }
 
-function parseQuantityInput(value: string): number {
-  const cleaned = String(value ?? "")
-    .replace(/,/g, "")
-    .replace(/٬/g, "")
+/** ورودی تعداد — تا ۳ رقم اعشار (مثلاً ۰.۸۰۰ کیلو) */
+function sanitizeQuantityDraftInput(value: string): string {
+  const normalized = String(value ?? "")
     .replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)))
     .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)))
-    .replace(/\s/g, "")
+    .replace(/[٫،,]/g, ".")
     .replace(/[^\d.]/g, "");
-  if (!cleaned) return 0;
+  const dot = normalized.indexOf(".");
+  if (dot === -1) return normalized;
+  const whole = normalized.slice(0, dot);
+  const fraction = normalized.slice(dot + 1).replace(/\./g, "").slice(0, 3);
+  return `${whole}.${fraction}`;
+}
+
+function parseQuantityInput(value: string): number {
+  const cleaned = sanitizeQuantityDraftInput(value);
+  if (!cleaned || cleaned === ".") return 0;
   const num = parseFloat(cleaned);
   return Number.isFinite(num) ? num : 0;
 }
@@ -1192,7 +1200,9 @@ export default function InvoiceDetailsDialog({
                               type="text"
                               inputMode="decimal"
                               value={row.quantity}
-                              onChange={(e) => updateDraft(row.key, { quantity: e.target.value })}
+                              onChange={(e) =>
+                                updateDraft(row.key, { quantity: sanitizeQuantityDraftInput(e.target.value) })
+                              }
                               onKeyDown={handleFieldEnter}
                               fullWidth
                               sx={{
