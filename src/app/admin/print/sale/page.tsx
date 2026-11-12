@@ -148,7 +148,21 @@ function SaleReceiptPrintContent() {
         size: ${formalPrint ? `A5 ${formalOrientation}` : `${paperWidthMm}mm auto`};
         margin: ${formalPrint ? "5mm" : "0"};
       }
+      @media screen {
+        .print-ticket-wrap-extra { display: none !important; }
+      }
       @media print {
+        .print-ticket-wrap-extra {
+          break-before: page;
+          page-break-before: always;
+        }
+        body[data-print-station="hall"] .print-ticket-wrap:not(:has(.print-ticket-hall)),
+        body[data-print-station="kitchen"] .print-ticket-wrap:not(:has(.print-ticket-kitchen)),
+        body[data-print-station="extra"] .print-ticket-wrap:not(:has(.print-ticket-extra)) {
+          display: none !important;
+          break-before: auto !important;
+          page-break-before: auto !important;
+        }
         html, body {
           width: ${formalPrint ? "auto" : `${paperWidthMm}mm`};
           height: auto !important;

@@ -1,6 +1,7 @@
 import {
   applyStationLayout,
   getEnabledReceiptPrintStations,
+  getStationCopyCount,
   getStationPrinterName,
   resolvePaperWidthMm,
   type ReceiptPrintStation,
@@ -569,7 +570,10 @@ export async function silentPrintReceiptStations(
     try {
       const ticketSettings = applyStationLayout(settings, station);
       const html = buildStationTicketHtml(receipt, ticketSettings, station);
-      await printHtmlToNamedPrinter(printer, html, resolvePaperWidthMm(ticketSettings));
+      const copies = getStationCopyCount(settings, station);
+      for (let copy = 0; copy < copies; copy += 1) {
+        await printHtmlToNamedPrinter(printer, html, resolvePaperWidthMm(ticketSettings));
+      }
       printed.push(station);
     } catch (error) {
       skipped.push(station);

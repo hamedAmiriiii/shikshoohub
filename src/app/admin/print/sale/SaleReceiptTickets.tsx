@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Box, Divider, Typography } from "@mui/material";
 import { saleNumberLines } from "@/app/lib/dailyTicketNumber";
 import { normalizeReceiptTemplateId } from "@/app/lib/receiptTemplates";
@@ -10,6 +11,7 @@ import {
   formatReceiptNumber,
   formatReceiptTimeOnly,
   getEnabledReceiptPrintStations,
+  getStationCopyCount,
   getPaymentTypeLabel,
   normalizeSaleReceiptData,
   resolveStationPaperWidthMm,
@@ -692,33 +694,48 @@ export function ReceiptTicketsBlock({
     items: safeReceiptItems(receipt),
   };
 
+  const repeat = (station: ReceiptPrintStation, node: () => ReactNode) => {
+    const count = getStationCopyCount(settings, station);
+    return Array.from({ length: count }, (_, index) => (
+      <Box
+        key={`${station}-${index}`}
+        className={index === 0 ? "print-ticket-wrap" : "print-ticket-wrap print-ticket-wrap-extra"}
+      >
+        {node()}
+      </Box>
+    ));
+  };
+
   return (
     <>
-      {stations.includes("hall") && (
-        <HallReceiptTicket
-          receipt={safeReceipt}
-          settings={applyStationLayout(settings, "hall")}
-          paperWidthMm={paperWidthMm ?? resolveStationPaperWidthMm(settings, "hall")}
-        />
-      )}
-      {stations.includes("kitchen") && (
-        <PrepStationTicket
-          receipt={safeReceipt}
-          settings={applyStationLayout(settings, "kitchen")}
-          paperWidthMm={resolveStationPaperWidthMm(settings, "kitchen")}
-          station="kitchen"
-          title={settings.kitchenTitle || "آشپزخانه"}
-        />
-      )}
-      {stations.includes("extra") && (
-        <PrepStationTicket
-          receipt={safeReceipt}
-          settings={applyStationLayout(settings, "extra")}
-          paperWidthMm={resolveStationPaperWidthMm(settings, "extra")}
-          station="extra"
-          title={settings.extraTitle || "بار"}
-        />
-      )}
+      {stations.includes("hall") &&
+        repeat("hall", () => (
+          <HallReceiptTicket
+            receipt={safeReceipt}
+            settings={applyStationLayout(settings, "hall")}
+            paperWidthMm={paperWidthMm ?? resolveStationPaperWidthMm(settings, "hall")}
+          />
+        ))}
+      {stations.includes("kitchen") &&
+        repeat("kitchen", () => (
+          <PrepStationTicket
+            receipt={safeReceipt}
+            settings={applyStationLayout(settings, "kitchen")}
+            paperWidthMm={resolveStationPaperWidthMm(settings, "kitchen")}
+            station="kitchen"
+            title={settings.kitchenTitle || "آشپزخانه"}
+          />
+        ))}
+      {stations.includes("extra") &&
+        repeat("extra", () => (
+          <PrepStationTicket
+            receipt={safeReceipt}
+            settings={applyStationLayout(settings, "extra")}
+            paperWidthMm={resolveStationPaperWidthMm(settings, "extra")}
+            station="extra"
+            title={settings.extraTitle || "بار"}
+          />
+        ))}
     </>
   );
 }

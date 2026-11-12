@@ -109,6 +109,10 @@ export type SaleReceiptPrintSettings = {
   hallPrinter: string;
   kitchenPrinter: string;
   extraPrinter: string;
+  /** تعداد نسخهٔ هر فیش روی پرینتر همان ایستگاه */
+  hallCopies: number;
+  kitchenCopies: number;
+  extraCopies: number;
   hallLayout?: StationTicketLayout;
   kitchenLayout?: StationTicketLayout;
   extraLayout?: StationTicketLayout;
@@ -166,6 +170,9 @@ export const DEFAULT_SALE_RECEIPT_PRINT_SETTINGS: SaleReceiptPrintSettings = {
   hallPrinter: "",
   kitchenPrinter: "",
   extraPrinter: "",
+  hallCopies: 1,
+  kitchenCopies: 1,
+  extraCopies: 1,
   qzCertificate: "",
   qzPrivateKey: "",
 };
@@ -230,6 +237,9 @@ function normalizeSaleReceiptPrintSettings(
   merged.hallPrinter = String(merged.hallPrinter || "").slice(0, 120);
   merged.kitchenPrinter = String(merged.kitchenPrinter || "").slice(0, 120);
   merged.extraPrinter = String(merged.extraPrinter || "").slice(0, 120);
+  merged.hallCopies = clampReceiptCopies(merged.hallCopies);
+  merged.kitchenCopies = clampReceiptCopies(merged.kitchenCopies);
+  merged.extraCopies = clampReceiptCopies(merged.extraCopies);
   merged.hallLayout = raw.hallLayout ? normalizeStationLayout(raw.hallLayout) : undefined;
   merged.kitchenLayout = raw.kitchenLayout ? normalizeStationLayout(raw.kitchenLayout) : undefined;
   merged.extraLayout = raw.extraLayout ? normalizeStationLayout(raw.extraLayout) : undefined;
@@ -393,6 +403,27 @@ export function stationPrinterSettingKey(
   if (station === "hall") return "hallPrinter";
   if (station === "kitchen") return "kitchenPrinter";
   return "extraPrinter";
+}
+
+export function clampReceiptCopies(value: unknown): number {
+  const count = Math.round(Number(value));
+  if (!Number.isFinite(count) || count < 1) return 1;
+  return Math.min(10, count);
+}
+
+export function stationCopiesSettingKey(
+  station: ReceiptPrintStation,
+): "hallCopies" | "kitchenCopies" | "extraCopies" {
+  if (station === "hall") return "hallCopies";
+  if (station === "kitchen") return "kitchenCopies";
+  return "extraCopies";
+}
+
+export function getStationCopyCount(
+  settings: SaleReceiptPrintSettings,
+  station: ReceiptPrintStation,
+): number {
+  return clampReceiptCopies(settings[stationCopiesSettingKey(station)]);
 }
 
 export function getEnabledReceiptPrintStations(

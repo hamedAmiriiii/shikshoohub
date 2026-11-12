@@ -20,6 +20,7 @@ import {
   TableHead,
   TableRow,
   TextField,
+  MenuItem,
   Typography,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
@@ -65,6 +66,7 @@ export type InvoiceItem = {
   vat_percent?: number | string | null;
   vat_amount?: number | string | null;
   discount_amount?: number | string | null;
+  unit_type?: string | null;
 };
 
 export type InvoiceRecord = DocumentPaymentFields & {
@@ -86,6 +88,8 @@ export type InvoiceRecord = DocumentPaymentFields & {
   image_url?: string | null;
   has_items?: boolean;
   has_consumable_lots?: boolean;
+  has_raw_material_lots?: boolean;
+  stock_target?: "product" | "consumable" | "raw" | string | null;
   vat_mode?: string | null;
   vat_percent?: number | string | null;
   vat_amount?: number | string | null;
@@ -96,11 +100,17 @@ export type InvoiceRecord = DocumentPaymentFields & {
 
 type VatMode = "none" | "percent" | "amount";
 
-type ConsumableOption = {
+type StockKind = "product" | "consumable" | "raw";
+
+type QtyUnit = "piece" | "kg" | "liter";
+
+type NameOption = {
   id: number;
   name: string;
   stock?: number;
-  next_unit_cost?: number | null;
+  unit?: QtyUnit;
+  salePrice?: number | null;
+  nextCost?: number | null;
 };
 
 /** فاکتور آیتم‌دار: مبلغ فقط از مجموع آیتم‌هاست و فیلد مبلغ کلی نباید فرستاده شود */
@@ -136,6 +146,7 @@ type DraftItem = {
   vatMode: VatMode;
   vatInput: string;
   discount: string;
+  unitType: QtyUnit;
   registered?: RegisteredProduct | null;
 };
 
@@ -198,7 +209,22 @@ function emptyDraft(): DraftItem {
     vatMode: "none",
     vatInput: "",
     discount: "",
+    unitType: "piece",
   };
+}
+
+function asQtyUnit(value: unknown, fallback: QtyUnit): QtyUnit {
+  if (value === "kg" || value === "liter" || value === "piece") return value;
+  return fallback;
+}
+
+function resolveStockKind(invoice?: InvoiceRecord | null, draft?: InvoiceCreateDraft | null): StockKind | null {
+  if (draft?.entryKind) return draft.entryKind;
+  const target = invoice?.stock_target;
+  if (target === "product" || target === "consumable" || target === "raw") return target;
+  if (invoice?.has_consumable_lots) return "consumable";
+  if (invoice?.has_raw_material_lots) return "raw";
+  return null;
 }
 
 function asVatMode(value: unknown): VatMode {
@@ -307,6 +333,7 @@ function draftsFromInvoice(invoice: InvoiceRecord): DraftItem[] {
       vatMode,
       vatInput,
       discount: toNumber(item.discount_amount) > 0 ? formatAmountNumber(toNumber(item.discount_amount)) : "",
+      unitType: asQtyUnit(item.unit_type, "piece"),
     };
   });
 }
@@ -339,6 +366,7 @@ export type InvoiceCreateDraft = {
   invoice_date?: { year: number; month: number; day: number };
   beneficiary_id?: number | "";
   beneficiary_label?: string;
+  entryKind?: StockKind;
 };
 
 type Props = {
@@ -366,10 +394,11 @@ export default function InvoiceDetailsDialog({
   const [settleOpen, setSettleOpen] = useState(false);
   const [productEntryEnabled, setProductEntryEnabled] = useState(false);
   const [consumableMode, setConsumableMode] = useState(false);
+  const [stockKind, setStockKind] = useState<StockKind | null>(null);
   const [paymentForm, setPaymentForm] = useState<DocumentPaymentFormState>(emptyDocumentPaymentForm);
-  const [consumableOptions, setConsumableOptions] = useState<ConsumableOption[]>([]);
-  const [consumableSearchLoading, setConsumableSearchLoading] = useState(false);
-  const consumableSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [nameOptions, setNameOptions] = useState<NameOption[]>([]);
+  const [nameSearchLoading, setNameSearchLoading] = useState(false);
+  const nameSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [afterMismatch, setAfterMismatch] = useState<"save" | "register">("save");
   const titleInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const focusKeyRef = useRef<string | null>(null);
@@ -385,10 +414,12 @@ export default function InvoiceDetailsDialog({
     if (!open) return;
     if (!invoice) {
       if (!createDraft) return;
-      setDrafts([emptyDraft()]);
+      const kind = createDraft.entryKind ?? null;
+      setDrafts([{ ...emptyDraft(), unitType: kind === "raw" ? "kg" : "piece" }]);
       setOriginalHadItems(false);
       setInvoiceAmount(0);
       setRecord(null);
+      setStockKind(kind);
       setConsumableMode(false);
       setPaymentForm(emptyDocumentPaymentForm());
       setConfirmMismatchOpen(false);
@@ -416,7 +447,9 @@ export default function InvoiceDetailsDialog({
       setOriginalHadItems(loadedItems.length > 0);
       setInvoiceAmount(toNumber(full.amount));
       setRecord(full);
-      setConsumableMode(Boolean(full.has_consumable_lots));
+      const kind = resolveStockKind(full, null);
+      setStockKind(kind);
+      setConsumableMode(kind === "consumable" || Boolean(full.has_consumable_lots));
       setPaymentForm(formFromDocumentPayment(full));
       setConfirmMismatchOpen(false);
       setLoading(false);
@@ -460,7 +493,7 @@ export default function InvoiceDetailsDialog({
   };
 
   const addRow = (focus = true) => {
-    const draft = emptyDraft();
+    const draft = { ...emptyDraft(), unitType: stockKind === "raw" ? "kg" as const : "piece" as const };
     if (focus) focusKeyRef.current = draft.key;
     setDrafts((prev) => [...prev, draft]);
   };
@@ -473,36 +506,50 @@ export default function InvoiceDetailsDialog({
     addRow(true);
   };
 
-  const searchConsumables = (query: string) => {
-    if (consumableSearchTimer.current) clearTimeout(consumableSearchTimer.current);
-    consumableSearchTimer.current = setTimeout(async () => {
+  const searchNames = (query: string) => {
+    const kind = stockKind || (consumableMode ? "consumable" : null);
+    if (!kind) return;
+    if (nameSearchTimer.current) clearTimeout(nameSearchTimer.current);
+    nameSearchTimer.current = setTimeout(async () => {
       const token = tokenCode();
       if (!token) return;
-      setConsumableSearchLoading(true);
+      setNameSearchLoading(true);
       try {
         const q = query.trim();
-        const res = await FetchWithJwtClient(
-          "GET",
-          `/api/consumable-materials?search=${encodeURIComponent(q)}&limit=20`,
-          token
-        );
+        const url =
+          kind === "product"
+            ? `/api/product?search=${encodeURIComponent(q)}&per_page=20`
+            : kind === "raw"
+              ? `/api/raw-materials?search=${encodeURIComponent(q)}&limit=20`
+              : `/api/consumable-materials?search=${encodeURIComponent(q)}&limit=20`;
+        const res = await FetchWithJwtClient("GET", url, token);
         if (!res || res.hasError) {
-          setConsumableOptions([]);
+          setNameOptions([]);
           return;
         }
-        const rows = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
-        setConsumableOptions(
+        const rows = (Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : []).filter(
+          (row: any) => kind !== "product" || row?.item_type !== "produced_good"
+        );
+        setNameOptions(
           rows
-            .map((row: any) => ({
-              id: Number(row.id),
-              name: String(row.name || ""),
-              stock: row.stock != null ? Number(row.stock) : undefined,
-              next_unit_cost: row.next_unit_cost != null ? Number(row.next_unit_cost) : null,
-            }))
-            .filter((row: ConsumableOption) => row.id && row.name)
+            .map((row: any) => {
+              const unit = row.unit_type === "kg" || row.unit_type === "liter" || row.unit_type === "piece"
+                ? row.unit_type
+                : undefined;
+              const stock = row.stock != null ? Number(row.stock) : row.stock_kg != null ? Number(row.stock_kg) : row.quantity != null ? Number(row.quantity) : undefined;
+              return {
+                id: Number(row.id),
+                name: String(row.name || ""),
+                stock: Number.isFinite(stock) ? stock : undefined,
+                unit,
+                salePrice: row.sale_price != null ? Number(row.sale_price) : null,
+                nextCost: row.next_unit_cost != null ? Number(row.next_unit_cost) : row.next_price_per_kg != null ? Number(row.next_price_per_kg) : null,
+              };
+            })
+            .filter((row: NameOption) => row.id && row.name)
         );
       } finally {
-        setConsumableSearchLoading(false);
+        setNameSearchLoading(false);
       }
     }, 280);
   };
@@ -523,6 +570,9 @@ export default function InvoiceDetailsDialog({
           vat_percent: row.vatMode === "percent" ? parseAmountInput(row.vatInput) : null,
           vat_amount: vatAmount,
           discount_amount: enteredDiscount,
+          unit_type: stockKind === "product" ? "piece" : row.unitType || (stockKind === "raw" ? "kg" : "piece"),
+          sale_price: stockKind === "product" ? parseAmountInput(row.salePrice) : null,
+          barcode: stockKind === "product" ? row.barcode.trim() : "",
           _base: base,
           _gross: base + vatAmount,
         };
@@ -538,7 +588,8 @@ export default function InvoiceDetailsDialog({
         );
         return null;
       }
-      if (consumableMode && !Number.isInteger(row.quantity)) {
+      const needsWhole = stockKind === "product" || ((stockKind === "consumable" || stockKind === "raw" || consumableMode) && row.unit_type === "piece");
+      if (needsWhole && !Number.isInteger(row.quantity)) {
         toast.error(`تعداد «${row.title}» باید عدد صحیح باشد`);
         return null;
       }
@@ -563,6 +614,9 @@ export default function InvoiceDetailsDialog({
       vat_percent: number | null;
       vat_amount: number;
       discount_amount: number;
+      unit_type?: string;
+      sale_price?: number | null;
+      barcode?: string;
     }[]
   ) => {
     if (!invoice && !createDraft) return;
@@ -589,7 +643,16 @@ export default function InvoiceDetailsDialog({
       if (items.length > 0 || originalHadItems) {
         payload.items = items;
       }
-      if (consumableMode) {
+      if (stockKind) {
+        if (items.length === 0) {
+          toast.error("حداقل یک ردیف لازم است");
+          return;
+        }
+        payload.stock_target = stockKind;
+        if (stockKind === "consumable") payload.sync_consumables = true;
+        if (stockKind === "raw") payload.sync_raw_materials = true;
+        if (stockKind === "product") payload.sync_products = true;
+      } else if (consumableMode) {
         if (items.length === 0) {
           toast.error("برای ثبت مواد مصرفی حداقل یک ردیف لازم است");
           return;
@@ -612,13 +675,19 @@ export default function InvoiceDetailsDialog({
         return;
       }
 
-      toast.success(
-        invoice
-          ? consumableMode
-            ? "فاکتور و خرید مواد مصرفی ذخیره شد"
-            : "جزئیات فاکتور ذخیره شد"
-          : "فاکتور با جزئیات ثبت شد"
-      );
+      const savedLabel =
+        stockKind === "product"
+          ? "فاکتور ثبت شد و کالاها به موجودی اضافه شدند"
+          : stockKind === "consumable"
+            ? "فاکتور ثبت شد و مواد مصرفی به انبار اضافه شدند"
+            : stockKind === "raw"
+              ? "فاکتور ثبت شد و مواد اولیه به انبار اضافه شدند"
+              : consumableMode
+                ? "فاکتور و خرید مواد مصرفی ذخیره شد"
+                : invoice
+                  ? "جزئیات فاکتور ذخیره شد"
+                  : "فاکتور با جزئیات ثبت شد";
+      toast.success(savedLabel);
       setConfirmMismatchOpen(false);
       onSaved();
       onClose();
@@ -714,6 +783,10 @@ export default function InvoiceDetailsDialog({
     }
   };
 
+  const showProductFields = stockKind === "product" || (!stockKind && productEntryEnabled && !consumableMode);
+  const showUnit = stockKind === "consumable" || stockKind === "raw";
+  const sectionTitle =
+    stockKind === "product" ? "کالاها" : stockKind === "consumable" ? "مواد مصرفی" : stockKind === "raw" ? "مواد اولیه" : "اقلام کالا / خدمات";
   const display = record || invoice;
   const beneficiary = beneficiaryFromRecord(display);
   const shopAccountName =
@@ -875,9 +948,10 @@ export default function InvoiceDetailsDialog({
                 }}
               >
                 <Typography sx={{ color: "var(--admin-text)", fontWeight: 800, fontSize: 13, minWidth: 0, flex: 1 }}>
-                  اقلام کالا / خدمات
+                  {sectionTitle}
                 </Typography>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>
+                  {stockKind ? null : (
                   <FormControlLabel
                     control={
                       <Switch
@@ -904,6 +978,7 @@ export default function InvoiceDetailsDialog({
                       },
                     }}
                   />
+                  )}
                   <Button
                     size="small"
                     variant="contained"
@@ -930,20 +1005,21 @@ export default function InvoiceDetailsDialog({
                     <TableRow>
                       <StyledTableCell align="center">ردیف</StyledTableCell>
                       <StyledTableCell align="center">
-                        {consumableMode ? "نام کالا" : "شرح کالا / خدمات"}
+                        {stockKind || consumableMode ? "نام کالا" : "شرح کالا / خدمات"}
                       </StyledTableCell>
                       <StyledTableCell align="center">فی</StyledTableCell>
                       <StyledTableCell align="center">ارزش افزوده</StyledTableCell>
-                      <StyledTableCell align="center">تعداد</StyledTableCell>
+                      {showUnit ? <StyledTableCell align="center">واحد</StyledTableCell> : null}
+                      <StyledTableCell align="center">{showUnit ? "مقدار" : "تعداد"}</StyledTableCell>
                       <StyledTableCell align="center">تخفیف</StyledTableCell>
-                      {productEntryEnabled && !consumableMode ? (
+                      {showProductFields ? (
                         <StyledTableCell align="center">بارکد</StyledTableCell>
                       ) : null}
-                      {productEntryEnabled && !consumableMode ? (
+                      {showProductFields ? (
                         <StyledTableCell align="center">قیمت فروش</StyledTableCell>
                       ) : null}
                       <StyledTableCell align="center">
-                        {consumableMode ? "قیمت تمام‌شده" : "قیمت خرید"}
+                        {stockKind === "consumable" || consumableMode ? "قیمت تمام‌شده" : "قیمت خرید"}
                       </StyledTableCell>
                       <StyledTableCell align="center">مبلغ کل</StyledTableCell>
                       <StyledTableCell align="center">حذف</StyledTableCell>
@@ -960,11 +1036,11 @@ export default function InvoiceDetailsDialog({
                             {formatAmountNumber(index + 1)}
                           </StyledTableCell>
                           <StyledTableCell align="center" sx={{ minWidth: 160 }}>
-                            {consumableMode ? (
+                            {stockKind || consumableMode ? (
                               <Autocomplete
                                 freeSolo
-                                options={consumableOptions}
-                                loading={consumableSearchLoading}
+                                options={nameOptions}
+                                loading={nameSearchLoading}
                                 filterOptions={(x) => x}
                                 isOptionEqualToValue={(option, value) =>
                                   typeof value === "string"
@@ -979,7 +1055,7 @@ export default function InvoiceDetailsDialog({
                                 onInputChange={(_, value, reason) => {
                                   updateDraft(row.key, { title: value });
                                   if (reason === "input" || reason === "clear") {
-                                    searchConsumables(value);
+                                    searchNames(value);
                                   }
                                 }}
                                 onChange={(_, value) => {
@@ -988,11 +1064,18 @@ export default function InvoiceDetailsDialog({
                                     return;
                                   }
                                   if (value) {
-                                    updateDraft(row.key, { title: value.name });
+                                    updateDraft(row.key, {
+                                      title: value.name,
+                                      unitType: value.unit || row.unitType,
+                                      salePrice:
+                                        stockKind === "product" && value.salePrice
+                                          ? formatAmountNumber(value.salePrice)
+                                          : row.salePrice,
+                                    });
                                   }
                                 }}
                                 onOpen={() => {
-                                  if (consumableOptions.length === 0) searchConsumables(row.title);
+                                  if (nameOptions.length === 0) searchNames(row.title);
                                 }}
                                 renderOption={(props, option) => (
                                   <li {...props} key={option.id}>
@@ -1000,8 +1083,8 @@ export default function InvoiceDetailsDialog({
                                       <Typography sx={{ fontSize: 13, fontWeight: 700 }}>{option.name}</Typography>
                                       <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)" }}>
                                         موجودی {formatAmountNumber(option.stock ?? 0)}
-                                        {option.next_unit_cost != null
-                                          ? ` · فی بعدی ${formatAmountNumber(option.next_unit_cost)}`
+                                        {option.nextCost != null
+                                          ? ` · فی ${formatAmountNumber(option.nextCost)}`
                                           : ""}
                                       </Typography>
                                     </Box>
@@ -1086,10 +1169,26 @@ export default function InvoiceDetailsDialog({
                               ) : null}
                             </Box>
                           </StyledTableCell>
+                          {showUnit ? (
+                            <StyledTableCell align="center" sx={{ width: 96 }}>
+                              <TextField
+                                select
+                                size="small"
+                                value={row.unitType}
+                                onChange={(e) => updateDraft(row.key, { unitType: asQtyUnit(e.target.value, "piece") })}
+                                fullWidth
+                                sx={fieldSx}
+                              >
+                                <MenuItem value="piece">عدد</MenuItem>
+                                <MenuItem value="kg">کیلو</MenuItem>
+                                <MenuItem value="liter">لیتر</MenuItem>
+                              </TextField>
+                            </StyledTableCell>
+                          ) : null}
                           <StyledTableCell align="center" sx={{ width: 88 }}>
                             <TextField
                               size="small"
-                              placeholder="تعداد"
+                              placeholder={row.unitType === "kg" ? "کیلو" : row.unitType === "liter" ? "لیتر" : "تعداد"}
                               type="text"
                               inputMode="decimal"
                               value={row.quantity}
@@ -1117,7 +1216,7 @@ export default function InvoiceDetailsDialog({
                               inputProps={{ inputMode: "numeric" }}
                             />
                           </StyledTableCell>
-                          {productEntryEnabled && !consumableMode ? (
+                          {showProductFields ? (
                             <StyledTableCell align="center" sx={{ width: 120 }}>
                               <TextField
                                 size="small"
@@ -1136,7 +1235,7 @@ export default function InvoiceDetailsDialog({
                               ) : null}
                             </StyledTableCell>
                           ) : null}
-                          {productEntryEnabled && !consumableMode ? (
+                          {showProductFields ? (
                             <StyledTableCell align="center" sx={{ width: 120 }}>
                               <TextField
                                 size="small"
@@ -1267,7 +1366,7 @@ export default function InvoiceDetailsDialog({
         <Button onClick={onClose} disabled={saving} sx={{ color: "var(--admin-text-muted)" }}>
           انصراف
         </Button>
-        {productEntryEnabled && !consumableMode ? (
+        {!stockKind && productEntryEnabled && !consumableMode ? (
           <Button
             onClick={() => void handleRegisterAndSave()}
             variant="contained"
@@ -1291,7 +1390,13 @@ export default function InvoiceDetailsDialog({
             "&:hover": { backgroundColor: "var(--admin-accent-hover)" },
           }}
         >
-          {saving ? "در حال ذخیره..." : consumableMode ? "ذخیره و ثبت در انبار" : "ذخیره فاکتور"}
+          {saving
+            ? "در حال ذخیره..."
+            : stockKind === "product"
+              ? "ثبت کالا و ذخیره فاکتور"
+              : stockKind === "consumable" || stockKind === "raw" || consumableMode
+                ? "ذخیره و ثبت در انبار"
+                : "ذخیره فاکتور"}
         </Button>
       </DialogActions>
     </Dialog>

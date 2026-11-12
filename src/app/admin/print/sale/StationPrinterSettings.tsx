@@ -17,8 +17,11 @@ import {
 } from "@mui/material";
 import {
   RECEIPT_PAPER_PRESETS,
+  clampReceiptCopies,
+  getStationCopyCount,
   getStationLayout,
   getStationPrinterName,
+  stationCopiesSettingKey,
   resolvePaperWidthMm,
   stationLayoutSettingKey,
   stationPrinterSettingKey,
@@ -113,6 +116,7 @@ const containedBtnSx = {
 type StationDraft = {
   enabled: boolean;
   printer: string;
+  copies: number;
   layout: StationTicketLayout;
   title: string;
   shopTitle: string;
@@ -144,6 +148,7 @@ function draftFromSettings(settings: SaleReceiptPrintSettings, station: ReceiptP
   return {
     enabled,
     printer: getStationPrinterName(settings, station),
+    copies: getStationCopyCount(settings, station),
     layout: getStationLayout(settings, station),
     title:
       station === "kitchen"
@@ -200,8 +205,10 @@ function StationSettingsDialog({
   const save = () => {
     const layoutKey = stationLayoutSettingKey(station);
     const printerKey = stationPrinterSettingKey(station);
+    const copiesKey = stationCopiesSettingKey(station);
     const partial: Partial<SaleReceiptPrintSettings> = {
       [printerKey]: draft.printer,
+      [copiesKey]: clampReceiptCopies(draft.copies),
       [layoutKey]: draft.layout,
     };
     if (station === "hall") {
@@ -289,6 +296,23 @@ function StationSettingsDialog({
             پرینتر از گفتگوی چاپ ویندوز انتخاب می‌شود.
           </Typography>
         )}
+
+        <TextField
+          size="small"
+          type="number"
+          label="تعداد چاپ هر فیش"
+          value={draft.copies}
+          inputProps={{ min: 1, max: 10, step: 1 }}
+          helperText="در گفتگوی ویندوز تعداد را ۱ بگذارید؛ همین‌جا مشخص می‌شود چند نسخه برود"
+          onChange={(e) => {
+            const value = parseInt(e.target.value, 10);
+            setDraft({ ...draft, copies: Number.isNaN(value) ? 1 : clampReceiptCopies(value) });
+          }}
+          sx={{
+            ...fieldSx,
+            "& .MuiFormHelperText-root": { color: "var(--admin-text-secondary)", mx: 0 },
+          }}
+        />
 
         <Select
           size="small"
@@ -596,6 +620,7 @@ export function StationPrinterSettings({
               ? Boolean(settings.printKitchen)
               : Boolean(settings.printExtra);
         const printer = getStationPrinterName(settings, station);
+        const copies = getStationCopyCount(settings, station);
         const layout = getStationLayout(settings, station);
         const singleMode = Boolean(settings.singlePrinterNoQz) && !listMode;
         return (
@@ -622,7 +647,7 @@ export function StationPrinterSettings({
                     ).trim() || STATION_LABEL[station]}
               </Typography>
               <Typography sx={{ fontSize: 11, color: "var(--admin-text-secondary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                {STATION_HINT[station]} · {paperLabel(layout)}
+                {STATION_HINT[station]} · {paperLabel(layout)} · {copies} نسخه
                 {singleMode
                   ? " · چاپ مرورگر"
                   : printer
