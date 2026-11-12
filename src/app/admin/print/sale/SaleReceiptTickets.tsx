@@ -56,13 +56,40 @@ function SaleNumberLines({
 
 function WebinoPlusMark() {
   return (
-    <Box sx={{ mt: 1.25, textAlign: "center" }}>
-      <Typography align="center" sx={{ fontWeight: 800, fontSize: "12px" }}>
+    <Box
+      sx={{
+        mt: 1.25,
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "baseline",
+        gap: 0.75,
+        flexWrap: "wrap",
+      }}
+    >
+      <Typography component="span" sx={{ fontWeight: 800, fontSize: "12px" }}>
         وبینوپلاس
       </Typography>
-      <Typography align="center" dir="ltr" sx={{ fontSize: "11px" }}>
+      <Typography component="span" dir="ltr" sx={{ fontSize: "11px" }}>
         www.webinoplus.ir
       </Typography>
+    </Box>
+  );
+}
+
+function CountAndInvoiceTotal({ receipt, fontSize }: { receipt: SaleReceiptData; fontSize: string }) {
+  return (
+    <Box sx={{ mb: 0.35 }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 1 }}>
+        <Typography sx={{ fontSize }}>
+          جمع اقلام: {formatReceiptNumber(safeReceiptItems(receipt).length)}
+        </Typography>
+        <Typography sx={{ fontSize, flexShrink: 0 }}>
+          جمع فاکتور: {formatReceiptNumber(receipt.subtotal)}
+        </Typography>
+      </Box>
+      {receipt.discount > 0 ? (
+        <Typography sx={{ fontSize, mt: 0.25 }}>تخفیف: {formatReceiptNumber(receipt.discount)}</Typography>
+      ) : null}
     </Box>
   );
 }
@@ -104,8 +131,7 @@ function TotalsBlock({
 }) {
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: settings.compactItems ? 0.1 : 0.25 }}>
-      <Row label="جمع" value={formatReceiptNumber(receipt.subtotal)} />
-      {receipt.discount > 0 && <Row label="تخفیف" value={formatReceiptNumber(receipt.discount)} />}
+      <CountAndInvoiceTotal receipt={receipt} fontSize={`${settings.fontSize}px`} />
       {receipt.creditUsed > 0 && <Row label="اعتبار" value={formatReceiptNumber(receipt.creditUsed)} />}
       {receipt.backPrice > 0 && <Row label="برگشتی" value={formatReceiptNumber(receipt.backPrice)} />}
       <Row label="مبلغ نهایی" value={`${formatReceiptNumber(receipt.finalTotal)} تومان`} bold />
@@ -378,17 +404,7 @@ function RetailHallTicket({
         </tbody>
       </Box>
 
-      <Typography sx={{ fontSize: `${fs}px`, mb: 0.35 }}>
-        جمع اقلام: {formatReceiptNumber(safeReceiptItems(receipt).length)}
-      </Typography>
-      <Typography sx={{ fontSize: `${fs}px`, mb: 0.35 }}>
-        جمع فاکتور: {formatReceiptNumber(receipt.subtotal)}
-      </Typography>
-      {receipt.discount > 0 ? (
-        <Typography sx={{ fontSize: `${fs}px`, mb: 0.75 }}>
-          سود شما از این خرید: {formatReceiptNumber(receipt.discount)}
-        </Typography>
-      ) : null}
+      <CountAndInvoiceTotal receipt={receipt} fontSize={`${fs}px`} />
 
       <Box
         sx={{

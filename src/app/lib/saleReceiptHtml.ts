@@ -147,10 +147,17 @@ function rowHtml(label: string, valueHtml: string, bold = false): string {
   return `<table class="row${cls}"><tr><td class="label">${escapeHtml(label)}</td><td class="value">${valueHtml}</td></tr></table>`;
 }
 
+function countAndTotalHtml(receipt: SaleReceiptData): string {
+  const discount =
+    receipt.discount > 0
+      ? `<div class="block">تخفیف: ${ltr(formatReceiptNumber(receipt.discount))}</div>`
+      : "";
+  return `<table class="row"><tr><td style="text-align:right;width:50%">جمع اقلام: ${ltr(formatReceiptNumber(receiptItems(receipt).length))}</td><td style="text-align:left;width:50%">جمع فاکتور: ${ltr(formatReceiptNumber(receipt.subtotal))}</td></tr></table>${discount}`;
+}
+
 function totalsHtml(receipt: SaleReceiptData): string {
   const extras: string[] = [];
-  extras.push(rowHtml("جمع", ltr(formatReceiptNumber(receipt.subtotal))));
-  if (receipt.discount > 0) extras.push(rowHtml("تخفیف", ltr(formatReceiptNumber(receipt.discount))));
+  extras.push(countAndTotalHtml(receipt));
   if (receipt.creditUsed > 0) extras.push(rowHtml("اعتبار", ltr(formatReceiptNumber(receipt.creditUsed))));
   if (receipt.backPrice > 0) extras.push(rowHtml("برگشتی", ltr(formatReceiptNumber(receipt.backPrice))));
   extras.push(rowHtml("مبلغ نهایی", `${ltr(formatReceiptNumber(receipt.finalTotal))} تومان`, true));
@@ -274,9 +281,7 @@ function retailHallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSet
       </thead>
       <tbody>${rows}</tbody>
     </table>
-    <div class="block">جمع اقلام: ${ltr(formatReceiptNumber(receiptItems(receipt).length))}</div>
-    <div class="block">جمع فاکتور: ${ltr(formatReceiptNumber(receipt.subtotal))}</div>
-    ${receipt.discount > 0 ? `<div class="block">سود شما از این خرید: ${ltr(formatReceiptNumber(receipt.discount))}</div>` : ""}
+    ${countAndTotalHtml(receipt)}
     <div style="background:#000;color:#fff;text-align:center;padding:8px 4px;margin:8px 0">
       <div>مبلغ پرداختی شما:</div>
       <div style="font-size:1.25em;font-weight:800">${ltr(formatReceiptNumber(receipt.payableNow || receipt.finalTotal))} ریال</div>
@@ -350,7 +355,7 @@ function boldHallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSetti
 }
 
 function webinoPlusFooterHtml(): string {
-  return `<div class="muted" style="margin-top:10px;font-weight:800">وبینوپلاس</div><div class="muted"><span class="ltr">www.webinoplus.ir</span></div>`;
+  return `<div class="muted" style="margin-top:10px;font-weight:800">وبینوپلاس <span class="ltr" style="font-weight:600">www.webinoplus.ir</span></div>`;
 }
 
 function hallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSettings): string {
