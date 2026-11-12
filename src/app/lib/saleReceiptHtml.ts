@@ -112,6 +112,26 @@ function wrapTicketHtml(inner: string, settings: SaleReceiptPrintSettings): stri
   .ltr { direction: ltr; unicode-bidi: embed; display: inline-block; font-weight: 700; }
   .item { margin-bottom: ${settings.compactItems ? 5 : 9}px; }
   .name { font-weight: 800; text-align: right; }
+  table.retail-items {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: fixed;
+    margin: 0 0 8px;
+  }
+  table.retail-items th,
+  table.retail-items td {
+    display: table-cell;
+    border: 1px solid #000;
+    padding: 4px 3px;
+    text-align: center;
+    vertical-align: middle;
+    word-wrap: break-word;
+    background: #fff;
+    color: #000;
+  }
+  table.retail-items th { font-weight: 800; background: #f3f3f3; }
+  table.retail-items td.item-name { text-align: right; font-weight: 800; }
   hr { border: none; border-top: 2px solid #000; margin: 8px 0; }
   .bold { font-weight: 800; }
   .note { white-space: pre-wrap; text-align: right; }
@@ -203,13 +223,20 @@ function retailHallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSet
   const shopTitle = escapeHtml(settings.shopTitle || receipt.shopName || "فاکتور فروش");
   const cashierLabel = escapeHtml(settings.cashierLabel || "صندوق‌دار");
   const unitCol = settings.showItemUnitPrice;
+  const nameWidth = unitCol ? "46%" : "58%";
+  const qtyWidth = unitCol ? "16%" : "18%";
+  const moneyWidth = unitCol ? "19%" : "24%";
+  const cell = "border:1px solid #000;padding:4px 3px;text-align:center;vertical-align:middle;background:#fff;color:#000";
   const rows = receiptItems(receipt)
     .map((item) => {
+      const note = item.note
+        ? `<div style="font-weight:600;margin-top:2px">${escapeHtml(item.note)}</div>`
+        : "";
       return `<tr>
-        <td style="text-align:right;font-weight:800">${escapeHtml(item.name)}</td>
-        <td>${ltr(formatReceiptNumber(item.quantity))}</td>
-        ${unitCol ? `<td>${ltr(formatReceiptNumber(item.unitPrice))}</td>` : ""}
-        <td>${ltr(formatReceiptNumber(item.lineTotal))}</td>
+        <td class="item-name" style="${cell};text-align:right;font-weight:800;width:${nameWidth}">${escapeHtml(item.name)}${note}</td>
+        <td style="${cell};width:${qtyWidth}">${ltr(formatReceiptNumber(item.quantity))}</td>
+        ${unitCol ? `<td style="${cell};width:${moneyWidth}">${ltr(formatReceiptNumber(item.unitPrice))}</td>` : ""}
+        <td style="${cell};width:${moneyWidth}">${ltr(formatReceiptNumber(item.lineTotal))}</td>
       </tr>`;
     })
     .join("");
@@ -230,13 +257,19 @@ function retailHallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSet
           : ""
       }
     </div>
-    <table style="width:100%;border-collapse:collapse;font-size:90%;margin-bottom:8px">
+    <table class="retail-items" style="width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:90%;margin-bottom:8px">
+      <colgroup>
+        <col style="width:${nameWidth}"/>
+        <col style="width:${qtyWidth}"/>
+        ${unitCol ? `<col style="width:${moneyWidth}"/>` : ""}
+        <col style="width:${moneyWidth}"/>
+      </colgroup>
       <thead>
         <tr>
-          <th style="border:1px solid #000;padding:3px">نام کالا</th>
-          <th style="border:1px solid #000;padding:3px">تعداد</th>
-          ${unitCol ? `<th style="border:1px solid #000;padding:3px">فی</th>` : ""}
-          <th style="border:1px solid #000;padding:3px">جمع</th>
+          <th style="${cell};font-weight:800;background:#f3f3f3;width:${nameWidth}">نام کالا</th>
+          <th style="${cell};font-weight:800;background:#f3f3f3;width:${qtyWidth}">تعداد</th>
+          ${unitCol ? `<th style="${cell};font-weight:800;background:#f3f3f3;width:${moneyWidth}">فی</th>` : ""}
+          <th style="${cell};font-weight:800;background:#f3f3f3;width:${moneyWidth}">جمع</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>

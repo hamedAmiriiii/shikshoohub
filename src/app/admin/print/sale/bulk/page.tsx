@@ -158,6 +158,13 @@ function BulkSaleReceiptPrintContent() {
         .print-ticket {
           box-shadow: none !important;
         }
+        table.retail-items { display: table !important; width: 100% !important; table-layout: fixed !important; }
+        table.retail-items tr { display: table-row !important; }
+        table.retail-items th, table.retail-items td {
+          display: table-cell !important;
+          border: 1px solid #000 !important;
+          color: #000 !important;
+        }
         .print-receipt-batch-group {
           page-break-after: always;
           break-after: page;

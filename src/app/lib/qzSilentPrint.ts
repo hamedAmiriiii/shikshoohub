@@ -197,6 +197,9 @@ function forcePixelTicketLayout(doc: Document, layoutWidthPx: number): void {
     }
     body { box-sizing: border-box !important; overflow: visible !important; }
     table.row { width: 100% !important; table-layout: fixed !important; }
+    table.retail-items { display: table !important; width: 100% !important; table-layout: fixed !important; border-collapse: separate !important; }
+    table.retail-items tr { display: table-row !important; }
+    table.retail-items th, table.retail-items td { display: table-cell !important; border: 1px solid #000 !important; }
     h1, .sub, .muted, .item, .note, hr { width: 100% !important; }
   `;
   doc.head.appendChild(style);

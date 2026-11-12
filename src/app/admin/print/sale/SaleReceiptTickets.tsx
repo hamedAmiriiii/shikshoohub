@@ -324,21 +324,33 @@ function RetailHallTicket({
 
       <Box
         component="table"
+        className="retail-items"
         sx={{
           width: "100%",
           borderCollapse: "collapse",
+          tableLayout: "fixed",
           fontSize: `${fs}px`,
           mb: 1,
+          color: "#111",
           "& th, & td": {
+            display: "table-cell",
             border: "1px solid #111",
             p: "3px 2px",
             textAlign: "center",
             verticalAlign: "middle",
+            color: "#111",
+            wordBreak: "break-word",
           },
           "& th": { fontWeight: 800, bgcolor: "#f3f3f3" },
-          "& td.name": { textAlign: "right", fontWeight: 700 },
+          "& td.item-name": { textAlign: "right", fontWeight: 700 },
         }}
       >
+        <colgroup>
+          <col style={{ width: settings.showItemUnitPrice ? "46%" : "58%" }} />
+          <col style={{ width: settings.showItemUnitPrice ? "16%" : "18%" }} />
+          {settings.showItemUnitPrice ? <col style={{ width: "19%" }} /> : null}
+          <col style={{ width: settings.showItemUnitPrice ? "19%" : "24%" }} />
+        </colgroup>
         <thead>
           <tr>
             <th>نام کالا</th>
@@ -350,7 +362,14 @@ function RetailHallTicket({
         <tbody>
           {safeReceiptItems(receipt).map((item, index) => (
             <tr key={`${item.id ?? index}-${index}`}>
-              <td className="name">{item.name}</td>
+              <td className="item-name">
+                {item.name}
+                {item.note ? (
+                  <Box component="div" sx={{ fontWeight: 600, fontSize: `${Math.max(8, fs - 1)}px`, mt: 0.25 }}>
+                    {item.note}
+                  </Box>
+                ) : null}
+              </td>
               <td>{formatReceiptNumber(item.quantity)}</td>
               {settings.showItemUnitPrice ? <td>{formatReceiptNumber(item.unitPrice)}</td> : null}
               <td>{formatReceiptNumber(item.lineTotal)}</td>
