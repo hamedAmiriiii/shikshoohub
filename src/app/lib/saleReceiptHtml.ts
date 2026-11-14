@@ -282,7 +282,7 @@ function retailHallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSet
       <tbody>${rows}</tbody>
     </table>
     ${countAndTotalHtml(receipt)}
-    <div style="background:#000;color:#fff;text-align:center;padding:8px 4px;margin:8px 0">
+    <div style="border:1.5px solid #000;color:#000;background:#fff;text-align:center;padding:8px 4px;margin:8px 0">
       <div>مبلغ پرداختی شما:</div>
       <div style="font-size:1.25em;font-weight:800">${ltr(formatReceiptNumber(receipt.payableNow || receipt.finalTotal))} ریال</div>
     </div>

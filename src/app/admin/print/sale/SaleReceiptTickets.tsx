@@ -408,16 +408,16 @@ function RetailHallTicket({
 
       <Box
         sx={{
-          bgcolor: "#111",
-          color: "#fff",
+          border: "1.5px solid #111",
+          color: "#111",
+          bgcolor: "#fff",
           textAlign: "center",
           py: 1,
           px: 0.5,
           mb: 1,
-          "& .MuiTypography-root": { color: "#fff !important" },
         }}
       >
-        <Typography sx={{ fontSize: `${fs}px` }}>مبلغ پرداختی شما:</Typography>
+        <Typography sx={{ fontSize: `${fs}px`, color: "#111" }}>مبلغ پرداختی شما:</Typography>
         <Typography sx={{ fontWeight: 800, fontSize: `${settings.titleFontSize + 2}px` }}>
           {formatReceiptNumber(receipt.payableNow || receipt.finalTotal)} ریال
         </Typography>

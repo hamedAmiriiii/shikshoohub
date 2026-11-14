@@ -4,6 +4,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import {
   Box,
   Button,
+  Checkbox,
   CircularProgress,
   Container,
   Dialog,
@@ -28,6 +29,7 @@ import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import HistoryIcon from "@mui/icons-material/History";
 import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutline";
+import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import { toast, ToastContainer } from "react-toastify";
@@ -123,6 +125,10 @@ export default function ConsumablesPage() {
   const [loading, setLoading] = useState(true);
   const [materials, setMaterials] = useState<ConsumableMaterial[]>([]);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
+  const [bulkMoving, setBulkMoving] = useState(false);
+  const [bulkFailed, setBulkFailed] = useState<{ id: number; name?: string | null; reason: string }[]>([]);
 
   const [historyLoading, setHistoryLoading] = useState(false);
   const [history, setHistory] = useState<WithdrawalRow[]>([]);
@@ -160,10 +166,13 @@ export default function ConsumablesPage() {
         return;
       }
       const rows = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
-      setMaterials(rows as ConsumableMaterial[]);
+      const list = rows as ConsumableMaterial[];
+      setMaterials(list);
+      setSelectedIds((prev) => prev.filter((id) => list.some((row) => row.id === id)));
     } catch {
       toast.error("خطا در دریافت انبار مواد مصرفی");
       setMaterials([]);
+      setSelectedIds([]);
     } finally {
       setLoading(false);
     }
@@ -218,6 +227,53 @@ export default function ConsumablesPage() {
     const value = materials.reduce((sum, row) => sum + (Number(row.stock_value) || 0), 0);
     return { stock, value, count: materials.length };
   }, [materials]);
+
+  const allSelected = materials.length > 0 && selectedIds.length === materials.length;
+  const someSelected = selectedIds.length > 0 && selectedIds.length < materials.length;
+  const selectedRows = useMemo(
+    () => materials.filter((row) => selectedIds.includes(row.id)),
+    [materials, selectedIds]
+  );
+
+  const toggleSelectAll = () => {
+    setSelectedIds(allSelected ? [] : materials.map((row) => row.id));
+  };
+
+  const toggleSelectOne = (id: number) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const submitBulkMove = async () => {
+    if (selectedIds.length === 0) return;
+    setBulkMoving(true);
+    setBulkFailed([]);
+    try {
+      const res = await FetchWithJwtClient("POST", "/api/consumable-materials/bulk-move-to-raw", {
+        ids: selectedIds,
+      });
+      const movedCount = Number(res?.moved_count) || 0;
+      const failedRows = Array.isArray(res?.failed) ? res.failed : [];
+      if (!res || (res.hasError && movedCount === 0)) {
+        toast.error(getApiErrorMessage(res, "انتقال گروهی انجام نشد"));
+        if (failedRows.length) setBulkFailed(failedRows);
+        return;
+      }
+      if (movedCount > 0) {
+        toast.success(res.message || `${formatAmountNumber(movedCount)} کالا منتقل شد`);
+      } else {
+        toast.error(res.message || "هیچ کالایی منتقل نشد");
+      }
+      if (failedRows.length) {
+        setBulkFailed(failedRows);
+      } else {
+        setBulkConfirmOpen(false);
+      }
+      setSelectedIds([]);
+      await loadMaterials();
+    } finally {
+      setBulkMoving(false);
+    }
+  };
 
   const previewCost = useMemo(() => {
     if (!withdrawTarget) return 0;
@@ -378,13 +434,56 @@ export default function ConsumablesPage() {
 
         {tab === 0 ? (
           <>
-            <TextField
-              size="small"
-              label="جستجوی نام کالا"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              sx={{ ...fieldSx, mb: 1.5, minWidth: { xs: "100%", sm: 280 } }}
-            />
+            <Box
+              sx={{
+                mb: 1.5,
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 1,
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <TextField
+                size="small"
+                label="جستجوی نام کالا"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                sx={{ ...fieldSx, minWidth: { xs: "100%", sm: 280 } }}
+              />
+              {selectedIds.length > 0 ? (
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, alignItems: "center" }}>
+                  <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)" }}>
+                    {formatAmountNumber(selectedIds.length)} کالا انتخاب شده
+                  </Typography>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    startIcon={<SwapHorizIcon sx={{ fontSize: 16 }} />}
+                    onClick={() => {
+                      setBulkFailed([]);
+                      setBulkConfirmOpen(true);
+                    }}
+                    sx={{
+                      ...adminButtonStartIconSx,
+                      backgroundColor: "var(--admin-accent)",
+                      fontWeight: 800,
+                      minHeight: 32,
+                      "&:hover": { backgroundColor: "var(--admin-accent-hover)" },
+                    }}
+                  >
+                    انتقال به مواد اولیه
+                  </Button>
+                  <Button
+                    size="small"
+                    onClick={() => setSelectedIds([])}
+                    sx={{ color: "var(--admin-text-muted)", minHeight: 32 }}
+                  >
+                    لغو انتخاب
+                  </Button>
+                </Box>
+              ) : null}
+            </Box>
 
             {loading ? (
               <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
@@ -414,6 +513,19 @@ export default function ConsumablesPage() {
                 <Table size="small">
                   <TableHead>
                     <TableRow sx={{ bgcolor: "var(--admin-surface-alt)" }}>
+                      <TableCell sx={{ ...cellSx, width: 42, px: 0.5 }}>
+                        <Checkbox
+                          size="small"
+                          checked={allSelected}
+                          indeterminate={someSelected}
+                          onChange={toggleSelectAll}
+                          sx={{
+                            color: "var(--admin-text-muted)",
+                            "&.Mui-checked, &.MuiCheckbox-indeterminate": { color: "var(--admin-accent)" },
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell sx={{ ...cellSx, fontWeight: 800 }}>آیدی</TableCell>
                       <TableCell sx={{ ...cellSx, fontWeight: 800 }}>نام کالا</TableCell>
                       <TableCell sx={{ ...cellSx, fontWeight: 800 }}>واحد</TableCell>
                       <TableCell sx={{ ...cellSx, fontWeight: 800 }}>موجودی</TableCell>
@@ -425,9 +537,24 @@ export default function ConsumablesPage() {
                   <TableBody>
                     {materials.map((row) => {
                       const open = expandedId === row.id;
+                      const checked = selectedIds.includes(row.id);
                       return (
                         <Fragment key={row.id}>
-                          <TableRow hover>
+                          <TableRow hover selected={checked}>
+                            <TableCell sx={{ ...cellSx, width: 42, px: 0.5 }}>
+                              <Checkbox
+                                size="small"
+                                checked={checked}
+                                onChange={() => toggleSelectOne(row.id)}
+                                sx={{
+                                  color: "var(--admin-text-muted)",
+                                  "&.Mui-checked": { color: "var(--admin-accent)" },
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell sx={{ ...cellSx, fontWeight: 700, color: "var(--admin-text-muted)" }}>
+                              {row.id}
+                            </TableCell>
                             <TableCell sx={cellSx}>
                               <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0.5 }}>
                                 <IconButton
@@ -482,7 +609,7 @@ export default function ConsumablesPage() {
                           </TableRow>
                           {open ? (
                             <TableRow>
-                              <TableCell colSpan={6} sx={{ bgcolor: "var(--admin-surface-alt)", py: 1.25 }}>
+                              <TableCell colSpan={8} sx={{ bgcolor: "var(--admin-surface-alt)", py: 1.25 }}>
                                 {(row.lots || []).length === 0 ? (
                                   <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)", textAlign: "center" }}>
                                     لاتی ثبت نشده
@@ -676,6 +803,101 @@ export default function ConsumablesPage() {
           >
             {withdrawSaving ? "در حال ثبت..." : "ثبت برداشت"}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={bulkConfirmOpen}
+        onClose={bulkMoving ? undefined : () => setBulkConfirmOpen(false)}
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{
+          sx: {
+            bgcolor: "var(--admin-surface)",
+            borderRadius: 2.5,
+            border: "1px solid var(--admin-border)",
+          },
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 800, fontSize: 15, color: "var(--admin-text)" }}>
+          انتقال گروهی به مواد اولیه
+        </DialogTitle>
+        <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 1.25, pt: 1 }}>
+          {bulkFailed.length > 0 ? (
+            <Typography sx={{ fontSize: 13, color: "var(--admin-text)", lineHeight: 1.8 }}>
+              انتقال انجام شد؛ این موارد به انبار مواد اولیه نرفتند:
+            </Typography>
+          ) : (
+            <>
+              <Typography sx={{ fontSize: 13, color: "var(--admin-text)", lineHeight: 1.8 }}>
+                {formatAmountNumber(selectedRows.length || selectedIds.length)} کالای انتخاب‌شده به انبار مواد اولیه
+                منتقل می‌شوند. کالاهایی که برداشت دارند، در فرمول تولید هستند، یا لات دست‌خورده دارند رد می‌شوند.
+              </Typography>
+              {selectedRows.length > 0 && selectedRows.length <= 20 ? (
+                <Box
+                  sx={{
+                    maxHeight: 180,
+                    overflow: "auto",
+                    border: "1px solid var(--admin-border)",
+                    borderRadius: 1.5,
+                    p: 1,
+                    bgcolor: "var(--admin-surface-alt)",
+                  }}
+                >
+                  {selectedRows.map((row) => (
+                    <Typography key={row.id} sx={{ fontSize: 12, color: "var(--admin-text)", py: 0.25 }}>
+                      #{row.id} · {row.name}
+                    </Typography>
+                  ))}
+                </Box>
+              ) : null}
+            </>
+          )}
+          {bulkFailed.length > 0 ? (
+            <Box
+              sx={{
+                maxHeight: 220,
+                overflow: "auto",
+                border: "1px solid var(--admin-border)",
+                borderRadius: 1.5,
+                p: 1,
+                bgcolor: "var(--admin-surface-alt)",
+              }}
+            >
+              {bulkFailed.map((row) => (
+                <Typography key={row.id} sx={{ fontSize: 11.5, color: "var(--admin-text-muted)", py: 0.25, lineHeight: 1.6 }}>
+                  #{row.id}
+                  {row.name ? ` · ${row.name}` : ""} — {row.reason}
+                </Typography>
+              ))}
+            </Box>
+          ) : null}
+        </DialogContent>
+        <DialogActions sx={{ px: 2.5, pb: 2 }}>
+          <Button
+            onClick={() => {
+              setBulkConfirmOpen(false);
+              setBulkFailed([]);
+            }}
+            disabled={bulkMoving}
+            sx={{ color: "var(--admin-text-muted)" }}
+          >
+            {bulkFailed.length > 0 ? "بستن" : "انصراف"}
+          </Button>
+          {bulkFailed.length === 0 ? (
+            <Button
+              variant="contained"
+              onClick={() => void submitBulkMove()}
+              disabled={bulkMoving || selectedIds.length === 0}
+              sx={{
+                backgroundColor: "var(--admin-accent)",
+                fontWeight: 800,
+                "&:hover": { backgroundColor: "var(--admin-accent-hover)" },
+              }}
+            >
+              {bulkMoving ? "در حال انتقال..." : "تأیید انتقال"}
+            </Button>
+          ) : null}
         </DialogActions>
       </Dialog>
 
