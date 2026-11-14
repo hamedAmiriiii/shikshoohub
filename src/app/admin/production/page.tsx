@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useCallback, useEffect, useMemo, useState, Fragment } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, Fragment, type KeyboardEvent } from "react";
 import {
   Box,
   Button,
@@ -336,6 +336,8 @@ export default function ProductionCostingPage() {
   const [goodUnit, setGoodUnit] = useState<"kg" | "liter" | "piece">("kg");
   const [goodIsFinal, setGoodIsFinal] = useState(true);
   const [recipeLines, setRecipeLines] = useState<RecipeLine[]>([emptyLine()]);
+  const recipeNameInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
+  const focusRecipeNameIndexRef = useRef<number | null>(null);
   const [layerOrder, setLayerOrder] = useState<LayerOrderEntry[]>([]);
   const [layerCompose, setLayerCompose] = useState<LayerComposeMode>("side");
   const [selectedLayerIndex, setSelectedLayerIndex] = useState<number | null>(null);
@@ -905,6 +907,37 @@ export default function ProductionCostingPage() {
       setSaving(false);
     }
   };
+
+  const addRecipeLineAndFocusName = useCallback(() => {
+    setRecipeLines((prev) => {
+      focusRecipeNameIndexRef.current = prev.length;
+      return [...prev, emptyLine()];
+    });
+  }, []);
+
+  const handleRecipeFieldEnter = (e: KeyboardEvent) => {
+    if (e.key !== "Enter") return;
+    if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return;
+    const target = e.currentTarget as HTMLElement;
+    if (target.getAttribute("aria-expanded") === "true") return;
+    e.preventDefault();
+    e.stopPropagation();
+    addRecipeLineAndFocusName();
+  };
+
+  useEffect(() => {
+    const index = focusRecipeNameIndexRef.current;
+    if (index == null) return;
+    const timer = window.setTimeout(() => {
+      const input = recipeNameInputRefs.current[index];
+      if (input) {
+        input.focus();
+        input.select?.();
+      }
+      focusRecipeNameIndexRef.current = null;
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [recipeLines.length]);
 
   const openCreateGood = () => {
     if (!materials.length && !consumables.length && !goods.length) {
@@ -2399,6 +2432,21 @@ export default function ProductionCostingPage() {
                     label="ماده / انبار مصرفی / کالای تولیدی"
                     placeholder="جستجو در لیست..."
                     sx={fieldSx}
+                    inputRef={(el) => {
+                      recipeNameInputRefs.current[index] = el;
+                      const ref = params.inputRef;
+                      if (typeof ref === "function") ref(el);
+                      else if (ref && typeof ref === "object") {
+                        (ref as { current: HTMLInputElement | null }).current = el;
+                      }
+                    }}
+                    inputProps={{
+                      ...params.inputProps,
+                      onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => {
+                        params.inputProps?.onKeyDown?.(e);
+                        handleRecipeFieldEnter(e);
+                      },
+                    }}
                   />
                 )}
               />
@@ -2411,6 +2459,7 @@ export default function ProductionCostingPage() {
                   next[index] = { ...next[index], grams_per_kg: parseAmount(e.target.value) };
                   setRecipeLines(next);
                 }}
+                onKeyDown={handleRecipeFieldEnter}
                 inputMode="decimal"
                 sx={fieldSx}
               />
