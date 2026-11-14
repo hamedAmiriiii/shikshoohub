@@ -140,6 +140,8 @@ type DraftItem = {
   title: string;
   unitPrice: string;
   quantity: string;
+  /** اگر پر باشد، نمایش/محاسبهٔ فی از روی مبلغ کل×مقدار */
+  totalAmount: string;
   barcode: string;
   purchasePrice: string;
   salePrice: string;
@@ -203,6 +205,7 @@ function emptyDraft(): DraftItem {
     title: "",
     unitPrice: "",
     quantity: "",
+    totalAmount: "",
     barcode: "",
     purchasePrice: "",
     salePrice: "",
@@ -211,6 +214,12 @@ function emptyDraft(): DraftItem {
     discount: "",
     unitType: "piece",
   };
+}
+
+/** فی واحد از روی مبلغ کل و مقدار (مثلاً ۲ میلیون ÷ ۰.۲۵ کیلو = ۸ میلیون) */
+function unitPriceFromTotal(total: number, qty: number): string {
+  if (total <= 0 || qty <= 0) return "";
+  return formatAmountNumber(Math.round(total / qty));
 }
 
 function asQtyUnit(value: unknown, fallback: QtyUnit): QtyUnit {
@@ -335,6 +344,7 @@ function draftsFromInvoice(invoice: InvoiceRecord): DraftItem[] {
       title: String(item.title ?? ""),
       unitPrice: unitPrice > 0 ? formatAmountNumber(unitPrice) : "",
       quantity: quantity > 0 ? String(quantity) : "",
+      totalAmount: "",
       barcode: "",
       purchasePrice: unitPrice > 0 ? formatAmountNumber(unitPrice) : "",
       salePrice: "",
@@ -1029,7 +1039,9 @@ export default function InvoiceDetailsDialog({
                       <StyledTableCell align="center">
                         {stockKind === "consumable" || consumableMode ? "قیمت تمام‌شده" : "قیمت خرید"}
                       </StyledTableCell>
-                      <StyledTableCell align="center">مبلغ کل</StyledTableCell>
+                      <StyledTableCell align="center" title="مقدار و مبلغ کل را بزنید تا فی خودکار پر شود">
+                        مبلغ کل
+                      </StyledTableCell>
                       <StyledTableCell align="center">حذف</StyledTableCell>
                     </TableRow>
                   </TableHead>
@@ -1133,7 +1145,12 @@ export default function InvoiceDetailsDialog({
                               type="text"
                               inputMode="numeric"
                               value={row.unitPrice}
-                              onChange={(e) => updateDraft(row.key, { unitPrice: formatAmountInput(e.target.value) })}
+                              onChange={(e) =>
+                                updateDraft(row.key, {
+                                  unitPrice: formatAmountInput(e.target.value),
+                                  totalAmount: "",
+                                })
+                              }
                               onKeyDown={handleFieldEnter}
                               fullWidth
                               sx={{
@@ -1196,13 +1213,29 @@ export default function InvoiceDetailsDialog({
                           <StyledTableCell align="center" sx={{ width: 88 }}>
                             <TextField
                               size="small"
-                              placeholder={row.unitType === "kg" ? "کیلو" : row.unitType === "liter" ? "لیتر" : "تعداد"}
+                              placeholder={
+                                row.unitType === "kg"
+                                  ? "کیلو (۰.۲۵=۲۵۰گ)"
+                                  : row.unitType === "liter"
+                                    ? "لیتر"
+                                    : "تعداد"
+                              }
                               type="text"
                               inputMode="decimal"
                               value={row.quantity}
-                              onChange={(e) =>
-                                updateDraft(row.key, { quantity: sanitizeQuantityDraftInput(e.target.value) })
-                              }
+                              onChange={(e) => {
+                                const quantity = sanitizeQuantityDraftInput(e.target.value);
+                                const qty = parseQuantityInput(quantity);
+                                const total = parseAmountInput(row.totalAmount);
+                                if (row.totalAmount && qty > 0 && total > 0) {
+                                  updateDraft(row.key, {
+                                    quantity,
+                                    unitPrice: unitPriceFromTotal(total, qty),
+                                  });
+                                  return;
+                                }
+                                updateDraft(row.key, { quantity });
+                              }}
                               onKeyDown={handleFieldEnter}
                               fullWidth
                               sx={{
@@ -1275,10 +1308,47 @@ export default function InvoiceDetailsDialog({
                               </Typography>
                             ) : null}
                           </StyledTableCell>
-                          <StyledTableCell align="center" sx={{ whiteSpace: "nowrap", minWidth: 100 }}>
-                            <Typography sx={{ color: "var(--admin-accent)", fontWeight: 800, fontSize: 13 }}>
-                              {formatAmountNumber(lineTotal) || "۰"}
-                            </Typography>
+                          <StyledTableCell align="center" sx={{ minWidth: 120 }}>
+                            <TextField
+                              size="small"
+                              placeholder="مبلغ کل"
+                              type="text"
+                              inputMode="numeric"
+                              value={
+                                row.totalAmount !== ""
+                                  ? row.totalAmount
+                                  : formatAmountNumber(Math.round(lineBaseOf(row))) || ""
+                              }
+                              onChange={(e) => {
+                                const totalAmount = formatAmountInput(e.target.value);
+                                const total = parseAmountInput(totalAmount);
+                                const qty = parseQuantityInput(row.quantity);
+                                if (qty > 0 && total > 0) {
+                                  updateDraft(row.key, {
+                                    totalAmount,
+                                    unitPrice: unitPriceFromTotal(total, qty),
+                                  });
+                                  return;
+                                }
+                                updateDraft(row.key, { totalAmount });
+                              }}
+                              onKeyDown={handleFieldEnter}
+                              fullWidth
+                              sx={{
+                                ...fieldSx,
+                                "& .MuiInputBase-input": {
+                                  ...fieldSx["& .MuiInputBase-input"],
+                                  textAlign: "center",
+                                  color: "var(--admin-accent)",
+                                  fontWeight: 800,
+                                },
+                              }}
+                            />
+                            {lineDiscountOf(row) > 0 || lineVatOf(row) > 0 ? (
+                              <Typography sx={{ fontSize: 10.5, color: "var(--admin-text-muted)", mt: 0.25 }}>
+                                خالص {formatAmountNumber(lineTotal) || "۰"}
+                              </Typography>
+                            ) : null}
                           </StyledTableCell>
                           <StyledTableCell align="center" sx={{ width: 48 }}>
                             <IconButton
