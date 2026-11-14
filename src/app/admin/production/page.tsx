@@ -240,6 +240,16 @@ type ConsumableOption = {
   id: number;
   name: string;
   stock?: number;
+  unit_type?: string | null;
+};
+
+type RecipePickOption = {
+  key: string;
+  kind: "raw_material" | "consumable" | "produced_good";
+  id: number;
+  name: string;
+  group: string;
+  secondary?: string;
 };
 
 const emptyLine = (): RecipeLine => ({
@@ -455,10 +465,58 @@ export default function ProductionCostingPage() {
     if (!searchText) return goods;
     return goods.filter((item) => String(item.name || "").toLowerCase().includes(searchText));
   }, [goods, searchText]);
+  const filteredFinalGoods = useMemo(
+    () => filteredGoods.filter((item) => isFinalProducedGood(item)),
+    [filteredGoods]
+  );
+  const filteredSemiGoods = useMemo(
+    () => filteredGoods.filter((item) => !isFinalProducedGood(item)),
+    [filteredGoods]
+  );
   const filteredMaterials = useMemo(() => {
     if (!searchText) return materials;
     return materials.filter((item) => String(item.name || "").toLowerCase().includes(searchText));
   }, [materials, searchText]);
+
+  const recipePickOptions = useMemo((): RecipePickOption[] => {
+    const opts: RecipePickOption[] = [];
+    for (const material of materials) {
+      opts.push({
+        key: `rm:${material.id}`,
+        kind: "raw_material",
+        id: material.id,
+        name: material.name,
+        group: "مواد اولیه",
+        secondary: `موجودی ${formatKg(Number(material.stock_kg) || 0)} ${materialUnitLabel(material)}`,
+      });
+    }
+    for (const good of goods) {
+      if (editingGood && good.id === editingGood.id) continue;
+      const final = isFinalProducedGood(good);
+      opts.push({
+        key: `pg:${good.id}`,
+        kind: "produced_good",
+        id: good.id,
+        name: good.name,
+        group: final ? "کالای نهایی" : "نیمه‌ساخته",
+        secondary: `موجودی ${formatKg(Number(good.stock_kg) || 0)} ${materialUnitLabel(good)}`,
+      });
+    }
+    for (const item of consumables) {
+      opts.push({
+        key: `cm:${item.id}`,
+        kind: "consumable",
+        id: item.id,
+        name: item.name,
+        group: "انبار مصرفی",
+        secondary: `موجودی ${formatKg(Number(item.stock) || 0)} ${
+          item.unit_type ? materialUnitLabel(item) : "عدد"
+        }`,
+      });
+    }
+    return opts;
+  }, [materials, goods, consumables, editingGood]);
+
   const searchPlaceholder =
     tab === "materials"
       ? "جستجوی ماده اولیه"
@@ -627,7 +685,7 @@ export default function ProductionCostingPage() {
           `/api/raw-materials/${editingMaterial.id}`,
           token,
           {},
-          { body: JSON.stringify({ name }) },
+          { body: JSON.stringify({ name, unit_type: materialUnit }) },
         );
         if (res?.hasError) {
           toast.error(getApiErrorMessage(res, "ویرایش ماده اولیه ناموفق بود"));
@@ -1255,123 +1313,163 @@ export default function ProductionCostingPage() {
         ) : filteredGoods.length === 0 ? (
           <EmptyHint title="نتیجه‌ای پیدا نشد" text="نام دیگری جستجو کنید." />
         ) : (
-          <TableContainer component={Paper} sx={tableWrapSx}>
-            <Table size="small" aria-label="موجودی کالاهای تولیدی">
-              <TableHead>
-                <TableRow>
-                  <StyledTableCell align="center">ردیف</StyledTableCell>
-                  <StyledTableCell align="center">کالا</StyledTableCell>
-                  <StyledTableCell align="center">موجودی</StyledTableCell>
-                  <StyledTableCell align="center">قیمت تمام‌شده</StyledTableCell>
-                  <StyledTableCell align="center">قیمت فروش</StyledTableCell>
-                  <StyledTableCell align="center">سود</StyledTableCell>
-                  <StyledTableCell align="center">درصد سود</StyledTableCell>
-                  <StyledTableCell align="center">عملیات</StyledTableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredGoods.map((good, index) => {
-                  const cost = Number(good.cost_per_kg) || 0;
-                  const sale = Number(good.sale_price) || 0;
-                  const profit = good.profit_per_kg != null ? Number(good.profit_per_kg) : sale - cost;
-                  const percentMode = isPercentSaleMode(good);
-                  const percent = percentMode
-                    ? storedMarkupPercent(good) ?? profitPercentFromSale(cost, sale)
-                    : good.profit_percent != null
-                      ? Number(good.profit_percent)
-                      : profitPercentFromSale(cost, sale);
-                  return (
-                    <StyledTableRow key={good.id}>
-                      <StyledTableCell align="center">{index + 1}</StyledTableCell>
-                      <StyledTableCell align="center">
-                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
-                          {(() => {
-                            const src = goodDisplayImageSrc(good, materials);
-                            return src ? (
-                              <Box
-                                component="img"
-                                src={src}
-                                alt=""
-                                sx={{
-                                  width: 40,
-                                  height: 40,
-                                  borderRadius: "10px",
-                                  objectFit: "cover",
-                                  border: "1px solid var(--admin-border)",
-                                  flexShrink: 0,
-                                }}
-                              />
-                            ) : null;
-                          })()}
-                          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 0.35 }}>
-                            <Typography sx={{ fontWeight: 600 }}>{good.name}</Typography>
-                            {!isFinalProducedGood(good) ? (
-                              <Chip size="small" label="نیمه‌ساخته" sx={{ height: 20, fontSize: 10 }} />
-                            ) : null}
-                          </Box>
-                        </Box>
-                      </StyledTableCell>
-                      <StyledTableCell align="center">{formatKg(good.stock_kg || 0)} {materialUnitLabel(good)}</StyledTableCell>
-                      <StyledTableCell align="center">{formatToman(cost)}</StyledTableCell>
-                      <StyledTableCell align="center" sx={{ color: "var(--admin-accent)", fontWeight: 700 }}>
-                        {formatToman(sale)}
-                      </StyledTableCell>
-                      <StyledTableCell align="center" sx={{ color: profit >= 0 ? "var(--admin-accent)" : "#ef5350", fontWeight: 700 }}>
-                        {formatToman(profit)}
-                      </StyledTableCell>
-                      <StyledTableCell align="center">
-                        {percentMode || percent
-                          ? `${new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 2 }).format(percent || 0)}٪`
-                          : "—"}
-                      </StyledTableCell>
-                      <StyledTableCell align="center">
-                        <Box sx={{ display: "flex", gap: 0.25, justifyContent: "center" }}>
-                          <Tooltip title="قیمت فروش">
-                            <IconButton size="small" onClick={() => openSalePrice(good)} sx={{ ...actionBtnSx, color: "var(--admin-warning-strong)" }}>
-                              <LocalOfferIcon sx={{ fontSize: 18 }} />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="ثبت تولید">
-                            <IconButton
-                              size="small"
-                              onClick={() => {
-                                setProduceGood(good);
-                                setProduceKg("1");
-                                setProducePreview(null);
-                              }}
-                              sx={{ ...actionBtnSx, color: "var(--admin-accent)" }}
-                            >
-                              <PrecisionManufacturingIcon sx={{ fontSize: 18 }} />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="ثبت ضایعات">
-                            <IconButton
-                              size="small"
-                              onClick={() => openWaste({ kind: "produced_good", item: good })}
-                              disabled={!((good.stock_kg || 0) > 0)}
-                              sx={{ ...actionBtnSx, color: "#ef6c00" }}
-                            >
-                              <DeleteSweepIcon sx={{ fontSize: 18 }} />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="ویرایش فرمول">
-                            <IconButton size="small" onClick={() => openEditGood(good)} sx={{ ...actionBtnSx, color: "var(--admin-accent)" }}>
-                              <EditIcon sx={{ fontSize: 18 }} />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="حذف">
-                            <IconButton size="small" onClick={() => setDeleteTarget({ kind: "good", item: good })} sx={{ ...actionBtnSx, color: "var(--admin-error)" }}>
-                              <DeleteOutlineIcon sx={{ fontSize: 18 }} />
-                            </IconButton>
-                          </Tooltip>
-                        </Box>
-                      </StyledTableCell>
-                    </StyledTableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {(
+              [
+                { key: "final", title: "کالای نهایی", rows: filteredFinalGoods },
+                { key: "semi", title: "نیمه‌ساخته", rows: filteredSemiGoods },
+              ] as const
+            )
+              .filter((section) => section.rows.length > 0)
+              .map((section) => (
+                <Box key={section.key}>
+                  <Typography
+                    sx={{
+                      mb: 0.75,
+                      px: 0.25,
+                      fontSize: 13,
+                      fontWeight: 800,
+                      color: "var(--admin-text)",
+                      textAlign: "right",
+                    }}
+                  >
+                    {section.title}
+                    <Typography component="span" sx={{ ml: 0.75, fontSize: 11, fontWeight: 600, color: "var(--admin-text-muted)" }}>
+                      ({new Intl.NumberFormat("fa-IR").format(section.rows.length)})
+                    </Typography>
+                  </Typography>
+                  <TableContainer component={Paper} sx={tableWrapSx}>
+                    <Table size="small" aria-label={`موجودی ${section.title}`}>
+                      <TableHead>
+                        <TableRow>
+                          <StyledTableCell align="center">ردیف</StyledTableCell>
+                          <StyledTableCell align="center">کالا</StyledTableCell>
+                          <StyledTableCell align="center">موجودی</StyledTableCell>
+                          <StyledTableCell align="center">قیمت تمام‌شده</StyledTableCell>
+                          <StyledTableCell align="center">قیمت فروش</StyledTableCell>
+                          <StyledTableCell align="center">سود</StyledTableCell>
+                          <StyledTableCell align="center">درصد سود</StyledTableCell>
+                          <StyledTableCell align="center">عملیات</StyledTableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {section.rows.map((good, index) => {
+                          const cost = Number(good.cost_per_kg) || 0;
+                          const sale = Number(good.sale_price) || 0;
+                          const profit = good.profit_per_kg != null ? Number(good.profit_per_kg) : sale - cost;
+                          const percentMode = isPercentSaleMode(good);
+                          const percent = percentMode
+                            ? storedMarkupPercent(good) ?? profitPercentFromSale(cost, sale)
+                            : good.profit_percent != null
+                              ? Number(good.profit_percent)
+                              : profitPercentFromSale(cost, sale);
+                          return (
+                            <StyledTableRow key={good.id}>
+                              <StyledTableCell align="center">{index + 1}</StyledTableCell>
+                              <StyledTableCell align="center">
+                                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
+                                  {(() => {
+                                    const src = goodDisplayImageSrc(good, materials);
+                                    return src ? (
+                                      <Box
+                                        component="img"
+                                        src={src}
+                                        alt=""
+                                        sx={{
+                                          width: 40,
+                                          height: 40,
+                                          borderRadius: "10px",
+                                          objectFit: "cover",
+                                          border: "1px solid var(--admin-border)",
+                                          flexShrink: 0,
+                                        }}
+                                      />
+                                    ) : null;
+                                  })()}
+                                  <Typography sx={{ fontWeight: 600 }}>{good.name}</Typography>
+                                </Box>
+                              </StyledTableCell>
+                              <StyledTableCell align="center">
+                                {formatKg(good.stock_kg || 0)} {materialUnitLabel(good)}
+                              </StyledTableCell>
+                              <StyledTableCell align="center">{formatToman(cost)}</StyledTableCell>
+                              <StyledTableCell align="center" sx={{ color: "var(--admin-accent)", fontWeight: 700 }}>
+                                {formatToman(sale)}
+                              </StyledTableCell>
+                              <StyledTableCell
+                                align="center"
+                                sx={{ color: profit >= 0 ? "var(--admin-accent)" : "#ef5350", fontWeight: 700 }}
+                              >
+                                {formatToman(profit)}
+                              </StyledTableCell>
+                              <StyledTableCell align="center">
+                                {percentMode || percent
+                                  ? `${new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 2 }).format(percent || 0)}٪`
+                                  : "—"}
+                              </StyledTableCell>
+                              <StyledTableCell align="center">
+                                <Box sx={{ display: "flex", gap: 0.25, justifyContent: "center" }}>
+                                  <Tooltip title="قیمت فروش">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => openSalePrice(good)}
+                                      sx={{ ...actionBtnSx, color: "var(--admin-warning-strong)" }}
+                                    >
+                                      <LocalOfferIcon sx={{ fontSize: 18 }} />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="ثبت تولید">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => {
+                                        setProduceGood(good);
+                                        setProduceKg("1");
+                                        setProducePreview(null);
+                                      }}
+                                      sx={{ ...actionBtnSx, color: "var(--admin-accent)" }}
+                                    >
+                                      <PrecisionManufacturingIcon sx={{ fontSize: 18 }} />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="ثبت ضایعات">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => openWaste({ kind: "produced_good", item: good })}
+                                      disabled={!((good.stock_kg || 0) > 0)}
+                                      sx={{ ...actionBtnSx, color: "#ef6c00" }}
+                                    >
+                                      <DeleteSweepIcon sx={{ fontSize: 18 }} />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="ویرایش فرمول">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => openEditGood(good)}
+                                      sx={{ ...actionBtnSx, color: "var(--admin-accent)" }}
+                                    >
+                                      <EditIcon sx={{ fontSize: 18 }} />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="حذف">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => setDeleteTarget({ kind: "good", item: good })}
+                                      sx={{ ...actionBtnSx, color: "var(--admin-error)" }}
+                                    >
+                                      <DeleteOutlineIcon sx={{ fontSize: 18 }} />
+                                    </IconButton>
+                                  </Tooltip>
+                                </Box>
+                              </StyledTableCell>
+                            </StyledTableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Box>
+              ))}
+          </Box>
         )
       ) : tab === "materials" ? (
         materials.length === 0 ? (
@@ -1671,101 +1769,135 @@ export default function ProductionCostingPage() {
       ) : filteredGoods.length === 0 ? (
         <EmptyHint title="نتیجه‌ای پیدا نشد" text="نام دیگری جستجو کنید." />
       ) : (
-          <TableContainer component={Paper} sx={tableWrapSx}>
-            <Table size="small" aria-label="کالای تولیدی">
-              <TableHead>
-                <TableRow>
-                  <StyledTableCell align="center">ردیف</StyledTableCell>
-                  <StyledTableCell align="center">نام</StyledTableCell>
-                  <StyledTableCell align="center">قیمت تمام‌شده</StyledTableCell>
-                  <StyledTableCell align="center">مواد</StyledTableCell>
-                  <StyledTableCell align="center">عملیات</StyledTableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredGoods.map((good, index) => (
-                  <StyledTableRow key={good.id}>
-                    <StyledTableCell align="center">{index + 1}</StyledTableCell>
-                    <StyledTableCell align="center">
-                      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
-                        {(() => {
-                          const src = goodDisplayImageSrc(good, materials);
-                          return src ? (
-                            <Box
-                              component="img"
-                              src={src}
-                              alt=""
-                              sx={{
-                                width: 40,
-                                height: 40,
-                                borderRadius: "10px",
-                                objectFit: "cover",
-                                border: "1px solid var(--admin-border)",
-                                flexShrink: 0,
-                              }}
-                            />
-                          ) : null;
-                        })()}
-                        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 0.35 }}>
-                          <Typography sx={{ fontWeight: 600 }}>{good.name}</Typography>
-                          {!isFinalProducedGood(good) ? (
-                            <Chip size="small" label="نیمه‌ساخته" sx={{ height: 20, fontSize: 10 }} />
-                          ) : null}
-                        </Box>
-                      </Box>
-                    </StyledTableCell>
-                    <StyledTableCell align="center" sx={{ color: "var(--admin-accent)", fontWeight: 700 }}>
-                      {formatToman(good.cost_per_kg || 0)}
-                    </StyledTableCell>
-                    <StyledTableCell align="center" sx={{ color: good.stock_sufficient === false ? "#ef5350" : "var(--admin-text-muted)" }}>
-                      {good.stock_sufficient === false
-                        ? "کمبود مواد"
-                        : (good.ingredient_costs || []).length > 0
-                          ? `${(good.ingredient_costs || []).length} قلم`
-                          : "—"}
-                    </StyledTableCell>
-                    <StyledTableCell align="center">
-                      <Box sx={{ display: "flex", gap: 0.25, justifyContent: "center" }}>
-                        <Tooltip title="ثبت تولید">
-                          <IconButton
-                            size="small"
-                            onClick={() => {
-                              setProduceGood(good);
-                              setProduceKg("1");
-                              setProducePreview(null);
-                            }}
-                            sx={{ ...actionBtnSx, color: "var(--admin-accent)" }}
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {(
+            [
+              { key: "final", title: "کالای نهایی", rows: filteredFinalGoods },
+              { key: "semi", title: "نیمه‌ساخته", rows: filteredSemiGoods },
+            ] as const
+          )
+            .filter((section) => section.rows.length > 0)
+            .map((section) => (
+              <Box key={section.key}>
+                <Typography
+                  sx={{
+                    mb: 0.75,
+                    px: 0.25,
+                    fontSize: 13,
+                    fontWeight: 800,
+                    color: "var(--admin-text)",
+                    textAlign: "right",
+                  }}
+                >
+                  {section.title}
+                  <Typography component="span" sx={{ ml: 0.75, fontSize: 11, fontWeight: 600, color: "var(--admin-text-muted)" }}>
+                    ({new Intl.NumberFormat("fa-IR").format(section.rows.length)})
+                  </Typography>
+                </Typography>
+                <TableContainer component={Paper} sx={tableWrapSx}>
+                  <Table size="small" aria-label={section.title}>
+                    <TableHead>
+                      <TableRow>
+                        <StyledTableCell align="center">ردیف</StyledTableCell>
+                        <StyledTableCell align="center">نام</StyledTableCell>
+                        <StyledTableCell align="center">قیمت تمام‌شده</StyledTableCell>
+                        <StyledTableCell align="center">مواد</StyledTableCell>
+                        <StyledTableCell align="center">عملیات</StyledTableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {section.rows.map((good, index) => (
+                        <StyledTableRow key={good.id}>
+                          <StyledTableCell align="center">{index + 1}</StyledTableCell>
+                          <StyledTableCell align="center">
+                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
+                              {(() => {
+                                const src = goodDisplayImageSrc(good, materials);
+                                return src ? (
+                                  <Box
+                                    component="img"
+                                    src={src}
+                                    alt=""
+                                    sx={{
+                                      width: 40,
+                                      height: 40,
+                                      borderRadius: "10px",
+                                      objectFit: "cover",
+                                      border: "1px solid var(--admin-border)",
+                                      flexShrink: 0,
+                                    }}
+                                  />
+                                ) : null;
+                              })()}
+                              <Typography sx={{ fontWeight: 600 }}>{good.name}</Typography>
+                            </Box>
+                          </StyledTableCell>
+                          <StyledTableCell align="center" sx={{ color: "var(--admin-accent)", fontWeight: 700 }}>
+                            {formatToman(good.cost_per_kg || 0)}
+                          </StyledTableCell>
+                          <StyledTableCell
+                            align="center"
+                            sx={{ color: good.stock_sufficient === false ? "#ef5350" : "var(--admin-text-muted)" }}
                           >
-                            <PrecisionManufacturingIcon sx={{ fontSize: 18 }} />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="ثبت ضایعات">
-                          <IconButton
-                            size="small"
-                            onClick={() => openWaste({ kind: "produced_good", item: good })}
-                            disabled={!((good.stock_kg || 0) > 0)}
-                            sx={{ ...actionBtnSx, color: "#ef6c00" }}
-                          >
-                            <DeleteSweepIcon sx={{ fontSize: 18 }} />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="ویرایش">
-                          <IconButton size="small" onClick={() => openEditGood(good)} sx={{ ...actionBtnSx, color: "var(--admin-accent)" }}>
-                            <EditIcon sx={{ fontSize: 18 }} />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="حذف">
-                          <IconButton size="small" onClick={() => setDeleteTarget({ kind: "good", item: good })} sx={{ ...actionBtnSx, color: "#ef5350" }}>
-                            <DeleteOutlineIcon sx={{ fontSize: 18 }} />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    </StyledTableCell>
-                  </StyledTableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                            {good.stock_sufficient === false
+                              ? "کمبود مواد"
+                              : (good.ingredient_costs || []).length > 0
+                                ? `${(good.ingredient_costs || []).length} قلم`
+                                : "—"}
+                          </StyledTableCell>
+                          <StyledTableCell align="center">
+                            <Box sx={{ display: "flex", gap: 0.25, justifyContent: "center" }}>
+                              <Tooltip title="ثبت تولید">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => {
+                                    setProduceGood(good);
+                                    setProduceKg("1");
+                                    setProducePreview(null);
+                                  }}
+                                  sx={{ ...actionBtnSx, color: "var(--admin-accent)" }}
+                                >
+                                  <PrecisionManufacturingIcon sx={{ fontSize: 18 }} />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="ثبت ضایعات">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => openWaste({ kind: "produced_good", item: good })}
+                                  disabled={!((good.stock_kg || 0) > 0)}
+                                  sx={{ ...actionBtnSx, color: "#ef6c00" }}
+                                >
+                                  <DeleteSweepIcon sx={{ fontSize: 18 }} />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="ویرایش">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => openEditGood(good)}
+                                  sx={{ ...actionBtnSx, color: "var(--admin-accent)" }}
+                                >
+                                  <EditIcon sx={{ fontSize: 18 }} />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="حذف">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => setDeleteTarget({ kind: "good", item: good })}
+                                  sx={{ ...actionBtnSx, color: "#ef5350" }}
+                                >
+                                  <DeleteOutlineIcon sx={{ fontSize: 18 }} />
+                                </IconButton>
+                              </Tooltip>
+                            </Box>
+                          </StyledTableCell>
+                        </StyledTableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
+            ))}
+        </Box>
       )}
 
       <Dialog open={materialDialogOpen} onClose={() => setMaterialDialogOpen(false)} fullWidth maxWidth="sm">
@@ -1788,26 +1920,30 @@ export default function ProductionCostingPage() {
                 }));
               }
             }}
-            sx={{ ...fieldSx, gridColumn: editingMaterial ? "1 / -1" : undefined }}
+            sx={fieldSx}
           />
-          {!editingMaterial && (
-            <TextField
-              select
-              size="small"
-              label="واحد"
-              value={materialUnit}
-              onChange={(e) => {
-                const unit = parseRawMaterialUnit(e.target.value);
-                setMaterialUnit(unit);
-                if (unit === "piece") setLotQty((prev) => String(Math.trunc(parseAmount(prev)) || ""));
-              }}
-              sx={fieldSx}
-            >
-              <MenuItem value="kg">کیلویی</MenuItem>
-              <MenuItem value="liter">لیتری</MenuItem>
-              <MenuItem value="piece">تعدادی (عدد)</MenuItem>
-            </TextField>
-          )}
+          <TextField
+            select
+            size="small"
+            label="واحد"
+            value={materialUnit}
+            onChange={(e) => {
+              const unit = parseRawMaterialUnit(e.target.value);
+              setMaterialUnit(unit);
+              if (unit === "piece") setLotQty((prev) => String(Math.trunc(parseAmount(prev)) || ""));
+            }}
+            sx={fieldSx}
+          >
+            <MenuItem value="kg">کیلویی</MenuItem>
+            <MenuItem value="liter">لیتری</MenuItem>
+            <MenuItem value="piece">تعدادی (عدد)</MenuItem>
+          </TextField>
+          {editingMaterial ? (
+            <Typography sx={{ gridColumn: "1 / -1", fontSize: 11, color: "var(--admin-text-muted)", textAlign: "right", lineHeight: 1.7 }}>
+              اگر موجودی هنوز مصرف نشده باشد، واحد عوض می‌شود و همان مقدار با واحد جدید خوانده می‌شود.
+              اگر بخشی مصرف شده یا در فرمول کالا استفاده شده، تغییر واحد ممکن نیست.
+            </Typography>
+          ) : null}
           {!editingMaterial && (
             <>
               <TextField
@@ -2161,97 +2297,111 @@ export default function ProductionCostingPage() {
                 bgcolor: "var(--admin-surface-alt)",
               }}
             >
-              <TextField
-                select
+              <Autocomplete
                 size="small"
-                label="ماده / انبار مصرفی / کالای تولیدی"
-                value={selectedValue}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  const next = [...recipeLines];
-                  if (value.startsWith("cm:")) {
-                    const id = Number(value.slice(3));
-                    next[index] = {
-                      ...next[index],
+                options={recipePickOptions}
+                groupBy={(option) => option.group}
+                value={recipePickOptions.find((opt) => opt.key === selectedValue) ?? null}
+                onChange={(_e, next) => {
+                  const picked = next;
+                  const row = [...recipeLines];
+                  if (!picked) {
+                    row[index] = {
+                      ...row[index],
+                      kind: "raw_material",
+                      raw_material_id: "",
+                      ingredient_produced_good_id: "",
+                      consumable_material_id: "",
+                    };
+                  } else if (picked.kind === "consumable") {
+                    row[index] = {
+                      ...row[index],
                       kind: "consumable",
                       raw_material_id: "",
                       ingredient_produced_good_id: "",
-                      consumable_material_id: id > 0 ? id : "",
+                      consumable_material_id: picked.id,
                       is_removable: false,
                       is_addable: false,
                     };
-                  } else if (value.startsWith("pg:")) {
-                    const id = Number(value.slice(3));
-                    next[index] = {
-                      ...next[index],
+                  } else if (picked.kind === "produced_good") {
+                    row[index] = {
+                      ...row[index],
                       kind: "produced_good",
                       raw_material_id: "",
-                      ingredient_produced_good_id: id > 0 ? id : "",
+                      ingredient_produced_good_id: picked.id,
                       consumable_material_id: "",
                       is_removable: false,
                       is_addable: false,
                     };
-                  } else if (value.startsWith("rm:")) {
-                    const id = Number(value.slice(3));
-                    next[index] = {
-                      ...next[index],
-                      kind: "raw_material",
-                      raw_material_id: id > 0 ? id : "",
-                      ingredient_produced_good_id: "",
-                      consumable_material_id: "",
-                    };
                   } else {
-                    next[index] = {
-                      ...next[index],
+                    row[index] = {
+                      ...row[index],
                       kind: "raw_material",
-                      raw_material_id: "",
+                      raw_material_id: picked.id,
                       ingredient_produced_good_id: "",
                       consumable_material_id: "",
                     };
                   }
-                  setRecipeLines(next);
+                  setRecipeLines(row);
                 }}
-                sx={fieldSx}
-              >
-                <MenuItem value="">
-                  <em>انتخاب کنید</em>
-                </MenuItem>
-                {materials.length > 0 && (
-                  <MenuItem disabled value="__raw_header">
-                    — مواد اولیه —
-                  </MenuItem>
+                getOptionLabel={(option) => option.name}
+                isOptionEqualToValue={(a, b) => a.key === b.key}
+                filterOptions={(opts, state) => {
+                  const q = state.inputValue.trim().toLowerCase();
+                  if (!q) return opts;
+                  return opts.filter(
+                    (opt) =>
+                      opt.name.toLowerCase().includes(q) ||
+                      (opt.secondary || "").toLowerCase().includes(q) ||
+                      String(opt.id).includes(q)
+                  );
+                }}
+                noOptionsText="موردی پیدا نشد"
+                slotProps={{
+                  popper: { sx: { zIndex: 1700, direction: "rtl" } },
+                  listbox: { sx: { maxHeight: 280 } },
+                }}
+                renderOption={(props, option) => (
+                  <li {...props} key={option.key}>
+                    <Box
+                      sx={{
+                        width: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 2,
+                        py: 0.25,
+                      }}
+                    >
+                      <Typography sx={{ fontSize: 12, fontWeight: 700, color: "var(--admin-text)", textAlign: "right" }}>
+                        {option.name}
+                      </Typography>
+                      {option.secondary ? (
+                        <Typography
+                          sx={{
+                            fontSize: 11,
+                            fontWeight: 600,
+                            color: "var(--admin-text-muted)",
+                            whiteSpace: "nowrap",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {option.secondary}
+                        </Typography>
+                      ) : null}
+                    </Box>
+                  </li>
                 )}
-                {materials.map((material) => (
-                  <MenuItem key={`rm-${material.id}`} value={`rm:${material.id}`}>
-                    {material.name}
-                  </MenuItem>
-                ))}
-                {goods.filter((g) => !editingGood || g.id !== editingGood.id).length > 0 && (
-                  <MenuItem disabled value="__pg_header">
-                    — کالاهای تولیدی —
-                  </MenuItem>
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    size="small"
+                    label="ماده / انبار مصرفی / کالای تولیدی"
+                    placeholder="جستجو در لیست..."
+                    sx={fieldSx}
+                  />
                 )}
-                {goods
-                  .filter((g) => !editingGood || g.id !== editingGood.id)
-                  .map((good) => (
-                    <MenuItem key={`pg-${good.id}`} value={`pg:${good.id}`}>
-                      {good.name}
-                      {!isFinalProducedGood(good) ? " (نیمه‌ساخته)" : ""}
-                      {good.stock_kg != null ? ` · موجودی ${formatKg(good.stock_kg)}` : ""}
-                    </MenuItem>
-                  ))}
-                {consumables.length > 0 && (
-                  <MenuItem disabled value="__cm_header">
-                    — انبار مصرفی —
-                  </MenuItem>
-                )}
-                {consumables.map((item) => (
-                  <MenuItem key={`cm-${item.id}`} value={`cm:${item.id}`}>
-                    {item.name}
-                    {item.stock != null ? ` · موجودی ${formatKg(item.stock)}` : ""}
-                  </MenuItem>
-                ))}
-              </TextField>
+              />
               <TextField
                 size="small"
                 label={qtyLabel}
