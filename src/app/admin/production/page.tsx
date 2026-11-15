@@ -52,6 +52,7 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import ZoomInIcon from "@mui/icons-material/ZoomIn";
 import ZoomOutIcon from "@mui/icons-material/ZoomOut";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
+import RefreshIcon from "@mui/icons-material/Refresh";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import { ToastContainer, toast } from "react-toastify";
@@ -339,6 +340,7 @@ export default function ProductionCostingPage() {
   const [goodUnit, setGoodUnit] = useState<"kg" | "liter" | "piece">("kg");
   const [goodIsFinal, setGoodIsFinal] = useState(true);
   const [recipeLines, setRecipeLines] = useState<RecipeLine[]>([emptyLine()]);
+  const [recipeOptionsRefreshing, setRecipeOptionsRefreshing] = useState(false);
   const recipeNameInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
   const focusRecipeNameIndexRef = useRef<number | null>(null);
   const [layerOrder, setLayerOrder] = useState<LayerOrderEntry[]>([]);
@@ -410,6 +412,45 @@ export default function ProductionCostingPage() {
       }
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  /** بروزرسانی لیست کمبوی فرمول بدون بستن دیالوگ / لودینگ کل صفحه */
+  const refreshRecipeOptions = useCallback(async () => {
+    const token = tokenCode();
+    if (!token) {
+      toast.error("لطفاً وارد شوید");
+      return;
+    }
+    setRecipeOptionsRefreshing(true);
+    try {
+      const [materialsRes, goodsRes, consumablesRes] = await Promise.all([
+        FetchWithJwtClient("GET", "/api/raw-materials?with_all_lots=1", token),
+        FetchWithJwtClient("GET", "/api/produced-goods", token),
+        FetchWithJwtClient("GET", "/api/consumable-materials", token),
+      ]);
+      let failed = false;
+      if (materialsRes?.hasError) {
+        failed = true;
+        toast.error(getApiErrorMessage(materialsRes, "خطا در بروزرسانی مواد اولیه"));
+      } else {
+        setMaterials(extractList<RawMaterial>(materialsRes));
+      }
+      if (goodsRes?.hasError) {
+        failed = true;
+        toast.error(getApiErrorMessage(goodsRes, "خطا در بروزرسانی کالاهای تولیدی"));
+      } else {
+        setGoods(extractList<ProducedGood>(goodsRes));
+      }
+      if (consumablesRes?.hasError) {
+        failed = true;
+        toast.error(getApiErrorMessage(consumablesRes, "خطا در بروزرسانی انبار مصرفی"));
+      } else {
+        setConsumables(extractList<ConsumableOption>(consumablesRes));
+      }
+      if (!failed) toast.success("لیست مواد بروزرسانی شد");
+    } finally {
+      setRecipeOptionsRefreshing(false);
     }
   }, []);
 
@@ -2300,8 +2341,27 @@ export default function ProductionCostingPage() {
             })()}
           </Box>
 
-          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mt: 0.5 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 700, color: "var(--admin-text)" }}>فرمول</Typography>
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, mt: 0.5 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+              <Typography sx={{ fontSize: 12, fontWeight: 700, color: "var(--admin-text)" }}>فرمول</Typography>
+              <Tooltip title="بروزرسانی لیست مواد اولیه / مصرفی / تولیدی">
+                <span>
+                  <IconButton
+                    size="small"
+                    onClick={() => void refreshRecipeOptions()}
+                    disabled={recipeOptionsRefreshing}
+                    sx={{ ...actionBtnSx, color: "var(--admin-accent)" }}
+                    aria-label="بروزرسانی لیست مواد"
+                  >
+                    {recipeOptionsRefreshing ? (
+                      <CircularProgress size={14} sx={{ color: "var(--admin-accent)" }} />
+                    ) : (
+                      <RefreshIcon sx={{ fontSize: 16 }} />
+                    )}
+                  </IconButton>
+                </span>
+              </Tooltip>
+            </Box>
             <Typography sx={{ fontSize: 10.5, color: "var(--admin-text-muted)" }}>
               {goodUnit === "piece"
                 ? "برای ۱ عدد · گرم / عدد"
