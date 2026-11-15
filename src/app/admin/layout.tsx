@@ -71,6 +71,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/shop-tables': 'میز و اتاق',
     '/admin/shop-services': 'خدمات اتاق',
     '/admin/best-selling': 'محصولات پرفروش',
+    '/admin/low-stock': 'کالاهای رو به اتمام',
     '/admin/invoices': 'فاکتورها',
     '/admin/consumables': 'انبار مواد مصرفی',
     '/admin/manufacturers': 'تولیدکنندگان',

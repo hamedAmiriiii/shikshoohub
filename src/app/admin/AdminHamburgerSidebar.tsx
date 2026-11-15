@@ -32,6 +32,7 @@ import TableRestaurantIcon from "@mui/icons-material/TableRestaurant";
 import RoomServiceIcon from "@mui/icons-material/RoomService";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import FactoryIcon from "@mui/icons-material/Factory";
 import CreditCardIcon from "@mui/icons-material/CreditCard";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
@@ -423,6 +424,13 @@ export default function AdminHamburgerSidebar({
   const productChildren: NavLeaf[] = useMemo(
     () => {
       const items: NavLeaf[] = [
+      {
+        id: "low-stock",
+        label: "کالاهای رو به اتمام",
+        href: "/admin/low-stock",
+        icon: <WarningAmberIcon />,
+        permission: "products",
+      },
       {
         id: "best-selling",
         label: "محصولات پرفروش",
