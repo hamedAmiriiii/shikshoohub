@@ -10,6 +10,8 @@ export type RawMaterialLot = {
   invoice_id?: number | null;
   invoice_item_id?: number | null;
   invoice_link?: "whole" | "item" | string | null;
+  /** فاکتور متصل؛ number شمارهٔ فروشگاهی است که در لیست فاکتورها دیده می‌شود */
+  invoice?: { id?: number | null; number?: number | string | null; title?: string | null } | null;
 };
 
 export type RawMaterialUnit = "kg" | "liter" | "piece";

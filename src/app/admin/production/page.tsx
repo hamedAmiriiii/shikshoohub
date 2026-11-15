@@ -123,7 +123,10 @@ import InvoiceLinkFields, {
   type InvoiceLinkState,
 } from "@/app/admin/production/InvoiceLinkFields";
 import BulkRawMaterialInvoiceDialog from "@/app/admin/production/BulkRawMaterialInvoiceDialog";
+import { invoiceShopNumber } from "@/app/admin/invoices/InvoiceDetailsDialog";
+import { buildDocumentLink } from "@/app/lib/documentReturn";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import NextLink from "next/link";
 
 const fieldSx = {
   "& .MuiOutlinedInput-root": {
@@ -1621,11 +1624,30 @@ export default function ProductionCostingPage() {
                                       <StyledTableCell align="center">{formatKg(lot.quantity_kg)}</StyledTableCell>
                                       <StyledTableCell align="center">{formatToman(lot.price_per_kg)}</StyledTableCell>
                                       <StyledTableCell align="center">
-                                        {lot.invoice_id
-                                          ? lot.invoice_link === "item"
-                                            ? `#${lot.invoice_id} آیتم`
-                                            : `#${lot.invoice_id}`
-                                          : "—"}
+                                        {(() => {
+                                          const shopNo = invoiceShopNumber(
+                                            lot.invoice ?? (lot.invoice_id ? { id: lot.invoice_id } : null)
+                                          );
+                                          if (!shopNo) return "—";
+                                          const label =
+                                            lot.invoice_link === "item" ? `#${shopNo} · ردیف` : `#${shopNo}`;
+                                          if (!lot.invoice_id) return label;
+                                          return (
+                                            <Typography
+                                              component={NextLink}
+                                              href={buildDocumentLink("invoice", lot.invoice_id, "/admin/production")}
+                                              sx={{
+                                                color: "var(--admin-accent)",
+                                                fontWeight: 700,
+                                                textDecoration: "none",
+                                                fontSize: 12,
+                                                "&:hover": { textDecoration: "underline" },
+                                              }}
+                                            >
+                                              {label}
+                                            </Typography>
+                                          );
+                                        })()}
                                       </StyledTableCell>
                                       <StyledTableCell align="center">
                                         <IconButton
