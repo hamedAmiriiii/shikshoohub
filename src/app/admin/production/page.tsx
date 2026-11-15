@@ -894,9 +894,36 @@ export default function ProductionCostingPage() {
         return;
       }
       toast.success(deleteTarget.kind === "waste" ? "ضایعات برگشت خورد" : "حذف شد");
+
+      // بدون رفرش صفحه: فقط از state محلی حذف می‌شود تا لود بعدی
+      if (deleteTarget.kind === "material") {
+        const id = deleteTarget.item.id;
+        setMaterials((prev) => prev.filter((m) => m.id !== id));
+        if (expandedMaterialId === id) setExpandedMaterialId(null);
+      } else if (deleteTarget.kind === "good") {
+        setGoods((prev) => prev.filter((g) => g.id !== deleteTarget.item.id));
+      } else if (deleteTarget.kind === "lot") {
+        const { material, lotId } = deleteTarget;
+        setMaterials((prev) =>
+          prev.map((m) => {
+            if (m.id !== material.id) return m;
+            const lot = (m.lots || []).find((l) => l.id === lotId);
+            const removedRemaining = Number(lot?.remaining_kg) || 0;
+            const nextLots = (m.lots || []).filter((l) => l.id !== lotId);
+            return {
+              ...m,
+              lots: nextLots,
+              stock_kg: Math.max(0, (Number(m.stock_kg) || 0) - removedRemaining),
+              open_lots_count: nextLots.length,
+              next_price_per_kg: nextLots[0]?.price_per_kg ?? null,
+            };
+          }),
+        );
+      } else if (deleteTarget.kind === "waste") {
+        setWastes((prev) => prev.filter((w) => w.id !== deleteTarget.item.id));
+      }
+
       setDeleteTarget(null);
-      await loadAll();
-      if (tab === "waste") await loadWastes();
     } finally {
       setSaving(false);
     }
