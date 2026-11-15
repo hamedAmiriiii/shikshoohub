@@ -212,6 +212,10 @@ export type ProductionRecord = {
   produced_good_id: number;
   produced_good_name?: string;
   quantity_kg: number;
+  remaining_kg?: number;
+  sold_kg?: number;
+  /** true وقتی هنوز فروخته/ضایع/مصرف نشده — مواد قابل برگشت به لات هستند */
+  can_reverse?: boolean;
   total_cost: number;
   cost_per_kg: number;
   note?: string | null;
