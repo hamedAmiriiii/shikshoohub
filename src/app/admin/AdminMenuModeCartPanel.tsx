@@ -25,6 +25,7 @@ import {
   ADMIN_MENU_CART_WIDTH,
   ADMIN_MENU_CART_WIDTH_VAR,
 } from "@/app/admin/adminMenuCartLayout";
+import type { CartDiningMode } from "@/app/admin/multiCartState";
 import DatePicker from "react-multi-date-picker";
 import DateObject from "react-date-object";
 import persian from "react-date-object/calendars/persian";
@@ -93,6 +94,12 @@ export type AdminMenuModeCartPanelProps = {
   askCustomerName?: boolean;
   customerName?: string;
   onChangeCustomerName?: (value: string) => void;
+  cartDiningModeEnabled?: boolean;
+  diningMode?: CartDiningMode;
+  onDiningModeChange?: (mode: CartDiningMode) => void;
+  cartOrderNoteEnabled?: boolean;
+  orderNote?: string;
+  onOrderNoteChange?: (value: string) => void;
   checkingCredit: boolean;
   credit: number;
   useCreditAmount: number;
@@ -186,6 +193,12 @@ export default function AdminMenuModeCartPanel({
   askCustomerName = false,
   customerName = "",
   onChangeCustomerName,
+  cartDiningModeEnabled = false,
+  diningMode = "hall",
+  onDiningModeChange,
+  cartOrderNoteEnabled = false,
+  orderNote = "",
+  onOrderNoteChange,
   checkingCredit,
   credit,
   useCreditAmount,
@@ -450,6 +463,32 @@ export default function AdminMenuModeCartPanel({
             placeholder="نام مشتری"
             size="small"
             fullWidth
+            sx={fieldSx}
+          />
+        ) : null}
+        {cartDiningModeEnabled ? (
+          <PosSegmentButtons
+            dense
+            columns={2}
+            fontBoost={fontBoost}
+            value={diningMode}
+            onChange={(mode) => onDiningModeChange?.(mode)}
+            options={[
+              { value: "hall", label: "سالن" },
+              { value: "takeaway", label: "بیرون‌بر" },
+            ]}
+          />
+        ) : null}
+        {cartOrderNoteEnabled ? (
+          <TextField
+            value={orderNote}
+            onChange={(e) => onOrderNoteChange?.(e.target.value)}
+            placeholder="توضیحات سفارش"
+            size="small"
+            fullWidth
+            multiline
+            minRows={1}
+            maxRows={3}
             sx={fieldSx}
           />
         ) : null}

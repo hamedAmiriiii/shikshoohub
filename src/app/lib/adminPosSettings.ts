@@ -38,6 +38,10 @@ export type AdminPosSettings = {
   classicPosMode: boolean;
   /** در ثبت مشتری، فیلد نام هم گرفته شود */
   askCustomerName: boolean;
+  /** در سبد: انتخاب سالن / بیرون‌بر (پیش‌فرض سالن) */
+  cartDiningModeEnabled: boolean;
+  /** در سبد: فیلد توضیحات / یادداشت سفارش */
+  cartOrderNoteEnabled: boolean;
   /** شماره فیش روزانه از ۱؛ هر روز از نو */
   showDailyTicketNumber: boolean;
   /** نمایش فیلد اولویت/ترتیب نمایش در ثبت و ویرایش کالا */
@@ -75,6 +79,8 @@ const DEFAULT_SETTINGS: AdminPosSettings = {
   saleDateEditEnabled: false,
   classicPosMode: false,
   askCustomerName: false,
+  cartDiningModeEnabled: false,
+  cartOrderNoteEnabled: false,
   showDailyTicketNumber: false,
   productDisplayOrderEnabled: false,
   productPurchaseDateEnabled: false,

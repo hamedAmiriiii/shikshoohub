@@ -106,6 +106,12 @@ export default function AdminClassicPosView({
     askCustomerName = false,
     customerName = "",
     onChangeCustomerName,
+    cartDiningModeEnabled = false,
+    diningMode = "hall",
+    onDiningModeChange,
+    cartOrderNoteEnabled = false,
+    orderNote = "",
+    onOrderNoteChange,
     checkingCredit,
     credit,
     useCreditAmount,
@@ -368,6 +374,31 @@ export default function AdminClassicPosView({
                 placeholder="نام مشتری"
                 size="small"
                 fullWidth
+                sx={compactFieldSx}
+              />
+            ) : null}
+            {cartDiningModeEnabled ? (
+              <PosSegmentButtons
+                dense
+                columns={2}
+                value={diningMode}
+                onChange={(mode) => onDiningModeChange?.(mode)}
+                options={[
+                  { value: "hall", label: "سالن" },
+                  { value: "takeaway", label: "بیرون‌بر" },
+                ]}
+              />
+            ) : null}
+            {cartOrderNoteEnabled ? (
+              <TextField
+                value={orderNote}
+                onChange={(e) => onOrderNoteChange?.(e.target.value)}
+                placeholder="توضیحات سفارش"
+                size="small"
+                fullWidth
+                multiline
+                minRows={1}
+                maxRows={3}
                 sx={compactFieldSx}
               />
             ) : null}

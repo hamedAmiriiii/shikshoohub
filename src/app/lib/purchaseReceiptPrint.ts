@@ -174,6 +174,10 @@ export function purchaseToSaleReceipt(purchase: any, shopName?: string): SaleRec
     phone: purchase?.phone || undefined,
     customerName: purchase?.customer_name || purchase?.name || undefined,
     tableLabel: tableLabel || undefined,
+    diningMode:
+      purchase?.dining_mode === "takeaway" || purchase?.dining_mode === "hall"
+        ? purchase.dining_mode
+        : undefined,
     items,
     subtotal,
     discount,
@@ -191,6 +195,10 @@ export function purchaseToSaleReceipt(purchase: any, shopName?: string): SaleRec
       paymentType === "installment" ? Number(purchase?.installment_amount) || undefined : undefined,
     chequeId: paymentType === "cheque" ? purchase?.cheque_id ?? purchase?.cheque?.id : undefined,
     chequeNumber: purchase?.cheque?.cheque_number || undefined,
+    customerNote:
+      purchase?.customer_note == null || String(purchase.customer_note).trim() === ""
+        ? undefined
+        : String(purchase.customer_note).trim(),
     dailyTicketNumber: dailyTicketFromRecord(purchase) ?? undefined,
   };
 }

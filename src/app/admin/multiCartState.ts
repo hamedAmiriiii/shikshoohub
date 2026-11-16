@@ -2,11 +2,17 @@ import type { PaymentType } from "@/app/lib/paymentTypes";
 
 export type SettlementMode = "split" | "card_all" | "cash_all";
 
+export type CartDiningMode = "hall" | "takeaway";
+
 export type CartSlotSnapshot = {
   cart: any[];
   total: number;
   phone: string;
   customerName?: string;
+  /** سالن | بیرون‌بر — پیش‌فرض سالن */
+  diningMode?: CartDiningMode;
+  /** یادداشت سفارش */
+  orderNote?: string;
   credit: number;
   useCreditAmount: number;
   discounttype: number;
@@ -32,6 +38,8 @@ export function createEmptyCartSlot(): CartSlotSnapshot {
     total: 0,
     phone: "",
     customerName: "",
+    diningMode: "hall",
+    orderNote: "",
     credit: 0,
     useCreditAmount: 0,
     discounttype: 0,
@@ -89,6 +97,8 @@ function normalizeSlot(raw: unknown): CartSlotSnapshot {
     total: Number(slot.total) || 0,
     phone: String(slot.phone ?? ""),
     customerName: String(slot.customerName ?? ""),
+    diningMode: slot.diningMode === "takeaway" ? "takeaway" : "hall",
+    orderNote: String(slot.orderNote ?? ""),
     credit: Number(slot.credit) || 0,
     useCreditAmount: Number(slot.useCreditAmount) || 0,
     discounttype: Number(slot.discounttype) || 0,

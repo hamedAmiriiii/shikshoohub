@@ -93,6 +93,8 @@ import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import SavingsOutlinedIcon from "@mui/icons-material/SavingsOutlined";
 import PaletteOutlinedIcon from "@mui/icons-material/PaletteOutlined";
 import StorefrontOutlinedIcon from "@mui/icons-material/StorefrontOutlined";
+import DinnerDiningOutlinedIcon from "@mui/icons-material/DinnerDiningOutlined";
+import NotesOutlinedIcon from "@mui/icons-material/NotesOutlined";
 import ReservMenuThemeSettings from "@/app/admin/settings/ReservMenuThemeSettings";
 import SadrScaleSettings from "@/app/admin/settings/SadrScaleSettings";
 import CardReaderSettings from "@/app/admin/settings/CardReaderSettings";
@@ -342,6 +344,8 @@ export default function SettingsPage() {
   const [productPurchaseDateEnabled, setProductPurchaseDateEnabled] = useState(false);
   const [classicPosMode, setClassicPosMode] = useState(false);
   const [askCustomerName, setAskCustomerName] = useState(false);
+  const [cartDiningModeEnabled, setCartDiningModeEnabled] = useState(false);
+  const [cartOrderNoteEnabled, setCartOrderNoteEnabled] = useState(false);
   const [showDailyTicketNumber, setShowDailyTicketNumber] = useState(false);
   const [productDisplayOrderEnabled, setProductDisplayOrderEnabled] = useState(false);
   const [sequentialProductBarcodeEnabled, setSequentialProductBarcodeEnabled] = useState(false);
@@ -394,6 +398,8 @@ export default function SettingsPage() {
       setProductPurchaseDateEnabled(Boolean(settings.productPurchaseDateEnabled));
       setClassicPosMode(settings.classicPosMode);
       setAskCustomerName(settings.askCustomerName);
+      setCartDiningModeEnabled(Boolean(settings.cartDiningModeEnabled));
+      setCartOrderNoteEnabled(Boolean(settings.cartOrderNoteEnabled));
       setShowDailyTicketNumber(Boolean(settings.showDailyTicketNumber));
       setProductDisplayOrderEnabled(Boolean(settings.productDisplayOrderEnabled));
       setSequentialProductBarcodeEnabled(Boolean(settings.sequentialProductBarcodeEnabled));
@@ -842,6 +848,28 @@ export default function SettingsPage() {
       enabled
         ? "در ثبت مشتری، فیلد نام هم نمایش داده می‌شود"
         : "ثبت مشتری فقط با شماره تلفن انجام می‌شود",
+    );
+  };
+
+  const handleToggleCartDiningMode = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setCartDiningModeEnabled(enabled);
+    writeAdminPosSettings({ cartDiningModeEnabled: enabled });
+    toast.success(
+      enabled
+        ? "انتخاب سالن / بیرون‌بر در سبد فعال شد"
+        : "انتخاب سالن / بیرون‌بر در سبد غیرفعال شد",
+    );
+  };
+
+  const handleToggleCartOrderNote = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setCartOrderNoteEnabled(enabled);
+    writeAdminPosSettings({ cartOrderNoteEnabled: enabled });
+    toast.success(
+      enabled
+        ? "فیلد توضیحات سفارش در سبد فعال شد"
+        : "فیلد توضیحات سفارش در سبد غیرفعال شد",
     );
   };
 
@@ -1467,6 +1495,20 @@ export default function SettingsPage() {
             hint="علاوه بر تلفن، نام هم گرفته شود"
             checked={askCustomerName}
             onChange={handleToggleAskCustomerName}
+          />
+          <SettingsToggleRow
+            icon={<DinnerDiningOutlinedIcon sx={{ fontSize: 18 }} />}
+            title="سالن / بیرون‌بر در سبد"
+            hint="در سبد فروش قابل انتخاب است — پیش‌فرض سالن؛ روی فیش هم چاپ می‌شود"
+            checked={cartDiningModeEnabled}
+            onChange={handleToggleCartDiningMode}
+          />
+          <SettingsToggleRow
+            icon={<NotesOutlinedIcon sx={{ fontSize: 18 }} />}
+            title="توضیحات سفارش در سبد"
+            hint="یادداشت سفارش در سبد؛ روی فیش هم چاپ می‌شود — پیش‌فرض خاموش"
+            checked={cartOrderNoteEnabled}
+            onChange={handleToggleCartOrderNote}
           />
           <SettingsToggleRow
             icon={<ConfirmationNumberOutlinedIcon sx={{ fontSize: 18 }} />}

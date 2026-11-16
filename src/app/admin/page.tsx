@@ -101,6 +101,7 @@ import {
   createEmptyCartSlot,
   readPersistedMultiCart,
   writePersistedMultiCart,
+  type CartDiningMode,
   type CartSlotSnapshot,
 } from '@/app/admin/multiCartState';
 import { publishAdminSaleCartSnapshot } from '@/app/admin/onboarding/adminSaleCartCheck';
@@ -259,6 +260,10 @@ export default function ShoppingPage() {
   const [registerName, setRegisterName] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [askCustomerName, setAskCustomerName] = useState(false);
+  const [cartDiningModeEnabled, setCartDiningModeEnabled] = useState(false);
+  const [cartOrderNoteEnabled, setCartOrderNoteEnabled] = useState(false);
+  const [diningMode, setDiningMode] = useState<CartDiningMode>('hall');
+  const [orderNote, setOrderNote] = useState('');
   const [todayDashboard, setTodayDashboard] = useState<TodayDashboardSnapshot | null>(null);
   const [salesByDay, setSalesByDay] = useState<SalesByDaySnapshot | null>(null);
   const [isRefreshingDashboard, setIsRefreshingDashboard] = useState(false);
@@ -491,6 +496,8 @@ export default function ShoppingPage() {
     total,
     phone,
     customerName,
+    diningMode,
+    orderNote,
     credit,
     useCreditAmount,
     discounttype,
@@ -513,6 +520,8 @@ export default function ShoppingPage() {
     total,
     phone,
     customerName,
+    diningMode,
+    orderNote,
     credit,
     useCreditAmount,
     discounttype,
@@ -537,6 +546,8 @@ export default function ShoppingPage() {
     setTotal(slot.total ?? 0);
     setPhone(slot.phone ?? "");
     setCustomerName(slot.customerName ?? "");
+    setDiningMode(slot.diningMode === "takeaway" ? "takeaway" : "hall");
+    setOrderNote(slot.orderNote ?? "");
     setCredit(slot.credit ?? 0);
     setUseCreditAmount(slot.useCreditAmount ?? 0);
     setDiscounttype(slot.discounttype ?? 0);
@@ -1244,6 +1255,8 @@ export default function ShoppingPage() {
       setMenuMode(settings.menuMode);
       setClassicPosMode(settings.classicPosMode);
       setAskCustomerName(settings.askCustomerName);
+      setCartDiningModeEnabled(Boolean(settings.cartDiningModeEnabled));
+      setCartOrderNoteEnabled(Boolean(settings.cartOrderNoteEnabled));
       setInstallmentPaymentEnabled(settings.installmentPaymentEnabled);
       setDebtPaymentEnabled(settings.debtPaymentEnabled);
       setChequePaymentEnabled(settings.chequePaymentEnabled);
@@ -1575,6 +1588,9 @@ export default function ShoppingPage() {
         shopName: getShopNameFromUser(),
         phone: phone || undefined,
         customerName: customerName.trim() || undefined,
+        diningMode: cartDiningModeEnabled ? diningMode : undefined,
+        customerNote:
+          cartOrderNoteEnabled && orderNote.trim() ? orderNote.trim() : undefined,
         items: cart.map((item: any) => {
           const unitPrice = Number(item.sale_price);
           return {
@@ -1626,6 +1642,10 @@ export default function ShoppingPage() {
       getShopNameFromUser,
       parseAmountInput,
       customerName,
+      cartDiningModeEnabled,
+      diningMode,
+      cartOrderNoteEnabled,
+      orderNote,
     ],
   );
 
@@ -1919,6 +1939,12 @@ export default function ShoppingPage() {
     if (askCustomerName && customerName.trim()) {
       loadData.customer_name = customerName.trim();
     }
+    if (cartDiningModeEnabled) {
+      loadData.dining_mode = diningMode;
+    }
+    if (cartOrderNoteEnabled && orderNote.trim()) {
+      loadData.customer_note = orderNote.trim();
+    }
 
     if (useCreditAmount > 0 || editReuseCredit) {
       loadData.use_credit = true;
@@ -2171,7 +2197,7 @@ export default function ShoppingPage() {
     }
 
     sendPurchase();
-  }, [cart, phone, useCreditAmount, effectiveOnline, discounttype, total, formatNumber, paymentType, installmentCount, payableNow, paymentFieldsValid, settlementMode, appendPaymentSettlement, resetPaymentSettlement, installmentCalculation, calculatingInstallments, installmentCreditError, finalizeSuccessfulSale, queueCurrentPurchase, withTimeout, selectedChequeId, selectedChequeIds, selectedCheques, selectedCheque, selectedChequeAmount, chequeRemainder, salePayableAmount, loadingAvailableCheques, buildPurchaseProductLine, parseAmountInput, cardAmountInput, cashAmountInput, editingPurchaseId, editReuseCredit, saleDateEditEnabled, saleDate, mixedDebtResidual, askCustomerName, customerName]);
+  }, [cart, phone, useCreditAmount, effectiveOnline, discounttype, total, formatNumber, paymentType, installmentCount, payableNow, paymentFieldsValid, settlementMode, appendPaymentSettlement, resetPaymentSettlement, installmentCalculation, calculatingInstallments, installmentCreditError, finalizeSuccessfulSale, queueCurrentPurchase, withTimeout, selectedChequeId, selectedChequeIds, selectedCheques, selectedCheque, selectedChequeAmount, chequeRemainder, salePayableAmount, loadingAvailableCheques, buildPurchaseProductLine, parseAmountInput, cardAmountInput, cashAmountInput, editingPurchaseId, editReuseCredit, saleDateEditEnabled, saleDate, mixedDebtResidual, askCustomerName, customerName, cartDiningModeEnabled, diningMode, cartOrderNoteEnabled, orderNote]);
 
   // بررسی اعتبارسنجی تخفیف هنگام تغییر total
   useEffect(() => {
@@ -2795,6 +2821,12 @@ export default function ShoppingPage() {
     askCustomerName,
     customerName,
     onChangeCustomerName: setCustomerName,
+    cartDiningModeEnabled,
+    diningMode,
+    onDiningModeChange: setDiningMode,
+    cartOrderNoteEnabled,
+    orderNote,
+    onOrderNoteChange: setOrderNote,
     checkingCredit,
     credit,
     useCreditAmount,
@@ -2897,6 +2929,10 @@ export default function ShoppingPage() {
     phone,
     customerName,
     askCustomerName,
+    cartDiningModeEnabled,
+    diningMode,
+    cartOrderNoteEnabled,
+    orderNote,
     onChangePhone,
     checkingCredit,
     credit,
@@ -3796,6 +3832,42 @@ export default function ShoppingPage() {
                         placeholder="نام مشتری"
                         size="small"
                         fullWidth
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                            backgroundColor: "var(--admin-surface-alt)",
+                            color: "var(--admin-text)",
+                            "& fieldset": { borderColor: "var(--admin-border)" },
+                          },
+                          "& .MuiInputBase-input": {
+                            color: "var(--admin-text)",
+                            fontSize: { xs: "12px", md: "13px" },
+                            padding: { xs: "8px 10px", md: "10px 12px" },
+                          },
+                        }}
+                      />
+                    ) : null}
+                    {cartDiningModeEnabled ? (
+                      <PosSegmentButtons
+                        dense
+                        columns={2}
+                        value={diningMode}
+                        onChange={setDiningMode}
+                        options={[
+                          { value: "hall", label: "سالن" },
+                          { value: "takeaway", label: "بیرون‌بر" },
+                        ]}
+                      />
+                    ) : null}
+                    {cartOrderNoteEnabled ? (
+                      <TextField
+                        value={orderNote}
+                        onChange={(e) => setOrderNote(e.target.value)}
+                        placeholder="توضیحات سفارش"
+                        size="small"
+                        fullWidth
+                        multiline
+                        minRows={1}
+                        maxRows={3}
                         sx={{
                           "& .MuiOutlinedInput-root": {
                             backgroundColor: "var(--admin-surface-alt)",

@@ -45,6 +45,8 @@ export type SaleReceiptData = {
   customerName?: string;
   cashierName?: string;
   tableLabel?: string;
+  /** سالن | بیرون‌بر */
+  diningMode?: "hall" | "takeaway";
   items: SaleReceiptItem[];
   subtotal: number;
   discount: number;
@@ -64,6 +66,10 @@ export type SaleReceiptData = {
   customerNote?: string;
   dailyTicketNumber?: number;
 };
+
+export function diningModeLabel(mode?: string | null): string {
+  return mode === "takeaway" ? "بیرون‌بر" : mode === "hall" ? "سالن" : "";
+}
 
 export type StationTicketLayout = {
   paperPreset: ReceiptPaperPresetId;
@@ -586,6 +592,8 @@ export function normalizeSaleReceiptData(
     customerName: raw.customerName == null ? undefined : String(raw.customerName),
     cashierName: raw.cashierName == null ? undefined : String(raw.cashierName),
     tableLabel: raw.tableLabel == null ? undefined : String(raw.tableLabel),
+    diningMode:
+      raw.diningMode === "takeaway" || raw.diningMode === "hall" ? raw.diningMode : undefined,
     items,
     subtotal: num(raw.subtotal),
     discount: num(raw.discount),

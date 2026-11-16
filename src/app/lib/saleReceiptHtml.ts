@@ -5,6 +5,7 @@ import {
   formatReceiptDateOnly,
   formatReceiptNumber,
   formatReceiptTimeOnly,
+  diningModeLabel,
   getPaymentTypeLabel,
   normalizeSaleReceiptData,
   resolvePaperWidthMm,
@@ -15,6 +16,11 @@ import {
 
 function receiptItems(receipt: SaleReceiptData): SaleReceiptData["items"] {
   return Array.isArray(receipt.items) ? receipt.items : [];
+}
+
+function diningModeHtml(receipt: SaleReceiptData): string {
+  const dining = diningModeLabel(receipt.diningMode);
+  return dining ? `<div class="sub bold">نوع سفارش: ${escapeHtml(dining)}</div>` : "";
 }
 
 function escapeHtml(value: unknown): string {
@@ -217,6 +223,7 @@ function classicHallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSe
         ${receipt.tableLabel ? `<td class="value bold">${escapeHtml(receipt.tableLabel)}</td>` : ""}
       </tr>
     </table>
+    ${diningModeHtml(receipt)}
     <hr/>
     ${items}
     <hr/>
@@ -263,6 +270,8 @@ function retailHallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSet
           ? `<hr/><div class="sub">${receipt.customerName ? `نام مشتری : ${escapeHtml(receipt.customerName)}` : `مشتری : ${ltr(receipt.phone || "")}`}</div>`
           : ""
       }
+      ${diningModeHtml(receipt)}
+      ${receipt.customerNote ? `<div class="note">توضیحات: ${escapeHtml(receipt.customerNote)}</div>` : ""}
     </div>
     <table class="retail-items" style="width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:90%;margin-bottom:8px">
       <colgroup>
@@ -308,6 +317,8 @@ function minimalHallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSe
     <div class="muted">فاکتور فروش</div>
     ${settings.showDate ? `<div class="muted">${ltr(formatReceiptDate(receipt.createdAt))}</div>` : ""}
     ${saleNumberHtml(receipt, settings.showPurchaseId)}
+    ${diningModeHtml(receipt)}
+    ${receipt.customerNote ? `<div class="note">توضیحات: ${escapeHtml(receipt.customerNote)}</div>` : ""}
     <div class="muted" style="letter-spacing:2px">··············</div>
     ${items}
     <div class="muted" style="letter-spacing:2px">··············</div>
@@ -340,6 +351,8 @@ function boldHallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSetti
         ${receipt.tableLabel ? `<td class="value bold">${escapeHtml(receipt.tableLabel)}</td>` : ""}
       </tr>
     </table>
+    ${diningModeHtml(receipt)}
+    ${receipt.customerNote ? `<div class="note bold">توضیحات: ${escapeHtml(receipt.customerNote)}</div>` : ""}
     <div style="border-top:3px solid #000;border-bottom:3px solid #000;padding:8px 0;margin:8px 0">${items}</div>
     ${totalsHtml(receipt)}
     <div style="border:2px solid #000;text-align:center;padding:8px;margin:10px 0">
@@ -390,6 +403,7 @@ function prepInner(
     ${shopTitle ? `<div class="muted">${escapeHtml(shopTitle)}</div>` : ""}
     ${settings.showDate ? `<div class="muted">${ltr(formatReceiptDate(receipt.createdAt))}</div>` : ""}
     ${receipt.tableLabel ? `<div class="sub">${escapeHtml(receipt.tableLabel)}</div>` : ""}
+    ${diningModeHtml(receipt)}
     <hr/>
     ${items}
     ${receipt.customerNote ? `<hr/><div class="note bold">توضیحات سفارش: ${escapeHtml(receipt.customerNote)}</div>` : ""}

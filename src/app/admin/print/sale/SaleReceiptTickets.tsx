@@ -12,6 +12,7 @@ import {
   formatReceiptTimeOnly,
   getEnabledReceiptPrintStations,
   getStationCopyCount,
+  diningModeLabel,
   getPaymentTypeLabel,
   normalizeSaleReceiptData,
   resolveStationPaperWidthMm,
@@ -22,6 +23,24 @@ import {
 
 function safeReceiptItems(receipt: SaleReceiptData): SaleReceiptData["items"] {
   return Array.isArray(receipt.items) ? receipt.items : [];
+}
+
+function DiningModeLine({
+  receipt,
+  fontSize,
+  align = "inherit",
+}: {
+  receipt: SaleReceiptData;
+  fontSize: string;
+  align?: "inherit" | "center";
+}) {
+  const label = diningModeLabel(receipt.diningMode);
+  if (!label) return null;
+  return (
+    <Typography align={align} sx={{ fontWeight: 800, fontSize, mb: 0.5 }}>
+      نوع سفارش: {label}
+    </Typography>
+  );
 }
 
 function SaleNumberLines({
@@ -236,6 +255,7 @@ function ClassicHallTicket({
           </Typography>
         ) : null}
       </Box>
+      <DiningModeLine receipt={receipt} fontSize={`${settings.fontSize}px`} />
 
       <Divider sx={{ my: 1, borderColor: "#000" }} />
 
@@ -346,6 +366,12 @@ function RetailHallTicket({
             </Typography>
           </>
         )}
+        <DiningModeLine receipt={receipt} fontSize={`${fs}px`} align="center" />
+        {receipt.customerNote ? (
+          <Typography align="center" sx={{ fontSize: `${fs}px`, fontWeight: 700, whiteSpace: "pre-wrap", mb: 0.5 }}>
+            توضیحات: {receipt.customerNote}
+          </Typography>
+        ) : null}
       </Box>
 
       <Box
@@ -476,6 +502,12 @@ function MinimalHallTicket({
         </Typography>
       ) : null}
       <SaleNumberLines receipt={receipt} showPurchaseId={settings.showPurchaseId} fontSize={`${settings.fontSize - 1}px`} />
+      <DiningModeLine receipt={receipt} fontSize={`${settings.fontSize}px`} align="center" />
+      {receipt.customerNote ? (
+        <Typography align="center" sx={{ fontSize: `${settings.fontSize - 1}px`, mb: 0.5, whiteSpace: "pre-wrap", fontWeight: 700 }}>
+          توضیحات: {receipt.customerNote}
+        </Typography>
+      ) : null}
       <Typography align="center" sx={{ fontSize: 10, letterSpacing: 2, mb: 1, userSelect: "none" }}>
         {dash}
       </Typography>
@@ -568,6 +600,12 @@ function BoldHallTicket({
             <Typography sx={{ fontSize: `${settings.fontSize}px`, fontWeight: 800 }}>{receipt.tableLabel}</Typography>
           ) : null}
         </Box>
+        <DiningModeLine receipt={receipt} fontSize={`${settings.fontSize}px`} align="center" />
+        {receipt.customerNote ? (
+          <Typography sx={{ fontSize: `${settings.fontSize - 1}px`, mb: 1, whiteSpace: "pre-wrap", fontWeight: 700 }}>
+            توضیحات: {receipt.customerNote}
+          </Typography>
+        ) : null}
 
         <Box sx={{ borderTop: "3px solid #111", borderBottom: "3px solid #111", py: 1, mb: 1 }}>
           {safeReceiptItems(receipt).map((item, index) => (
@@ -684,6 +722,7 @@ function PrepStationTicket({
           {receipt.tableLabel}
         </Typography>
       ) : null}
+      <DiningModeLine receipt={receipt} fontSize={`${settings.fontSize + 1}px`} align="center" />
       <Divider sx={{ my: 1, borderColor: "#000" }} />
 
       {safeReceiptItems(receipt).map((item, index) => (
