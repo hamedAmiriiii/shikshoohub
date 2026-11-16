@@ -230,6 +230,21 @@ const tableWrapSx = {
   overflowX: "auto",
 } as const;
 
+const goodsKindTabsSx = {
+  minHeight: 40,
+  bgcolor: "var(--admin-surface)",
+  borderRadius: "12px",
+  border: "1px solid var(--admin-border)",
+  "& .MuiTab-root": {
+    minHeight: 40,
+    fontSize: 13,
+    fontWeight: 700,
+    color: "var(--admin-text-muted)",
+  },
+  "& .Mui-selected": { color: "var(--admin-accent) !important" },
+  "& .MuiTabs-indicator": { backgroundColor: "var(--admin-accent)" },
+} as const;
+
 const actionBtnSx = {
   color: "var(--admin-text-muted)",
   p: 0.4,
@@ -316,6 +331,7 @@ export default function ProductionCostingPage() {
   const canMaterials = can("raw_materials");
   const canGoods = can("produced_goods");
   const [tab, setTab] = useState<TabKey>(canGoods ? "stock" : "materials");
+  const [goodsKindTab, setGoodsKindTab] = useState<"final" | "semi">("final");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [materials, setMaterials] = useState<RawMaterial[]>([]);
@@ -559,6 +575,76 @@ export default function ProductionCostingPage() {
     () => filteredGoods.filter((item) => !isFinalProducedGood(item)),
     [filteredGoods]
   );
+  const goodsKindRows = useMemo(
+    () => (goodsKindTab === "final" ? filteredFinalGoods : filteredSemiGoods),
+    [goodsKindTab, filteredFinalGoods, filteredSemiGoods],
+  );
+
+  const upsertGoodLocal = useCallback((saved: ProducedGood) => {
+    setGoods((prev) => {
+      const idx = prev.findIndex((g) => g.id === saved.id);
+      if (idx < 0) return [saved, ...prev];
+      const next = [...prev];
+      next[idx] = { ...prev[idx], ...saved };
+      return next;
+    });
+  }, []);
+
+  const applyProductionLocally = useCallback((producedId: number, kg: number, record: ProductionRecord | null) => {
+    const consumptions = record?.consumptions || [];
+    const roundQty = (n: number) => Math.round(n * 1000) / 1000;
+
+    setGoods((prev) =>
+      prev.map((g) => {
+        if (g.id === producedId) {
+          return {
+            ...g,
+            stock_kg: roundQty((Number(g.stock_kg) || 0) + kg),
+            cost_per_kg: record?.cost_per_kg != null ? Number(record.cost_per_kg) : g.cost_per_kg,
+          };
+        }
+        const nestedUsed = consumptions
+          .filter((c) => Number(c.ingredient_produced_good_id) > 0 && Number(c.ingredient_produced_good_id) === g.id)
+          .reduce((sum, c) => sum + (Number(c.quantity_kg) || 0), 0);
+        if (nestedUsed <= 0) return g;
+        return {
+          ...g,
+          stock_kg: Math.max(0, roundQty((Number(g.stock_kg) || 0) - nestedUsed)),
+        };
+      }),
+    );
+
+    if (consumptions.length === 0) return;
+
+    setMaterials((prev) =>
+      prev.map((m) => {
+        const usedRows = consumptions.filter(
+          (c) =>
+            Number(c.raw_material_id) === m.id &&
+            !(Number(c.ingredient_produced_good_id) > 0) &&
+            c.ingredient_kind !== "consumable",
+        );
+        if (!usedRows.length) return m;
+        let stock = Number(m.stock_kg) || 0;
+        const lots = (m.lots || []).map((lot) => {
+          const hit = usedRows.find((c) => Number(c.raw_material_lot_id) === lot.id);
+          if (!hit) return lot;
+          const qty = Number(hit.quantity_kg) || 0;
+          stock -= qty;
+          return {
+            ...lot,
+            remaining_kg: Math.max(0, roundQty((Number(lot.remaining_kg) || 0) - qty)),
+          };
+        });
+        return {
+          ...m,
+          lots,
+          stock_kg: Math.max(0, roundQty(stock)),
+        };
+      }),
+    );
+  }, []);
+
   const filteredMaterials = useMemo(() => {
     if (!searchText) return materials;
     return materials.filter((item) => String(item.name || "").toLowerCase().includes(searchText));
@@ -1223,15 +1309,22 @@ export default function ProductionCostingPage() {
       const saved = asProducedGood(res);
       const goodId = saved?.id || editingGood?.id;
       if (goodId) {
-        const coverOk = await syncCoverImage(goodId, token);
-        if (!coverOk) {
-          await loadAll();
-          return;
-        }
+        await syncCoverImage(goodId, token);
+      }
+      if (saved) {
+        upsertGoodLocal(saved);
+        if (isFinalProducedGood(saved)) setGoodsKindTab("final");
+        else setGoodsKindTab("semi");
+      } else if (editingGood) {
+        upsertGoodLocal({
+          ...editingGood,
+          name,
+          is_final: goodIsFinal,
+          unit_type: editingGood.unit_type || goodUnit,
+        });
       }
       toast.success(editingGood ? "فرمول کالا به‌روز شد" : "کالای تولیدی ثبت شد");
       setGoodDialogOpen(false);
-      await loadAll();
     } finally {
       setSaving(false);
     }
@@ -1386,6 +1479,7 @@ export default function ProductionCostingPage() {
           : "تولید ثبت شد",
       );
       const producedId = produceGood.id;
+      applyProductionLocally(producedId, kg, record);
       setGoodProductions((prev) => {
         if (!(producedId in prev)) return prev;
         const next = { ...prev };
@@ -1393,7 +1487,6 @@ export default function ProductionCostingPage() {
         return next;
       });
       setProduceGood(null);
-      await loadAll();
       if (expandedGoodId === producedId) void loadGoodProductions(producedId);
     } finally {
       setSaving(false);
@@ -1582,33 +1675,34 @@ export default function ProductionCostingPage() {
         ) : filteredGoods.length === 0 ? (
           <EmptyHint title="نتیجه‌ای پیدا نشد" text="نام دیگری جستجو کنید." />
         ) : (
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            {(
-              [
-                { key: "final", title: "کالای نهایی", rows: filteredFinalGoods },
-                { key: "semi", title: "نیمه‌ساخته", rows: filteredSemiGoods },
-              ] as const
-            )
-              .filter((section) => section.rows.length > 0)
-              .map((section) => (
-                <Box key={section.key}>
-                  <Typography
-                    sx={{
-                      mb: 0.75,
-                      px: 0.25,
-                      fontSize: 13,
-                      fontWeight: 800,
-                      color: "var(--admin-text)",
-                      textAlign: "right",
-                    }}
-                  >
-                    {section.title}
-                    <Typography component="span" sx={{ ml: 0.75, fontSize: 11, fontWeight: 600, color: "var(--admin-text-muted)" }}>
-                      ({new Intl.NumberFormat("fa-IR").format(section.rows.length)})
-                    </Typography>
-                  </Typography>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
+            <Tabs
+              value={goodsKindTab}
+              onChange={(_, v) => setGoodsKindTab(v as "final" | "semi")}
+              variant="fullWidth"
+              sx={goodsKindTabsSx}
+            >
+              <Tab
+                value="final"
+                label={`آماده (${new Intl.NumberFormat("fa-IR").format(filteredFinalGoods.length)})`}
+              />
+              <Tab
+                value="semi"
+                label={`نیمه‌آماده (${new Intl.NumberFormat("fa-IR").format(filteredSemiGoods.length)})`}
+              />
+            </Tabs>
+            {goodsKindRows.length === 0 ? (
+              <EmptyHint
+                title={goodsKindTab === "final" ? "کالای آماده‌ای نیست" : "کالای نیمه‌آماده‌ای نیست"}
+                text={
+                  goodsKindTab === "final"
+                    ? "کالاهای نهایی (آماده فروش) اینجا دیده می‌شوند."
+                    : "کالاهای نیمه‌آماده اینجا دیده می‌شوند."
+                }
+              />
+            ) : (
                   <TableContainer component={Paper} sx={tableWrapSx}>
-                    <Table size="small" aria-label={`موجودی ${section.title}`}>
+                    <Table size="small" aria-label={goodsKindTab === "final" ? "موجودی کالای آماده" : "موجودی کالای نیمه‌آماده"}>
                       <TableHead>
                         <TableRow>
                           <StyledTableCell align="center">ردیف</StyledTableCell>
@@ -1622,7 +1716,7 @@ export default function ProductionCostingPage() {
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {section.rows.map((good, index) => {
+                        {goodsKindRows.map((good, index) => {
                           const cost = Number(good.cost_per_kg) || 0;
                           const sale = Number(good.sale_price) || 0;
                           const profit = good.profit_per_kg != null ? Number(good.profit_per_kg) : sale - cost;
@@ -1753,8 +1847,7 @@ export default function ProductionCostingPage() {
                       </TableBody>
                     </Table>
                   </TableContainer>
-                </Box>
-              ))}
+            )}
           </Box>
         )
       ) : tab === "materials" ? (
@@ -2074,33 +2167,34 @@ export default function ProductionCostingPage() {
       ) : filteredGoods.length === 0 ? (
         <EmptyHint title="نتیجه‌ای پیدا نشد" text="نام دیگری جستجو کنید." />
       ) : (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {(
-            [
-              { key: "final", title: "کالای نهایی", rows: filteredFinalGoods },
-              { key: "semi", title: "نیمه‌ساخته", rows: filteredSemiGoods },
-            ] as const
-          )
-            .filter((section) => section.rows.length > 0)
-            .map((section) => (
-              <Box key={section.key}>
-                <Typography
-                  sx={{
-                    mb: 0.75,
-                    px: 0.25,
-                    fontSize: 13,
-                    fontWeight: 800,
-                    color: "var(--admin-text)",
-                    textAlign: "right",
-                  }}
-                >
-                  {section.title}
-                  <Typography component="span" sx={{ ml: 0.75, fontSize: 11, fontWeight: 600, color: "var(--admin-text-muted)" }}>
-                    ({new Intl.NumberFormat("fa-IR").format(section.rows.length)})
-                  </Typography>
-                </Typography>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
+          <Tabs
+            value={goodsKindTab}
+            onChange={(_, v) => setGoodsKindTab(v as "final" | "semi")}
+            variant="fullWidth"
+            sx={goodsKindTabsSx}
+          >
+            <Tab
+              value="final"
+              label={`آماده (${new Intl.NumberFormat("fa-IR").format(filteredFinalGoods.length)})`}
+            />
+            <Tab
+              value="semi"
+              label={`نیمه‌آماده (${new Intl.NumberFormat("fa-IR").format(filteredSemiGoods.length)})`}
+            />
+          </Tabs>
+          {goodsKindRows.length === 0 ? (
+            <EmptyHint
+              title={goodsKindTab === "final" ? "کالای آماده‌ای نیست" : "کالای نیمه‌آماده‌ای نیست"}
+              text={
+                goodsKindTab === "final"
+                  ? "کالاهای نهایی (آماده فروش) اینجا دیده می‌شوند."
+                  : "کالاهای نیمه‌آماده اینجا دیده می‌شوند."
+              }
+            />
+          ) : (
                 <TableContainer component={Paper} sx={tableWrapSx}>
-                  <Table size="small" aria-label={section.title}>
+                  <Table size="small" aria-label={goodsKindTab === "final" ? "کالای آماده" : "کالای نیمه‌آماده"}>
                     <TableHead>
                       <TableRow>
                         <StyledTableCell align="center">ردیف</StyledTableCell>
@@ -2111,7 +2205,7 @@ export default function ProductionCostingPage() {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {section.rows.map((good, index) => {
+                      {goodsKindRows.map((good, index) => {
                         const productionsOpen = expandedGoodId === good.id;
                         return (
                           <Fragment key={good.id}>
@@ -2219,8 +2313,7 @@ export default function ProductionCostingPage() {
                     </TableBody>
                   </Table>
                 </TableContainer>
-              </Box>
-            ))}
+          )}
         </Box>
       )}
 
