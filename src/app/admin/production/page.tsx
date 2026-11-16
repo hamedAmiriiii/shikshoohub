@@ -300,6 +300,15 @@ function layerImageSrc(url?: string | null): string | null {
   return url.startsWith("/storage/") ? `https://api.webinoo-plus.ir${url}` : url;
 }
 
+/** نام مواد / نیمه‌ساخته‌های کمبودی برای ستون مواد گرید */
+function shortageNamesLabel(good: ProducedGood): string {
+  const names = (good.shortages || [])
+    .map((row) => String(row.name || "").trim())
+    .filter(Boolean);
+  const unique = Array.from(new Set(names));
+  return unique.length ? unique.join("، ") : "کمبود مواد";
+}
+
 /** عکس نمایشی کالا: کلی، وگرنه اولین لایهٔ ماده */
 function goodDisplayImageSrc(
   good: ProducedGood,
@@ -2242,10 +2251,15 @@ export default function ProductionCostingPage() {
                               </StyledTableCell>
                               <StyledTableCell
                                 align="center"
-                                sx={{ color: good.stock_sufficient === false ? "#ef5350" : "var(--admin-text-muted)" }}
+                                sx={{
+                                  color: good.stock_sufficient === false ? "#ef5350" : "var(--admin-text-muted)",
+                                  fontWeight: good.stock_sufficient === false ? 700 : 400,
+                                  maxWidth: 220,
+                                  whiteSpace: "normal",
+                                }}
                               >
                                 {good.stock_sufficient === false
-                                  ? "کمبود مواد"
+                                  ? shortageNamesLabel(good)
                                   : (good.ingredient_costs || []).length > 0
                                     ? `${(good.ingredient_costs || []).length} قلم`
                                     : "—"}
