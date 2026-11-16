@@ -230,6 +230,8 @@ export type RecipeLine = {
   ingredient_produced_good_id: number | "";
   consumable_material_id: number | "";
   grams_per_kg: number;
+  /** متن خام فیلد مقدار تا موقع تایپ اعشار (۰.۵) قطع نشود */
+  grams_text?: string;
   /** مشتری در منوی سه‌بعدی بتواند این ماده را بردارد (فقط ماده اولیه) */
   is_removable?: boolean;
   /** مشتری در منوی سه‌بعدی بتواند یک واحد اضافه (مثلاً دوبل) سفارش دهد */
@@ -327,10 +329,28 @@ function normalizeDigits(value: string): string {
 }
 
 export function parseAmount(raw: string): number {
-  const cleaned = normalizeDigits(raw).replace(/[^\d.]/g, "");
-  if (!cleaned) return 0;
+  const cleaned = normalizeDigits(raw).replace(/,/g, ".").replace(/[^\d.]/g, "");
+  if (!cleaned || cleaned === ".") return 0;
   const n = Number(cleaned);
   return Number.isFinite(n) ? n : 0;
+}
+
+/** ورودی اعشاری کنترل‌شده (مثلاً ۰.۵ یا ۲.۵) بدون قطع شدن نقطه هنگام تایپ */
+export function sanitizeDecimalInput(raw: string, maxDecimals = 3): string {
+  let s = normalizeDigits(raw).replace(/,/g, ".").replace(/[^\d.]/g, "");
+  const firstDot = s.indexOf(".");
+  if (firstDot !== -1) {
+    s = s.slice(0, firstDot + 1) + s.slice(firstDot + 1).replace(/\./g, "");
+    if (maxDecimals >= 0) {
+      const [whole, frac = ""] = s.split(".");
+      s = frac.length > maxDecimals ? `${whole}.${frac.slice(0, maxDecimals)}` : s;
+    }
+  }
+  return s;
+}
+
+export function sanitizeIntegerInput(raw: string): string {
+  return normalizeDigits(raw).replace(/[^\d]/g, "");
 }
 
 export function formatToman(num: number): string {

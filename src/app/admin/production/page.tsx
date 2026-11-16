@@ -95,6 +95,8 @@ import {
   type LayerComposeMode,
   type LayerOrderEntry,
   parseAmount,
+  sanitizeDecimalInput,
+  sanitizeIntegerInput,
   profitPercentFromSale,
   recipeLinesFromGood,
   recipeLineKey,
@@ -1217,10 +1219,11 @@ export default function ProductionCostingPage() {
       return;
     }
     const ingredients = usableLines.map((line) => {
+      const qty = Math.round(line.grams_per_kg * 1e6) / 1e6;
       if (isConsumableRecipeLine(line)) {
         return {
           consumable_material_id: Number(line.consumable_material_id),
-          grams_per_kg: line.grams_per_kg,
+          grams_per_kg: qty,
           is_removable: false,
           is_addable: false,
         };
@@ -1228,14 +1231,14 @@ export default function ProductionCostingPage() {
       if (isNestedRecipeLine(line)) {
         return {
           ingredient_produced_good_id: Number(line.ingredient_produced_good_id),
-          grams_per_kg: line.grams_per_kg,
+          grams_per_kg: qty,
           is_removable: false,
           is_addable: false,
         };
       }
       return {
         raw_material_id: Number(line.raw_material_id),
-        grams_per_kg: line.grams_per_kg,
+        grams_per_kg: qty,
         is_removable: line.is_removable === true,
         is_addable: line.is_addable === true,
       };
@@ -2856,14 +2859,29 @@ export default function ProductionCostingPage() {
               <TextField
                 size="small"
                 label={qtyLabel}
-                value={line.grams_per_kg || ""}
+                value={
+                  line.grams_text !== undefined
+                    ? line.grams_text
+                    : line.grams_per_kg > 0
+                      ? String(line.grams_per_kg)
+                      : ""
+                }
                 onChange={(e) => {
+                  const countQty = qtyLabel === "عدد";
+                  const text = countQty
+                    ? sanitizeIntegerInput(e.target.value)
+                    : sanitizeDecimalInput(e.target.value, 6);
                   const next = [...recipeLines];
-                  next[index] = { ...next[index], grams_per_kg: parseAmount(e.target.value) };
+                  next[index] = {
+                    ...next[index],
+                    grams_text: text,
+                    grams_per_kg: parseAmount(text),
+                  };
                   setRecipeLines(next);
                 }}
                 onKeyDown={handleRecipeFieldEnter}
                 inputMode="decimal"
+                placeholder={qtyLabel === "عدد" ? "مثلاً ۲" : "مثلاً ۰.۵ یا ۲.۵"}
                 sx={fieldSx}
               />
               <IconButton
