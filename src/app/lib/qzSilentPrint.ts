@@ -553,10 +553,20 @@ export function canSilentPrint(settings: SaleReceiptPrintSettings): boolean {
   return settings.silentPrint !== false && stationsWithAssignedPrinters(settings).length > 0;
 }
 
+function sleepMs(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** فاصله بین دو نسخه روی یک پرینتر (وقتی تعداد نسخه ≥ ۲) */
+const COPY_GAP_MS = 6000;
+/** فاصله بین ارسال به پرینتر بعدی (سالن → آشپزخانه → بار) */
+const STATION_GAP_MS = 2000;
+
 export async function silentPrintReceiptStations(
   receipt: SaleReceiptData,
   settings: SaleReceiptPrintSettings,
 ): Promise<{ printed: ReceiptPrintStation[]; skipped: ReceiptPrintStation[] }> {
+  // ترتیب getEnabledReceiptPrintStations: سالن → آشپزخانه → بار
   const enabled = getEnabledReceiptPrintStations(settings);
   const printed: ReceiptPrintStation[] = [];
   const skipped: ReceiptPrintStation[] = [];
@@ -564,20 +574,30 @@ export async function silentPrintReceiptStations(
   await connectQzTray();
 
   let lastError: unknown;
+  let printedStationCount = 0;
   for (const station of enabled) {
     const printer = getStationPrinterName(settings, station);
     if (!printer) {
       skipped.push(station);
       continue;
     }
+
+    if (printedStationCount > 0) {
+      await sleepMs(STATION_GAP_MS);
+    }
+
     try {
       const ticketSettings = applyStationLayout(settings, station);
       const html = buildStationTicketHtml(receipt, ticketSettings, station);
       const copies = getStationCopyCount(settings, station);
       for (let copy = 0; copy < copies; copy += 1) {
+        if (copy > 0) {
+          await sleepMs(COPY_GAP_MS);
+        }
         await printHtmlToNamedPrinter(printer, html, resolvePaperWidthMm(ticketSettings));
       }
       printed.push(station);
+      printedStationCount += 1;
     } catch (error) {
       skipped.push(station);
       lastError = error;

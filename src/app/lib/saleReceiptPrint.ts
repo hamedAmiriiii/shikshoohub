@@ -460,9 +460,12 @@ export function printReceiptStationsSequentially(
     });
 
   return (async () => {
-    for (const station of list) {
-      await printOne(station);
-      await new Promise((r) => setTimeout(r, 350));
+    // ترتیب: سالن → آشپزخانه → بار · ۲ ثانیه بین ایستگاه‌ها
+    for (let i = 0; i < list.length; i += 1) {
+      if (i > 0) {
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+      await printOne(list[i]);
     }
     delete document.body.dataset.printStation;
   })();
