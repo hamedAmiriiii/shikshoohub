@@ -65,16 +65,13 @@ import { adminButtonStartIconSx, adminPageSx } from "@/app/admin/theme/adminThem
 import {
   asProducedGood,
   asProductionRecord,
-  asRawMaterial,
   categoryIdsFromGood,
   extractList,
   formatKg,
   formatToman,
   isPieceMaterial,
   materialPriceLabel,
-  materialPriceLabelFromCode,
   materialQtyFieldLabel,
-  materialQtyFieldLabelFromCode,
   materialUnitFromCode,
   materialUnitLabel,
   parseRawMaterialUnit,
@@ -127,6 +124,7 @@ import InvoiceLinkFields, {
   type InvoiceLinkState,
 } from "@/app/admin/production/InvoiceLinkFields";
 import BulkRawMaterialInvoiceDialog from "@/app/admin/production/BulkRawMaterialInvoiceDialog";
+import RawMaterialFormDialog from "@/app/admin/production/RawMaterialFormDialog";
 import { invoiceShopNumber } from "@/app/admin/invoices/InvoiceDetailsDialog";
 import { buildDocumentLink } from "@/app/lib/documentReturn";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
@@ -284,7 +282,6 @@ const emptyLine = (): RecipeLine => ({
   is_addable: false,
 });
 
-const LAYER_IMAGE_MAX_BYTES = 3 * 1024 * 1024;
 const COVER_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 
 const checkerSx = {
@@ -359,8 +356,6 @@ export default function ProductionCostingPage() {
   const [materialAssignRecipeIndex, setMaterialAssignRecipeIndex] = useState<number | null>(null);
   const [bulkInvoiceOpen, setBulkInvoiceOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<RawMaterial | null>(null);
-  const [materialName, setMaterialName] = useState("");
-  const [materialUnit, setMaterialUnit] = useState<"kg" | "liter" | "piece">("kg");
   const [lotQty, setLotQty] = useState("");
   const [lotPrice, setLotPrice] = useState("");
   const [invoiceLink, setInvoiceLink] = useState<InvoiceLinkState>(emptyInvoiceLinkState);
@@ -379,9 +374,6 @@ export default function ProductionCostingPage() {
   const [layerOrder, setLayerOrder] = useState<LayerOrderEntry[]>([]);
   const [layerCompose, setLayerCompose] = useState<LayerComposeMode>("side");
   const [selectedLayerIndex, setSelectedLayerIndex] = useState<number | null>(null);
-  // عکس لایهٔ ماده اولیه (منوی سه‌بعدی)
-  const [layerDataUrl, setLayerDataUrl] = useState<string | null>(null);
-  const [layerRemoved, setLayerRemoved] = useState(false);
   // عکس کلی کالای تولیدی (بدون مواد)
   const [coverDataUrl, setCoverDataUrl] = useState<string | null>(null);
   const [coverRemoved, setCoverRemoved] = useState(false);
@@ -749,6 +741,7 @@ export default function ProductionCostingPage() {
   const closeMaterialDialog = () => {
     setMaterialDialogOpen(false);
     setMaterialAssignRecipeIndex(null);
+    setEditingMaterial(null);
   };
 
   const openCreateMaterial = (options?: { recipeIndex?: number }) => {
@@ -756,26 +749,12 @@ export default function ProductionCostingPage() {
       options?.recipeIndex != null && options.recipeIndex >= 0 ? options.recipeIndex : null,
     );
     setEditingMaterial(null);
-    setMaterialName("");
-    setMaterialUnit("kg");
-    setLotQty("");
-    setLotPrice("");
-    setInvoiceLink(emptyInvoiceLinkState());
-    setLayerDataUrl(null);
-    setLayerRemoved(false);
     setMaterialDialogOpen(true);
   };
 
   const openEditMaterial = (material: RawMaterial) => {
     setMaterialAssignRecipeIndex(null);
     setEditingMaterial(material);
-    setMaterialName(material.name);
-    setMaterialUnit(parseRawMaterialUnit(material.unit_type));
-    setLotQty("");
-    setLotPrice("");
-    setInvoiceLink(emptyInvoiceLinkState());
-    setLayerDataUrl(null);
-    setLayerRemoved(false);
     setMaterialDialogOpen(true);
   };
 
@@ -801,22 +780,11 @@ export default function ProductionCostingPage() {
     focusRecipeNameIndexRef.current = recipeIndex;
   };
 
-  const pickLayerFile = (file: File | undefined | null) => {
-    if (!file) return;
-    if (file.type !== "image/png" && file.type !== "image/webp") {
-      toast.error("عکس لایه باید PNG یا WebP با پس‌زمینهٔ شفاف باشد");
-      return;
+  const handleMaterialSaved = (material: RawMaterial | null, created: boolean) => {
+    if (created && material && materialAssignRecipeIndex != null) {
+      applyCreatedMaterialToRecipe(material, materialAssignRecipeIndex);
     }
-    if (file.size > LAYER_IMAGE_MAX_BYTES) {
-      toast.error("حجم عکس لایه نباید بیشتر از ۳ مگابایت باشد");
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      setLayerDataUrl(typeof reader.result === "string" ? reader.result : null);
-      setLayerRemoved(false);
-    };
-    reader.readAsDataURL(file);
+    void loadAll();
   };
 
   const pickCoverFile = (file: File | undefined | null) => {
@@ -835,30 +803,6 @@ export default function ProductionCostingPage() {
       setCoverRemoved(false);
     };
     reader.readAsDataURL(file);
-  };
-
-  /** بعد از ذخیرهٔ ماده: آپلود یا حذف عکس لایه. false یعنی خطا (پیام داده شده). */
-  const syncLayerImage = async (materialId: number, token: string): Promise<boolean> => {
-    if (layerDataUrl) {
-      const res = await FetchWithJwtClient(
-        "POST",
-        `/api/raw-materials/${materialId}/layer-image`,
-        token,
-        {},
-        { body: JSON.stringify({ image_base64: layerDataUrl }) },
-      );
-      if (res?.hasError) {
-        toast.error(getApiErrorMessage(res, "ماده ذخیره شد ولی عکس لایه آپلود نشد"));
-        return false;
-      }
-    } else if (layerRemoved && editingMaterial?.layer_image_url) {
-      const res = await FetchWithJwtClient("DELETE", `/api/raw-materials/${materialId}/layer-image`, token, {});
-      if (res?.hasError) {
-        toast.error(getApiErrorMessage(res, "حذف عکس لایه ناموفق بود"));
-        return false;
-      }
-    }
-    return true;
   };
 
   /** بعد از ذخیرهٔ کالا: آپلود یا حذف عکس کلی. */
@@ -883,118 +827,6 @@ export default function ProductionCostingPage() {
       }
     }
     return true;
-  };
-
-  const saveMaterial = async () => {
-    const name = materialName.trim();
-    if (!name) {
-      toast.error("نام ماده اولیه را وارد کنید");
-      return;
-    }
-    const token = tokenCode();
-    if (!token) return;
-    setSaving(true);
-    try {
-      if (editingMaterial) {
-        const res = await FetchWithJwtClient(
-          "PUT",
-          `/api/raw-materials/${editingMaterial.id}`,
-          token,
-          {},
-          { body: JSON.stringify({ name, unit_type: materialUnit }) },
-        );
-        if (res?.hasError) {
-          toast.error(getApiErrorMessage(res, "ویرایش ماده اولیه ناموفق بود"));
-          return;
-        }
-        await syncLayerImage(editingMaterial.id, token);
-        toast.success("ماده اولیه به‌روز شد");
-      } else {
-        const qty = parseAmount(lotQty);
-        const price = parseAmount(lotPrice);
-        const isPiece = materialUnit === "piece";
-        if (invoiceLink.createInvoice && (qty <= 0 || price <= 0)) {
-          toast.error(`برای ایجاد فاکتور، مقدار و ${materialPriceLabelFromCode(materialUnit)} را وارد کنید`);
-          return;
-        }
-        if (isPiece && qty > 0 && !Number.isInteger(qty)) {
-          toast.error("تعداد باید عدد صحیح باشد");
-          return;
-        }
-        const invoiceError = validateInvoiceLink(invoiceLink, qty * price);
-        if (invoiceError) {
-          toast.error(invoiceError);
-          return;
-        }
-
-        let createdMaterial: RawMaterial | null = null;
-        if (invoiceLink.createInvoice) {
-          const res = await FetchWithJwtClient(
-            "POST",
-            "/api/raw-materials",
-            token,
-            {},
-            {
-              body: JSON.stringify({
-                name,
-                unit_type: materialUnit,
-                quantity_kg: qty,
-                price_per_kg: price,
-                ...buildInvoiceLinkPayload(invoiceLink, qty * price),
-              }),
-            },
-          );
-          if (res?.hasError) {
-            toast.error(getApiErrorMessage(res, "ثبت ماده اولیه ناموفق بود"));
-            return;
-          }
-          createdMaterial = asRawMaterial(res);
-          if (createdMaterial) await syncLayerImage(createdMaterial.id, token);
-        } else {
-          const res = await FetchWithJwtClient(
-            "POST",
-            "/api/raw-materials",
-            token,
-            {},
-            { body: JSON.stringify({ name, unit_type: materialUnit }) },
-          );
-          if (res?.hasError) {
-            toast.error(getApiErrorMessage(res, "ثبت ماده اولیه ناموفق بود"));
-            return;
-          }
-          createdMaterial = asRawMaterial(res);
-          if (createdMaterial) await syncLayerImage(createdMaterial.id, token);
-          if (createdMaterial && qty > 0 && price > 0) {
-            const lotRes = await FetchWithJwtClient(
-              "POST",
-              `/api/raw-materials/${createdMaterial.id}/lots`,
-              token,
-              {},
-              { body: JSON.stringify({ quantity_kg: qty, price_per_kg: price }) },
-            );
-            if (lotRes?.hasError) {
-              toast.error(getApiErrorMessage(lotRes, "ماده ثبت شد ولی خرید انبار ذخیره نشد"));
-              if (createdMaterial && materialAssignRecipeIndex != null) {
-                applyCreatedMaterialToRecipe(createdMaterial, materialAssignRecipeIndex);
-              }
-              await loadAll();
-              closeMaterialDialog();
-              return;
-            }
-          }
-        }
-        if (createdMaterial && materialAssignRecipeIndex != null) {
-          applyCreatedMaterialToRecipe(createdMaterial, materialAssignRecipeIndex);
-          toast.success("ماده اولیه ثبت و در فرمول انتخاب شد");
-        } else {
-          toast.success("ماده اولیه ثبت شد");
-        }
-      }
-      closeMaterialDialog();
-      await loadAll();
-    } finally {
-      setSaving(false);
-    }
   };
 
   const saveLot = async () => {
@@ -2371,175 +2203,13 @@ export default function ProductionCostingPage() {
         </Box>
       )}
 
-      <Dialog
+      <RawMaterialFormDialog
         open={materialDialogOpen}
-        onClose={() => !saving && closeMaterialDialog()}
-        fullWidth
-        maxWidth="sm"
-        sx={{ zIndex: (theme) => theme.zIndex.modal + 2 }}
-      >
-        <DialogTitle sx={{ fontSize: 15, fontWeight: 700, py: 1, direction: "rtl" }}>
-          {editingMaterial
-            ? "ویرایش ماده اولیه"
-            : materialAssignRecipeIndex != null
-              ? "ثبت ماده اولیه برای فرمول"
-              : "ماده اولیه جدید"}
-        </DialogTitle>
-        <DialogContent sx={dialogGridSx}>
-          <TextField
-            autoFocus
-            size="small"
-            label="نام"
-            value={materialName}
-            onChange={(e) => {
-              const name = e.target.value;
-              setMaterialName(name);
-              if (!editingMaterial) {
-                setInvoiceLink((prev) => ({
-                  ...prev,
-                  invoiceTitle: purchaseInvoiceTitle(name),
-                }));
-              }
-            }}
-            sx={fieldSx}
-          />
-          <TextField
-            select
-            size="small"
-            label="واحد"
-            value={materialUnit}
-            onChange={(e) => {
-              const unit = parseRawMaterialUnit(e.target.value);
-              setMaterialUnit(unit);
-              if (unit === "piece") setLotQty((prev) => String(Math.trunc(parseAmount(prev)) || ""));
-            }}
-            sx={fieldSx}
-          >
-            <MenuItem value="kg">کیلویی</MenuItem>
-            <MenuItem value="liter">لیتری</MenuItem>
-            <MenuItem value="piece">تعدادی (عدد)</MenuItem>
-          </TextField>
-          {editingMaterial ? (
-            <Typography sx={{ gridColumn: "1 / -1", fontSize: 11, color: "var(--admin-text-muted)", textAlign: "right", lineHeight: 1.7 }}>
-              اگر موجودی هنوز مصرف نشده باشد، واحد عوض می‌شود و همان مقدار با واحد جدید خوانده می‌شود.
-              اگر بخشی مصرف شده یا در فرمول کالا استفاده شده، تغییر واحد ممکن نیست.
-            </Typography>
-          ) : null}
-          {!editingMaterial && (
-            <>
-              <TextField
-                size="small"
-                label={materialQtyFieldLabelFromCode(materialUnit)}
-                value={lotQty}
-                onChange={(e) => setLotQty(e.target.value)}
-                inputMode={materialUnit === "piece" ? "numeric" : "decimal"}
-                sx={fieldSx}
-              />
-              <TextField
-                size="small"
-                label={materialPriceLabelFromCode(materialUnit)}
-                value={lotPrice}
-                onChange={(e) => setLotPrice(formatAmountInput(e.target.value))}
-                inputMode="numeric"
-                sx={fieldSx}
-              />
-              <Typography sx={{ gridColumn: "1 / -1", fontSize: 11, color: "var(--admin-text-muted)", textAlign: "right" }}>
-                خرید اول انبار اختیاری است.
-              </Typography>
-              <Box sx={{ gridColumn: "1 / -1" }}>
-                <InvoiceLinkFields
-                  value={invoiceLink}
-                  onChange={setInvoiceLink}
-                  lotTotal={parseAmount(lotQty) * parseAmount(lotPrice)}
-                />
-              </Box>
-            </>
-          )}
-          {(() => {
-            const existing = layerRemoved ? null : layerImageSrc(editingMaterial?.layer_image_url);
-            const shown = layerDataUrl || existing;
-            return (
-              <Box
-                sx={{
-                  gridColumn: "1 / -1",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1.5,
-                  p: 1,
-                  borderRadius: "12px",
-                  border: "1px dashed var(--admin-border)",
-                }}
-              >
-                <Box
-                  sx={{
-                    width: 84,
-                    height: 64,
-                    flexShrink: 0,
-                    borderRadius: "10px",
-                    display: "grid",
-                    placeItems: "center",
-                    overflow: "hidden",
-                    ...checkerSx,
-                  }}
-                >
-                  {shown ? (
-                    <Box component="img" src={shown} alt="" sx={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
-                  ) : (
-                    <Typography sx={{ fontSize: 10, color: "#888" }}>بدون عکس</Typography>
-                  )}
-                </Box>
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography sx={{ fontSize: 12, fontWeight: 700, color: "var(--admin-text)" }}>
-                    عکس لایه برای منوی سه‌بعدی
-                  </Typography>
-                  <Typography sx={{ fontSize: 10.5, color: "var(--admin-text-muted)", lineHeight: 1.7 }}>
-                    PNG یا WebP با پس‌زمینهٔ شفاف. برای ساندویچ نمای کنار؛ برای پیتزا نمای بالا. حداکثر ۳ مگابایت.
-                  </Typography>
-                  <Box sx={{ display: "flex", gap: 0.8, mt: 0.6, flexWrap: "wrap" }}>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      component="label"
-                      startIcon={<CloudUploadIcon />}
-                      sx={{ fontSize: 11 }}
-                    >
-                      {shown ? "تغییر عکس" : "انتخاب عکس"}
-                      <input
-                        hidden
-                        type="file"
-                        accept="image/png,image/webp"
-                        onChange={(e) => {
-                          pickLayerFile(e.target.files?.[0]);
-                          e.target.value = "";
-                        }}
-                      />
-                    </Button>
-                    {shown ? (
-                      <Button
-                        size="small"
-                        color="error"
-                        onClick={() => {
-                          setLayerDataUrl(null);
-                          setLayerRemoved(true);
-                        }}
-                        sx={{ fontSize: 11 }}
-                      >
-                        حذف عکس
-                      </Button>
-                    ) : null}
-                  </Box>
-                </Box>
-              </Box>
-            );
-          })()}
-        </DialogContent>
-        <DialogActions sx={{ px: 1.5, py: 1 }}>
-          <Button size="small" disabled={saving} onClick={closeMaterialDialog}>انصراف</Button>
-          <Button disabled={saving} onClick={() => void saveMaterial()} variant="contained" size="small" sx={{ backgroundColor: "var(--admin-accent)" }}>
-            {materialAssignRecipeIndex != null && !editingMaterial ? "ثبت و انتخاب" : "ذخیره"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        editingMaterial={editingMaterial}
+        assignToRecipe={materialAssignRecipeIndex != null}
+        onClose={closeMaterialDialog}
+        onSaved={handleMaterialSaved}
+      />
 
       <Dialog open={!!lotDialogMaterial} onClose={() => setLotDialogMaterial(null)} fullWidth maxWidth="sm">
         <DialogTitle sx={{ fontSize: 15, fontWeight: 700, py: 1, direction: "rtl" }}>

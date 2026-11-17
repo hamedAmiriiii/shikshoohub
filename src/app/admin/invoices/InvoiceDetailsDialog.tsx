@@ -327,6 +327,8 @@ function extractInvoice(res: any, fallback: InvoiceRecord): InvoiceRecord {
 
 function draftsFromInvoice(invoice: InvoiceRecord): DraftItem[] {
   const items = Array.isArray(invoice.items) ? invoice.items : [];
+  const stockKind = resolveStockKind(invoice, null);
+  const defaultUnit: QtyUnit = stockKind === "raw" ? "kg" : "piece";
   return items.map((item) => {
     const unitPrice = toNumber(item.unit_price);
     const quantity = toNumber(item.quantity);
@@ -351,7 +353,7 @@ function draftsFromInvoice(invoice: InvoiceRecord): DraftItem[] {
       vatMode,
       vatInput,
       discount: toNumber(item.discount_amount) > 0 ? formatAmountNumber(toNumber(item.discount_amount)) : "",
-      unitType: asQtyUnit(item.unit_type, "piece"),
+      unitType: asQtyUnit(item.unit_type, defaultUnit),
     };
   });
 }
