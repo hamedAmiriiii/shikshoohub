@@ -74,6 +74,7 @@ const getPageTitle = (pathname: string | null): string | undefined => {
     '/admin/low-stock': 'کالاهای رو به اتمام',
     '/admin/invoices': 'فاکتورها',
     '/admin/consumables': 'انبار مواد مصرفی',
+    '/admin/warehouse-stocktake': 'انبارداری',
     '/admin/manufacturers': 'تولیدکنندگان',
     '/admin/manufacturers/report': 'گزارش فروش تولیدکنندگان',
     '/admin/shop-sms-logs': 'پیامک‌های فروشگاه',

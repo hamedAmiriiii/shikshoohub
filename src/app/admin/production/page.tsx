@@ -355,6 +355,8 @@ export default function ProductionCostingPage() {
   const [productionsLoadingId, setProductionsLoadingId] = useState<number | null>(null);
 
   const [materialDialogOpen, setMaterialDialogOpen] = useState(false);
+  /** وقتی از مدال کالای تولیدی باز شود، مادهٔ جدید روی همین ایندکس فرمول ست می‌شود */
+  const [materialAssignRecipeIndex, setMaterialAssignRecipeIndex] = useState<number | null>(null);
   const [bulkInvoiceOpen, setBulkInvoiceOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<RawMaterial | null>(null);
   const [materialName, setMaterialName] = useState("");
@@ -744,7 +746,15 @@ export default function ProductionCostingPage() {
     };
   }, [produceGood, produceKg]);
 
-  const openCreateMaterial = () => {
+  const closeMaterialDialog = () => {
+    setMaterialDialogOpen(false);
+    setMaterialAssignRecipeIndex(null);
+  };
+
+  const openCreateMaterial = (options?: { recipeIndex?: number }) => {
+    setMaterialAssignRecipeIndex(
+      options?.recipeIndex != null && options.recipeIndex >= 0 ? options.recipeIndex : null,
+    );
     setEditingMaterial(null);
     setMaterialName("");
     setMaterialUnit("kg");
@@ -757,6 +767,7 @@ export default function ProductionCostingPage() {
   };
 
   const openEditMaterial = (material: RawMaterial) => {
+    setMaterialAssignRecipeIndex(null);
     setEditingMaterial(material);
     setMaterialName(material.name);
     setMaterialUnit(parseRawMaterialUnit(material.unit_type));
@@ -766,6 +777,28 @@ export default function ProductionCostingPage() {
     setLayerDataUrl(null);
     setLayerRemoved(false);
     setMaterialDialogOpen(true);
+  };
+
+  const applyCreatedMaterialToRecipe = (created: RawMaterial, recipeIndex: number) => {
+    setMaterials((prev) => {
+      if (prev.some((row) => row.id === created.id)) {
+        return prev.map((row) => (row.id === created.id ? { ...row, ...created } : row));
+      }
+      return [created, ...prev];
+    });
+    setRecipeLines((prev) => {
+      const next = [...prev];
+      while (next.length <= recipeIndex) next.push(emptyLine());
+      next[recipeIndex] = {
+        ...next[recipeIndex],
+        kind: "raw_material",
+        raw_material_id: created.id,
+        ingredient_produced_good_id: "",
+        consumable_material_id: "",
+      };
+      return next;
+    });
+    focusRecipeNameIndexRef.current = recipeIndex;
   };
 
   const pickLayerFile = (file: File | undefined | null) => {
@@ -894,6 +927,7 @@ export default function ProductionCostingPage() {
           return;
         }
 
+        let createdMaterial: RawMaterial | null = null;
         if (invoiceLink.createInvoice) {
           const res = await FetchWithJwtClient(
             "POST",
@@ -914,8 +948,8 @@ export default function ProductionCostingPage() {
             toast.error(getApiErrorMessage(res, "ثبت ماده اولیه ناموفق بود"));
             return;
           }
-          const createdWithInvoice = asRawMaterial(res);
-          if (createdWithInvoice) await syncLayerImage(createdWithInvoice.id, token);
+          createdMaterial = asRawMaterial(res);
+          if (createdMaterial) await syncLayerImage(createdMaterial.id, token);
         } else {
           const res = await FetchWithJwtClient(
             "POST",
@@ -928,27 +962,35 @@ export default function ProductionCostingPage() {
             toast.error(getApiErrorMessage(res, "ثبت ماده اولیه ناموفق بود"));
             return;
           }
-          const created = asRawMaterial(res);
-          if (created) await syncLayerImage(created.id, token);
-          if (created && qty > 0 && price > 0) {
+          createdMaterial = asRawMaterial(res);
+          if (createdMaterial) await syncLayerImage(createdMaterial.id, token);
+          if (createdMaterial && qty > 0 && price > 0) {
             const lotRes = await FetchWithJwtClient(
               "POST",
-              `/api/raw-materials/${created.id}/lots`,
+              `/api/raw-materials/${createdMaterial.id}/lots`,
               token,
               {},
               { body: JSON.stringify({ quantity_kg: qty, price_per_kg: price }) },
             );
             if (lotRes?.hasError) {
               toast.error(getApiErrorMessage(lotRes, "ماده ثبت شد ولی خرید انبار ذخیره نشد"));
+              if (createdMaterial && materialAssignRecipeIndex != null) {
+                applyCreatedMaterialToRecipe(createdMaterial, materialAssignRecipeIndex);
+              }
               await loadAll();
-              setMaterialDialogOpen(false);
+              closeMaterialDialog();
               return;
             }
           }
         }
-        toast.success("ماده اولیه ثبت شد");
+        if (createdMaterial && materialAssignRecipeIndex != null) {
+          applyCreatedMaterialToRecipe(createdMaterial, materialAssignRecipeIndex);
+          toast.success("ماده اولیه ثبت و در فرمول انتخاب شد");
+        } else {
+          toast.success("ماده اولیه ثبت شد");
+        }
       }
-      setMaterialDialogOpen(false);
+      closeMaterialDialog();
       await loadAll();
     } finally {
       setSaving(false);
@@ -1177,11 +1219,6 @@ export default function ProductionCostingPage() {
   }, [recipeLines.length]);
 
   const openCreateGood = () => {
-    if (!materials.length && !consumables.length && !goods.length) {
-      toast.error("اول یک ماده اولیه یا کالای انبار مصرفی ثبت کنید");
-      setTab("materials");
-      return;
-    }
     setEditingGood(null);
     setGoodName("");
     setGoodUnit("kg");
@@ -2334,9 +2371,19 @@ export default function ProductionCostingPage() {
         </Box>
       )}
 
-      <Dialog open={materialDialogOpen} onClose={() => setMaterialDialogOpen(false)} fullWidth maxWidth="sm">
+      <Dialog
+        open={materialDialogOpen}
+        onClose={() => !saving && closeMaterialDialog()}
+        fullWidth
+        maxWidth="sm"
+        sx={{ zIndex: (theme) => theme.zIndex.modal + 2 }}
+      >
         <DialogTitle sx={{ fontSize: 15, fontWeight: 700, py: 1, direction: "rtl" }}>
-          {editingMaterial ? "ویرایش ماده اولیه" : "ماده اولیه جدید"}
+          {editingMaterial
+            ? "ویرایش ماده اولیه"
+            : materialAssignRecipeIndex != null
+              ? "ثبت ماده اولیه برای فرمول"
+              : "ماده اولیه جدید"}
         </DialogTitle>
         <DialogContent sx={dialogGridSx}>
           <TextField
@@ -2487,9 +2534,9 @@ export default function ProductionCostingPage() {
           })()}
         </DialogContent>
         <DialogActions sx={{ px: 1.5, py: 1 }}>
-          <Button size="small" onClick={() => setMaterialDialogOpen(false)}>انصراف</Button>
+          <Button size="small" disabled={saving} onClick={closeMaterialDialog}>انصراف</Button>
           <Button disabled={saving} onClick={() => void saveMaterial()} variant="contained" size="small" sx={{ backgroundColor: "var(--admin-accent)" }}>
-            ذخیره
+            {materialAssignRecipeIndex != null && !editingMaterial ? "ثبت و انتخاب" : "ذخیره"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -2706,6 +2753,31 @@ export default function ProductionCostingPage() {
                 : `برای ۱ ${materialUnitFromCode(goodUnit)} · گرم / عدد`}
             </Typography>
           </Box>
+
+          {!materials.length && canMaterials ? (
+            <Box
+              sx={{
+                p: 1.25,
+                borderRadius: "12px",
+                border: "1px dashed var(--admin-border)",
+                bgcolor: "var(--admin-surface-alt)",
+                display: "grid",
+                gap: 0.75,
+              }}
+            >
+              <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)" }}>
+                هنوز ماده اولیه‌ای ثبت نشده. از همین‌جا می‌توانید ماده جدید بسازید و مستقیم در فرمول انتخاب شود.
+              </Typography>
+              <Button
+                size="small"
+                startIcon={<AddIcon />}
+                onClick={() => openCreateMaterial({ recipeIndex: 0 })}
+                sx={{ ...adminButtonStartIconSx, justifySelf: "start", color: "var(--admin-accent)" }}
+              >
+                ثبت ماده اولیه جدید
+              </Button>
+            </Box>
+          ) : null}
          
           {recipeLines.map((line, index) => {
             const consumable = isConsumableRecipeLine(line);
@@ -2809,7 +2881,25 @@ export default function ProductionCostingPage() {
                       String(opt.id).includes(q)
                   );
                 }}
-                noOptionsText="موردی پیدا نشد"
+                noOptionsText={
+                  canMaterials ? (
+                    <Box sx={{ py: 0.5, textAlign: "center" }}>
+                      <Typography sx={{ fontSize: 12, color: "var(--admin-text-muted)", mb: 0.5 }}>
+                        موردی پیدا نشد
+                      </Typography>
+                      <Button
+                        size="small"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => openCreateMaterial({ recipeIndex: index })}
+                        sx={{ color: "var(--admin-accent)", fontSize: 12 }}
+                      >
+                        + ثبت ماده اولیه جدید
+                      </Button>
+                    </Box>
+                  ) : (
+                    "موردی پیدا نشد"
+                  )
+                }
                 slotProps={{
                   popper: { sx: { zIndex: 1700, direction: "rtl" } },
                   listbox: { sx: { maxHeight: 280 } },
@@ -2906,6 +2996,22 @@ export default function ProductionCostingPage() {
               >
                 <DeleteOutlineIcon sx={{ fontSize: 18 }} />
               </IconButton>
+              {canMaterials ? (
+                <Button
+                  size="small"
+                  onClick={() => openCreateMaterial({ recipeIndex: index })}
+                  sx={{
+                    gridColumn: "1 / -1",
+                    justifySelf: "start",
+                    color: "var(--admin-accent)",
+                    fontSize: 11.5,
+                    px: 0,
+                    minHeight: 28,
+                  }}
+                >
+                  + ثبت ماده اولیه جدید
+                </Button>
+              ) : null}
               {!nested && !consumable && (
               <Box sx={{ gridColumn: "1 / -1", display: "flex", gap: 1.5, flexWrap: "wrap" }}>
                 <FormControlLabel

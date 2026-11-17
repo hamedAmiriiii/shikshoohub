@@ -453,6 +453,13 @@ export default function AdminHamburgerSidebar({
         icon: <Inventory2Icon />,
         permission: "products",
       },
+      {
+        id: "warehouse-stocktake",
+        label: "انبارداری",
+        href: "/admin/warehouse-stocktake",
+        icon: <FactCheckIcon />,
+        permission: "products",
+      },
       { id: "categories", label: "دسته‌بندی", href: "/admin/categories", icon: <CategoryIcon />, permission: "categories" },
       {
         id: "bulk-discount",
