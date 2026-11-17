@@ -9,6 +9,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import InstallmentCard from "./installmentCard";
 import BottomSheetModal from "@/app/coponent/BottomSheetModal";
 import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
+import { formatAmountInput, formatAmountNumber, parseAmountInput } from "@/app/lib/amountInput";
 
 export default function InstallmentsPage() {
     const [filterMode, setFilterMode] = useState<'all' | 'unpaid' | 'paid'>('unpaid');
@@ -16,6 +17,7 @@ export default function InstallmentsPage() {
     const [payInstallmentDialogOpen, setPayInstallmentDialogOpen] = useState(false);
     const [selectedInstallment, setSelectedInstallment] = useState<any>(null);
     const [installmentNotes, setInstallmentNotes] = useState("");
+    const [installmentPayAmount, setInstallmentPayAmount] = useState("");
     const [payingInstallment, setPayingInstallment] = useState(false);
     
     let searchBoxList: any = [
@@ -66,6 +68,7 @@ export default function InstallmentsPage() {
     const handleOpenPayInstallmentDialog = (installment: any) => {
         setSelectedInstallment(installment);
         setInstallmentNotes("");
+        setInstallmentPayAmount(formatAmountNumber(Number(installment?.amount) || 0));
         setPayInstallmentDialogOpen(true);
     };
 
@@ -73,10 +76,16 @@ export default function InstallmentsPage() {
         setPayInstallmentDialogOpen(false);
         setSelectedInstallment(null);
         setInstallmentNotes("");
+        setInstallmentPayAmount("");
     };
 
     const handlePayInstallment = async () => {
         if (!selectedInstallment || !selectedInstallment.purchase_id) return;
+        const amount = parseAmountInput(installmentPayAmount);
+        if (amount < 1) {
+            alert("مبلغ پرداخت را وارد کنید");
+            return;
+        }
         
         setPayingInstallment(true);
         try {
@@ -84,6 +93,7 @@ export default function InstallmentsPage() {
                 "POST",
                 `/api/purchased-products/${selectedInstallment.purchase_id}/installments/${selectedInstallment.id}/pay`,
                 {
+                    amount,
                     notes: installmentNotes || null
                 }
             );
@@ -93,7 +103,7 @@ export default function InstallmentsPage() {
                 // Refresh the list - force reload by changing key
                 window.location.reload();
             } else {
-                alert("خطا در پرداخت قسط");
+                alert(response?.message || "خطا در پرداخت قسط");
             }
         } catch (error) {
             console.error("Error paying installment:", error);
@@ -290,7 +300,7 @@ export default function InstallmentsPage() {
                     </DialogTitle>
                     <DialogContent>
                         <DialogContentText sx={{ color: "#ccc", textAlign: "center", marginBottom: "16px" }}>
-                            آیا از پرداخت این قسط مطمئن هستید؟
+                            مبلغ پرداخت را وارد کنید. اگر بیشتر از قسط باشد، مازاد از قسط بعدی کسر می‌شود.
                         </DialogContentText>
                         {selectedInstallment && (
                             <Box sx={{ 
@@ -303,7 +313,7 @@ export default function InstallmentsPage() {
                                     قسط شماره: {selectedInstallment.installment_number}
                                 </Typography>
                                 <Typography sx={{ color: "var(--admin-text)", fontSize: "14px", marginBottom: "8px" }}>
-                                    مبلغ: {formatNumber(selectedInstallment.amount)} تومان
+                                    مبلغ قسط: {formatNumber(selectedInstallment.amount)} تومان
                                 </Typography>
                                 {selectedInstallment.due_date_jalali && (
                                     <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "13px" }}>
@@ -312,6 +322,33 @@ export default function InstallmentsPage() {
                                 )}
                             </Box>
                         )}
+                        <TextField
+                            fullWidth
+                            value={installmentPayAmount}
+                            onChange={(e) => setInstallmentPayAmount(formatAmountInput(e.target.value))}
+                            placeholder="مبلغ پرداخت (تومان)"
+                            inputProps={{ inputMode: "numeric" }}
+                            sx={{
+                                marginBottom: "12px",
+                                "& .MuiOutlinedInput-root": {
+                                    backgroundColor: "var(--admin-surface-alt)",
+                                    color: "var(--admin-text)",
+                                    "& fieldset": {
+                                        borderColor: "var(--admin-border)",
+                                    },
+                                    "&:hover fieldset": {
+                                        borderColor: "var(--admin-accent)",
+                                    },
+                                    "&.Mui-focused fieldset": {
+                                        borderColor: "var(--admin-accent)",
+                                    },
+                                },
+                                "& .MuiInputBase-input": {
+                                    color: "var(--admin-text)",
+                                    fontSize: "14px",
+                                },
+                            }}
+                        />
                         <TextField
                             fullWidth
                             multiline

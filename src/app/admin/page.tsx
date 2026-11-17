@@ -4129,7 +4129,7 @@ export default function ShoppingPage() {
                     <PosSegmentButtons
                       value={paymentType}
                       onChange={handlePaymentTypeChange}
-                      inlineLabel="نوع پرداخت"
+                      inlineLabel="نوع خرید"
                       options={[
                         { value: "cash", label: "نقدی" },
                         { value: "debt", label: "نسیه", show: debtPaymentEnabled },
@@ -4581,7 +4581,7 @@ export default function ShoppingPage() {
                           fontSize: { xs: "12px", md: "14px" },
                           marginBottom: { xs: "4px", md: "6px" }
                         }}>
-                          نوع پرداخت: اقساطی ({installmentCount} قسط)
+                          نوع خرید: اقساطی ({installmentCount} قسط)
                         </Typography>
                         {/* نمایش پیش پرداخت اگر اولین آیتم payment_type: "cash" باشد */}
                         {installmentCalculation && 

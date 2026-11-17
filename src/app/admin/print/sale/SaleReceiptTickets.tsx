@@ -9,6 +9,7 @@ import {
   formatReceiptDate,
   formatReceiptDateOnly,
   formatReceiptNumber,
+  formatReceiptRial,
   formatReceiptTimeOnly,
   getEnabledReceiptPrintStations,
   getStationCopyCount,
@@ -103,11 +104,11 @@ function CountAndInvoiceTotal({ receipt, fontSize }: { receipt: SaleReceiptData;
           جمع اقلام: {formatReceiptNumber(safeReceiptItems(receipt).length)}
         </Typography>
         <Typography sx={{ fontSize, flexShrink: 0 }}>
-          جمع فاکتور: {formatReceiptNumber(receipt.subtotal)}
+          جمع فاکتور: {formatReceiptRial(receipt.subtotal)}
         </Typography>
       </Box>
       {receipt.discount > 0 ? (
-        <Typography sx={{ fontSize, mt: 0.25 }}>تخفیف: {formatReceiptNumber(receipt.discount)}</Typography>
+        <Typography sx={{ fontSize, mt: 0.25 }}>تخفیف: {formatReceiptRial(receipt.discount)}</Typography>
       ) : null}
     </Box>
   );
@@ -151,11 +152,11 @@ function TotalsBlock({
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: settings.compactItems ? 0.1 : 0.25 }}>
       <CountAndInvoiceTotal receipt={receipt} fontSize={`${settings.fontSize}px`} />
-      {receipt.creditUsed > 0 && <Row label="اعتبار" value={formatReceiptNumber(receipt.creditUsed)} />}
-      {receipt.backPrice > 0 && <Row label="برگشتی" value={formatReceiptNumber(receipt.backPrice)} />}
-      <Row label="مبلغ نهایی" value={`${formatReceiptNumber(receipt.finalTotal)} تومان`} bold />
+      {receipt.creditUsed > 0 && <Row label="اعتبار" value={formatReceiptRial(receipt.creditUsed)} />}
+      {receipt.backPrice > 0 && <Row label="برگشتی" value={formatReceiptRial(receipt.backPrice)} />}
+      <Row label="مبلغ نهایی" value={`${formatReceiptRial(receipt.finalTotal)} ریال`} bold />
       {receipt.payableNow > 0 && receipt.payableNow !== receipt.finalTotal && (
-        <Row label="قابل پرداخت" value={`${formatReceiptNumber(receipt.payableNow)} تومان`} />
+        <Row label="قابل پرداخت" value={`${formatReceiptRial(receipt.payableNow)} ریال`} />
       )}
     </Box>
   );
@@ -187,19 +188,19 @@ function PaymentBlock({
         <>
           {!!receipt.cardAmount && (
             <Typography sx={{ fontSize: `${settings.fontSize - 1}px` }}>
-              کارت: {formatReceiptNumber(receipt.cardAmount)} تومان
+              کارت: {formatReceiptRial(receipt.cardAmount)} ریال
             </Typography>
           )}
           {!!receipt.cashAmount && (
             <Typography sx={{ fontSize: `${settings.fontSize - 1}px` }}>
-              نقد: {formatReceiptNumber(receipt.cashAmount)} تومان
+              نقد: {formatReceiptRial(receipt.cashAmount)} ریال
             </Typography>
           )}
         </>
       )}
       {receipt.paymentType === "installment" && receipt.installmentAmount != null && (
         <Typography sx={{ fontSize: `${settings.fontSize - 1}px` }}>
-          مبلغ هر قسط: {formatReceiptNumber(Math.floor(receipt.installmentAmount))} تومان
+          مبلغ هر قسط: {formatReceiptRial(Math.floor(receipt.installmentAmount))} ریال
         </Typography>
       )}
     </>
@@ -276,7 +277,7 @@ function ClassicHallTicket({
           <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1 }}>
             {settings.showItemUnitPrice ? (
               <Typography sx={{ fontSize: `${settings.fontSize - 1}px` }}>
-                {formatReceiptNumber(item.quantity)} × {formatReceiptNumber(item.unitPrice)}
+                {formatReceiptNumber(item.quantity)} × {formatReceiptRial(item.unitPrice)}
               </Typography>
             ) : (
               <Typography sx={{ fontSize: `${settings.fontSize - 1}px` }}>
@@ -284,7 +285,7 @@ function ClassicHallTicket({
               </Typography>
             )}
             <Typography sx={{ fontSize: `${settings.fontSize - 1}px`, fontWeight: 700 }}>
-              {formatReceiptNumber(item.lineTotal)}
+              {formatReceiptRial(item.lineTotal)}
             </Typography>
           </Box>
         </Box>
@@ -423,8 +424,8 @@ function RetailHallTicket({
                 ) : null}
               </td>
               <td>{formatReceiptNumber(item.quantity)}</td>
-              {settings.showItemUnitPrice ? <td>{formatReceiptNumber(item.unitPrice)}</td> : null}
-              <td>{formatReceiptNumber(item.lineTotal)}</td>
+              {settings.showItemUnitPrice ? <td>{formatReceiptRial(item.unitPrice)}</td> : null}
+              <td>{formatReceiptRial(item.lineTotal)}</td>
             </tr>
           ))}
         </tbody>
@@ -445,7 +446,7 @@ function RetailHallTicket({
       >
         <Typography sx={{ fontSize: `${fs}px`, color: "#111" }}>مبلغ پرداختی شما:</Typography>
         <Typography sx={{ fontWeight: 800, fontSize: `${settings.titleFontSize + 2}px` }}>
-          {formatReceiptNumber(receipt.payableNow || receipt.finalTotal)} ریال
+          {formatReceiptRial(receipt.payableNow || receipt.finalTotal)} ریال
         </Typography>
       </Box>
 
@@ -518,11 +519,11 @@ function MinimalHallTicket({
           <Box sx={{ display: "flex", justifyContent: "space-between" }}>
             <Typography sx={{ fontSize: `${settings.fontSize - 1}px`, color: "#444" }}>
               {settings.showItemUnitPrice
-                ? `${formatReceiptNumber(item.quantity)} × ${formatReceiptNumber(item.unitPrice)}`
+                ? `${formatReceiptNumber(item.quantity)} × ${formatReceiptRial(item.unitPrice)}`
                 : `× ${formatReceiptNumber(item.quantity)}`}
             </Typography>
             <Typography sx={{ fontSize: `${settings.fontSize - 1}px` }}>
-              {formatReceiptNumber(item.lineTotal)}
+              {formatReceiptRial(item.lineTotal)}
             </Typography>
           </Box>
         </Box>
@@ -614,10 +615,10 @@ function BoldHallTicket({
               <Box sx={{ display: "flex", justifyContent: "space-between" }}>
                 <Typography sx={{ fontSize: `${settings.fontSize - 1}px` }}>
                   {settings.showItemUnitPrice
-                    ? `${formatReceiptNumber(item.quantity)} × ${formatReceiptNumber(item.unitPrice)}`
+                    ? `${formatReceiptNumber(item.quantity)} × ${formatReceiptRial(item.unitPrice)}`
                     : `تعداد ${formatReceiptNumber(item.quantity)}`}
                 </Typography>
-                <Typography sx={{ fontWeight: 800 }}>{formatReceiptNumber(item.lineTotal)}</Typography>
+                <Typography sx={{ fontWeight: 800 }}>{formatReceiptRial(item.lineTotal)}</Typography>
               </Box>
             </Box>
           ))}
@@ -635,9 +636,9 @@ function BoldHallTicket({
         >
           <Typography sx={{ fontSize: `${settings.fontSize - 1}px` }}>قابل پرداخت</Typography>
           <Typography sx={{ fontWeight: 900, fontSize: `${settings.titleFontSize + 4}px` }}>
-            {formatReceiptNumber(receipt.payableNow || receipt.finalTotal)}
+            {formatReceiptRial(receipt.payableNow || receipt.finalTotal)}
           </Typography>
-          <Typography sx={{ fontSize: `${settings.fontSize - 1}px` }}>تومان</Typography>
+          <Typography sx={{ fontSize: `${settings.fontSize - 1}px` }}>ریال</Typography>
         </Box>
 
         <PaymentBlock receipt={receipt} settings={settings} />

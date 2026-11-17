@@ -641,7 +641,7 @@ export default function AdminMenuModeCartPanel({
         {showPaymentTypeSelector && (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
             <Typography sx={{ fontSize: fs(9), fontWeight: 700, color: "var(--admin-text)" }}>
-              نوع پرداخت
+              نوع خرید
             </Typography>
             <PosSegmentButtons
               dense

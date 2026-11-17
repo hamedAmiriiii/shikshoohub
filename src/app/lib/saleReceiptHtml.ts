@@ -4,6 +4,7 @@ import {
   formatReceiptDate,
   formatReceiptDateOnly,
   formatReceiptNumber,
+  formatReceiptRial,
   formatReceiptTimeOnly,
   diningModeLabel,
   getPaymentTypeLabel,
@@ -156,19 +157,19 @@ function rowHtml(label: string, valueHtml: string, bold = false): string {
 function countAndTotalHtml(receipt: SaleReceiptData): string {
   const discount =
     receipt.discount > 0
-      ? `<div class="block">تخفیف: ${ltr(formatReceiptNumber(receipt.discount))}</div>`
+      ? `<div class="block">تخفیف: ${ltr(formatReceiptRial(receipt.discount))}</div>`
       : "";
-  return `<table class="row"><tr><td style="text-align:right;width:50%">جمع اقلام: ${ltr(formatReceiptNumber(receiptItems(receipt).length))}</td><td style="text-align:left;width:50%">جمع فاکتور: ${ltr(formatReceiptNumber(receipt.subtotal))}</td></tr></table>${discount}`;
+  return `<table class="row"><tr><td style="text-align:right;width:50%">جمع اقلام: ${ltr(formatReceiptNumber(receiptItems(receipt).length))}</td><td style="text-align:left;width:50%">جمع فاکتور: ${ltr(formatReceiptRial(receipt.subtotal))}</td></tr></table>${discount}`;
 }
 
 function totalsHtml(receipt: SaleReceiptData): string {
   const extras: string[] = [];
   extras.push(countAndTotalHtml(receipt));
-  if (receipt.creditUsed > 0) extras.push(rowHtml("اعتبار", ltr(formatReceiptNumber(receipt.creditUsed))));
-  if (receipt.backPrice > 0) extras.push(rowHtml("برگشتی", ltr(formatReceiptNumber(receipt.backPrice))));
-  extras.push(rowHtml("مبلغ نهایی", `${ltr(formatReceiptNumber(receipt.finalTotal))} تومان`, true));
+  if (receipt.creditUsed > 0) extras.push(rowHtml("اعتبار", ltr(formatReceiptRial(receipt.creditUsed))));
+  if (receipt.backPrice > 0) extras.push(rowHtml("برگشتی", ltr(formatReceiptRial(receipt.backPrice))));
+  extras.push(rowHtml("مبلغ نهایی", `${ltr(formatReceiptRial(receipt.finalTotal))} ریال`, true));
   if (receipt.payableNow > 0 && receipt.payableNow !== receipt.finalTotal) {
-    extras.push(rowHtml("قابل پرداخت", `${ltr(formatReceiptNumber(receipt.payableNow))} تومان`));
+    extras.push(rowHtml("قابل پرداخت", `${ltr(formatReceiptRial(receipt.payableNow))} ریال`));
   }
   return extras.join("");
 }
@@ -183,15 +184,15 @@ function paymentHtml(receipt: SaleReceiptData, settings: SaleReceiptPrintSetting
   }
   if (receipt.settlementMode === "split" || receipt.paymentType === "cheque") {
     if (receipt.cardAmount) {
-      pay.push(`<div class="block">کارت: ${ltr(formatReceiptNumber(receipt.cardAmount))} تومان</div>`);
+      pay.push(`<div class="block">کارت: ${ltr(formatReceiptRial(receipt.cardAmount))} ریال</div>`);
     }
     if (receipt.cashAmount) {
-      pay.push(`<div class="block">نقد: ${ltr(formatReceiptNumber(receipt.cashAmount))} تومان</div>`);
+      pay.push(`<div class="block">نقد: ${ltr(formatReceiptRial(receipt.cashAmount))} ریال</div>`);
     }
   }
   if (receipt.paymentType === "installment" && receipt.installmentAmount != null) {
     pay.push(
-      `<div class="block">مبلغ هر قسط: ${ltr(formatReceiptNumber(Math.floor(receipt.installmentAmount)))} تومان</div>`,
+      `<div class="block">مبلغ هر قسط: ${ltr(formatReceiptRial(Math.floor(receipt.installmentAmount)))} ریال</div>`,
     );
   }
   return pay.length ? `<hr/>${pay.join("")}` : "";
@@ -202,10 +203,10 @@ function classicHallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSe
   const items = receiptItems(receipt)
     .map((item) => {
       const qtyPrice = settings.showItemUnitPrice
-        ? `${ltr(formatReceiptNumber(item.quantity))} × ${ltr(formatReceiptNumber(item.unitPrice))}`
+        ? `${ltr(formatReceiptNumber(item.quantity))} × ${ltr(formatReceiptRial(item.unitPrice))}`
         : `تعداد: ${ltr(formatReceiptNumber(item.quantity))}`;
       const note = item.note ? `<div class="block">یادداشت: ${escapeHtml(item.note)}</div>` : "";
-      return `<div class="item"><div class="name">${escapeHtml(item.name)}</div>${note}<table class="row"><tr><td class="label">${qtyPrice}</td><td class="value bold">${ltr(formatReceiptNumber(item.lineTotal))}</td></tr></table></div>`;
+      return `<div class="item"><div class="name">${escapeHtml(item.name)}</div>${note}<table class="row"><tr><td class="label">${qtyPrice}</td><td class="value bold">${ltr(formatReceiptRial(item.lineTotal))}</td></tr></table></div>`;
     })
     .join("");
 
@@ -249,8 +250,8 @@ function retailHallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSet
       return `<tr>
         <td class="item-name" style="${cell};text-align:right;font-weight:800;width:${nameWidth}">${escapeHtml(item.name)}${note}</td>
         <td style="${cell};width:${qtyWidth}">${ltr(formatReceiptNumber(item.quantity))}</td>
-        ${unitCol ? `<td style="${cell};width:${moneyWidth}">${ltr(formatReceiptNumber(item.unitPrice))}</td>` : ""}
-        <td style="${cell};width:${moneyWidth}">${ltr(formatReceiptNumber(item.lineTotal))}</td>
+        ${unitCol ? `<td style="${cell};width:${moneyWidth}">${ltr(formatReceiptRial(item.unitPrice))}</td>` : ""}
+        <td style="${cell};width:${moneyWidth}">${ltr(formatReceiptRial(item.lineTotal))}</td>
       </tr>`;
     })
     .join("");
@@ -293,7 +294,7 @@ function retailHallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSet
     ${countAndTotalHtml(receipt)}
     <div style="border:1.5px solid #000;color:#000;background:#fff;text-align:center;padding:8px 4px;margin:8px 0">
       <div>مبلغ پرداختی شما:</div>
-      <div style="font-size:1.25em;font-weight:800">${ltr(formatReceiptNumber(receipt.payableNow || receipt.finalTotal))} ریال</div>
+      <div style="font-size:1.25em;font-weight:800">${ltr(formatReceiptRial(receipt.payableNow || receipt.finalTotal))} ریال</div>
     </div>
     ${settings.showPaymentMethod ? `<div class="muted">${escapeHtml(getPaymentTypeLabel(receipt))}</div>` : ""}
     ${settings.shopAddress ? `<div class="muted">آدرس ${escapeHtml(settings.shopAddress)}</div>` : ""}
@@ -307,9 +308,9 @@ function minimalHallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSe
   const items = receiptItems(receipt)
     .map((item) => {
       const qtyPrice = settings.showItemUnitPrice
-        ? `${ltr(formatReceiptNumber(item.quantity))} × ${ltr(formatReceiptNumber(item.unitPrice))}`
+        ? `${ltr(formatReceiptNumber(item.quantity))} × ${ltr(formatReceiptRial(item.unitPrice))}`
         : `× ${ltr(formatReceiptNumber(item.quantity))}`;
-      return `<div class="item"><div class="name">${escapeHtml(item.name)}</div><table class="row"><tr><td class="label">${qtyPrice}</td><td class="value">${ltr(formatReceiptNumber(item.lineTotal))}</td></tr></table></div>`;
+      return `<div class="item"><div class="name">${escapeHtml(item.name)}</div><table class="row"><tr><td class="label">${qtyPrice}</td><td class="value">${ltr(formatReceiptRial(item.lineTotal))}</td></tr></table></div>`;
     })
     .join("");
   return `
@@ -334,9 +335,9 @@ function boldHallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSetti
   const items = receiptItems(receipt)
     .map((item) => {
       const qtyPrice = settings.showItemUnitPrice
-        ? `${ltr(formatReceiptNumber(item.quantity))} × ${ltr(formatReceiptNumber(item.unitPrice))}`
+        ? `${ltr(formatReceiptNumber(item.quantity))} × ${ltr(formatReceiptRial(item.unitPrice))}`
         : `تعداد ${ltr(formatReceiptNumber(item.quantity))}`;
-      return `<div class="item"><div class="name" style="font-size:1.05em">${escapeHtml(item.name)}</div><table class="row"><tr><td class="label">${qtyPrice}</td><td class="value bold">${ltr(formatReceiptNumber(item.lineTotal))}</td></tr></table></div>`;
+      return `<div class="item"><div class="name" style="font-size:1.05em">${escapeHtml(item.name)}</div><table class="row"><tr><td class="label">${qtyPrice}</td><td class="value bold">${ltr(formatReceiptRial(item.lineTotal))}</td></tr></table></div>`;
     })
     .join("");
   return `
@@ -357,8 +358,8 @@ function boldHallInner(receipt: SaleReceiptData, settings: SaleReceiptPrintSetti
     ${totalsHtml(receipt)}
     <div style="border:2px solid #000;text-align:center;padding:8px;margin:10px 0">
       <div>قابل پرداخت</div>
-      <div style="font-size:1.4em;font-weight:900">${ltr(formatReceiptNumber(receipt.payableNow || receipt.finalTotal))}</div>
-      <div>تومان</div>
+      <div style="font-size:1.4em;font-weight:900">${ltr(formatReceiptRial(receipt.payableNow || receipt.finalTotal))}</div>
+      <div>ریال</div>
     </div>
     ${paymentHtml(receipt, settings)}
     ${settings.shopAddress ? `<div class="muted">${escapeHtml(settings.shopAddress)}</div>` : ""}

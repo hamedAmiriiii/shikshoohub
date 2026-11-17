@@ -720,7 +720,7 @@ export default function AdminClassicPosView({
           }}
         >
           <Typography sx={{ fontSize: "10px", fontWeight: 700, color: "var(--admin-text-muted)" }}>
-            نوع پرداخت
+            نوع خرید
           </Typography>
           <Box
             sx={{

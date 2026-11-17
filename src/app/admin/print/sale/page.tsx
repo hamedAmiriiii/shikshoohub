@@ -18,6 +18,7 @@ import {
   getEnabledReceiptPrintStations,
   printReceiptStationsSequentially,
   formatReceiptNumber,
+  formatReceiptRial,
   normalizeSaleReceiptData,
 } from "@/app/lib/saleReceiptPrint";
 import { ReceiptTicketsBlock } from "@/app/admin/print/sale/SaleReceiptTickets";
@@ -412,17 +413,17 @@ function SaleReceiptPrintContent() {
                             {formatReceiptNumber(item.quantity)}
                           </Box>
                           <Box component="td" sx={{ border: "1px solid #111", p: 0.35, textAlign: "center" }}>
-                            {formatReceiptNumber(item.unitPrice)}
+                            {formatReceiptRial(item.unitPrice)}
                           </Box>
                           <Box component="td" sx={{ border: "1px solid #111", p: 0.35, textAlign: "center" }}>
-                            {formatReceiptNumber(item.lineTotal)}
+                            {formatReceiptRial(item.lineTotal)}
                           </Box>
                         </Box>
                       ))}
                     </Box>
                   </Box>
                   <Typography sx={{ fontSize: 11, mt: 0.75, fontWeight: 800, color: "#111" }}>
-                    قابل پرداخت: {formatReceiptNumber(receipt.payableNow || receipt.finalTotal)} تومان
+                    قابل پرداخت: {formatReceiptRial(receipt.payableNow || receipt.finalTotal)} ریال
                   </Typography>
                 </Box>
               ) : (

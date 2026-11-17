@@ -44,6 +44,7 @@ import {
   parseQuantityInput,
 } from "@/app/lib/productUnits";
 import { paymentTypeLabel } from "@/app/lib/paymentTypes";
+import { formatAmountInput, formatAmountNumber, parseAmountInput } from "@/app/lib/amountInput";
 import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
 import {
   fetchPosTerminalRefundAvailability,
@@ -171,6 +172,7 @@ export default function purchas(props: any) {
   const [payInstallmentDialogOpen, setPayInstallmentDialogOpen] = useState(false);
   const [selectedInstallment, setSelectedInstallment] = useState<any>(null);
   const [installmentNotes, setInstallmentNotes] = useState("");
+  const [installmentPayAmount, setInstallmentPayAmount] = useState("");
   const [payingInstallment, setPayingInstallment] = useState(false);
   const [installmentsData, setInstallmentsData] = useState<any[]>([]);
   const router = useRouter();
@@ -339,6 +341,7 @@ export default function purchas(props: any) {
   const handleOpenPayInstallmentDialog = (installment: any) => {
     setSelectedInstallment(installment);
     setInstallmentNotes("");
+    setInstallmentPayAmount(formatAmountNumber(Number(installment?.amount) || 0));
     setPayInstallmentDialogOpen(true);
   };
 
@@ -346,10 +349,16 @@ export default function purchas(props: any) {
     setPayInstallmentDialogOpen(false);
     setSelectedInstallment(null);
     setInstallmentNotes("");
+    setInstallmentPayAmount("");
   };
 
   const handlePayInstallment = async () => {
     if (!selectedInstallment || !data?.id) return;
+    const amount = parseAmountInput(installmentPayAmount);
+    if (amount < 1) {
+      alert("مبلغ پرداخت را وارد کنید");
+      return;
+    }
     
     setPayingInstallment(true);
     try {
@@ -357,36 +366,34 @@ export default function purchas(props: any) {
         "POST",
         `/api/purchased-products/${data.id}/installments/${selectedInstallment.id}/pay`,
         {
+          amount,
           notes: installmentNotes || null
         }
       );
       
       if (response !== null && response.installment) {
-        // استفاده از داده‌های برگشتی از API (شامل due_date_jalali و paid_at_jalali)
-        const updatedInstallment = response.installment;
+        const affected = Array.isArray(response.affected_installments)
+          ? response.affected_installments
+          : [response.installment];
+        const affectedById = new Map(affected.map((inst: any) => [inst.id, inst]));
         
-        // به‌روزرسانی installmentsData
         const currentInstallments = installmentsData.length > 0 ? installmentsData : (data?.installments || []);
-        const updatedInstallments = currentInstallments.map((inst: any) => 
-          inst.id === selectedInstallment.id 
-            ? updatedInstallment // شامل فیلدهای شمسی از API
-            : inst
+        const updatedInstallments = currentInstallments.map((inst: any) =>
+          affectedById.has(inst.id) ? affectedById.get(inst.id) : inst
         );
         setInstallmentsData(updatedInstallments);
         
-        // به‌روزرسانی data.installments هم
         if (data.installments && Array.isArray(data.installments)) {
           data.installments = updatedInstallments;
         }
         
         handleClosePayInstallmentDialog();
         
-        // Refresh the list if callback provided
         if (onRefresh) {
           onRefresh();
         }
       } else {
-        alert("خطا در پرداخت قسط");
+        alert(response?.message || "خطا در پرداخت قسط");
       }
     } catch (error) {
       console.error("Error paying installment:", error);
@@ -1429,7 +1436,7 @@ export default function purchas(props: any) {
         </DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ color: "var(--admin-text-secondary)", textAlign: "center", marginBottom: "16px" }}>
-            آیا از پرداخت این قسط مطمئن هستید؟
+            مبلغ پرداخت را وارد کنید. اگر بیشتر از قسط باشد، مازاد از قسط بعدی کسر می‌شود.
           </DialogContentText>
           {selectedInstallment && (
             <Box sx={{ 
@@ -1442,7 +1449,7 @@ export default function purchas(props: any) {
                 قسط شماره: {selectedInstallment.installment_number}
               </Typography>
               <Typography sx={{ color: "var(--admin-text)", fontSize: "14px", marginBottom: "8px" }}>
-                مبلغ: {formatNumber(selectedInstallment.amount)} تومان
+                مبلغ قسط: {formatNumber(selectedInstallment.amount)} تومان
               </Typography>
               {selectedInstallment.due_date && (
                 <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "13px" }}>
@@ -1451,6 +1458,33 @@ export default function purchas(props: any) {
               )}
             </Box>
           )}
+          <TextField
+            fullWidth
+            value={installmentPayAmount}
+            onChange={(e) => setInstallmentPayAmount(formatAmountInput(e.target.value))}
+            placeholder="مبلغ پرداخت (تومان)"
+            inputProps={{ inputMode: "numeric" }}
+            sx={{
+              marginBottom: "12px",
+              "& .MuiOutlinedInput-root": {
+                backgroundColor: "var(--admin-surface-alt)",
+                color: "var(--admin-text)",
+                "& fieldset": {
+                  borderColor: "var(--admin-border)",
+                },
+                "&:hover fieldset": {
+                  borderColor: "var(--admin-accent)",
+                },
+                "&.Mui-focused fieldset": {
+                  borderColor: "var(--admin-accent)",
+                },
+              },
+              "& .MuiInputBase-input": {
+                color: "var(--admin-text)",
+                fontSize: "14px",
+              },
+            }}
+          />
           <TextField
             fullWidth
             multiline

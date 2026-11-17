@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Box, Typography, Chip, Button, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, TextField, IconButton, CircularProgress } from "@mui/material";
 import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
+import { formatAmountInput, formatAmountNumber, parseAmountInput } from "@/app/lib/amountInput";
 import PaymentIcon from '@mui/icons-material/Payment';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
@@ -16,6 +17,7 @@ const formatNumber = (num: number | string) => {
 export default function InstallmentCard(props: any) {
   const [payInstallmentDialogOpen, setPayInstallmentDialogOpen] = useState(false);
   const [installmentNotes, setInstallmentNotes] = useState("");
+  const [installmentPayAmount, setInstallmentPayAmount] = useState("");
   const [payingInstallment, setPayingInstallment] = useState(false);
 
   const data = props?.props?.data;
@@ -23,16 +25,23 @@ export default function InstallmentCard(props: any) {
 
   const handleOpenPayInstallmentDialog = () => {
     setInstallmentNotes("");
+    setInstallmentPayAmount(formatAmountNumber(Number(data?.amount) || 0));
     setPayInstallmentDialogOpen(true);
   };
 
   const handleClosePayInstallmentDialog = () => {
     setPayInstallmentDialogOpen(false);
     setInstallmentNotes("");
+    setInstallmentPayAmount("");
   };
 
   const handlePayInstallment = async () => {
     if (!data || !data.purchase_id) return;
+    const amount = parseAmountInput(installmentPayAmount);
+    if (amount < 1) {
+      alert("مبلغ پرداخت را وارد کنید");
+      return;
+    }
     
     setPayingInstallment(true);
     try {
@@ -40,6 +49,7 @@ export default function InstallmentCard(props: any) {
         "POST",
         `/api/purchased-products/${data.purchase_id}/installments/${data.id}/pay`,
         {
+          amount,
           notes: installmentNotes || null
         }
       );
@@ -51,7 +61,7 @@ export default function InstallmentCard(props: any) {
           onRefresh();
         }
       } else {
-        alert("خطا در پرداخت قسط");
+        alert(response?.message || "خطا در پرداخت قسط");
       }
     } catch (error) {
       console.error("Error paying installment:", error);
@@ -171,7 +181,7 @@ export default function InstallmentCard(props: any) {
         </DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ color: "var(--admin-text-secondary)", textAlign: "center", marginBottom: "16px" }}>
-            آیا از پرداخت این قسط مطمئن هستید؟
+            مبلغ پرداخت را وارد کنید. اگر بیشتر از قسط باشد، مازاد از قسط بعدی کسر می‌شود.
           </DialogContentText>
           {data && (
             <Box sx={{ 
@@ -184,7 +194,7 @@ export default function InstallmentCard(props: any) {
                 قسط شماره: {data.installment_number}
               </Typography>
               <Typography sx={{ color: "var(--admin-text)", fontSize: "14px", marginBottom: "8px" }}>
-                مبلغ: {formatNumber(data.amount)} تومان
+                مبلغ قسط: {formatNumber(data.amount)} تومان
               </Typography>
               {data.due_date_jalali && (
                 <Typography sx={{ color: "var(--admin-text-secondary)", fontSize: "13px" }}>
@@ -193,6 +203,33 @@ export default function InstallmentCard(props: any) {
               )}
             </Box>
           )}
+          <TextField
+            fullWidth
+            value={installmentPayAmount}
+            onChange={(e) => setInstallmentPayAmount(formatAmountInput(e.target.value))}
+            placeholder="مبلغ پرداخت (تومان)"
+            inputProps={{ inputMode: "numeric" }}
+            sx={{
+              marginBottom: "12px",
+              "& .MuiOutlinedInput-root": {
+                backgroundColor: "var(--admin-surface-alt)",
+                color: "var(--admin-text)",
+                "& fieldset": {
+                  borderColor: "var(--admin-border)",
+                },
+                "&:hover fieldset": {
+                  borderColor: "var(--admin-accent)",
+                },
+                "&.Mui-focused fieldset": {
+                  borderColor: "var(--admin-accent)",
+                },
+              },
+              "& .MuiInputBase-input": {
+                color: "var(--admin-text)",
+                fontSize: "14px",
+              },
+            }}
+          />
           <TextField
             fullWidth
             multiline

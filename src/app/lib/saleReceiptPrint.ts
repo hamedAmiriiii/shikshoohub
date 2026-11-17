@@ -646,6 +646,13 @@ export function formatReceiptNumber(num: number): string {
   return new Intl.NumberFormat("fa-IR").format(n);
 }
 
+/** قیمت‌های برنامه تومان است؛ فیش فروش به ریال چاپ می‌شود. */
+export function formatReceiptRial(toman: number): string {
+  const n = Number(toman);
+  if (!Number.isFinite(n)) return "۰";
+  return formatReceiptNumber(Math.round(n * 10));
+}
+
 type JalaliParts = { date: string; time: string };
 
 function toLatinDigitsLocal(value: string): string {
