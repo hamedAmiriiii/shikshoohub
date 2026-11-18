@@ -27,8 +27,10 @@ import { styled } from "@mui/material/styles";
 import { tableCellClasses } from "@mui/material/TableCell";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import PrintIcon from "@mui/icons-material/Print";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import { toast } from "react-toastify";
+import { printPurchaseInvoice } from "@/app/admin/invoices/purchaseInvoicePrint";
 import tokenCode from "@/app/coponent/tokenCode";
 import { FetchWithJwtClient } from "@/app/coponent/fetchWithJwtClient";
 import { getApiErrorMessage } from "@/app/lib/apiErrorMessage";
@@ -813,6 +815,29 @@ export default function InvoiceDetailsDialog({
     display?.shop_account?.name ||
     (display?.shop_account_id != null ? `حساب #${display.shop_account_id}` : "");
 
+  const handlePrintInvoice = () => {
+    if (!display?.id) return;
+    printPurchaseInvoice({
+      invoice: display,
+      items: drafts
+        .filter((row) => row.title.trim())
+        .map((row) => ({
+          title: row.title.trim(),
+          unit_price: parseAmountInput(row.unitPrice),
+          quantity: parseQuantityInput(row.quantity),
+          vat_amount: lineVatOf(row),
+          discount_amount: lineDiscountOf(row),
+          unit_type: row.unitType,
+          total: Math.max(0, lineGrossOf(row) - lineDiscountOf(row)),
+        })),
+      shopAccountName: shopAccountName || undefined,
+      itemsTotal,
+      vatTotal,
+      discountTotal: discountAmount,
+      payableAmount,
+    });
+  };
+
   return (
     <>
     <Dialog
@@ -899,11 +924,32 @@ export default function InvoiceDetailsDialog({
             />
             <HeaderMetaItem label="عنوان سند" value={display?.title || createDraft?.title || "—"} />
           </Box>
-          <Box sx={{ textAlign: "left", flexShrink: 0 }}>
-            <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)" }}>تاریخ</Typography>
-            <Typography sx={{ fontSize: 13, fontWeight: 800, color: "var(--admin-text)" }}>
-              {display?.date || createDraft?.date || "—"}
-            </Typography>
+          <Box sx={{ textAlign: "left", flexShrink: 0, display: "grid", gap: 0.75, justifyItems: "end" }}>
+            <Box>
+              <Typography sx={{ fontSize: 11, color: "var(--admin-text-muted)" }}>تاریخ</Typography>
+              <Typography sx={{ fontSize: 13, fontWeight: 800, color: "var(--admin-text)" }}>
+                {display?.date || createDraft?.date || "—"}
+              </Typography>
+            </Box>
+            {display?.id ? (
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<PrintIcon sx={{ fontSize: 16 }} />}
+                disabled={loading || saving}
+                onClick={handlePrintInvoice}
+                sx={{
+                  ...adminButtonStartIconSx,
+                  color: "var(--admin-text)",
+                  borderColor: "var(--admin-border)",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  minHeight: 30,
+                }}
+              >
+                پرینت
+              </Button>
+            ) : null}
           </Box>
         </Box>
 
@@ -1445,6 +1491,16 @@ export default function InvoiceDetailsDialog({
         )}
       </DialogContent>
       <DialogActions sx={{ px: 2.25, py: 1.35, borderTop: "1px solid var(--admin-border)", gap: 1 }}>
+        {display?.id ? (
+          <Button
+            onClick={handlePrintInvoice}
+            disabled={loading || saving}
+            startIcon={<PrintIcon />}
+            sx={{ ...adminButtonStartIconSx, color: "var(--admin-text)", mr: "auto" }}
+          >
+            پرینت فاکتور
+          </Button>
+        ) : null}
         <Button onClick={onClose} disabled={saving} sx={{ color: "var(--admin-text-muted)" }}>
           انصراف
         </Button>
