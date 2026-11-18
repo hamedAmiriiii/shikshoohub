@@ -36,8 +36,6 @@ import InvoiceLinkFields, {
 } from "@/app/admin/production/InvoiceLinkFields";
 
 const LAYER_IMAGE_MAX_BYTES = 3 * 1024 * 1024;
-/** بالای دیالوگ کالای تولیدی (≈۱۳۰۰) و زیر date picker فاکتور (۱۶۰۰) */
-const DIALOG_Z = 1400;
 
 const fieldSx = {
   "& .MuiOutlinedInput-root": {
@@ -119,16 +117,18 @@ function RawMaterialFormDialog({
       setUnit(parseRawMaterialUnit(editingMaterial.unit_type));
       setLotQty("");
       setLotPrice("");
-      setInvoiceLink(emptyInvoiceLinkState());
+      setInvoiceLink({ ...emptyInvoiceLinkState(), createInvoice: false });
     } else {
       setName("");
       setUnit("kg");
       setLotQty("");
       setLotPrice("");
-      setInvoiceLink(emptyInvoiceLinkState());
+      // پیش‌فرض بدون فاکتور؛ فرم سبک‌تر باز می‌شود و کاربر در صورت نیاز تیک می‌زند
+      setInvoiceLink({ ...emptyInvoiceLinkState(), createInvoice: false });
     }
     setLayerDataUrl(null);
     setLayerRemoved(false);
+    setSaving(false);
   }, [open, editingMaterial]);
 
   const syncInvoiceTitleFromName = (nextName: string) => {
@@ -301,14 +301,15 @@ function RawMaterialFormDialog({
   return (
     <Dialog
       open={open}
-      onClose={() => !saving && onClose()}
+      onClose={() => {
+        if (!saving) onClose();
+      }}
       fullWidth
       maxWidth="sm"
       keepMounted={false}
-      sx={{ zIndex: DIALOG_Z }}
-      slotProps={{
-        backdrop: { sx: { zIndex: DIALOG_Z } },
-      }}
+      disableRestoreFocus
+      // بالاتر از دیالوگ کالای تولیدی؛ روی backdrop جداگانه z-index نگذار (کاغذ زیر بک‌دراپ می‌ماند)
+      sx={{ zIndex: (theme) => theme.zIndex.modal + 10 }}
     >
       <DialogTitle sx={{ fontSize: 15, fontWeight: 700, py: 1, direction: "rtl" }}>
         {editingMaterial

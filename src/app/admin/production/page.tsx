@@ -744,7 +744,9 @@ export default function ProductionCostingPage() {
     setEditingMaterial(null);
   };
 
-  const openCreateMaterial = (options?: { recipeIndex?: number }) => {
+  const openCreateMaterial = (options?: { recipeIndex?: number; event?: { stopPropagation?: () => void; preventDefault?: () => void } }) => {
+    options?.event?.stopPropagation?.();
+    options?.event?.preventDefault?.();
     setMaterialAssignRecipeIndex(
       options?.recipeIndex != null && options.recipeIndex >= 0 ? options.recipeIndex : null,
     );
@@ -2248,7 +2250,17 @@ export default function ProductionCostingPage() {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={goodDialogOpen} onClose={() => setGoodDialogOpen(false)} fullWidth maxWidth="sm">
+      <Dialog
+        open={goodDialogOpen}
+        onClose={() => {
+          // وقتی مدال ماده اولیه باز است، کلیک/اسکیپ روی کالای تولیدی آن را نبندد
+          if (materialDialogOpen) return;
+          setGoodDialogOpen(false);
+        }}
+        disableEnforceFocus={materialDialogOpen}
+        fullWidth
+        maxWidth="sm"
+      >
         <DialogTitle sx={{ fontSize: 15, fontWeight: 700, py: 1.25, direction: "rtl" }}>
           {editingGood ? "ویرایش کالا" : "کالای تولیدی جدید"}
         </DialogTitle>
@@ -2441,7 +2453,7 @@ export default function ProductionCostingPage() {
               <Button
                 size="small"
                 startIcon={<AddIcon />}
-                onClick={() => openCreateMaterial({ recipeIndex: 0 })}
+                onClick={(e) => openCreateMaterial({ recipeIndex: 0, event: e })}
                 sx={{ ...adminButtonStartIconSx, justifySelf: "start", color: "var(--admin-accent)" }}
               >
                 ثبت ماده اولیه جدید
@@ -2560,7 +2572,7 @@ export default function ProductionCostingPage() {
                       <Button
                         size="small"
                         onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => openCreateMaterial({ recipeIndex: index })}
+                        onClick={(e) => openCreateMaterial({ recipeIndex: index, event: e })}
                         sx={{ color: "var(--admin-accent)", fontSize: 12 }}
                       >
                         + ثبت ماده اولیه جدید
@@ -2669,7 +2681,7 @@ export default function ProductionCostingPage() {
               {canMaterials ? (
                 <Button
                   size="small"
-                  onClick={() => openCreateMaterial({ recipeIndex: index })}
+                  onClick={(e) => openCreateMaterial({ recipeIndex: index, event: e })}
                   sx={{
                     gridColumn: "1 / -1",
                     justifySelf: "start",
