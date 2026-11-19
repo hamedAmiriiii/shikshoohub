@@ -55,6 +55,7 @@ import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import AssessmentIcon from "@mui/icons-material/Assessment";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 import UndoIcon from "@mui/icons-material/Undo";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -1834,22 +1835,15 @@ export default function ProductionCostingPage() {
                                 <DeleteSweepIcon sx={{ fontSize: 18 }} />
                               </IconButton>
                             </Tooltip>
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              onClick={() => openMaterialUsage(material)}
-                              sx={{
-                                minWidth: 0,
-                                px: 0.75,
-                                py: 0.15,
-                                fontSize: 11,
-                                lineHeight: 1.4,
-                                borderColor: "var(--admin-border)",
-                                color: "var(--admin-accent)",
-                              }}
-                            >
-                              کجا استفاده شده
-                            </Button>
+                            <Tooltip title="کجا استفاده شده">
+                              <IconButton
+                                size="small"
+                                onClick={() => openMaterialUsage(material)}
+                                sx={{ ...actionBtnSx, color: "#5c6bc0" }}
+                              >
+                                <VisibilityIcon sx={{ fontSize: 18 }} />
+                              </IconButton>
+                            </Tooltip>
                             <Tooltip title="ویرایش">
                               <IconButton size="small" onClick={() => openEditMaterial(material)} sx={{ ...actionBtnSx, color: "var(--admin-accent)" }}>
                                 <EditIcon sx={{ fontSize: 18 }} />
@@ -3649,6 +3643,7 @@ export default function ProductionCostingPage() {
                       (c) => Number(c.raw_material_id) === materialUsage.material.id,
                     );
                     const qty = line?.grams_per_kg;
+                    const qtyUnit = isPieceMaterial(materialUsage.material) ? "عدد" : "گرم";
                     return (
                       <StyledTableRow key={good.id}>
                         <StyledTableCell align="center">
@@ -3662,23 +3657,24 @@ export default function ProductionCostingPage() {
                           />
                         </StyledTableCell>
                         <StyledTableCell align="center">
-                          {qty != null
-                            ? `${formatKg(qty)} ${materialUnitLabel(materialUsage.material)}`
-                            : "—"}
+                          {qty != null ? `${formatKg(qty)} ${qtyUnit}` : "—"}
                         </StyledTableCell>
                         <StyledTableCell align="center">
-                          <Button
-                            size="small"
-                            onClick={() => {
-                              setMaterialUsage(null);
-                              if (canGoods) {
-                                setTab("goods");
-                                openEditGood(good);
-                              }
-                            }}
-                          >
-                            مشاهده فرمول
-                          </Button>
+                          <Tooltip title="مشاهده فرمول">
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                setMaterialUsage(null);
+                                if (canGoods) {
+                                  setTab("goods");
+                                  openEditGood(good);
+                                }
+                              }}
+                              sx={{ ...actionBtnSx, color: "var(--admin-accent)" }}
+                            >
+                              <EditIcon sx={{ fontSize: 18 }} />
+                            </IconButton>
+                          </Tooltip>
                         </StyledTableCell>
                       </StyledTableRow>
                     );

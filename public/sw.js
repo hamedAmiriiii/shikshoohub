@@ -1,5 +1,5 @@
-const CACHE_NAME = "webino-pwa-v10";
-const ADMIN_CACHE_NAME = "webino-admin-shell-v8";
+const CACHE_NAME = "webino-pwa-v11";
+const ADMIN_CACHE_NAME = "webino-admin-shell-v9";
 const ADMIN_HOME = "/admin";
 const OFFLINE_URL = "/offline.html";
 const PRECACHE_URLS = [
@@ -8,6 +8,15 @@ const PRECACHE_URLS = [
   "/manifest-admin.json",
   "/pic/icon.png",
 ];
+
+async function safeCachePut(cache, request, response) {
+  if (!cache || !request || !response) return;
+  try {
+    await cache.put(request, response);
+  } catch {
+    /* قطع شبکه وسط خواندن body نباید پاسخ سالم را خراب کند */
+  }
+}
 
 async function cacheUrls(cache, urls) {
   for (const url of urls) {
@@ -71,7 +80,7 @@ async function warmCache(data) {
       if (await staticCache.match(url.href)) continue;
       const response = await fetch(url.href);
       if (isCacheableStaticResponse(response)) {
-        await staticCache.put(url.href, response);
+        await safeCachePut(staticCache, url.href, response);
       }
     } catch {
       /* ignore */
@@ -105,7 +114,7 @@ async function cacheAdminPage(pathname, response) {
   if (!response || response.status !== 200 || response.type !== "basic" || response.redirected) return;
   if (!isHtmlResponse(response)) return;
   const cache = await caches.open(ADMIN_CACHE_NAME);
-  await cache.put(adminPageKey(pathname), response.clone());
+  await safeCachePut(cache, adminPageKey(pathname), response.clone());
 }
 
 async function cachedAdminPage(pathname) {
@@ -178,7 +187,7 @@ async function networkThenAdminCache(request) {
       await cacheAdminPage(url.pathname, response);
     } else if (response && response.status === 200 && response.type === "basic") {
       const cache = await caches.open(ADMIN_CACHE_NAME);
-      await cache.put(request, response.clone());
+      await safeCachePut(cache, request, response.clone());
     }
     return response;
   } catch {
@@ -215,7 +224,7 @@ self.addEventListener("fetch", (event) => {
         try {
           const response = await fetch(event.request);
           if (isCacheableStaticResponse(response)) {
-            await cache.put(event.request, response.clone());
+            await safeCachePut(cache, event.request, response.clone());
           }
           return response;
         } catch {
@@ -254,7 +263,7 @@ self.addEventListener("fetch", (event) => {
         if (response.status === 200 && response.type === "basic") {
           const responseToCache = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
+            void safeCachePut(cache, event.request, responseToCache);
           });
         }
         return response;
