@@ -65,6 +65,7 @@ import { adminButtonStartIconSx, adminPageSx } from "@/app/admin/theme/adminThem
 import {
   asProducedGood,
   asProductionRecord,
+  asRawMaterial,
   categoryIdsFromGood,
   extractList,
   formatKg,
@@ -409,6 +410,11 @@ export default function ProductionCostingPage() {
     | { kind: "production"; good: ProducedGood; item: ProductionRecord }
     | null
   >(null);
+  const [materialUsage, setMaterialUsage] = useState<{
+    material: RawMaterial;
+    goods: ProducedGood[];
+    loading: boolean;
+  } | null>(null);
 
   const loadAll = useCallback(async (opts?: { quiet?: boolean }) => {
     const token = tokenCode();
@@ -758,6 +764,35 @@ export default function ProductionCostingPage() {
     setMaterialAssignRecipeIndex(null);
     setEditingMaterial(material);
     setMaterialDialogOpen(true);
+  };
+
+  const openMaterialUsage = async (material: RawMaterial) => {
+    const token = tokenCode();
+    if (!token) return;
+    setMaterialUsage({ material, goods: [], loading: true });
+    try {
+      const res = await FetchWithJwtClient("GET", `/api/raw-materials/${material.id}`, token);
+      if (res?.hasError) {
+        toast.error(getApiErrorMessage(res, "خطا در دریافت محل مصرف ماده"));
+        setMaterialUsage(null);
+        return;
+      }
+      const detail = asRawMaterial(res) || material;
+      const payload = res as { used_in?: ProducedGood[]; data?: { used_in?: ProducedGood[] } };
+      const usedIn = Array.isArray(payload.used_in)
+        ? payload.used_in
+        : Array.isArray(payload.data?.used_in)
+          ? payload.data.used_in
+          : [];
+      setMaterialUsage({
+        material: detail,
+        goods: usedIn,
+        loading: false,
+      });
+    } catch {
+      toast.error("خطا در دریافت محل مصرف ماده");
+      setMaterialUsage(null);
+    }
   };
 
   const applyCreatedMaterialToRecipe = (created: RawMaterial, recipeIndex: number) => {
@@ -1799,6 +1834,22 @@ export default function ProductionCostingPage() {
                                 <DeleteSweepIcon sx={{ fontSize: 18 }} />
                               </IconButton>
                             </Tooltip>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              onClick={() => openMaterialUsage(material)}
+                              sx={{
+                                minWidth: 0,
+                                px: 0.75,
+                                py: 0.15,
+                                fontSize: 11,
+                                lineHeight: 1.4,
+                                borderColor: "var(--admin-border)",
+                                color: "var(--admin-accent)",
+                              }}
+                            >
+                              کجا استفاده شده
+                            </Button>
                             <Tooltip title="ویرایش">
                               <IconButton size="small" onClick={() => openEditMaterial(material)} sx={{ ...actionBtnSx, color: "var(--admin-accent)" }}>
                                 <EditIcon sx={{ fontSize: 18 }} />
@@ -3559,6 +3610,86 @@ export default function ProductionCostingPage() {
           >
             ثبت ضایعات
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={!!materialUsage}
+        onClose={() => setMaterialUsage(null)}
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{ sx: { direction: "rtl" } }}
+      >
+        <DialogTitle sx={{ fontSize: 15, fontWeight: 700 }}>
+          محل مصرف «{materialUsage?.material.name || ""}»
+        </DialogTitle>
+        <DialogContent sx={{ pt: "8px !important" }}>
+          {materialUsage?.loading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
+              <CircularProgress size={28} />
+            </Box>
+          ) : !materialUsage?.goods.length ? (
+            <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 13, py: 1 }}>
+              این ماده در فرمول هیچ کالای تولیدی‌ای نیست.
+            </Typography>
+          ) : (
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <StyledTableCell align="center">کالا</StyledTableCell>
+                    <StyledTableCell align="center">نوع</StyledTableCell>
+                    <StyledTableCell align="center">مقدار در فرمول</StyledTableCell>
+                    <StyledTableCell align="center" />
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {materialUsage.goods.map((good) => {
+                    const line = (good.ingredient_costs || []).find(
+                      (c) => Number(c.raw_material_id) === materialUsage.material.id,
+                    );
+                    const qty = line?.grams_per_kg;
+                    return (
+                      <StyledTableRow key={good.id}>
+                        <StyledTableCell align="center">
+                          <Typography sx={{ fontWeight: 600, fontSize: 13 }}>{good.name}</Typography>
+                        </StyledTableCell>
+                        <StyledTableCell align="center">
+                          <Chip
+                            size="small"
+                            label={isFinalProducedGood(good) ? "نهایی" : "نیمه‌ساخته"}
+                            sx={{ height: 22, fontSize: 11 }}
+                          />
+                        </StyledTableCell>
+                        <StyledTableCell align="center">
+                          {qty != null
+                            ? `${formatKg(qty)} ${materialUnitLabel(materialUsage.material)}`
+                            : "—"}
+                        </StyledTableCell>
+                        <StyledTableCell align="center">
+                          <Button
+                            size="small"
+                            onClick={() => {
+                              setMaterialUsage(null);
+                              if (canGoods) {
+                                setTab("goods");
+                                openEditGood(good);
+                              }
+                            }}
+                          >
+                            مشاهده فرمول
+                          </Button>
+                        </StyledTableCell>
+                      </StyledTableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setMaterialUsage(null)}>بستن</Button>
         </DialogActions>
       </Dialog>
 
