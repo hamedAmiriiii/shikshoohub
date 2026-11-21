@@ -25,6 +25,7 @@ import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import EventAvailableIcon from "@mui/icons-material/EventAvailable";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
+import PercentIcon from "@mui/icons-material/Percent";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import HistoryIcon from "@mui/icons-material/History";
 import SettingsIcon from "@mui/icons-material/Settings";
@@ -56,6 +57,12 @@ const LINKS = [
   { href: "/admin/accounting/ledger", title: "دفتر حساب", desc: "آرتیکل‌های یک حساب با مانده جاری", icon: <MenuBookIcon /> },
   { href: "/admin/accounting/profit-loss", title: "سود و زیان دفتر", desc: "مبنای تعهدی از آرتیکل سند", icon: <TrendingUpIcon /> },
   { href: "/admin/accounting/balance-sheet", title: "ترازنامه", desc: "دارایی، بدهی، سرمایه و تطبیق نقد", icon: <AccountBalanceIcon /> },
+  {
+    href: "/admin/accounting/vat",
+    title: "گزارش ارزش افزوده",
+    desc: "اعتبار خرید به تفکیک طرف معامله + مانده تقریبی قابل پرداخت",
+    icon: <PercentIcon />,
+  },
   { href: "/admin/accounting/period-close", title: "بستن سال / میان‌دوره", desc: "صفر کردن درآمد و هزینه و انتقال به سود انباشته", icon: <EventAvailableIcon /> },
   { href: "/admin/accounting/audit-log", title: "لاگ حسابرس", desc: "اسنادی که حسابرس زده، اصلاح یا برگشت کرده — با دلیل", icon: <HistoryIcon /> },
   { href: "/admin/accounting/moadian", title: "سامانه مؤدیان", desc: "ارسال صورتحساب فروش به سازمان امور مالیاتی", icon: <FactCheckIcon /> },

@@ -1031,6 +1031,118 @@ function parseBalanceSection(raw: unknown): { rows: BalanceSheetRow[]; total: nu
   };
 }
 
+export type VatReportRow = {
+  id: number;
+  kind: "invoice" | "expense" | string;
+  kind_label: string;
+  number: number | null;
+  date: string;
+  title: string;
+  party_name: string | null;
+  party_phone: string | null;
+  base_amount: number;
+  discount_amount: number;
+  vat_mode: string;
+  vat_percent: number | null;
+  vat_amount: number;
+  payable_amount: number;
+  payment_status: string;
+  payment_status_label: string;
+  href: string;
+};
+
+export type VatReport = {
+  from: string | null;
+  to: string | null;
+  enabled: boolean;
+  rows: VatReportRow[];
+  totals: {
+    input_invoices: number;
+    input_expenses: number;
+    input_documents: number;
+    input_ledger: number;
+    output_ledger: number;
+    net_payable: number;
+  };
+  accounts: {
+    input: { code: string; name: string; debit: number; credit: number; net: number };
+    output: { code: string; name: string; debit: number; credit: number; net: number };
+  };
+  note: string;
+};
+
+function parseVatReport(raw: unknown): VatReport {
+  const obj = asRecord(raw) ?? {};
+  const totals = asRecord(obj.totals) ?? {};
+  const accounts = asRecord(obj.accounts) ?? {};
+  const input = asRecord(accounts.input) ?? {};
+  const output = asRecord(accounts.output) ?? {};
+  const rows = Array.isArray(obj.rows) ? obj.rows : [];
+  return {
+    from: obj.from == null ? null : asString(obj.from),
+    to: obj.to == null ? null : asString(obj.to),
+    enabled: asBool(obj.enabled, false),
+    rows: rows.map((row) => {
+      const r = asRecord(row) ?? {};
+      return {
+        id: asNumber(r.id),
+        kind: asString(r.kind),
+        kind_label: asString(r.kind_label),
+        number: r.number == null ? null : asNumber(r.number),
+        date: asString(r.date),
+        title: asString(r.title),
+        party_name: r.party_name == null || r.party_name === "" ? null : asString(r.party_name),
+        party_phone: r.party_phone == null || r.party_phone === "" ? null : asString(r.party_phone),
+        base_amount: asNumber(r.base_amount),
+        discount_amount: asNumber(r.discount_amount),
+        vat_mode: asString(r.vat_mode),
+        vat_percent: r.vat_percent == null ? null : asNumber(r.vat_percent),
+        vat_amount: asNumber(r.vat_amount),
+        payable_amount: asNumber(r.payable_amount),
+        payment_status: asString(r.payment_status),
+        payment_status_label: asString(r.payment_status_label),
+        href: asString(r.href, "/admin/invoices"),
+      };
+    }),
+    totals: {
+      input_invoices: asNumber(totals.input_invoices),
+      input_expenses: asNumber(totals.input_expenses),
+      input_documents: asNumber(totals.input_documents),
+      input_ledger: asNumber(totals.input_ledger),
+      output_ledger: asNumber(totals.output_ledger),
+      net_payable: asNumber(totals.net_payable),
+    },
+    accounts: {
+      input: {
+        code: asString(input.code, "11501"),
+        name: asString(input.name, "ارزش افزوده خرید"),
+        debit: asNumber(input.debit),
+        credit: asNumber(input.credit),
+        net: asNumber(input.net),
+      },
+      output: {
+        code: asString(output.code, "21301"),
+        name: asString(output.name, "ارزش افزوده فروش"),
+        debit: asNumber(output.debit),
+        credit: asNumber(output.credit),
+        net: asNumber(output.net),
+      },
+    },
+    note: asString(obj.note),
+  };
+}
+
+export async function fetchVatReport(options?: {
+  from?: string;
+  to?: string;
+}): Promise<VatReport> {
+  const params: Record<string, string> = {};
+  if (options?.from) params.from = options.from;
+  if (options?.to) params.to = options.to;
+  const res = await FetchWithJwtClient("GET", "/api/accounting/vat", authToken(), params);
+  return parseVatReport(unwrapData(res));
+}
+
 export async function fetchBalanceSheet(options?: {
   asOf?: string;
 }): Promise<BalanceSheetReport> {
