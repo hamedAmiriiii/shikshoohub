@@ -1055,6 +1055,9 @@ export type VatReport = {
   from: string | null;
   to: string | null;
   enabled: boolean;
+  purchase_vat_enabled: boolean;
+  sale_vat_enabled: boolean;
+  sale_vat_rate: number;
   rows: VatReportRow[];
   totals: {
     input_invoices: number;
@@ -1082,6 +1085,9 @@ function parseVatReport(raw: unknown): VatReport {
     from: obj.from == null ? null : asString(obj.from),
     to: obj.to == null ? null : asString(obj.to),
     enabled: asBool(obj.enabled, false),
+    purchase_vat_enabled: asBool(obj.purchase_vat_enabled, asBool(obj.enabled, false)),
+    sale_vat_enabled: asBool(obj.sale_vat_enabled, false),
+    sale_vat_rate: asNumber(obj.sale_vat_rate, 10),
     rows: rows.map((row) => {
       const r = asRecord(row) ?? {};
       return {

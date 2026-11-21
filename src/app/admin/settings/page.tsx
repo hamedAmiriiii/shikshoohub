@@ -60,6 +60,13 @@ import {
   setPurchaseVatEnabledCache,
 } from "@/app/lib/purchaseVat";
 import {
+  asSaleVatEnabled,
+  parseSaleVatRate,
+  SALE_VAT_DEFAULT_RATE,
+  SALE_VAT_ENABLED_KEY,
+  SALE_VAT_RATE_KEY,
+} from "@/app/lib/saleVat";
+import {
   getShopAccessFromUser,
   isShopAccessExpiredInfo,
 } from "@/app/lib/shopAccess";
@@ -353,6 +360,9 @@ export default function SettingsPage() {
   const [invoiceProductEntryEnabled, setInvoiceProductEntryEnabled] = useState(false);
   const [purchaseVatEnabled, setPurchaseVatEnabled] = useState(false);
   const [isSavingPurchaseVat, setIsSavingPurchaseVat] = useState(false);
+  const [saleVatEnabled, setSaleVatEnabled] = useState(false);
+  const [saleVatRate, setSaleVatRate] = useState(String(SALE_VAT_DEFAULT_RATE));
+  const [isSavingSaleVat, setIsSavingSaleVat] = useState(false);
   const [restaurantCafeEnabled, setRestaurantCafeEnabled] = useState(false);
   const [menuTableOrdersPopupEnabled, setMenuTableOrdersPopupEnabled] = useState(false);
   const [receiptPrintSettings, setReceiptPrintSettings] = useState<SaleReceiptPrintSettings>(
@@ -487,6 +497,30 @@ export default function SettingsPage() {
         const enabled = asPurchaseVatEnabled((res as { value?: unknown }).value);
         setPurchaseVatEnabled(enabled);
         setPurchaseVatEnabledCache(enabled);
+      });
+      void apiRequestError(
+        "Get",
+        {},
+        {},
+        `/api/settings/${SALE_VAT_ENABLED_KEY}`,
+        true,
+        true,
+        token,
+      ).then((res) => {
+        if (!res || res.hasError) return;
+        setSaleVatEnabled(asSaleVatEnabled((res as { value?: unknown }).value));
+      });
+      void apiRequestError(
+        "Get",
+        {},
+        {},
+        `/api/settings/${SALE_VAT_RATE_KEY}`,
+        true,
+        true,
+        token,
+      ).then((res) => {
+        if (!res || res.hasError) return;
+        setSaleVatRate(String(parseSaleVatRate((res as { value?: unknown }).value)));
       });
     }
     return () => window.removeEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, syncPosSettings);
@@ -672,6 +706,68 @@ export default function SettingsPage() {
       toast.error("خطا در ذخیره تنظیم ارزش افزوده");
     } finally {
       setIsSavingPurchaseVat(false);
+    }
+  };
+
+  const handleToggleSaleVat = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    const token = tokenCode();
+    if (!token) return;
+    setIsSavingSaleVat(true);
+    setSaleVatEnabled(enabled);
+    try {
+      const res = await apiRequestError(
+        "Put",
+        {},
+        { value: enabled ? "1" : "0" },
+        `/api/settings/${SALE_VAT_ENABLED_KEY}`,
+        true,
+        true,
+        token,
+      );
+      if (res?.hasError) {
+        setSaleVatEnabled(!enabled);
+        toast.error(typeof res.message === "string" ? res.message : "ذخیره ارزش افزوده فروش ناموفق بود");
+        return;
+      }
+      toast.success(
+        enabled
+          ? "ارزش افزوده فروش فعال شد — از فروش‌های بعدی در حساب ۲۱۳۰۱ جدا می‌شود"
+          : "ارزش افزوده فروش غیرفعال شد",
+      );
+    } catch {
+      setSaleVatEnabled(!enabled);
+      toast.error("خطا در ذخیره ارزش افزوده فروش");
+    } finally {
+      setIsSavingSaleVat(false);
+    }
+  };
+
+  const handleSaveSaleVatRate = async () => {
+    const token = tokenCode();
+    if (!token) return;
+    const rate = parseSaleVatRate(saleVatRate);
+    setSaleVatRate(String(rate));
+    setIsSavingSaleVat(true);
+    try {
+      const res = await apiRequestError(
+        "Put",
+        {},
+        { value: String(rate) },
+        `/api/settings/${SALE_VAT_RATE_KEY}`,
+        true,
+        true,
+        token,
+      );
+      if (res?.hasError) {
+        toast.error(typeof res.message === "string" ? res.message : "ذخیره نرخ ارزش افزوده فروش ناموفق بود");
+        return;
+      }
+      toast.success(`نرخ ارزش افزوده فروش ${rate}٪ ذخیره شد`);
+    } catch {
+      toast.error("خطا در ذخیره نرخ ارزش افزوده فروش");
+    } finally {
+      setIsSavingSaleVat(false);
     }
   };
 
@@ -1398,6 +1494,42 @@ export default function SettingsPage() {
             onChange={(e) => void handleTogglePurchaseVat(e)}
             disabled={isSavingPurchaseVat}
           />
+          <SettingsToggleRow
+            icon={<ReceiptLongIcon sx={{ fontSize: 18 }} />}
+            title="ارزش افزوده فروش"
+            hint="از مبلغ ناخالص فروش مالیات جدا و در حساب ۲۱۳۰۱ ثبت می‌شود (قیمت شامل مالیات فرض است)"
+            checked={saleVatEnabled}
+            onChange={(e) => void handleToggleSaleVat(e)}
+            disabled={isSavingSaleVat}
+          />
+          {saleVatEnabled ? (
+            <Box
+              sx={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 1,
+                alignItems: "center",
+                px: 1.5,
+                pb: 1.5,
+              }}
+            >
+              <TextField
+                size="small"
+                label="نرخ ارزش افزوده فروش (٪)"
+                value={saleVatRate}
+                onChange={(e) => setSaleVatRate(e.target.value)}
+                sx={{ width: 200 }}
+              />
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => void handleSaveSaleVatRate()}
+                disabled={isSavingSaleVat}
+              >
+                ذخیره نرخ
+              </Button>
+            </Box>
+          ) : null}
           <SettingsToggleRow
             icon={<QrCode2Icon sx={{ fontSize: 18 }} />}
             title="بارکد پشت سر هم کالا"

@@ -106,9 +106,19 @@ export default function VatReportPage() {
         </Box>
       </Box>
 
-      {report && !report.enabled ? (
+      {report && !report.purchase_vat_enabled ? (
         <Alert severity="info" sx={{ mb: 2 }}>
-          ثبت ارزش افزوده خرید برای این فروشگاه خاموش است. از تنظیمات فاکتور/هزینه می‌توانید روشن کنید؛ ردیف‌های قبلی با مبلغ VAT همچنان اینجا دیده می‌شوند.
+          ارزش افزوده خرید خاموش است. از تنظیمات فروشگاه روشن کنید؛ ردیف‌های قبلی با مبلغ VAT همچنان اینجا دیده می‌شوند.
+        </Alert>
+      ) : null}
+
+      {report && !report.sale_vat_enabled ? (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          ارزش افزوده فروش خاموش است؛ حساب ۲۱۳۰۱ برای فروش‌های جدید پر نمی‌شود. از تنظیمات فروشگاه فعال کنید (نرخ فعلی پیش‌فرض {report.sale_vat_rate}٪).
+        </Alert>
+      ) : report?.sale_vat_enabled ? (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          ارزش افزوده فروش فعال است (نرخ {report.sale_vat_rate}٪) — فروش‌های بعدی خالص + ۲۱۳۰۱ می‌شوند.
         </Alert>
       ) : null}
 
