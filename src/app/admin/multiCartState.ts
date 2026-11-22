@@ -15,6 +15,8 @@ export type CartSlotSnapshot = {
   orderNote?: string;
   credit: number;
   useCreditAmount: number;
+  /** خرید بدون افزایش اعتبار باشگاه */
+  skipCreditEarn?: boolean;
   discounttype: number;
   discountDisplay: string;
   profitPercentDisplay?: string;
@@ -42,6 +44,7 @@ export function createEmptyCartSlot(): CartSlotSnapshot {
     orderNote: "",
     credit: 0,
     useCreditAmount: 0,
+    skipCreditEarn: false,
     discounttype: 0,
     discountDisplay: "",
     profitPercentDisplay: "",
@@ -101,6 +104,7 @@ function normalizeSlot(raw: unknown): CartSlotSnapshot {
     orderNote: String(slot.orderNote ?? ""),
     credit: Number(slot.credit) || 0,
     useCreditAmount: Number(slot.useCreditAmount) || 0,
+    skipCreditEarn: Boolean(slot.skipCreditEarn),
     discounttype: Number(slot.discounttype) || 0,
     discountDisplay: String(slot.discountDisplay ?? ""),
     profitPercentDisplay: String(slot.profitPercentDisplay ?? ""),

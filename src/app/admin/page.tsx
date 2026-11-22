@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { Button, Modal, Dialog, DialogTitle, DialogContent, DialogActions, Box, Typography, Table, TableBody, TableContainer, TableHead, TableRow, Paper, IconButton, Input, Card, CardContent, Grid, Container, CircularProgress, TextField, FormControl, FormLabel, RadioGroup, FormControlLabel, Radio, Tooltip, MenuItem, Select, InputLabel } from '@mui/material';
+import { Button, Modal, Dialog, DialogTitle, DialogContent, DialogActions, Box, Typography, Table, TableBody, TableContainer, TableHead, TableRow, Paper, IconButton, Input, Card, CardContent, Grid, Container, CircularProgress, TextField, FormControl, FormLabel, RadioGroup, FormControlLabel, Radio, Switch, Tooltip, MenuItem, Select, InputLabel } from '@mui/material';
 import SafeBarcodeScanner from "@/app/coponent/SafeBarcodeScanner";
 import DeleteIcon from '@mui/icons-material/Delete';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -105,6 +105,7 @@ import {
   type CartSlotSnapshot,
 } from '@/app/admin/multiCartState';
 import { publishAdminSaleCartSnapshot } from '@/app/admin/onboarding/adminSaleCartCheck';
+import { readShopFeatures } from '@/app/lib/shopFeatures';
 import CategoryIcon from '@mui/icons-material/Category';
 import {
   type SaleReceiptData,
@@ -237,6 +238,11 @@ export default function ShoppingPage() {
   const [discountError, setDiscountError] = useState('');
   const [isDiscountFocused, setIsDiscountFocused] = useState(false);
   const [useCreditAmount, setUseCreditAmount] = useState(0);
+  const [skipCreditEarn, setSkipCreditEarn] = useState(false);
+  const [loyaltyCreditEnabled, setLoyaltyCreditEnabled] = useState(true);
+  const [customerClubEnabled, setCustomerClubEnabled] = useState(
+    () => readShopFeatures().customer_club_enabled,
+  );
   const [backPrice, setBackPrice] = useState(0);
   const [checkingCredit, setCheckingCredit] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -500,6 +506,7 @@ export default function ShoppingPage() {
     orderNote,
     credit,
     useCreditAmount,
+    skipCreditEarn,
     discounttype,
     discountDisplay,
     profitPercentDisplay,
@@ -524,6 +531,7 @@ export default function ShoppingPage() {
     orderNote,
     credit,
     useCreditAmount,
+    skipCreditEarn,
     discounttype,
     discountDisplay,
     profitPercentDisplay,
@@ -550,6 +558,7 @@ export default function ShoppingPage() {
     setOrderNote(slot.orderNote ?? "");
     setCredit(slot.credit ?? 0);
     setUseCreditAmount(slot.useCreditAmount ?? 0);
+    setSkipCreditEarn(Boolean(slot.skipCreditEarn));
     setDiscounttype(slot.discounttype ?? 0);
     setDiscountDisplay(slot.discountDisplay ?? "");
     {
@@ -1287,6 +1296,25 @@ export default function ShoppingPage() {
   }, []);
 
   useEffect(() => {
+    const syncClub = () => setCustomerClubEnabled(readShopFeatures().customer_club_enabled);
+    syncClub();
+    window.addEventListener("storage", syncClub);
+    const token = tokenCode();
+    if (token) {
+      void apiRequestError("Get", {}, {}, `/api/settings/loyalty-credit`, true, true, token).then(
+        (res) => {
+          if (!res || res.hasError) return;
+          const enabled = (res as { enable_loyalty_credit?: unknown }).enable_loyalty_credit;
+          setLoyaltyCreditEnabled(
+            enabled === true || enabled === 1 || enabled === "1" || enabled === "true",
+          );
+        },
+      );
+    }
+    return () => window.removeEventListener("storage", syncClub);
+  }, []);
+
+  useEffect(() => {
     if (!installmentPaymentEnabled && paymentType === "installment") {
       setPaymentType("cash");
       setInstallmentCount(2);
@@ -1949,6 +1977,9 @@ export default function ShoppingPage() {
     if (useCreditAmount > 0 || editReuseCredit) {
       loadData.use_credit = true;
     }
+    if (skipCreditEarn) {
+      loadData.skip_credit_earn = true;
+    }
 
     // افزودن اطلاعات پرداخت اقساطی
     loadData.payment_type = paymentType;
@@ -2197,7 +2228,7 @@ export default function ShoppingPage() {
     }
 
     sendPurchase();
-  }, [cart, phone, useCreditAmount, effectiveOnline, discounttype, total, formatNumber, paymentType, installmentCount, payableNow, paymentFieldsValid, settlementMode, appendPaymentSettlement, resetPaymentSettlement, installmentCalculation, calculatingInstallments, installmentCreditError, finalizeSuccessfulSale, queueCurrentPurchase, withTimeout, selectedChequeId, selectedChequeIds, selectedCheques, selectedCheque, selectedChequeAmount, chequeRemainder, salePayableAmount, loadingAvailableCheques, buildPurchaseProductLine, parseAmountInput, cardAmountInput, cashAmountInput, editingPurchaseId, editReuseCredit, saleDateEditEnabled, saleDate, mixedDebtResidual, askCustomerName, customerName, cartDiningModeEnabled, diningMode, cartOrderNoteEnabled, orderNote]);
+  }, [cart, phone, useCreditAmount, skipCreditEarn, effectiveOnline, discounttype, total, formatNumber, paymentType, installmentCount, payableNow, paymentFieldsValid, settlementMode, appendPaymentSettlement, resetPaymentSettlement, installmentCalculation, calculatingInstallments, installmentCreditError, finalizeSuccessfulSale, queueCurrentPurchase, withTimeout, selectedChequeId, selectedChequeIds, selectedCheques, selectedCheque, selectedChequeAmount, chequeRemainder, salePayableAmount, loadingAvailableCheques, buildPurchaseProductLine, parseAmountInput, cardAmountInput, cashAmountInput, editingPurchaseId, editReuseCredit, saleDateEditEnabled, saleDate, mixedDebtResidual, askCustomerName, customerName, cartDiningModeEnabled, diningMode, cartOrderNoteEnabled, orderNote]);
 
   // بررسی اعتبارسنجی تخفیف هنگام تغییر total
   useEffect(() => {
@@ -2830,6 +2861,9 @@ export default function ShoppingPage() {
     checkingCredit,
     credit,
     useCreditAmount,
+    skipCreditEarn,
+    showSkipCreditEarn: customerClubEnabled && loyaltyCreditEnabled,
+    onSkipCreditEarnChange: setSkipCreditEarn,
     discounttype,
     discountDisplay,
     discountPercentDisplay,
@@ -2937,6 +2971,9 @@ export default function ShoppingPage() {
     checkingCredit,
     credit,
     useCreditAmount,
+    skipCreditEarn,
+    customerClubEnabled,
+    loyaltyCreditEnabled,
     discounttype,
     discountDisplay,
     discountPercentDisplay,
@@ -3956,6 +3993,23 @@ export default function ShoppingPage() {
                         </Typography>
                       </Box>
                     )}
+                    {customerClubEnabled && loyaltyCreditEnabled && phone.trim() !== "" ? (
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            size="small"
+                            checked={skipCreditEarn}
+                            onChange={(e) => setSkipCreditEarn(e.target.checked)}
+                          />
+                        }
+                        label={
+                          <Typography sx={{ fontSize: { xs: "11px", md: "12px" }, color: "var(--admin-text)" }}>
+                            بدون افزایش اعتبار
+                          </Typography>
+                        }
+                        sx={{ m: 0, mt: 0.5 }}
+                      />
+                    ) : null}
                   </CardContent>
                   {(paymentType !== 'installment' || cartProfitEnabled) && (
                     <CardContent sx={{ padding: { xs: "4px 8px", md: "5px 12px" } }}>

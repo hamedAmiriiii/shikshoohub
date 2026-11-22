@@ -9,6 +9,8 @@ import {
   TextField,
   Divider,
   CircularProgress,
+  FormControlLabel,
+  Switch,
 } from "@mui/material";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import AddIcon from "@mui/icons-material/Add";
@@ -103,6 +105,9 @@ export type AdminMenuModeCartPanelProps = {
   checkingCredit: boolean;
   credit: number;
   useCreditAmount: number;
+  skipCreditEarn?: boolean;
+  showSkipCreditEarn?: boolean;
+  onSkipCreditEarnChange?: (value: boolean) => void;
   discounttype: number;
   discountDisplay: string;
   discountPercentDisplay?: string;
@@ -202,6 +207,9 @@ export default function AdminMenuModeCartPanel({
   checkingCredit,
   credit,
   useCreditAmount,
+  skipCreditEarn = false,
+  showSkipCreditEarn = false,
+  onSkipCreditEarnChange,
   discounttype,
   discountDisplay,
   discountPercentDisplay = "",
@@ -544,6 +552,23 @@ export default function AdminMenuModeCartPanel({
             اعتبار: {formatNumber(credit)}
           </Typography>
         )}
+        {showSkipCreditEarn && phone.trim() !== "" ? (
+          <FormControlLabel
+            control={
+              <Switch
+                size="small"
+                checked={skipCreditEarn}
+                onChange={(e) => onSkipCreditEarnChange?.(e.target.checked)}
+              />
+            }
+            label={
+              <Typography sx={{ fontSize: fs(10), color: "var(--admin-text)" }}>
+                بدون افزایش اعتبار
+              </Typography>
+            }
+            sx={{ m: 0 }}
+          />
+        ) : null}
 
         {(!installmentPaymentEnabled || paymentType !== "installment" || cartProfitEnabled) && (
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexWrap: "wrap" }}>
