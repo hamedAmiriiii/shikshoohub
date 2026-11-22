@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { allocateLoyaltyCreditByThousands } from '@/app/lib/loyaltyCreditAllocate';
 import {
   Box,
   Container,
@@ -462,6 +463,17 @@ export default function CartPage() {
       return total + price * item.quantity;
     }, 0);
   };
+
+  const creditUsableAmount = useMemo(() => {
+    if (customerCredit <= 0 || cartItems.length === 0) return 0;
+    const lineTotals = cartItems.map((item) => {
+      const price = typeof item.sale_price === 'string' ? parseFloat(item.sale_price) : Number(item.sale_price);
+      return Math.max(0, price || 0) * Math.max(0, Number(item.quantity) || 0);
+    });
+    const orderTotal = serverTotal !== null ? serverTotal : calculateTotal();
+    return allocateLoyaltyCreditByThousands(lineTotals, Math.min(customerCredit, orderTotal)).used;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartItems, customerCredit, serverTotal]);
 
   const handleSelectAddress = async (addressId: number) => {
     const token = getCustomerToken();
@@ -2116,12 +2128,17 @@ export default function CartPage() {
                             fontWeight: '600',
                           }}
                         >
-                          {new Intl.NumberFormat('fa-IR').format(customerCredit)} تومان
+                          موجودی {new Intl.NumberFormat('fa-IR').format(customerCredit)} تومان
                         </Box>
                       </Box>
                       {useCredit && (
                         <Typography sx={{ fontSize: '12px', color: '#4caf50', marginTop: '8px', marginRight: '32px' }}>
-                          این مبلغ از کل سفارش کسر خواهد شد
+                          {creditUsableAmount > 0
+                            ? `${new Intl.NumberFormat('fa-IR').format(creditUsableAmount)} تومان (مضارب ۱۰۰۰) از سفارش کسر می‌شود` +
+                              (customerCredit - creditUsableAmount >= 1
+                                ? `؛ باقی ${new Intl.NumberFormat('fa-IR').format(customerCredit - creditUsableAmount)} تومان در حساب می‌ماند`
+                                : '')
+                            : 'برای این سبد مبلغ قابل‌مصرف هزارتومانی نیست؛ اعتبار دست‌نخورده می‌ماند'}
                         </Typography>
                       )}
                     </Paper>

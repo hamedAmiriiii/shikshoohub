@@ -548,9 +548,23 @@ export default function AdminMenuModeCartPanel({
           </Typography>
         )}
         {!checkingCredit && credit > 0 && (
-          <Typography sx={{ fontSize: fs(10), color: "var(--admin-accent)", fontWeight: 600 }}>
-            اعتبار: {formatNumber(credit)}
-          </Typography>
+          <Box>
+            <Typography sx={{ fontSize: fs(10), color: "var(--admin-accent)", fontWeight: 600 }}>
+              اعتبار: {formatNumber(credit)}
+            </Typography>
+            {useCreditAmount > 0 ? (
+              <Typography sx={{ fontSize: fs(9), color: "var(--admin-text-muted)" }}>
+                مصرف (×۱۰۰۰): {formatNumber(useCreditAmount)}
+                {credit - useCreditAmount >= 1
+                  ? ` — باقی: ${formatNumber(credit - useCreditAmount)}`
+                  : ""}
+              </Typography>
+            ) : (
+              <Typography sx={{ fontSize: fs(9), color: "var(--admin-text-muted)" }}>
+                قابل‌مصرف هزارتومانی برای این سبد نیست
+              </Typography>
+            )}
+          </Box>
         )}
         {showSkipCreditEarn && phone.trim() !== "" ? (
           <FormControlLabel

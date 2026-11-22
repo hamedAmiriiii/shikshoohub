@@ -106,6 +106,7 @@ import {
 } from '@/app/admin/multiCartState';
 import { publishAdminSaleCartSnapshot } from '@/app/admin/onboarding/adminSaleCartCheck';
 import { readShopFeatures } from '@/app/lib/shopFeatures';
+import { allocateLoyaltyCreditByThousands } from '@/app/lib/loyaltyCreditAllocate';
 import CategoryIcon from '@mui/icons-material/Category';
 import {
   type SaleReceiptData,
@@ -1314,6 +1315,21 @@ export default function ShoppingPage() {
     return () => window.removeEventListener("storage", syncClub);
   }, []);
 
+  // اعتبار مصرفی فقط مضارب ۱۰۰۰ و به نسبت مبلغ اقلام؛ باقیمانده در حساب مشتری می‌ماند
+  useEffect(() => {
+    if (editReuseCredit) return;
+    if (credit <= 0 || !Array.isArray(cart) || cart.length === 0) {
+      setUseCreditAmount(0);
+      return;
+    }
+    const lineTotals = cart.map(
+      (item: any) => Math.max(0, Number(item.sale_price) || 0) * Math.max(0, Number(item.quantity) || 0),
+    );
+    const afterDiscount = Math.max(0, total - discounttype);
+    const { used } = allocateLoyaltyCreditByThousands(lineTotals, Math.min(credit, afterDiscount));
+    setUseCreditAmount(used);
+  }, [cart, total, discounttype, credit, editReuseCredit]);
+
   useEffect(() => {
     if (!installmentPaymentEnabled && paymentType === "installment") {
       setPaymentType("cash");
@@ -2466,10 +2482,8 @@ export default function ShoppingPage() {
         const cached = await findCustomerCreditInCache(phoneNumber);
         if (cached) {
           setCredit(cached.credit);
-          setUseCreditAmount(cached.useCredit);
         } else {
           setCredit(0);
-          setUseCreditAmount(0);
           toast.warn("اعتبار مشتری در حالت آفلاین در دسترس نیست");
         }
       } finally {
@@ -2497,9 +2511,9 @@ export default function ShoppingPage() {
       const useCreditValue = data.use_credit ? parseFloat(String(data.use_credit)) : 0;
       
       console.log("Credit Values:", { creditValue, useCreditValue });
-      
+
       setCredit(creditValue);
-      setUseCreditAmount(useCreditValue);
+      // مبلغ مصرف از سبد با تقسیم هزارتومانی محاسبه می‌شود (effect جدا)
       void upsertCustomerCreditCache({
         phone: phoneNumber,
         credit: creditValue,
@@ -3991,6 +4005,26 @@ export default function ShoppingPage() {
                         }}>
                           اعتبار موجود: {formatNumber(credit)} تومان
                         </Typography>
+                        {useCreditAmount > 0 ? (
+                          <Typography sx={{ 
+                            color: "var(--admin-text-muted)", 
+                            fontSize: { xs: "10px", md: "11px" },
+                            mt: 0.5,
+                          }}>
+                            مصرف این خرید (مضارب ۱۰۰۰): {formatNumber(useCreditAmount)} تومان
+                            {credit - useCreditAmount >= 1
+                              ? ` — باقی در حساب: ${formatNumber(credit - useCreditAmount)}`
+                              : ""}
+                          </Typography>
+                        ) : (
+                          <Typography sx={{ 
+                            color: "var(--admin-text-muted)", 
+                            fontSize: { xs: "10px", md: "11px" },
+                            mt: 0.5,
+                          }}>
+                            برای این سبد مبلغ قابل‌مصرف هزارتومانی نیست؛ اعتبار دست‌نخورده می‌ماند
+                          </Typography>
+                        )}
                       </Box>
                     )}
                     {customerClubEnabled && loyaltyCreditEnabled && phone.trim() !== "" ? (
