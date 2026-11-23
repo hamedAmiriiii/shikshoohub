@@ -285,7 +285,7 @@ export default function InvoicesPage() {
   const [settleInvoice, setSettleInvoice] = useState<Invoice | null>(null);
   const [beneficiaryId, setBeneficiaryId] = useState<number | "">("");
   const [beneficiaryOption, setBeneficiaryOption] = useState<Beneficiary | null>(null);
-  const [invoiceKind, setInvoiceKind] = useState<"overall" | "product" | "consumable" | "raw">("overall");
+  const [invoiceKind, setInvoiceKind] = useState<"overall" | "detailed">("overall");
   const [headerDiscount, setHeaderDiscount] = useState("");
   const [createDetailsOpen, setCreateDetailsOpen] = useState(false);
   const [createHeader, setCreateHeader] = useState<InvoiceCreateDraft | null>(null);
@@ -488,7 +488,7 @@ export default function InvoicesPage() {
       ? `${date.year}/${String(date.month).padStart(2, "0")}/${String(date.day).padStart(2, "0")}`
       : undefined;
 
-    if (invoiceKind !== "overall") {
+    if (invoiceKind === "detailed") {
       setCreateHeader({
         title: title.trim(),
         description: description.trim() || undefined,
@@ -496,7 +496,6 @@ export default function InvoicesPage() {
         invoice_date: date ?? undefined,
         beneficiary_id: beneficiaryId,
         beneficiary_label: beneficiaryOption?.name || "",
-        entryKind: invoiceKind,
       });
       setOpenCreateDialog(false);
       setCreateDetailsOpen(true);
@@ -1153,7 +1152,7 @@ export default function InvoicesPage() {
               <RadioGroup
                 row
                 value={invoiceKind}
-                onChange={(e) => setInvoiceKind(e.target.value as "overall" | "product" | "consumable" | "raw")}
+                onChange={(e) => setInvoiceKind(e.target.value as "overall" | "detailed")}
                 sx={{ gridColumn: '1 / -1', justifyContent: 'flex-start' }}
               >
                 <FormControlLabel
@@ -1163,21 +1162,9 @@ export default function InvoicesPage() {
                   sx={{ '& .MuiFormControlLabel-label': { fontSize: 13, color: 'var(--admin-text)' } }}
                 />
                 <FormControlLabel
-                  value="product"
+                  value="detailed"
                   control={<Radio size="small" sx={{ color: 'var(--admin-accent)', '&.Mui-checked': { color: 'var(--admin-accent)' } }} />}
-                  label="کالا"
-                  sx={{ '& .MuiFormControlLabel-label': { fontSize: 13, color: 'var(--admin-text)' } }}
-                />
-                <FormControlLabel
-                  value="consumable"
-                  control={<Radio size="small" sx={{ color: 'var(--admin-accent)', '&.Mui-checked': { color: 'var(--admin-accent)' } }} />}
-                  label="مواد مصرفی"
-                  sx={{ '& .MuiFormControlLabel-label': { fontSize: 13, color: 'var(--admin-text)' } }}
-                />
-                <FormControlLabel
-                  value="raw"
-                  control={<Radio size="small" sx={{ color: 'var(--admin-accent)', '&.Mui-checked': { color: 'var(--admin-accent)' } }} />}
-                  label="مواد اولیه"
+                  label="با جزئیات"
                   sx={{ '& .MuiFormControlLabel-label': { fontSize: 13, color: 'var(--admin-text)' } }}
                 />
               </RadioGroup>
@@ -1286,11 +1273,7 @@ export default function InvoicesPage() {
               >
                 {invoiceKind === "overall"
                   ? "مبلغ همین‌جا اصل فاکتور است و تخفیف روی کل فاکتور اعمال می‌شود."
-                  : invoiceKind === "product"
-                    ? "بعد از ورود کالاها، موجودی و قیمت خرید در بخش کالاها به‌روز می‌شود."
-                    : invoiceKind === "consumable"
-                      ? "مواد مصرفی با عدد، کیلو یا لیتر وارد می‌شوند و به انبار مواد مصرفی می‌روند."
-                      : "مواد اولیه با عدد، کیلو یا لیتر وارد می‌شوند و به انبار مواد اولیه می‌روند."}
+                  : "در مرحله بعد برای هر قلم مشخص کنید معمولی است یا کالای فروش، مواد مصرفی یا کالای اولیه."}
               </Typography>
             </Box>
           </DialogContent>

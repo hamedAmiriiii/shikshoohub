@@ -9,10 +9,8 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  FormControlLabel,
   IconButton,
   Paper,
-  Switch,
   Table,
   TableBody,
   TableCell,
@@ -53,10 +51,6 @@ import {
 } from "@/app/lib/documentPayments";
 import { DocumentPaymentBreakdownView, documentNeedsSettle } from "@/app/admin/DocumentPaymentBadge";
 import DocumentPaymentSettleDialog from "@/app/admin/DocumentPaymentSettleDialog";
-import {
-  ADMIN_POS_SETTINGS_CHANGED_EVENT,
-  readAdminPosSettings,
-} from "@/app/lib/adminPosSettings";
 
 export type InvoiceItem = {
   id?: number;
@@ -69,6 +63,7 @@ export type InvoiceItem = {
   vat_amount?: number | string | null;
   discount_amount?: number | string | null;
   unit_type?: string | null;
+  stock_target?: "product" | "consumable" | "raw" | "normal" | string | null;
 };
 
 export type InvoiceRecord = DocumentPaymentFields & {
@@ -104,7 +99,22 @@ type VatMode = "none" | "percent" | "amount";
 
 type StockKind = "product" | "consumable" | "raw";
 
+/** نوع هر قلم فاکتور — معمولی انبار نمی‌شود */
+type ItemKind = "normal" | StockKind;
+
 type QtyUnit = "piece" | "kg" | "liter";
+
+const ITEM_KIND_OPTIONS: { value: ItemKind; label: string }[] = [
+  { value: "normal", label: "فاکتور معمولی" },
+  { value: "product", label: "کالای فروش" },
+  { value: "consumable", label: "مواد مصرفی" },
+  { value: "raw", label: "کالای اولیه" },
+];
+
+function asItemKind(value: unknown): ItemKind | "" {
+  if (value === "normal" || value === "product" || value === "consumable" || value === "raw") return value;
+  return "";
+}
 
 type NameOption = {
   id: number;
@@ -151,6 +161,7 @@ type DraftItem = {
   vatInput: string;
   discount: string;
   unitType: QtyUnit;
+  stockKind: ItemKind | "";
   registered?: RegisteredProduct | null;
 };
 
@@ -201,7 +212,7 @@ function newDraftKey() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function emptyDraft(): DraftItem {
+function emptyDraft(defaultKind: ItemKind | "" = ""): DraftItem {
   return {
     key: newDraftKey(),
     title: "",
@@ -214,7 +225,8 @@ function emptyDraft(): DraftItem {
     vatMode: "none",
     vatInput: "",
     discount: "",
-    unitType: "piece",
+    unitType: defaultKind === "raw" ? "kg" : "piece",
+    stockKind: defaultKind,
   };
 }
 
@@ -229,13 +241,22 @@ function asQtyUnit(value: unknown, fallback: QtyUnit): QtyUnit {
   return fallback;
 }
 
-function resolveStockKind(invoice?: InvoiceRecord | null, draft?: InvoiceCreateDraft | null): StockKind | null {
-  if (draft?.entryKind) return draft.entryKind;
+function resolveInvoiceStockKind(invoice?: InvoiceRecord | null): StockKind | null {
   const target = invoice?.stock_target;
   if (target === "product" || target === "consumable" || target === "raw") return target;
   if (invoice?.has_consumable_lots) return "consumable";
   if (invoice?.has_raw_material_lots) return "raw";
   return null;
+}
+
+function resolveItemKind(
+  item: InvoiceItem | null | undefined,
+  invoice?: InvoiceRecord | null
+): ItemKind {
+  const own = asItemKind(item?.stock_target);
+  if (own) return own;
+  const inherited = resolveInvoiceStockKind(invoice);
+  return inherited || "normal";
 }
 
 function asVatMode(value: unknown): VatMode {
@@ -329,9 +350,9 @@ function extractInvoice(res: any, fallback: InvoiceRecord): InvoiceRecord {
 
 function draftsFromInvoice(invoice: InvoiceRecord): DraftItem[] {
   const items = Array.isArray(invoice.items) ? invoice.items : [];
-  const stockKind = resolveStockKind(invoice, null);
-  const defaultUnit: QtyUnit = stockKind === "raw" ? "kg" : "piece";
   return items.map((item) => {
+    const stockKind = resolveItemKind(item, invoice);
+    const defaultUnit: QtyUnit = stockKind === "raw" ? "kg" : "piece";
     const unitPrice = toNumber(item.unit_price);
     const quantity = toNumber(item.quantity);
     const vatMode = asVatMode(item.vat_mode);
@@ -356,6 +377,7 @@ function draftsFromInvoice(invoice: InvoiceRecord): DraftItem[] {
       vatInput,
       discount: toNumber(item.discount_amount) > 0 ? formatAmountNumber(toNumber(item.discount_amount)) : "",
       unitType: asQtyUnit(item.unit_type, defaultUnit),
+      stockKind,
     };
   });
 }
@@ -388,7 +410,6 @@ export type InvoiceCreateDraft = {
   invoice_date?: { year: number; month: number; day: number };
   beneficiary_id?: number | "";
   beneficiary_label?: string;
-  entryKind?: StockKind;
 };
 
 type Props = {
@@ -414,35 +435,24 @@ export default function InvoiceDetailsDialog({
   const [confirmMismatchOpen, setConfirmMismatchOpen] = useState(false);
   const [record, setRecord] = useState<InvoiceRecord | null>(null);
   const [settleOpen, setSettleOpen] = useState(false);
-  const [productEntryEnabled, setProductEntryEnabled] = useState(false);
-  const [consumableMode, setConsumableMode] = useState(false);
-  const [stockKind, setStockKind] = useState<StockKind | null>(null);
   const [paymentForm, setPaymentForm] = useState<DocumentPaymentFormState>(emptyDocumentPaymentForm);
   const [nameOptions, setNameOptions] = useState<NameOption[]>([]);
   const [nameSearchLoading, setNameSearchLoading] = useState(false);
   const nameSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [afterMismatch, setAfterMismatch] = useState<"save" | "register">("save");
   const titleInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const focusKeyRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    const sync = () => setProductEntryEnabled(Boolean(readAdminPosSettings().invoiceProductEntryEnabled));
-    sync();
-    window.addEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, sync);
-    return () => window.removeEventListener(ADMIN_POS_SETTINGS_CHANGED_EVENT, sync);
-  }, []);
+  /** نوع انتخاب‌شدهٔ اولین قلم → پیش‌فرض ردیف‌های بعدی */
+  const [defaultItemKind, setDefaultItemKind] = useState<ItemKind | "">("");
 
   useEffect(() => {
     if (!open) return;
     if (!invoice) {
       if (!createDraft) return;
-      const kind = createDraft.entryKind ?? null;
-      setDrafts([{ ...emptyDraft(), unitType: kind === "raw" ? "kg" : "piece" }]);
+      setDrafts([emptyDraft("")]);
+      setDefaultItemKind("");
       setOriginalHadItems(false);
       setInvoiceAmount(0);
       setRecord(null);
-      setStockKind(kind);
-      setConsumableMode(false);
       setPaymentForm(emptyDocumentPaymentForm());
       setConfirmMismatchOpen(false);
       setLoading(false);
@@ -465,13 +475,12 @@ export default function InvoiceDetailsDialog({
 
       if (cancelled) return;
       const loadedItems = draftsFromInvoice(full);
-      setDrafts(loadedItems.length > 0 ? loadedItems : [emptyDraft()]);
+      const rows = loadedItems.length > 0 ? loadedItems : [emptyDraft("")];
+      setDrafts(rows);
+      setDefaultItemKind(rows[0]?.stockKind || "");
       setOriginalHadItems(loadedItems.length > 0);
       setInvoiceAmount(toNumber(full.amount));
       setRecord(full);
-      const kind = resolveStockKind(full, null);
-      setStockKind(kind);
-      setConsumableMode(kind === "consumable" || Boolean(full.has_consumable_lots));
       setPaymentForm(formFromDocumentPayment(full));
       setConfirmMismatchOpen(false);
       setLoading(false);
@@ -511,11 +520,29 @@ export default function InvoiceDetailsDialog({
   const followsItemAmount = !invoice || invoiceUsesItemAmount(record || invoice);
 
   const updateDraft = (key: string, patch: Partial<DraftItem>) => {
-    setDrafts((prev) => prev.map((row) => (row.key === key ? { ...row, ...patch } : row)));
+    setDrafts((prev) => {
+      const next = prev.map((row) => {
+        if (row.key !== key) return row;
+        const merged = { ...row, ...patch };
+        if (patch.stockKind !== undefined) {
+          if (patch.stockKind === "raw" && row.stockKind !== "raw") {
+            merged.unitType = "kg";
+          } else if (patch.stockKind === "product") {
+            merged.unitType = "piece";
+          }
+        }
+        return merged;
+      });
+      const firstKind = next[0]?.stockKind || "";
+      if (firstKind) setDefaultItemKind(firstKind);
+      else if (patch.stockKind) setDefaultItemKind((prevKind) => prevKind || patch.stockKind || "");
+      return next;
+    });
   };
 
   const addRow = (focus = true) => {
-    const draft = { ...emptyDraft(), unitType: stockKind === "raw" ? "kg" as const : "piece" as const };
+    const kind = defaultItemKind || drafts[0]?.stockKind || "";
+    const draft = emptyDraft(kind);
     if (focus) focusKeyRef.current = draft.key;
     setDrafts((prev) => [...prev, draft]);
   };
@@ -528,9 +555,7 @@ export default function InvoiceDetailsDialog({
     addRow(true);
   };
 
-  const searchNames = (query: string) => {
-    const kind = stockKind || (consumableMode ? "consumable" : null);
-    if (!kind) return;
+  const searchNames = (query: string, kind: StockKind) => {
     if (nameSearchTimer.current) clearTimeout(nameSearchTimer.current);
     nameSearchTimer.current = setTimeout(async () => {
       const token = tokenCode();
@@ -584,6 +609,7 @@ export default function InvoiceDetailsDialog({
         const base = Math.round(unitPrice * quantity);
         const vatAmount = lineVatOf(row);
         const enteredDiscount = Math.max(0, Math.round(parseAmountInput(row.discount)));
+        const kind = asItemKind(row.stockKind);
         return {
           title: row.title.trim(),
           unit_price: unitPrice,
@@ -592,9 +618,11 @@ export default function InvoiceDetailsDialog({
           vat_percent: row.vatMode === "percent" ? parseAmountInput(row.vatInput) : null,
           vat_amount: vatAmount,
           discount_amount: enteredDiscount,
-          unit_type: stockKind === "product" ? "piece" : row.unitType || (stockKind === "raw" ? "kg" : "piece"),
-          sale_price: stockKind === "product" ? parseAmountInput(row.salePrice) : null,
-          barcode: stockKind === "product" ? row.barcode.trim() : "",
+          unit_type: kind === "product" ? "piece" : row.unitType || (kind === "raw" ? "kg" : "piece"),
+          sale_price: kind === "product" ? parseAmountInput(row.salePrice) : null,
+          barcode: kind === "product" ? row.barcode.trim() : "",
+          stock_target: kind === "normal" || !kind ? "" : kind,
+          _kind: kind,
           _base: base,
           _gross: base + vatAmount,
         };
@@ -602,15 +630,21 @@ export default function InvoiceDetailsDialog({
       .filter((row) => row.title || row.unit_price > 0 || row.quantity > 0);
 
     for (const row of items) {
-      if (!row.title || row.unit_price <= 0 || row.quantity <= 0) {
-        toast.error(
-          consumableMode
-            ? "هر ردیف باید نام کالا، فی و تعداد معتبر داشته باشد"
-            : "هر ردیف باید عنوان، فی و تعداد معتبر داشته باشد"
-        );
+      if (!row._kind) {
+        toast.error(`نوع «${row.title || "ردیف"}» را انتخاب کنید`);
         return null;
       }
-      const needsWhole = stockKind === "product" || ((stockKind === "consumable" || stockKind === "raw" || consumableMode) && row.unit_type === "piece");
+      if (!row.title || row.unit_price <= 0 || row.quantity <= 0) {
+        toast.error("هر ردیف باید عنوان، فی و تعداد معتبر داشته باشد");
+        return null;
+      }
+      if (row._kind === "product" && (!row.sale_price || row.sale_price <= 0)) {
+        toast.error(`قیمت فروش «${row.title}» را وارد کنید`);
+        return null;
+      }
+      const needsWhole =
+        row._kind === "product" ||
+        ((row._kind === "consumable" || row._kind === "raw") && row.unit_type === "piece");
       if (needsWhole && !Number.isInteger(row.quantity)) {
         toast.error(`تعداد «${row.title}» باید عدد صحیح باشد`);
         return null;
@@ -624,7 +658,7 @@ export default function InvoiceDetailsDialog({
         return null;
       }
     }
-    return items.map(({ _base, _gross, ...row }) => row);
+    return items.map(({ _base, _gross, _kind, ...row }) => row);
   };
 
   const saveItems = async (
@@ -639,6 +673,7 @@ export default function InvoiceDetailsDialog({
       unit_type?: string;
       sale_price?: number | null;
       barcode?: string;
+      stock_target?: string;
     }[]
   ) => {
     if (!invoice && !createDraft) return;
@@ -665,22 +700,16 @@ export default function InvoiceDetailsDialog({
       if (items.length > 0 || originalHadItems) {
         payload.items = items;
       }
-      if (stockKind) {
-        if (items.length === 0) {
-          toast.error("حداقل یک ردیف لازم است");
-          return;
-        }
-        payload.stock_target = stockKind;
-        if (stockKind === "consumable") payload.sync_consumables = true;
-        if (stockKind === "raw") payload.sync_raw_materials = true;
-        if (stockKind === "product") payload.sync_products = true;
-      } else if (consumableMode) {
-        if (items.length === 0) {
-          toast.error("برای ثبت مواد مصرفی حداقل یک ردیف لازم است");
-          return;
-        }
-        payload.sync_consumables = true;
-      }
+
+      const kinds = new Set(
+        items
+          .map((row) => row.stock_target)
+          .filter((k): k is StockKind => k === "product" || k === "consumable" || k === "raw")
+      );
+      if (kinds.has("consumable")) payload.sync_consumables = true;
+      if (kinds.has("raw")) payload.sync_raw_materials = true;
+      if (kinds.has("product")) payload.sync_products = true;
+      if (kinds.size === 1) payload.stock_target = [...kinds][0];
 
       const res = invoice
         ? await FetchWithJwtClient("PUT", `/api/invoices/${invoice.id}`, payload)
@@ -698,17 +727,11 @@ export default function InvoiceDetailsDialog({
       }
 
       const savedLabel =
-        stockKind === "product"
-          ? "فاکتور ثبت شد و کالاها به موجودی اضافه شدند"
-          : stockKind === "consumable"
-            ? "فاکتور ثبت شد و مواد مصرفی به انبار اضافه شدند"
-            : stockKind === "raw"
-              ? "فاکتور ثبت شد و مواد اولیه به انبار اضافه شدند"
-              : consumableMode
-                ? "فاکتور و خرید مواد مصرفی ذخیره شد"
-                : invoice
-                  ? "جزئیات فاکتور ذخیره شد"
-                  : "فاکتور با جزئیات ثبت شد";
+        kinds.size > 0
+          ? "فاکتور ذخیره شد و موجودی انبار به‌روز شد"
+          : invoice
+            ? "جزئیات فاکتور ذخیره شد"
+            : "فاکتور با جزئیات ثبت شد";
       toast.success(savedLabel);
       setConfirmMismatchOpen(false);
       onSaved();
@@ -730,85 +753,15 @@ export default function InvoiceDetailsDialog({
       items.length > 0 &&
       Math.round(itemsTotal) !== Math.round(invoiceAmount)
     ) {
-      setAfterMismatch("save");
       setConfirmMismatchOpen(true);
       return;
     }
     await saveItems(items);
   };
 
-  const registerProducts = async (rows: DraftItem[]) => {
-    const token = tokenCode();
-    if (!token) {
-      toast.error("لطفاً وارد شوید");
-      return false;
-    }
-    const pending = rows.filter((row) => row.title.trim() && !row.registered);
-    for (const row of pending) {
-      const barcode = row.barcode.trim();
-      const quantity = parseQuantityInput(row.quantity);
-      const purchasePrice = landedUnitOf(row);
-      const salePrice = parseAmountInput(row.salePrice);
-      if (purchasePrice <= 0 || quantity <= 0) {
-        toast.error(`فی و تعداد «${row.title.trim()}» باید معتبر باشد`);
-        return false;
-      }
-      if (salePrice <= 0) {
-        toast.error(`قیمت فروش «${row.title.trim()}» را وارد کنید`);
-        return false;
-      }
-      const productPayload: Record<string, string | number> = {
-        name: row.title.trim(),
-        purchase_price: purchasePrice,
-        sale_price: salePrice,
-        quantity,
-      };
-      if (barcode) productPayload.barcode = barcode;
-      const res = await FetchWithJwtClient("POST", "/api/product", productPayload);
-      if (!res || res.hasError) {
-        toast.error(getApiErrorMessage(res, `ثبت کالای «${row.title.trim()}» انجام نشد`));
-        return false;
-      }
-      const payload = res?.data && typeof res.data === "object" ? res.data : res;
-      const registered: RegisteredProduct = {
-        id: payload?.id ?? payload?.product?.id,
-        name: String(payload?.name || row.title.trim()),
-        barcode: String(payload?.barcode || barcode),
-      };
-      setDrafts((prev) => prev.map((item) => (item.key === row.key ? { ...item, registered } : item)));
-    }
-    if (pending.length > 0) {
-      toast.success(pending.length === 1 ? "کالا ثبت شد" : `${pending.length} کالا ثبت شد`);
-    }
-    return true;
-  };
-
-  const handleRegisterAndSave = async () => {
-    const items = collectItems();
-    if (!items) return;
-    if (items.length === 0) {
-      toast.error("ردیفی برای ثبت کالا نیست");
-      return;
-    }
-    if (!followsItemAmount && invoice && Math.round(itemsTotal) !== Math.round(invoiceAmount)) {
-      setAfterMismatch("register");
-      setConfirmMismatchOpen(true);
-      return;
-    }
-    setSaving(true);
-    try {
-      const ok = await registerProducts(drafts);
-      if (!ok) return;
-      await saveItems(items);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const showProductFields = stockKind === "product" || (!stockKind && productEntryEnabled && !consumableMode);
-  const showUnit = stockKind === "consumable" || stockKind === "raw";
-  const sectionTitle =
-    stockKind === "product" ? "کالاها" : stockKind === "consumable" ? "مواد مصرفی" : stockKind === "raw" ? "مواد اولیه" : "اقلام کالا / خدمات";
+  const showProductFields = drafts.some((row) => row.stockKind === "product");
+  const showUnit = drafts.some((row) => row.stockKind === "consumable" || row.stockKind === "raw");
+  const sectionTitle = "اقلام فاکتور";
   const display = record || invoice;
   const beneficiary = beneficiaryFromRecord(display);
   const shopAccountName =
@@ -1017,34 +970,6 @@ export default function InvoiceDetailsDialog({
                   {sectionTitle}
                 </Typography>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>
-                  {stockKind ? null : (
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        size="small"
-                        checked={consumableMode}
-                        onChange={(_, checked) => setConsumableMode(checked)}
-                        sx={{
-                          "& .MuiSwitch-switchBase.Mui-checked": { color: "var(--admin-accent)" },
-                          "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-                            backgroundColor: "var(--admin-accent)",
-                          },
-                        }}
-                      />
-                    }
-                    label="مواد مصرفی"
-                    sx={{
-                      m: 0,
-                      mr: 0.5,
-                      "& .MuiFormControlLabel-label": {
-                        fontSize: 12,
-                        fontWeight: 700,
-                        color: "var(--admin-text)",
-                        whiteSpace: "nowrap",
-                      },
-                    }}
-                  />
-                  )}
                   <Button
                     size="small"
                     variant="contained"
@@ -1070,9 +995,8 @@ export default function InvoiceDetailsDialog({
                   <TableHead>
                     <TableRow>
                       <StyledTableCell align="center">ردیف</StyledTableCell>
-                      <StyledTableCell align="center">
-                        {stockKind || consumableMode ? "نام کالا" : "شرح کالا / خدمات"}
-                      </StyledTableCell>
+                      <StyledTableCell align="center">نوع</StyledTableCell>
+                      <StyledTableCell align="center">نام / شرح</StyledTableCell>
                       <StyledTableCell align="center">فی</StyledTableCell>
                       <StyledTableCell align="center">ارزش افزوده</StyledTableCell>
                       {showUnit ? <StyledTableCell align="center">واحد</StyledTableCell> : null}
@@ -1084,9 +1008,7 @@ export default function InvoiceDetailsDialog({
                       {showProductFields ? (
                         <StyledTableCell align="center">قیمت فروش</StyledTableCell>
                       ) : null}
-                      <StyledTableCell align="center">
-                        {stockKind === "consumable" || consumableMode ? "قیمت تمام‌شده" : "قیمت خرید"}
-                      </StyledTableCell>
+                      <StyledTableCell align="center">قیمت تمام‌شده</StyledTableCell>
                       <StyledTableCell align="center" title="مقدار و مبلغ کل را بزنید تا فی خودکار پر شود">
                         مبلغ کل
                       </StyledTableCell>
@@ -1098,13 +1020,38 @@ export default function InvoiceDetailsDialog({
                       const lineTotal = Math.max(0, lineGrossOf(row) - lineDiscountOf(row));
                       const landed = landedUnitOf(row);
                       const share = lineDiscountOf(row);
+                      const rowKind = asItemKind(row.stockKind);
+                      const rowUsesStock = rowKind === "product" || rowKind === "consumable" || rowKind === "raw";
+                      const rowShowUnit = rowKind === "consumable" || rowKind === "raw";
+                      const rowShowProduct = rowKind === "product";
                       return (
                         <StyledTableRow key={row.key}>
                           <StyledTableCell align="center" sx={{ width: 48, fontWeight: 700 }}>
                             {formatAmountNumber(index + 1)}
                           </StyledTableCell>
+                          <StyledTableCell align="center" sx={{ minWidth: 130 }}>
+                            <TextField
+                              select
+                              size="small"
+                              value={row.stockKind || ""}
+                              onChange={(e) =>
+                                updateDraft(row.key, { stockKind: asItemKind(e.target.value) || "" })
+                              }
+                              fullWidth
+                              sx={fieldSx}
+                            >
+                              <MenuItem value="" disabled>
+                                انتخاب نوع
+                              </MenuItem>
+                              {ITEM_KIND_OPTIONS.map((opt) => (
+                                <MenuItem key={opt.value} value={opt.value}>
+                                  {opt.label}
+                                </MenuItem>
+                              ))}
+                            </TextField>
+                          </StyledTableCell>
                           <StyledTableCell align="center" sx={{ minWidth: 160 }}>
-                            {stockKind || consumableMode ? (
+                            {rowUsesStock ? (
                               <Autocomplete
                                 freeSolo
                                 options={nameOptions}
@@ -1122,8 +1069,8 @@ export default function InvoiceDetailsDialog({
                                 value={row.title}
                                 onInputChange={(_, value, reason) => {
                                   updateDraft(row.key, { title: value });
-                                  if (reason === "input" || reason === "clear") {
-                                    searchNames(value);
+                                  if ((reason === "input" || reason === "clear") && rowKind !== "normal" && rowKind) {
+                                    searchNames(value, rowKind);
                                   }
                                 }}
                                 onChange={(_, value) => {
@@ -1136,14 +1083,16 @@ export default function InvoiceDetailsDialog({
                                       title: value.name,
                                       unitType: value.unit || row.unitType,
                                       salePrice:
-                                        stockKind === "product" && value.salePrice
+                                        rowKind === "product" && value.salePrice
                                           ? formatAmountNumber(value.salePrice)
                                           : row.salePrice,
                                     });
                                   }
                                 }}
                                 onOpen={() => {
-                                  if (nameOptions.length === 0) searchNames(row.title);
+                                  if (nameOptions.length === 0 && rowKind !== "normal" && rowKind) {
+                                    searchNames(row.title, rowKind);
+                                  }
                                 }}
                                 renderOption={(props, option) => (
                                   <li {...props} key={option.id}>
@@ -1244,18 +1193,22 @@ export default function InvoiceDetailsDialog({
                           </StyledTableCell>
                           {showUnit ? (
                             <StyledTableCell align="center" sx={{ width: 96 }}>
-                              <TextField
-                                select
-                                size="small"
-                                value={row.unitType}
-                                onChange={(e) => updateDraft(row.key, { unitType: asQtyUnit(e.target.value, "piece") })}
-                                fullWidth
-                                sx={fieldSx}
-                              >
-                                <MenuItem value="piece">عدد</MenuItem>
-                                <MenuItem value="kg">کیلو</MenuItem>
-                                <MenuItem value="liter">لیتر</MenuItem>
-                              </TextField>
+                              {rowShowUnit ? (
+                                <TextField
+                                  select
+                                  size="small"
+                                  value={row.unitType}
+                                  onChange={(e) => updateDraft(row.key, { unitType: asQtyUnit(e.target.value, "piece") })}
+                                  fullWidth
+                                  sx={fieldSx}
+                                >
+                                  <MenuItem value="piece">عدد</MenuItem>
+                                  <MenuItem value="kg">کیلو</MenuItem>
+                                  <MenuItem value="liter">لیتر</MenuItem>
+                                </TextField>
+                              ) : (
+                                <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>—</Typography>
+                              )}
                             </StyledTableCell>
                           ) : null}
                           <StyledTableCell align="center" sx={{ width: 88 }}>
@@ -1309,41 +1262,51 @@ export default function InvoiceDetailsDialog({
                           </StyledTableCell>
                           {showProductFields ? (
                             <StyledTableCell align="center" sx={{ width: 120 }}>
-                              <TextField
-                                size="small"
-                                placeholder="بارکد (اختیاری)"
-                                value={row.barcode}
-                                onChange={(e) => updateDraft(row.key, { barcode: e.target.value })}
-                                onKeyDown={handleFieldEnter}
-                                fullWidth
-                                sx={fieldSx}
-                              />
-                              {row.registered ? (
-                                <Typography sx={{ color: "var(--admin-success, #2e7d32)", fontSize: 11, mt: 0.4 }}>
-                                  ثبت شد: {row.registered.name}
-                                  {row.registered.barcode ? ` — ${row.registered.barcode}` : ""}
-                                </Typography>
-                              ) : null}
+                              {rowShowProduct ? (
+                                <>
+                                  <TextField
+                                    size="small"
+                                    placeholder="بارکد (اختیاری)"
+                                    value={row.barcode}
+                                    onChange={(e) => updateDraft(row.key, { barcode: e.target.value })}
+                                    onKeyDown={handleFieldEnter}
+                                    fullWidth
+                                    sx={fieldSx}
+                                  />
+                                  {row.registered ? (
+                                    <Typography sx={{ color: "var(--admin-success, #2e7d32)", fontSize: 11, mt: 0.4 }}>
+                                      ثبت شد: {row.registered.name}
+                                      {row.registered.barcode ? ` — ${row.registered.barcode}` : ""}
+                                    </Typography>
+                                  ) : null}
+                                </>
+                              ) : (
+                                <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>—</Typography>
+                              )}
                             </StyledTableCell>
                           ) : null}
                           {showProductFields ? (
                             <StyledTableCell align="center" sx={{ width: 120 }}>
-                              <TextField
-                                size="small"
-                                placeholder="قیمت فروش"
-                                type="text"
-                                inputMode="numeric"
-                                value={row.salePrice}
-                                onChange={(e) =>
-                                  updateDraft(row.key, { salePrice: formatAmountInput(e.target.value) })
-                                }
-                                onKeyDown={handleFieldEnter}
-                                fullWidth
-                                sx={{
-                                  ...fieldSx,
-                                  "& .MuiInputBase-input": { ...fieldSx["& .MuiInputBase-input"], textAlign: "center" },
-                                }}
-                              />
+                              {rowShowProduct ? (
+                                <TextField
+                                  size="small"
+                                  placeholder="قیمت فروش"
+                                  type="text"
+                                  inputMode="numeric"
+                                  value={row.salePrice}
+                                  onChange={(e) =>
+                                    updateDraft(row.key, { salePrice: formatAmountInput(e.target.value) })
+                                  }
+                                  onKeyDown={handleFieldEnter}
+                                  fullWidth
+                                  sx={{
+                                    ...fieldSx,
+                                    "& .MuiInputBase-input": { ...fieldSx["& .MuiInputBase-input"], textAlign: "center" },
+                                  }}
+                                />
+                              ) : (
+                                <Typography sx={{ color: "var(--admin-text-muted)", fontSize: 12 }}>—</Typography>
+                              )}
                             </StyledTableCell>
                           ) : null}
                           <StyledTableCell align="center" sx={{ whiteSpace: "nowrap", minWidth: 110 }}>
@@ -1404,7 +1367,12 @@ export default function InvoiceDetailsDialog({
                               onClick={() =>
                                 setDrafts((prev) => {
                                   const next = prev.filter((item) => item.key !== row.key);
-                                  return next.length > 0 ? next : [emptyDraft()];
+                                  if (next.length > 0) {
+                                    setDefaultItemKind(next[0]?.stockKind || "");
+                                    return next;
+                                  }
+                                  setDefaultItemKind("");
+                                  return [emptyDraft("")];
                                 })
                               }
                               sx={{ color: "#ff6b6b", p: 0.4 }}
@@ -1504,19 +1472,6 @@ export default function InvoiceDetailsDialog({
         <Button onClick={onClose} disabled={saving} sx={{ color: "var(--admin-text-muted)" }}>
           انصراف
         </Button>
-        {!stockKind && productEntryEnabled && !consumableMode ? (
-          <Button
-            onClick={() => void handleRegisterAndSave()}
-            variant="contained"
-            disabled={loading || saving}
-            sx={{
-              backgroundColor: "var(--admin-success, #2e7d32)",
-              "&:hover": { backgroundColor: "#1b5e20" },
-            }}
-          >
-            {saving ? "در حال ثبت..." : "ثبت کالا و ذخیره فاکتور"}
-          </Button>
-        ) : null}
         <Button
           onClick={handleSave}
           variant="contained"
@@ -1530,11 +1485,9 @@ export default function InvoiceDetailsDialog({
         >
           {saving
             ? "در حال ذخیره..."
-            : stockKind === "product"
-              ? "ثبت کالا و ذخیره فاکتور"
-              : stockKind === "consumable" || stockKind === "raw" || consumableMode
-                ? "ذخیره و ثبت در انبار"
-                : "ذخیره فاکتور"}
+            : drafts.some((row) => row.stockKind === "product" || row.stockKind === "consumable" || row.stockKind === "raw")
+              ? "ذخیره و ثبت در انبار"
+              : "ذخیره فاکتور"}
         </Button>
       </DialogActions>
     </Dialog>
@@ -1549,19 +1502,6 @@ export default function InvoiceDetailsDialog({
         onConfirm={() => {
           const items = collectItems();
           if (!items) return;
-          if (afterMismatch === "register") {
-            setSaving(true);
-            void (async () => {
-              try {
-                const ok = await registerProducts(drafts);
-                if (!ok) return;
-                await saveItems(items);
-              } finally {
-                setSaving(false);
-              }
-            })();
-            return;
-          }
           void saveItems(items);
         }}
         onCancel={() => !saving && setConfirmMismatchOpen(false)}
